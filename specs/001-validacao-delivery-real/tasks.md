@@ -25,11 +25,11 @@
 - [x] T006 Create Prisma schema for Tenant and User in `packages/database`
 - [x] T007 Create Prisma schema for Category, Product, Order and OrderItem in `packages/database`
 - [x] T008 Add initial migration and seed for one pilot tenant/admin user
-- [ ] T009 Implement auth login and JWT guard in `apps/api/src/platform`
-- [ ] T010 Implement tenant context for admin routes from authenticated user
-- [ ] T011 Implement tenant resolution for public routes by slug
-- [ ] T012 Add structured logging for tenant resolution and API errors
-- [ ] T013 Add integration tests for tenant resolution and cross-tenant blocking
+- [x] T009 Implement auth login and JWT guard in `apps/api/src/platform`
+- [x] T010 Implement tenant context for admin routes from authenticated user
+- [x] T011 Implement tenant resolution for public routes by slug
+- [x] T012 Add structured logging for tenant resolution and API errors
+- [x] T013 Add integration tests for tenant resolution and cross-tenant blocking
 
 **Checkpoint**: Foundation ready; user stories can be implemented.
 
@@ -43,17 +43,17 @@
 
 ### Tests
 
-- [ ] T014 [P] [US1] Add API tests for category/product active filtering
-- [ ] T015 [P] [US1] Add public menu contract test based on `contracts/openapi.yaml`
+- [x] T014 [P] [US1] Add API tests for category/product active filtering
+- [x] T015 [P] [US1] Add public menu contract test based on `contracts/openapi.yaml`
 
 ### Implementation
 
-- [ ] T016 [US1] Implement category CRUD endpoints in `apps/api/src/catalog`
-- [ ] T017 [US1] Implement product CRUD endpoints in `apps/api/src/catalog`
-- [ ] T018 [US1] Implement public menu endpoint `GET /public/tenants/{slug}/menu`
-- [ ] T019 [US1] Build admin category/product screens in `apps/web/app/admin`
-- [ ] T020 [US1] Build public menu page in `apps/web/app/(public-menu)`
-- [ ] T021 [US1] Add mobile responsive styling for public menu
+- [x] T016 [US1] Implement category CRUD endpoints in `apps/api/src/catalog`
+- [x] T017 [US1] Implement product CRUD endpoints in `apps/api/src/catalog`
+- [x] T018 [US1] Implement public menu endpoint `GET /public/tenants/{slug}/menu`
+- [x] T019 [US1] Build admin category/product screens in `apps/web/app/admin`
+- [x] T020 [US1] Build public menu page in `apps/web/app/(public-menu)`
+- [x] T021 [US1] Add mobile responsive styling for public menu
 
 **Checkpoint**: Pilot catalog can be published and viewed.
 
@@ -67,18 +67,18 @@
 
 ### Tests
 
-- [ ] T022 [P] [US2] Add unit tests for order total calculation
-- [ ] T023 [P] [US2] Add integration tests for closed store, inactive product and empty cart rejection
-- [ ] T024 [P] [US2] Add unit tests for WhatsApp deep link generation
+- [x] T022 [P] [US2] Add unit tests for order total calculation
+- [x] T023 [P] [US2] Add integration tests for closed store, inactive product and empty cart rejection
+- [x] T024 [P] [US2] Add unit tests for WhatsApp deep link generation
 
 ### Implementation
 
-- [ ] T025 [US2] Implement local cart in `apps/web`
-- [ ] T026 [US2] Implement checkout form for delivery/pickup and payment method
-- [ ] T027 [US2] Implement order creation endpoint `POST /public/tenants/{slug}/orders`
-- [ ] T028 [US2] Recalculate order totals server-side and persist snapshots
-- [ ] T029 [US2] Implement order confirmation page with WhatsApp deep link
-- [ ] T030 [US2] Add user-facing checkout rejection states
+- [x] T025 [US2] Implement local cart in `apps/web`
+- [x] T026 [US2] Implement checkout form for delivery/pickup and payment method
+- [x] T027 [US2] Implement order creation endpoint `POST /public/tenants/{slug}/orders`
+- [x] T028 [US2] Recalculate order totals server-side and persist snapshots
+- [x] T029 [US2] Implement order confirmation page with WhatsApp deep link
+- [x] T030 [US2] Add user-facing checkout rejection states
 
 **Checkpoint**: A real customer order can be created.
 
@@ -92,17 +92,17 @@
 
 ### Tests
 
-- [ ] T031 [P] [US3] Add tests for order status transition rules
-- [ ] T032 [P] [US3] Add tests for tenant-scoped order listing
+- [x] T031 [P] [US3] Add tests for order status transition rules
+- [x] T032 [P] [US3] Add tests for tenant-scoped order listing
 
 ### Implementation
 
-- [ ] T033 [US3] Implement admin order list endpoint `GET /admin/orders`
-- [ ] T034 [US3] Implement status endpoint `PATCH /admin/orders/{id}/status`
-- [ ] T035 [US3] Configure Socket.io order-created event scoped by tenant
-- [ ] T036 [US3] Build admin order queue UI in `apps/web/app/admin/orders`
-- [ ] T037 [US3] Add visual and sound alert for new orders
-- [ ] T038 [US3] Add order history filter for delivered/cancelled orders
+- [x] T033 [US3] Implement admin order list endpoint `GET /admin/orders`
+- [x] T034 [US3] Implement status endpoint `PATCH /admin/orders/{id}/status`
+- [x] T035 [US3] Configure Socket.io order-created event scoped by tenant
+- [x] T036 [US3] Build admin order queue UI in `apps/web/app/admin/orders`
+- [x] T037 [US3] Add visual and sound alert for new orders
+- [x] T038 [US3] Add order history filter for delivered/cancelled orders
 
 **Checkpoint**: Operator can run a live order shift.
 
@@ -116,12 +116,12 @@
 
 ### Tests
 
-- [ ] T039 [P] [US4] Add tests for daily summary calculation
+- [x] T039 [P] [US4] Add tests for daily summary calculation
 
 ### Implementation
 
-- [ ] T040 [US4] Implement `GET /admin/reports/daily-summary`
-- [ ] T041 [US4] Build daily summary widget in admin dashboard
+- [x] T040 [US4] Implement `GET /admin/reports/daily-summary`
+- [x] T041 [US4] Build daily summary widget in admin dashboard
 
 **Checkpoint**: Pilot has basic business measurement.
 

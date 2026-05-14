@@ -1,0 +1,256 @@
+import { ConflictException, Inject, Injectable, Logger, NotFoundException } from "@nestjs/common";
+import { FulfillmentMethod, OrderStatus, Prisma } from "@prisma/client";
+import { PrismaService } from "../platform/database/prisma.service";
+import { CreateOrderDto } from "./dto/create-order.dto";
+import { calculateOrderTotals, PricedOrderItem } from "./order-calculator";
+import { canTransitionOrderStatus } from "./order-status";
+import { OrdersGateway } from "./orders.gateway";
+import { buildWhatsAppOrderLink } from "./whatsapp-link";
+
+@Injectable()
+export class OrderingService {
+  private readonly logger = new Logger(OrderingService.name);
+
+  constructor(
+    @Inject(PrismaService) private readonly prisma: PrismaService,
+    @Inject(OrdersGateway) private readonly ordersGateway: OrdersGateway
+  ) {}
+
+  async createPublicOrder(slug: string, dto: CreateOrderDto) {
+    const tenant = await this.prisma.tenant.findFirst({
+      where: {
+        slug,
+        active: true
+      },
+      select: {
+        id: true,
+        name: true,
+        slug: true,
+        phone: true,
+        isOpen: true
+      }
+    });
+
+    if (!tenant) {
+      throw new NotFoundException("Tenant not found");
+    }
+
+    if (!tenant.isOpen) {
+      this.logger.warn(`Checkout rejected because store is closed slug=${slug}`);
+      throw new ConflictException("Store is closed");
+    }
+
+    if (dto.items.length === 0) {
+      this.logger.warn(`Checkout rejected because cart is empty slug=${slug}`);
+      throw new ConflictException("Cart is empty");
+    }
+
+    if (dto.fulfillmentMethod === FulfillmentMethod.DELIVERY && !dto.deliveryAddress) {
+      throw new ConflictException("Delivery address is required");
+    }
+
+    const requestedProductIds = [...new Set(dto.items.map((item) => item.productId))];
+    const products = await this.prisma.product.findMany({
+      where: {
+        id: {
+          in: requestedProductIds
+        },
+        tenantId: tenant.id,
+        active: true,
+        category: {
+          active: true
+        }
+      },
+      select: {
+        id: true,
+        name: true,
+        price: true
+      }
+    });
+
+    if (products.length !== requestedProductIds.length) {
+      this.logger.warn(`Checkout rejected because cart has stale product slug=${slug}`);
+      throw new ConflictException("Cart contains unavailable products");
+    }
+
+    const productById = new Map(products.map((product) => [product.id, product]));
+    const pricedItems: PricedOrderItem[] = dto.items.map((item) => {
+      const product = productById.get(item.productId);
+
+      if (!product) {
+        throw new ConflictException("Cart contains unavailable products");
+      }
+
+      return {
+        productId: product.id,
+        productName: product.name,
+        quantity: item.quantity,
+        unitPrice: product.price
+      };
+    });
+
+    const calculated = calculateOrderTotals(pricedItems);
+
+    const order = await this.prisma.order.create({
+      data: {
+        tenantId: tenant.id,
+        total: calculated.total,
+        customerName: dto.customerName,
+        customerPhone: dto.customerPhone,
+        fulfillmentMethod: dto.fulfillmentMethod,
+        deliveryAddress: dto.deliveryAddress as Prisma.InputJsonValue | undefined,
+        paymentMethod: dto.paymentMethod,
+        notes: dto.notes,
+        items: {
+          create: calculated.items.map((item) => ({
+            tenantId: tenant.id,
+            productId: item.productId,
+            productNameSnapshot: item.productNameSnapshot,
+            quantity: item.quantity,
+            unitPrice: item.unitPrice,
+            total: item.total
+          }))
+        }
+      },
+      include: {
+        items: true
+      }
+    });
+
+    this.logger.log(`Order created tenantId=${tenant.id} orderId=${order.id}`);
+
+    const response = {
+      id: order.id,
+      status: order.status,
+      total: order.total.toFixed(2),
+      customerName: order.customerName,
+      customerPhone: order.customerPhone,
+      fulfillmentMethod: order.fulfillmentMethod,
+      paymentMethod: order.paymentMethod,
+      items: order.items.map((item) => ({
+        id: item.id,
+        productId: item.productId,
+        productNameSnapshot: item.productNameSnapshot,
+        quantity: item.quantity,
+        unitPrice: item.unitPrice.toFixed(2),
+        total: item.total.toFixed(2)
+      })),
+      whatsappUrl: buildWhatsAppOrderLink({
+        tenantPhone: tenant.phone,
+        customerName: order.customerName,
+        customerPhone: order.customerPhone,
+        fulfillmentMethod: order.fulfillmentMethod,
+        paymentMethod: order.paymentMethod,
+        order: calculated,
+        notes: order.notes ?? undefined
+      })
+    };
+
+    this.ordersGateway.emitOrderCreated(tenant.id, response);
+
+    return response;
+  }
+
+  async listAdminOrders(tenantId: string, history: boolean) {
+    const terminalStatuses: OrderStatus[] = [OrderStatus.DELIVERED, OrderStatus.CANCELLED];
+
+    const orders = await this.prisma.order.findMany({
+      where: {
+        tenantId,
+        status: history
+          ? {
+              in: terminalStatuses
+            }
+          : {
+              notIn: terminalStatuses
+            }
+      },
+      orderBy: {
+        createdAt: "desc"
+      },
+      include: {
+        items: true
+      }
+    });
+
+    return orders.map((order) => this.toOrderResponse(order));
+  }
+
+  async updateOrderStatus(tenantId: string, orderId: string, status: OrderStatus) {
+    const order = await this.prisma.order.findFirst({
+      where: {
+        id: orderId,
+        tenantId
+      },
+      include: {
+        items: true
+      }
+    });
+
+    if (!order) {
+      throw new NotFoundException("Order not found");
+    }
+
+    if (!canTransitionOrderStatus(order.status, status)) {
+      this.logger.warn(
+        `Invalid order transition tenantId=${tenantId} orderId=${orderId} from=${order.status} to=${status}`
+      );
+      throw new ConflictException("Invalid order status transition");
+    }
+
+    const updatedOrder = await this.prisma.order.update({
+      where: {
+        id: orderId
+      },
+      data: {
+        status
+      },
+      include: {
+        items: true
+      }
+    });
+
+    this.logger.log(`Order status changed tenantId=${tenantId} orderId=${orderId} status=${status}`);
+    return this.toOrderResponse(updatedOrder);
+  }
+
+  private toOrderResponse(order: {
+    id: string;
+    status: OrderStatus;
+    total: Prisma.Decimal;
+    customerName: string;
+    customerPhone: string;
+    fulfillmentMethod: string;
+    paymentMethod: string;
+    notes: string | null;
+    createdAt?: Date;
+    items: Array<{
+      id: string;
+      productId: string;
+      productNameSnapshot: string;
+      quantity: number;
+      unitPrice: Prisma.Decimal;
+      total: Prisma.Decimal;
+    }>;
+  }) {
+    return {
+      id: order.id,
+      status: order.status,
+      total: order.total.toFixed(2),
+      customerName: order.customerName,
+      customerPhone: order.customerPhone,
+      fulfillmentMethod: order.fulfillmentMethod,
+      paymentMethod: order.paymentMethod,
+      notes: order.notes,
+      createdAt: order.createdAt?.toISOString(),
+      items: order.items.map((item) => ({
+        id: item.id,
+        productId: item.productId,
+        productNameSnapshot: item.productNameSnapshot,
+        quantity: item.quantity,
+        unitPrice: item.unitPrice.toFixed(2),
+        total: item.total.toFixed(2)
+      }))
+    };
+  }
+}
