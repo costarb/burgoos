@@ -131,13 +131,13 @@
 
 **Purpose**: Validate the real operation before launch.
 
-- [ ] T042 Add E2E test for create catalog -> public menu -> place order -> manage order
-- [ ] T043 Add E2E test for store closed blocking checkout
-- [ ] T044 Add E2E test for inactive product hidden from public menu
-- [ ] T045 Validate mobile layout of public menu and checkout
-- [ ] T046 Validate public menu performance target with pilot catalog size
-- [ ] T047 Run quickstart validation from `specs/001-validacao-delivery-real/quickstart.md`
-- [ ] T048 Prepare pilot launch checklist and rollback/manual fallback notes
+- [x] T042 Add E2E test for create catalog -> public menu -> place order -> manage order
+- [x] T043 Add E2E test for store closed blocking checkout
+- [x] T044 Add E2E test for inactive product hidden from public menu
+- [x] T045 Validate mobile layout of public menu and checkout
+- [x] T046 Validate public menu performance target with pilot catalog size
+- [x] T047 Run quickstart validation from `specs/001-validacao-delivery-real/quickstart.md`
+- [x] T048 Prepare pilot launch checklist and rollback/manual fallback notes
 
 ---
 

@@ -3,7 +3,7 @@ import type {
   CreatedOrder,
   CreatePublicOrderInput,
   OrderStatus,
-  PublicMenu
+  PublicMenu,
 } from "@burgoos/types";
 
 const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3001";
@@ -15,6 +15,12 @@ export interface AdminCategory {
   active: boolean;
 }
 
+export interface CreateAdminCategoryInput {
+  name: string;
+  sortOrder?: number;
+  active?: boolean;
+}
+
 export interface AdminProduct {
   id: string;
   categoryId: string;
@@ -23,6 +29,15 @@ export interface AdminProduct {
   price: string;
   imageUrl: string | null;
   active: boolean;
+}
+
+export interface CreateAdminProductInput {
+  categoryId: string;
+  name: string;
+  description?: string;
+  price: number;
+  imageUrl?: string;
+  active?: boolean;
 }
 
 export interface AdminTenant {
@@ -41,8 +56,8 @@ export interface DailySummary {
 export async function getPublicMenu(slug: string): Promise<PublicMenu | null> {
   const response = await fetch(`${apiUrl}/api/public/tenants/${slug}/menu`, {
     next: {
-      revalidate: 30
-    }
+      revalidate: 30,
+    },
   });
 
   if (response.status === 404) {
@@ -63,10 +78,10 @@ export async function createPublicOrder(
   const response = await fetch(`${apiUrl}/api/public/tenants/${slug}/orders`, {
     method: "POST",
     headers: {
-      "Content-Type": "application/json"
+      "Content-Type": "application/json",
     },
     body: JSON.stringify(payload),
-    cache: "no-store"
+    cache: "no-store",
   });
 
   if (!response.ok) {
@@ -81,10 +96,10 @@ export async function loginAdmin(email: string, password: string): Promise<strin
   const response = await fetch(`${apiUrl}/api/auth/login`, {
     method: "POST",
     headers: {
-      "Content-Type": "application/json"
+      "Content-Type": "application/json",
     },
     body: JSON.stringify({ email, password }),
-    cache: "no-store"
+    cache: "no-store",
   });
 
   if (!response.ok) {
@@ -103,18 +118,19 @@ export async function getAdminToken(): Promise<string> {
 }
 
 export async function getAdminCatalog(): Promise<{
+  token: string;
   categories: AdminCategory[];
   products: AdminProduct[];
 }> {
   const token = await getAdminToken();
 
   const headers = {
-    Authorization: `Bearer ${token}`
+    Authorization: `Bearer ${token}`,
   };
 
   const [categoriesResponse, productsResponse] = await Promise.all([
     fetch(`${apiUrl}/api/admin/categories`, { headers, cache: "no-store" }),
-    fetch(`${apiUrl}/api/admin/products`, { headers, cache: "no-store" })
+    fetch(`${apiUrl}/api/admin/products`, { headers, cache: "no-store" }),
   ]);
 
   if (!categoriesResponse.ok || !productsResponse.ok) {
@@ -122,9 +138,54 @@ export async function getAdminCatalog(): Promise<{
   }
 
   return {
+    token,
     categories: (await categoriesResponse.json()) as AdminCategory[],
-    products: (await productsResponse.json()) as AdminProduct[]
+    products: (await productsResponse.json()) as AdminProduct[],
   };
+}
+
+export async function createAdminCategory(
+  token: string,
+  payload: CreateAdminCategoryInput
+): Promise<AdminCategory> {
+  const response = await fetch(`${apiUrl}/api/admin/categories`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${token}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(payload),
+    cache: "no-store",
+  });
+
+  if (!response.ok) {
+    const error = (await response.json().catch(() => null)) as { message?: string } | null;
+    throw new Error(error?.message ?? "Nao foi possivel criar a categoria");
+  }
+
+  return response.json() as Promise<AdminCategory>;
+}
+
+export async function createAdminProduct(
+  token: string,
+  payload: CreateAdminProductInput
+): Promise<AdminProduct> {
+  const response = await fetch(`${apiUrl}/api/admin/products`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${token}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(payload),
+    cache: "no-store",
+  });
+
+  if (!response.ok) {
+    const error = (await response.json().catch(() => null)) as { message?: string } | null;
+    throw new Error(error?.message ?? "Nao foi possivel criar o produto");
+  }
+
+  return response.json() as Promise<AdminProduct>;
 }
 
 export async function getAdminOrderQueue(): Promise<{
@@ -136,13 +197,13 @@ export async function getAdminOrderQueue(): Promise<{
 }> {
   const token = await getAdminToken();
   const headers = {
-    Authorization: `Bearer ${token}`
+    Authorization: `Bearer ${token}`,
   };
 
   const [tenantResponse, activeResponse, historyResponse] = await Promise.all([
     fetch(`${apiUrl}/api/admin/tenant`, { headers, cache: "no-store" }),
     fetch(`${apiUrl}/api/admin/orders`, { headers, cache: "no-store" }),
-    fetch(`${apiUrl}/api/admin/orders?history=true`, { headers, cache: "no-store" })
+    fetch(`${apiUrl}/api/admin/orders?history=true`, { headers, cache: "no-store" }),
   ]);
 
   if (!tenantResponse.ok || !activeResponse.ok || !historyResponse.ok) {
@@ -154,7 +215,7 @@ export async function getAdminOrderQueue(): Promise<{
     apiUrl,
     tenant: (await tenantResponse.json()) as AdminTenant,
     activeOrders: (await activeResponse.json()) as AdminOrder[],
-    historyOrders: (await historyResponse.json()) as AdminOrder[]
+    historyOrders: (await historyResponse.json()) as AdminOrder[],
   };
 }
 
@@ -167,10 +228,10 @@ export async function updateAdminOrderStatus(
     method: "PATCH",
     headers: {
       Authorization: `Bearer ${token}`,
-      "Content-Type": "application/json"
+      "Content-Type": "application/json",
     },
     body: JSON.stringify({ status }),
-    cache: "no-store"
+    cache: "no-store",
   });
 
   if (!response.ok) {
@@ -185,9 +246,9 @@ export async function getAdminDailySummary(): Promise<DailySummary> {
   const token = await getAdminToken();
   const response = await fetch(`${apiUrl}/api/admin/reports/daily-summary`, {
     headers: {
-      Authorization: `Bearer ${token}`
+      Authorization: `Bearer ${token}`,
     },
-    cache: "no-store"
+    cache: "no-store",
   });
 
   if (!response.ok) {

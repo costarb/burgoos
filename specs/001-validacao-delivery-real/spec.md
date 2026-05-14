@@ -16,13 +16,15 @@ Como dono da operação piloto, quero cadastrar minha loja, categorias e produto
 
 **Why this priority**: Sem cardápio público e catálogo editável não existe validação comercial.
 
-**Independent Test**: Criar uma loja piloto, cadastrar ao menos 2 categorias e 5 produtos, abrir o link público em celular e verificar que apenas itens ativos aparecem com preço, descrição e imagem quando disponível.
+**Independent Test**: Criar uma loja piloto, usar a tela administrativa de catálogo para cadastrar ao menos 2 categorias e 5 produtos, abrir o link público em celular e verificar que apenas itens ativos aparecem com preço, descrição e imagem quando disponível.
 
 **Acceptance Scenarios**:
 
 1. **Given** uma loja piloto ativa, **When** o admin cadastra categoria e produto ativos, **Then** eles aparecem no cardápio público da loja.
 2. **Given** um produto inativo, **When** o cliente acessa o cardápio público, **Then** o produto não aparece para compra.
 3. **Given** um slug inexistente ou loja inativa, **When** o cliente acessa o cardápio, **Then** o sistema exibe estado de indisponibilidade sem erro técnico.
+4. **Given** o admin autenticado na tela de catálogo, **When** ele informa nome, ordem e status de uma categoria, **Then** a categoria é criada e aparece na lista administrativa.
+5. **Given** existe ao menos uma categoria, **When** o admin informa categoria, nome, descrição, preço, imagem opcional e status de um produto, **Then** o produto é criado e aparece na lista administrativa.
 
 ---
 
@@ -89,8 +91,8 @@ Como dono da operação piloto, quero consultar quantidade de pedidos e receita 
 
 - **FR-001**: System MUST support one pilot store with SaaS-ready tenant fields.
 - **FR-002**: System MUST allow admin login for the pilot store.
-- **FR-003**: System MUST allow creating, editing, activating and deactivating categories.
-- **FR-004**: System MUST allow creating, editing, activating and deactivating products with name, description, price, category and optional image URL.
+- **FR-003**: System MUST allow admins to create, view, edit, activate and deactivate categories from the administrative catalog experience.
+- **FR-004**: System MUST allow admins to create, view, edit, activate and deactivate products from the administrative catalog experience, including name, description, price, category and optional image URL.
 - **FR-005**: System MUST expose a public menu by store slug.
 - **FR-006**: System MUST show only active categories and active products in the public menu.
 - **FR-007**: System MUST allow customers to add active products to a local cart.
