@@ -1,50 +1,90 @@
-# [PROJECT_NAME] Constitution
-<!-- Example: Spec Constitution, TaskFlow Constitution, etc. -->
+# BurgoOS Constitution
 
 ## Core Principles
 
-### [PRINCIPLE_1_NAME]
-<!-- Example: I. Library-First -->
-[PRINCIPLE_1_DESCRIPTION]
-<!-- Example: Every feature starts as a standalone library; Libraries must be self-contained, independently testable, documented; Clear purpose required - no organizational-only libraries -->
+### I. Real Operation First
 
-### [PRINCIPLE_2_NAME]
-<!-- Example: II. CLI Interface -->
-[PRINCIPLE_2_DESCRIPTION]
-<!-- Example: Every library exposes functionality via CLI; Text in/out protocol: stdin/args → stdout, errors → stderr; Support JSON + human-readable formats -->
+The first milestone is validating a real delivery operation, not building every SaaS module upfront. Features must prove value for one real food business before being generalized. Multi-tenant SaaS concerns are allowed when they avoid rework, but they must not block the pilot flow: publish menu, receive order, operate kitchen/delivery, and review daily results.
 
-### [PRINCIPLE_3_NAME]
-<!-- Example: III. Test-First (NON-NEGOTIABLE) -->
-[PRINCIPLE_3_DESCRIPTION]
-<!-- Example: TDD mandatory: Tests written → User approved → Tests fail → Then implement; Red-Green-Refactor cycle strictly enforced -->
+### II. TypeScript Strict By Default
 
-### [PRINCIPLE_4_NAME]
-<!-- Example: IV. Integration Testing -->
-[PRINCIPLE_4_DESCRIPTION]
-<!-- Example: Focus areas requiring integration tests: New library contract tests, Contract changes, Inter-service communication, Shared schemas -->
+All application code must be written in TypeScript with strict typing enabled. Shared contracts between frontend, backend, database and tests must be explicit. Avoid untyped payloads at service boundaries; external inputs must be validated before use.
 
-### [PRINCIPLE_5_NAME]
-<!-- Example: V. Observability, VI. Versioning & Breaking Changes, VII. Simplicity -->
-[PRINCIPLE_5_DESCRIPTION]
-<!-- Example: Text I/O ensures debuggability; Structured logging required; Or: MAJOR.MINOR.BUILD format; Or: Start simple, YAGNI principles -->
+### III. Modular Monolith, Domain-Oriented
 
-## [SECTION_2_NAME]
-<!-- Example: Additional Constraints, Security Requirements, Performance Standards, etc. -->
+The system starts as a modular monolith organized by business domains: Platform, Customer Experience, Operations, and Management. Feature slices should cross UI, API and persistence when needed. Avoid premature microservices and avoid organizing business logic only by technical layers.
 
-[SECTION_2_CONTENT]
-<!-- Example: Technology stack requirements, compliance standards, deployment policies, etc. -->
+### IV. Tenant Isolation Is A Design Constraint
 
-## [SECTION_3_NAME]
-<!-- Example: Development Workflow, Review Process, Quality Gates, etc. -->
+The pilot may run with one real store, but the architecture must remain SaaS-ready. Tenant-owned data must include `tenant_id`, admin operations must resolve tenant from authenticated context, and public operations must resolve tenant from slug. Cross-tenant access must be blocked and tested.
 
-[SECTION_3_CONTENT]
-<!-- Example: Code review requirements, testing gates, deployment approval process, etc. -->
+### V. Tests Protect Operational Flow
+
+Critical behavior must have tests before launch: checkout rules, server-side order totals, store open/closed handling, inactive products, order status transitions and tenant isolation. E2E coverage is required for the first real validation flow: create catalog, place order, receive/manage order.
+
+## Product Scope Rules
+
+### MVP Includes
+
+The MVP includes only what is needed to operate a real delivery pilot:
+
+*   Store setup for one pilot operation.
+*   Public digital menu by slug.
+*   Category and product management.
+*   Local cart and checkout.
+*   Delivery or pickup selection.
+*   Informational payment method: cash, manual PIX or card on delivery.
+*   Order creation and admin order queue.
+*   Order status updates.
+*   Visual/sound alert for new orders.
+*   WhatsApp deep link with order summary.
+*   Basic daily summary: order count and gross revenue.
+
+### Explicitly Deferred
+
+These items are post-MVP unless a new specification promotes them:
+
+*   Online payment integration.
+*   WhatsApp Cloud API, chatbot or AI assistant.
+*   Fiscal/NF-e features.
+*   Advanced stock control.
+*   Loyalty, coupons and campaigns.
+*   Marketplace integrations.
+*   Multi-store/franchise operations.
+*   Delivery driver dispatch.
+*   Tables/commands/POS cashier.
+*   Thermal printing, unless the real pilot proves it is a launch blocker.
+
+## Technical Standards
+
+*   Backend: NestJS, Prisma ORM and PostgreSQL.
+*   Frontend: Next.js App Router, TailwindCSS and React Query or framework-native data fetching where appropriate.
+*   API: REST with OpenAPI documentation for public and admin endpoints.
+*   Realtime: Socket.io for admin order updates.
+*   Storage: S3-compatible object storage for product images, with a local development fallback.
+*   Auth: JWT with refresh token for admin users.
+*   Formatting: ESLint and Prettier.
+*   Observability: structured logs for tenant resolution, order creation, checkout rejection and status changes.
+
+## Quality Gates
+
+Before implementation:
+
+*   The active feature must have `spec.md`, `plan.md` and `tasks.md`.
+*   User stories must be independently testable and prioritized.
+*   Scope must clearly separate MVP from post-MVP.
+*   Data model and API contracts must be explicit for the feature.
+
+Before pilot launch:
+
+*   E2E happy path passes.
+*   Store closed checkout rejection passes.
+*   Inactive product hidden/rejected behavior passes.
+*   Cross-tenant access tests pass, if more than one tenant exists in test data.
+*   Public menu is usable on mobile and loads within the MVP performance target.
 
 ## Governance
-<!-- Example: Constitution supersedes all other practices; Amendments require documentation, approval, migration plan -->
 
-[GOVERNANCE_RULES]
-<!-- Example: All PRs/reviews must verify compliance; Complexity must be justified; Use [GUIDANCE_FILE] for runtime development guidance -->
+This constitution supersedes older draft documents when there is a conflict. Changes to MVP scope require updating the feature specification, implementation plan and task list together. If implementation reveals a mismatch with the spec, update the spec artifacts before continuing.
 
-**Version**: [CONSTITUTION_VERSION] | **Ratified**: [RATIFICATION_DATE] | **Last Amended**: [LAST_AMENDED_DATE]
-<!-- Example: Version: 2.1.1 | Ratified: 2025-06-13 | Last Amended: 2025-07-16 -->
+**Version**: 1.0.0 | **Ratified**: 2026-05-13 | **Last Amended**: 2026-05-13
