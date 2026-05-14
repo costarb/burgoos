@@ -10,11 +10,11 @@
 
 **Purpose**: Create the monorepo and development baseline.
 
-- [ ] T001 Initialize monorepo with `apps/api`, `apps/web`, `packages/database`, `packages/types`, `packages/ui`
-- [ ] T002 Configure TypeScript strict, ESLint and Prettier across the workspace
-- [ ] T003 Configure PostgreSQL local development and environment variables
-- [ ] T004 Configure Prisma in `packages/database`
-- [ ] T005 Configure initial test runners for API and web
+- [x] T001 Initialize monorepo with `apps/api`, `apps/web`, `packages/database`, `packages/types`, `packages/ui`
+- [x] T002 Configure TypeScript strict, ESLint and Prettier across the workspace
+- [x] T003 Configure PostgreSQL local development and environment variables
+- [x] T004 Configure Prisma in `packages/database`
+- [x] T005 Configure initial test runners for API and web
 
 ---
 
@@ -22,9 +22,9 @@
 
 **Purpose**: Shared data, auth and tenant context needed by all stories.
 
-- [ ] T006 Create Prisma schema for Tenant and User in `packages/database`
-- [ ] T007 Create Prisma schema for Category, Product, Order and OrderItem in `packages/database`
-- [ ] T008 Add initial migration and seed for one pilot tenant/admin user
+- [x] T006 Create Prisma schema for Tenant and User in `packages/database`
+- [x] T007 Create Prisma schema for Category, Product, Order and OrderItem in `packages/database`
+- [x] T008 Add initial migration and seed for one pilot tenant/admin user
 - [ ] T009 Implement auth login and JWT guard in `apps/api/src/platform`
 - [ ] T010 Implement tenant context for admin routes from authenticated user
 - [ ] T011 Implement tenant resolution for public routes by slug
