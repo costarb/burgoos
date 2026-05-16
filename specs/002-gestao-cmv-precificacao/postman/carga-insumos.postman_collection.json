@@ -1,0 +1,704 @@
+{
+  "info": {
+    "name": "BurgoOS - Carga INSUMOS",
+    "_postman_id": "d0f79bb2-4eb0-4ec7-9d1b-0bd6f9d0f1f4",
+    "description": "Collection gerada a partir da aba INSUMOS da planilha CMV. Execute em ordem: login, carregar unidades, criar fornecedores e criar insumos.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:3001/api"
+    },
+    {
+      "key": "adminEmail",
+      "value": "admin@burgoos.local"
+    },
+    {
+      "key": "adminPassword",
+      "value": "admin123"
+    },
+    {
+      "key": "accessToken",
+      "value": ""
+    },
+    {
+      "key": "purchaseUnitId_g",
+      "value": ""
+    },
+    {
+      "key": "purchaseUnitId_un",
+      "value": ""
+    },
+    {
+      "key": "supplierId_fornecedor_a",
+      "value": ""
+    },
+    {
+      "key": "supplierId_fornecedor_b",
+      "value": ""
+    },
+    {
+      "key": "supplierId_fornecedor_c",
+      "value": ""
+    },
+    {
+      "key": "supplierId_fornecedor_d",
+      "value": ""
+    },
+    {
+      "key": "supplierId_fornecedor_e",
+      "value": ""
+    },
+    {
+      "key": "supplierId_fornecedor_f",
+      "value": ""
+    }
+  ],
+  "item": [
+    {
+      "name": "01 Login admin",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('login ok', function () { pm.response.to.have.status(201); });",
+              "const data = pm.response.json();",
+              "pm.collectionVariables.set('accessToken', data.accessToken);"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"email\": \"{{adminEmail}}\",\n  \"password\": \"{{adminPassword}}\"\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/auth/login",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "auth",
+            "login"
+          ]
+        }
+      }
+    },
+    {
+      "name": "02 Carregar unidades de compra",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('unidades carregadas', function () { pm.response.to.have.status(200); });",
+              "const units = pm.response.json();",
+              "for (const unit of units) {",
+              "  if (unit.abbreviation === 'g') pm.collectionVariables.set('purchaseUnitId_g', unit.id);",
+              "  if (unit.abbreviation === 'un') pm.collectionVariables.set('purchaseUnitId_un', unit.id);",
+              "}",
+              "pm.test('unidade g encontrada', function () { pm.expect(pm.collectionVariables.get('purchaseUnitId_g')).to.not.be.empty; });",
+              "pm.test('unidade un encontrada', function () { pm.expect(pm.collectionVariables.get('purchaseUnitId_un')).to.not.be.empty; });"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{accessToken}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/admin/purchase-units",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "admin",
+            "purchase-units"
+          ]
+        }
+      }
+    },
+    {
+      "name": "03 Criar fornecedores",
+      "item": [
+        {
+          "name": "Fornecedor A",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('fornecedor criado', function () { pm.response.to.have.status(201); });",
+                  "pm.collectionVariables.set('supplierId_fornecedor_a', pm.response.json().id);"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Fornecedor A\",\n  \"category\": \"Planilha INSUMOS\",\n  \"active\": true\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/admin/suppliers",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "admin",
+                "suppliers"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Fornecedor B",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('fornecedor criado', function () { pm.response.to.have.status(201); });",
+                  "pm.collectionVariables.set('supplierId_fornecedor_b', pm.response.json().id);"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Fornecedor B\",\n  \"category\": \"Planilha INSUMOS\",\n  \"active\": true\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/admin/suppliers",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "admin",
+                "suppliers"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Fornecedor C",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('fornecedor criado', function () { pm.response.to.have.status(201); });",
+                  "pm.collectionVariables.set('supplierId_fornecedor_c', pm.response.json().id);"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Fornecedor C\",\n  \"category\": \"Planilha INSUMOS\",\n  \"active\": true\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/admin/suppliers",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "admin",
+                "suppliers"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Fornecedor D",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('fornecedor criado', function () { pm.response.to.have.status(201); });",
+                  "pm.collectionVariables.set('supplierId_fornecedor_d', pm.response.json().id);"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Fornecedor D\",\n  \"category\": \"Planilha INSUMOS\",\n  \"active\": true\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/admin/suppliers",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "admin",
+                "suppliers"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Fornecedor E",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('fornecedor criado', function () { pm.response.to.have.status(201); });",
+                  "pm.collectionVariables.set('supplierId_fornecedor_e', pm.response.json().id);"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Fornecedor E\",\n  \"category\": \"Planilha INSUMOS\",\n  \"active\": true\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/admin/suppliers",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "admin",
+                "suppliers"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Fornecedor F",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('fornecedor criado', function () { pm.response.to.have.status(201); });",
+                  "pm.collectionVariables.set('supplierId_fornecedor_f', pm.response.json().id);"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Fornecedor F\",\n  \"category\": \"Planilha INSUMOS\",\n  \"active\": true\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/admin/suppliers",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "admin",
+                "suppliers"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "04 Criar insumos",
+      "item": [
+        {
+          "name": "INS001 - Blend bovino",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Blend bovino\",\n  \"category\": \"Carnes\",\n  \"purchaseUnitId\": \"{{purchaseUnitId_g}}\",\n  \"supplierId\": \"{{supplierId_fornecedor_a}}\",\n  \"purchaseQuantity\": 1000,\n  \"purchaseCost\": 38,\n  \"currentStock\": 15000,\n  \"minimumStock\": 5000,\n  \"active\": true\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/admin/ingredients",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "admin",
+                "ingredients"
+              ]
+            }
+          }
+        },
+        {
+          "name": "INS002 - Pao brioche",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Pao brioche\",\n  \"category\": \"Paes\",\n  \"purchaseUnitId\": \"{{purchaseUnitId_un}}\",\n  \"supplierId\": \"{{supplierId_fornecedor_b}}\",\n  \"purchaseQuantity\": 1,\n  \"purchaseCost\": 1.2,\n  \"currentStock\": 120,\n  \"minimumStock\": 30,\n  \"active\": true\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/admin/ingredients",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "admin",
+                "ingredients"
+              ]
+            }
+          }
+        },
+        {
+          "name": "INS003 - Queijo cheddar",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Queijo cheddar\",\n  \"category\": \"Queijos\",\n  \"purchaseUnitId\": \"{{purchaseUnitId_g}}\",\n  \"supplierId\": \"{{supplierId_fornecedor_a}}\",\n  \"purchaseQuantity\": 1000,\n  \"purchaseCost\": 32,\n  \"currentStock\": 5000,\n  \"minimumStock\": 1500,\n  \"active\": true\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/admin/ingredients",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "admin",
+                "ingredients"
+              ]
+            }
+          }
+        },
+        {
+          "name": "INS004 - Molho especial",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Molho especial\",\n  \"category\": \"Molhos\",\n  \"purchaseUnitId\": \"{{purchaseUnitId_g}}\",\n  \"supplierId\": \"{{supplierId_fornecedor_c}}\",\n  \"purchaseQuantity\": 1000,\n  \"purchaseCost\": 18,\n  \"currentStock\": 3000,\n  \"minimumStock\": 800,\n  \"active\": true\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/admin/ingredients",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "admin",
+                "ingredients"
+              ]
+            }
+          }
+        },
+        {
+          "name": "INS005 - Alface",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Alface\",\n  \"category\": \"Vegetais\",\n  \"purchaseUnitId\": \"{{purchaseUnitId_g}}\",\n  \"supplierId\": \"{{supplierId_fornecedor_c}}\",\n  \"purchaseQuantity\": 1000,\n  \"purchaseCost\": 12,\n  \"currentStock\": 2000,\n  \"minimumStock\": 500,\n  \"active\": true\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/admin/ingredients",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "admin",
+                "ingredients"
+              ]
+            }
+          }
+        },
+        {
+          "name": "INS006 - Tomate",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Tomate\",\n  \"category\": \"Vegetais\",\n  \"purchaseUnitId\": \"{{purchaseUnitId_g}}\",\n  \"supplierId\": \"{{supplierId_fornecedor_c}}\",\n  \"purchaseQuantity\": 1000,\n  \"purchaseCost\": 10,\n  \"currentStock\": 2000,\n  \"minimumStock\": 500,\n  \"active\": true\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/admin/ingredients",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "admin",
+                "ingredients"
+              ]
+            }
+          }
+        },
+        {
+          "name": "INS007 - Bacon",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Bacon\",\n  \"category\": \"Carnes\",\n  \"purchaseUnitId\": \"{{purchaseUnitId_g}}\",\n  \"supplierId\": \"{{supplierId_fornecedor_a}}\",\n  \"purchaseQuantity\": 1000,\n  \"purchaseCost\": 45,\n  \"currentStock\": 3000,\n  \"minimumStock\": 700,\n  \"active\": true\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/admin/ingredients",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "admin",
+                "ingredients"
+              ]
+            }
+          }
+        },
+        {
+          "name": "INS008 - Embalagem burger",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Embalagem burger\",\n  \"category\": \"Embalagens\",\n  \"purchaseUnitId\": \"{{purchaseUnitId_un}}\",\n  \"supplierId\": \"{{supplierId_fornecedor_d}}\",\n  \"purchaseQuantity\": 1,\n  \"purchaseCost\": 1.4,\n  \"currentStock\": 300,\n  \"minimumStock\": 80,\n  \"active\": true\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/admin/ingredients",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "admin",
+                "ingredients"
+              ]
+            }
+          }
+        },
+        {
+          "name": "INS009 - Batata congelada",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Batata congelada\",\n  \"category\": \"Extras\",\n  \"purchaseUnitId\": \"{{purchaseUnitId_g}}\",\n  \"supplierId\": \"{{supplierId_fornecedor_e}}\",\n  \"purchaseQuantity\": 1000,\n  \"purchaseCost\": 16,\n  \"currentStock\": 8000,\n  \"minimumStock\": 2000,\n  \"active\": true\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/admin/ingredients",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "admin",
+                "ingredients"
+              ]
+            }
+          }
+        },
+        {
+          "name": "INS010 - Refrigerante lata",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{accessToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Refrigerante lata\",\n  \"category\": \"Bebidas\",\n  \"purchaseUnitId\": \"{{purchaseUnitId_un}}\",\n  \"supplierId\": \"{{supplierId_fornecedor_f}}\",\n  \"purchaseQuantity\": 1,\n  \"purchaseCost\": 3,\n  \"currentStock\": 150,\n  \"minimumStock\": 40,\n  \"active\": true\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/admin/ingredients",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "admin",
+                "ingredients"
+              ]
+            }
+          }
+        }
+      ]
+    }
+  ],
+  "auth": {
+    "type": "noauth"
+  }
+}

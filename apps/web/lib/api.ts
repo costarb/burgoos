@@ -2,8 +2,24 @@ import type {
   AdminOrder,
   CreatedOrder,
   CreatePublicOrderInput,
+  FinancialConfiguration,
+  FinancialConfigurationInput,
+  Ingredient,
+  IngredientInput,
+  InventoryBalance,
+  OrderPlatform,
+  OrderPlatformInput,
   OrderStatus,
+  ProductPricing,
+  PurchaseUnit,
+  PurchaseUnitInput,
   PublicMenu,
+  Supplier,
+  SupplierInput,
+  StockMovementInput,
+  TechnicalSheet,
+  TechnicalSheetInput,
+  TechnicalSheetSummary,
 } from "@burgoos/types";
 
 const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3001";
@@ -51,6 +67,25 @@ export interface DailySummary {
   date: string;
   orderCount: number;
   grossRevenue: string;
+}
+
+async function fetchAdmin<T>(token: string, path: string, init?: RequestInit): Promise<T> {
+  const response = await fetch(`${apiUrl}${path}`, {
+    ...init,
+    headers: {
+      Authorization: `Bearer ${token}`,
+      "Content-Type": "application/json",
+      ...init?.headers,
+    },
+    cache: "no-store",
+  });
+
+  if (!response.ok) {
+    const error = (await response.json().catch(() => null)) as { message?: string } | null;
+    throw new Error(error?.message ?? "Falha na requisicao administrativa");
+  }
+
+  return response.json() as Promise<T>;
 }
 
 export async function getPublicMenu(slug: string): Promise<PublicMenu | null> {
@@ -121,6 +156,7 @@ export async function getAdminCatalog(): Promise<{
   token: string;
   categories: AdminCategory[];
   products: AdminProduct[];
+  technicalSheets: TechnicalSheetSummary[];
 }> {
   const token = await getAdminToken();
 
@@ -128,12 +164,13 @@ export async function getAdminCatalog(): Promise<{
     Authorization: `Bearer ${token}`,
   };
 
-  const [categoriesResponse, productsResponse] = await Promise.all([
+  const [categoriesResponse, productsResponse, technicalSheetsResponse] = await Promise.all([
     fetch(`${apiUrl}/api/admin/categories`, { headers, cache: "no-store" }),
     fetch(`${apiUrl}/api/admin/products`, { headers, cache: "no-store" }),
+    fetch(`${apiUrl}/api/admin/technical-sheets`, { headers, cache: "no-store" }),
   ]);
 
-  if (!categoriesResponse.ok || !productsResponse.ok) {
+  if (!categoriesResponse.ok || !productsResponse.ok || !technicalSheetsResponse.ok) {
     throw new Error("Failed to load admin catalog");
   }
 
@@ -141,6 +178,7 @@ export async function getAdminCatalog(): Promise<{
     token,
     categories: (await categoriesResponse.json()) as AdminCategory[],
     products: (await productsResponse.json()) as AdminProduct[],
+    technicalSheets: (await technicalSheetsResponse.json()) as TechnicalSheetSummary[],
   };
 }
 
@@ -256,4 +294,201 @@ export async function getAdminDailySummary(): Promise<DailySummary> {
   }
 
   return response.json() as Promise<DailySummary>;
+}
+
+export async function getFinancialConfiguration(): Promise<FinancialConfiguration> {
+  const token = await getAdminToken();
+  return fetchAdmin<FinancialConfiguration>(token, "/api/admin/financial/config");
+}
+
+export async function updateFinancialConfiguration(
+  token: string,
+  payload: FinancialConfigurationInput
+): Promise<FinancialConfiguration> {
+  return fetchAdmin<FinancialConfiguration>(token, "/api/admin/financial/config", {
+    method: "PUT",
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function getPurchaseUnits(): Promise<{
+  token: string;
+  purchaseUnits: PurchaseUnit[];
+}> {
+  const token = await getAdminToken();
+  const purchaseUnits = await fetchAdmin<PurchaseUnit[]>(token, "/api/admin/purchase-units");
+  return { token, purchaseUnits };
+}
+
+export async function createPurchaseUnit(
+  token: string,
+  payload: PurchaseUnitInput
+): Promise<PurchaseUnit> {
+  return fetchAdmin<PurchaseUnit>(token, "/api/admin/purchase-units", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function updatePurchaseUnit(
+  token: string,
+  id: string,
+  payload: PurchaseUnitInput
+): Promise<PurchaseUnit> {
+  return fetchAdmin<PurchaseUnit>(token, `/api/admin/purchase-units/${id}`, {
+    method: "PATCH",
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function getSuppliers(): Promise<{
+  token: string;
+  suppliers: Supplier[];
+}> {
+  const token = await getAdminToken();
+  const suppliers = await fetchAdmin<Supplier[]>(token, "/api/admin/suppliers");
+  return { token, suppliers };
+}
+
+export async function createSupplier(token: string, payload: SupplierInput): Promise<Supplier> {
+  return fetchAdmin<Supplier>(token, "/api/admin/suppliers", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function updateSupplier(
+  token: string,
+  id: string,
+  payload: SupplierInput
+): Promise<Supplier> {
+  return fetchAdmin<Supplier>(token, `/api/admin/suppliers/${id}`, {
+    method: "PATCH",
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function getOrderPlatforms(): Promise<{
+  token: string;
+  orderPlatforms: OrderPlatform[];
+}> {
+  const token = await getAdminToken();
+  const orderPlatforms = await fetchAdmin<OrderPlatform[]>(token, "/api/admin/order-platforms");
+  return { token, orderPlatforms };
+}
+
+export async function createOrderPlatform(
+  token: string,
+  payload: OrderPlatformInput
+): Promise<OrderPlatform> {
+  return fetchAdmin<OrderPlatform>(token, "/api/admin/order-platforms", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function updateOrderPlatform(
+  token: string,
+  id: string,
+  payload: OrderPlatformInput
+): Promise<OrderPlatform> {
+  return fetchAdmin<OrderPlatform>(token, `/api/admin/order-platforms/${id}`, {
+    method: "PATCH",
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function getIngredients(): Promise<{
+  token: string;
+  ingredients: Ingredient[];
+  purchaseUnits: PurchaseUnit[];
+  suppliers: Supplier[];
+}> {
+  const token = await getAdminToken();
+  const [ingredients, purchaseUnits, suppliers] = await Promise.all([
+    fetchAdmin<Ingredient[]>(token, "/api/admin/ingredients"),
+    fetchAdmin<PurchaseUnit[]>(token, "/api/admin/purchase-units"),
+    fetchAdmin<Supplier[]>(token, "/api/admin/suppliers"),
+  ]);
+
+  return { token, ingredients, purchaseUnits, suppliers };
+}
+
+export async function createIngredient(
+  token: string,
+  payload: IngredientInput
+): Promise<Ingredient> {
+  return fetchAdmin<Ingredient>(token, "/api/admin/ingredients", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function updateIngredient(
+  token: string,
+  id: string,
+  payload: IngredientInput
+): Promise<Ingredient> {
+  return fetchAdmin<Ingredient>(token, `/api/admin/ingredients/${id}`, {
+    method: "PATCH",
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function getTechnicalSheet(token: string, productId: string): Promise<TechnicalSheet> {
+  return fetchAdmin<TechnicalSheet>(token, `/api/admin/products/${productId}/technical-sheet`);
+}
+
+export async function replaceTechnicalSheet(
+  token: string,
+  productId: string,
+  payload: TechnicalSheetInput
+): Promise<TechnicalSheet> {
+  return fetchAdmin<TechnicalSheet>(token, `/api/admin/products/${productId}/technical-sheet`, {
+    method: "PUT",
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function getPricingAnalysis(platformId?: string): Promise<{
+  orderPlatforms: OrderPlatform[];
+  selectedPlatformId: string;
+  products: ProductPricing[];
+}> {
+  const token = await getAdminToken();
+  const orderPlatforms = await fetchAdmin<OrderPlatform[]>(token, "/api/admin/order-platforms");
+  const selectedPlatformId =
+    platformId ?? orderPlatforms.find((platform) => platform.active)?.id ?? "";
+  const query = selectedPlatformId ? `?platformId=${selectedPlatformId}` : "";
+  const products = await fetchAdmin<ProductPricing[]>(token, `/api/admin/pricing/products${query}`);
+
+  return {
+    orderPlatforms,
+    selectedPlatformId,
+    products,
+  };
+}
+
+export async function getInventoryBalances(): Promise<{
+  token: string;
+  balances: InventoryBalance[];
+  ingredients: Ingredient[];
+}> {
+  const token = await getAdminToken();
+  const [balances, ingredients] = await Promise.all([
+    fetchAdmin<InventoryBalance[]>(token, "/api/admin/inventory/balances"),
+    fetchAdmin<Ingredient[]>(token, "/api/admin/ingredients"),
+  ]);
+
+  return { token, balances, ingredients };
+}
+
+export async function createStockMovement(
+  token: string,
+  payload: StockMovementInput
+): Promise<void> {
+  await fetchAdmin<unknown>(token, "/api/admin/inventory/movements", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
 }

@@ -1,5 +1,6 @@
 "use client";
 
+import type { TechnicalSheetSummary } from "@burgoos/types";
 import { FormEvent, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
@@ -13,9 +14,15 @@ interface CatalogClientProps {
   token: string;
   initialCategories: AdminCategory[];
   initialProducts: AdminProduct[];
+  initialTechnicalSheets: TechnicalSheetSummary[];
 }
 
-export function CatalogClient({ token, initialCategories, initialProducts }: CatalogClientProps) {
+export function CatalogClient({
+  token,
+  initialCategories,
+  initialProducts,
+  initialTechnicalSheets,
+}: CatalogClientProps) {
   const router = useRouter();
   const [categories, setCategories] = useState(initialCategories);
   const [products, setProducts] = useState(initialProducts);
@@ -36,6 +43,10 @@ export function CatalogClient({ token, initialCategories, initialProducts }: Cat
   const categoryById = useMemo(
     () => new Map(categories.map((category) => [category.id, category])),
     [categories]
+  );
+  const technicalSheetByProductId = useMemo(
+    () => new Map(initialTechnicalSheets.map((sheet) => [sheet.productId, sheet])),
+    [initialTechnicalSheets]
   );
 
   async function handleCreateCategory(event: FormEvent<HTMLFormElement>): Promise<void> {
@@ -174,7 +185,16 @@ export function CatalogClient({ token, initialCategories, initialProducts }: Cat
             className="rounded-md border border-slate-200 bg-white p-4 shadow-sm"
             onSubmit={handleCreateProduct}
           >
-            <h2 className="text-lg font-semibold">Novo produto</h2>
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <h2 className="text-lg font-semibold">Novo produto</h2>
+              <a className="text-sm font-semibold text-tomato" href="/admin/ingredients">
+                Ver insumos
+              </a>
+            </div>
+            <p className="mt-2 text-sm text-slate-600">
+              Depois de criar o produto, monte a ficha tecnica para relacionar insumos, quantidades
+              e calcular o CMV.
+            </p>
             <div className="mt-4 grid gap-3 md:grid-cols-2">
               <select
                 className="w-full rounded-md border border-slate-200 px-3 py-2 text-sm"
@@ -275,29 +295,48 @@ export function CatalogClient({ token, initialCategories, initialProducts }: Cat
                     <th className="px-4 py-3 font-semibold">Categoria</th>
                     <th className="px-4 py-3 font-semibold">Preco</th>
                     <th className="px-4 py-3 font-semibold">Status</th>
+                    <th className="px-4 py-3 font-semibold">CMV</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-200">
                   {products.length === 0 ? (
                     <tr>
-                      <td className="px-4 py-4 text-slate-500" colSpan={4}>
+                      <td className="px-4 py-4 text-slate-500" colSpan={5}>
                         Nenhum produto criado.
                       </td>
                     </tr>
                   ) : (
-                    products.map((product) => (
-                      <tr key={product.id}>
-                        <td className="px-4 py-3">
-                          <p className="font-medium">{product.name}</p>
-                          <p className="text-slate-500">{product.description}</p>
-                        </td>
-                        <td className="px-4 py-3 text-slate-600">
-                          {categoryById.get(product.categoryId)?.name ?? "Sem categoria"}
-                        </td>
-                        <td className="px-4 py-3 font-semibold">R$ {product.price}</td>
-                        <td className="px-4 py-3">{product.active ? "Ativo" : "Inativo"}</td>
-                      </tr>
-                    ))
+                    products.map((product) => {
+                      const sheet = technicalSheetByProductId.get(product.id);
+
+                      return (
+                        <tr key={product.id}>
+                          <td className="px-4 py-3">
+                            <p className="font-medium">{product.name}</p>
+                            <p className="text-slate-500">{product.description}</p>
+                          </td>
+                          <td className="px-4 py-3 text-slate-600">
+                            {categoryById.get(product.categoryId)?.name ?? "Sem categoria"}
+                          </td>
+                          <td className="px-4 py-3 font-semibold">R$ {product.price}</td>
+                          <td className="px-4 py-3">{product.active ? "Ativo" : "Inativo"}</td>
+                          <td className="px-4 py-3">
+                            <a
+                              className={
+                                sheet?.complete
+                                  ? "rounded-md bg-green-50 px-3 py-1 text-xs font-semibold text-green-800"
+                                  : "rounded-md bg-amber-50 px-3 py-1 text-xs font-semibold text-amber-800"
+                              }
+                              href={`/admin/technical-sheets/${product.id}`}
+                            >
+                              {sheet?.complete
+                                ? `${sheet.lineCount} insumos - CMV R$ ${sheet.ingredientCmv}`
+                                : "Ficha pendente"}
+                            </a>
+                          </td>
+                        </tr>
+                      );
+                    })
                   )}
                 </tbody>
               </table>

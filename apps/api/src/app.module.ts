@@ -5,21 +5,23 @@ import { CatalogModule } from "./catalog/catalog.module";
 import { DatabaseModule } from "./platform/database/database.module";
 import { HealthController } from "./platform/health.controller";
 import { ManagementModule } from "./management/management.module";
+import { OperationsModule } from "./operations/operations.module";
 import { OrderingModule } from "./ordering/ordering.module";
 import { TenantModule } from "./platform/tenant/tenant.module";
 
 @Module({
   imports: [
     ConfigModule.forRoot({
-      isGlobal: true
+      isGlobal: true,
     }),
     DatabaseModule,
     AuthModule,
     TenantModule,
     CatalogModule,
     OrderingModule,
-    ManagementModule
+    OperationsModule,
+    ManagementModule,
   ],
-  controllers: [HealthController]
+  controllers: [HealthController],
 })
 export class AppModule {}

@@ -13,13 +13,70 @@ export default async function AdminPage() {
           Operacao piloto com catalogo, pedidos e fila em tempo real.
         </p>
         <div className="mt-6 flex flex-wrap gap-3">
-          <a className="rounded-md bg-ink px-4 py-2 text-sm font-semibold text-white" href="/admin/orders">
+          <a
+            className="rounded-md bg-ink px-4 py-2 text-sm font-semibold text-white"
+            href="/admin/orders"
+          >
             Pedidos
           </a>
-          <a className="rounded-md bg-tomato px-4 py-2 text-sm font-semibold text-white" href="/admin/catalog">
+          <a
+            className="rounded-md bg-tomato px-4 py-2 text-sm font-semibold text-white"
+            href="/admin/catalog"
+          >
             Catalogo
           </a>
-          <a className="rounded-md border border-slate-300 px-4 py-2 text-sm font-semibold" href="/piloto">
+          <a
+            className="rounded-md border border-slate-300 px-4 py-2 text-sm font-semibold"
+            href="/admin/settings"
+          >
+            Configuracoes
+          </a>
+          <a
+            className="rounded-md border border-slate-300 px-4 py-2 text-sm font-semibold"
+            href="/admin/purchase-units"
+          >
+            Unidades
+          </a>
+          <a
+            className="rounded-md border border-slate-300 px-4 py-2 text-sm font-semibold"
+            href="/admin/suppliers"
+          >
+            Fornecedores
+          </a>
+          <a
+            className="rounded-md border border-slate-300 px-4 py-2 text-sm font-semibold"
+            href="/admin/order-platforms"
+          >
+            Plataformas
+          </a>
+          <a
+            className="rounded-md border border-slate-300 px-4 py-2 text-sm font-semibold"
+            href="/admin/ingredients"
+          >
+            Insumos
+          </a>
+          <a
+            className="rounded-md border border-slate-300 px-4 py-2 text-sm font-semibold"
+            href="/admin/technical-sheets"
+          >
+            Fichas tecnicas
+          </a>
+          <a
+            className="rounded-md border border-slate-300 px-4 py-2 text-sm font-semibold"
+            href="/admin/pricing"
+          >
+            Precificacao
+          </a>
+          <a
+            className="rounded-md border border-slate-300 px-4 py-2 text-sm font-semibold"
+            href="/admin/inventory"
+          >
+            Estoque
+          </a>
+          <a
+            className="rounded-md border border-slate-300 px-4 py-2 text-sm font-semibold"
+            href="/piloto"
+          >
             Cardapio publico
           </a>
         </div>

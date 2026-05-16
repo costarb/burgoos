@@ -32,20 +32,52 @@ enum PaymentMethod {
   CARD_ON_DELIVERY
 }
 
+enum PurchaseUnitKind {
+  WEIGHT
+  VOLUME
+  COUNT
+  PACKAGE
+}
+
+enum ProductCostStatus {
+  OK
+  REVIEW_PRICE
+  MISSING_TECHNICAL_SHEET
+}
+
+enum StockMovementType {
+  INITIAL
+  MANUAL_ENTRY
+  MANUAL_ADJUSTMENT
+  RESERVATION
+  CONSUMPTION
+  RELEASE
+}
+
 model Tenant {
-  id        String     @id @default(uuid()) @db.Uuid
-  name      String
-  slug      String     @unique
-  phone     String
-  active    Boolean    @default(true)
-  isOpen    Boolean    @default(false) @map("is_open")
-  config    Json       @default("{}")
-  createdAt DateTime   @default(now()) @map("created_at")
-  updatedAt DateTime   @updatedAt @map("updated_at")
-  users     User[]
-  categories Category[]
-  products  Product[]
-  orders    Order[]
+  id                          String                       @id @default(uuid()) @db.Uuid
+  name                        String
+  slug                        String                       @unique
+  phone                       String
+  active                      Boolean                      @default(true)
+  isOpen                      Boolean                      @default(false) @map("is_open")
+  config                      Json                         @default("{}")
+  createdAt                   DateTime                     @default(now()) @map("created_at")
+  updatedAt                   DateTime                     @updatedAt @map("updated_at")
+  users                       User[]
+  categories                  Category[]
+  products                    Product[]
+  orders                      Order[]
+  financialConfiguration      FinancialConfiguration?
+  purchaseUnits               PurchaseUnit[]
+  suppliers                   Supplier[]
+  orderPlatforms              OrderPlatform[]
+  ingredients                 Ingredient[]
+  technicalSheets             TechnicalSheet[]
+  technicalSheetLines         TechnicalSheetLine[]
+  productCostSnapshots        ProductCostSnapshot[]
+  stockMovements              StockMovement[]
+  orderProfitabilitySnapshots OrderProfitabilitySnapshot[]
 
   @@map("tenants")
 }
@@ -81,19 +113,21 @@ model Category {
 }
 
 model Product {
-  id          String      @id @default(uuid()) @db.Uuid
-  tenantId    String      @map("tenant_id") @db.Uuid
-  categoryId  String      @map("category_id") @db.Uuid
-  name        String
-  description String      @default("")
-  price       Decimal     @db.Decimal(10, 2)
-  imageUrl    String?     @map("image_url")
-  active      Boolean     @default(true)
-  createdAt   DateTime    @default(now()) @map("created_at")
-  updatedAt   DateTime    @updatedAt @map("updated_at")
-  tenant      Tenant      @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  category    Category    @relation(fields: [categoryId], references: [id], onDelete: Restrict)
-  orderItems  OrderItem[]
+  id                   String                @id @default(uuid()) @db.Uuid
+  tenantId             String                @map("tenant_id") @db.Uuid
+  categoryId           String                @map("category_id") @db.Uuid
+  name                 String
+  description          String                @default("")
+  price                Decimal               @db.Decimal(10, 2)
+  imageUrl             String?               @map("image_url")
+  active               Boolean               @default(true)
+  createdAt            DateTime              @default(now()) @map("created_at")
+  updatedAt            DateTime              @updatedAt @map("updated_at")
+  tenant               Tenant                @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  category             Category              @relation(fields: [categoryId], references: [id], onDelete: Restrict)
+  orderItems           OrderItem[]
+  technicalSheets      TechnicalSheet[]
+  productCostSnapshots ProductCostSnapshot[]
 
   @@index([tenantId])
   @@index([categoryId])
@@ -101,39 +135,262 @@ model Product {
 }
 
 model Order {
-  id                String            @id @default(uuid()) @db.Uuid
-  tenantId          String            @map("tenant_id") @db.Uuid
-  status            OrderStatus       @default(PENDING)
-  total             Decimal           @db.Decimal(10, 2)
-  customerName      String            @map("customer_name")
-  customerPhone     String            @map("customer_phone")
-  fulfillmentMethod FulfillmentMethod @map("fulfillment_method")
-  deliveryAddress   Json?             @map("delivery_address")
-  paymentMethod     PaymentMethod     @map("payment_method")
-  notes             String?
-  createdAt         DateTime          @default(now()) @map("created_at")
-  updatedAt         DateTime          @updatedAt @map("updated_at")
-  tenant            Tenant            @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  items             OrderItem[]
+  id                     String                       @id @default(uuid()) @db.Uuid
+  tenantId               String                       @map("tenant_id") @db.Uuid
+  status                 OrderStatus                  @default(PENDING)
+  total                  Decimal                      @db.Decimal(10, 2)
+  customerName           String                       @map("customer_name")
+  customerPhone          String                       @map("customer_phone")
+  fulfillmentMethod      FulfillmentMethod            @map("fulfillment_method")
+  deliveryAddress        Json?                        @map("delivery_address")
+  paymentMethod          PaymentMethod                @map("payment_method")
+  orderPlatformId        String?                      @map("order_platform_id") @db.Uuid
+  notes                  String?
+  createdAt              DateTime                     @default(now()) @map("created_at")
+  updatedAt              DateTime                     @updatedAt @map("updated_at")
+  tenant                 Tenant                       @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  orderPlatform          OrderPlatform?               @relation(fields: [orderPlatformId], references: [id], onDelete: SetNull)
+  items                  OrderItem[]
+  stockMovements         StockMovement[]
+  profitabilitySnapshots OrderProfitabilitySnapshot[]
 
   @@index([tenantId, status])
   @@index([tenantId, createdAt])
+  @@index([orderPlatformId])
   @@map("orders")
 }
 
 model OrderItem {
-  id                  String   @id @default(uuid()) @db.Uuid
-  tenantId            String   @map("tenant_id") @db.Uuid
-  orderId             String   @map("order_id") @db.Uuid
-  productId           String   @map("product_id") @db.Uuid
-  productNameSnapshot String   @map("product_name_snapshot")
-  quantity            Int
-  unitPrice           Decimal  @map("unit_price") @db.Decimal(10, 2)
-  total               Decimal  @db.Decimal(10, 2)
-  order               Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
-  product             Product  @relation(fields: [productId], references: [id], onDelete: Restrict)
+  id                     String                       @id @default(uuid()) @db.Uuid
+  tenantId               String                       @map("tenant_id") @db.Uuid
+  orderId                String                       @map("order_id") @db.Uuid
+  productId              String                       @map("product_id") @db.Uuid
+  productNameSnapshot    String                       @map("product_name_snapshot")
+  quantity               Int
+  unitPrice              Decimal                      @map("unit_price") @db.Decimal(10, 2)
+  total                  Decimal                      @db.Decimal(10, 2)
+  order                  Order                        @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  product                Product                      @relation(fields: [productId], references: [id], onDelete: Restrict)
+  stockMovements         StockMovement[]
+  profitabilitySnapshots OrderProfitabilitySnapshot[]
 
   @@index([tenantId])
   @@index([orderId])
   @@map("order_items")
+}
+
+model FinancialConfiguration {
+  id                   String   @id @default(uuid()) @db.Uuid
+  tenantId             String   @unique @map("tenant_id") @db.Uuid
+  taxRate              Decimal  @default(0) @map("tax_rate") @db.Decimal(5, 4)
+  cardFeeRate          Decimal  @default(0) @map("card_fee_rate") @db.Decimal(5, 4)
+  operationalLossRate  Decimal  @default(0) @map("operational_loss_rate") @db.Decimal(5, 4)
+  desiredMarginRate    Decimal  @default(0.3) @map("desired_margin_rate") @db.Decimal(5, 4)
+  averagePackagingCost Decimal  @default(0) @map("average_packaging_cost") @db.Decimal(10, 2)
+  monthlyFixedCost     Decimal  @default(0) @map("monthly_fixed_cost") @db.Decimal(10, 2)
+  monthlyRevenueGoal   Decimal  @default(0) @map("monthly_revenue_goal") @db.Decimal(10, 2)
+  cmvWarningRate       Decimal  @default(0.35) @map("cmv_warning_rate") @db.Decimal(5, 4)
+  netMarginGoalRate    Decimal  @default(0.15) @map("net_margin_goal_rate") @db.Decimal(5, 4)
+  createdAt            DateTime @default(now()) @map("created_at")
+  updatedAt            DateTime @updatedAt @map("updated_at")
+  tenant               Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@map("financial_configurations")
+}
+
+model PurchaseUnit {
+  id           String           @id @default(uuid()) @db.Uuid
+  tenantId     String           @map("tenant_id") @db.Uuid
+  name         String
+  abbreviation String
+  kind         PurchaseUnitKind
+  active       Boolean          @default(true)
+  createdAt    DateTime         @default(now()) @map("created_at")
+  updatedAt    DateTime         @updatedAt @map("updated_at")
+  tenant       Tenant           @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  ingredients  Ingredient[]
+
+  @@unique([tenantId, name])
+  @@unique([tenantId, abbreviation])
+  @@index([tenantId])
+  @@map("purchase_units")
+}
+
+model Supplier {
+  id          String       @id @default(uuid()) @db.Uuid
+  tenantId    String       @map("tenant_id") @db.Uuid
+  name        String
+  category    String
+  contactName String?      @map("contact_name")
+  phone       String?
+  email       String?
+  notes       String?
+  active      Boolean      @default(true)
+  createdAt   DateTime     @default(now()) @map("created_at")
+  updatedAt   DateTime     @updatedAt @map("updated_at")
+  tenant      Tenant       @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  ingredients Ingredient[]
+
+  @@index([tenantId])
+  @@map("suppliers")
+}
+
+model OrderPlatform {
+  id                          String                       @id @default(uuid()) @db.Uuid
+  tenantId                    String                       @map("tenant_id") @db.Uuid
+  name                        String
+  feeRate                     Decimal                      @default(0) @map("fee_rate") @db.Decimal(5, 4)
+  paymentFeeRate              Decimal                      @default(0) @map("payment_fee_rate") @db.Decimal(5, 4)
+  active                      Boolean                      @default(true)
+  createdAt                   DateTime                     @default(now()) @map("created_at")
+  updatedAt                   DateTime                     @updatedAt @map("updated_at")
+  tenant                      Tenant                       @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  orders                      Order[]
+  productCostSnapshots        ProductCostSnapshot[]
+  orderProfitabilitySnapshots OrderProfitabilitySnapshot[]
+
+  @@unique([tenantId, name])
+  @@index([tenantId])
+  @@map("order_platforms")
+}
+
+model Ingredient {
+  id                  String               @id @default(uuid()) @db.Uuid
+  tenantId            String               @map("tenant_id") @db.Uuid
+  purchaseUnitId      String               @map("purchase_unit_id") @db.Uuid
+  supplierId          String?              @map("supplier_id") @db.Uuid
+  name                String
+  category            String
+  purchaseQuantity    Decimal              @map("purchase_quantity") @db.Decimal(12, 3)
+  purchaseCost        Decimal              @map("purchase_cost") @db.Decimal(10, 2)
+  unitCost            Decimal              @map("unit_cost") @db.Decimal(12, 4)
+  currentStock        Decimal              @default(0) @map("current_stock") @db.Decimal(12, 3)
+  minimumStock        Decimal              @default(0) @map("minimum_stock") @db.Decimal(12, 3)
+  active              Boolean              @default(true)
+  createdAt           DateTime             @default(now()) @map("created_at")
+  updatedAt           DateTime             @updatedAt @map("updated_at")
+  tenant              Tenant               @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  purchaseUnit        PurchaseUnit         @relation(fields: [purchaseUnitId], references: [id], onDelete: Restrict)
+  supplier            Supplier?            @relation(fields: [supplierId], references: [id], onDelete: SetNull)
+  technicalSheetLines TechnicalSheetLine[]
+  stockMovements      StockMovement[]
+
+  @@index([tenantId])
+  @@index([purchaseUnitId])
+  @@index([supplierId])
+  @@map("ingredients")
+}
+
+model TechnicalSheet {
+  id        String               @id @default(uuid()) @db.Uuid
+  tenantId  String               @map("tenant_id") @db.Uuid
+  productId String               @map("product_id") @db.Uuid
+  active    Boolean              @default(true)
+  createdAt DateTime             @default(now()) @map("created_at")
+  updatedAt DateTime             @updatedAt @map("updated_at")
+  tenant    Tenant               @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  product   Product              @relation(fields: [productId], references: [id], onDelete: Cascade)
+  lines     TechnicalSheetLine[]
+
+  @@unique([tenantId, productId, active])
+  @@index([tenantId])
+  @@index([productId])
+  @@map("technical_sheets")
+}
+
+model TechnicalSheetLine {
+  id               String         @id @default(uuid()) @db.Uuid
+  tenantId         String         @map("tenant_id") @db.Uuid
+  technicalSheetId String         @map("technical_sheet_id") @db.Uuid
+  ingredientId     String         @map("ingredient_id") @db.Uuid
+  quantityUsed     Decimal        @map("quantity_used") @db.Decimal(12, 3)
+  unitCostSnapshot Decimal        @map("unit_cost_snapshot") @db.Decimal(12, 4)
+  itemCost         Decimal        @map("item_cost") @db.Decimal(10, 2)
+  isPackaging      Boolean        @default(false) @map("is_packaging")
+  notes            String?
+  createdAt        DateTime       @default(now()) @map("created_at")
+  updatedAt        DateTime       @updatedAt @map("updated_at")
+  tenant           Tenant         @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  technicalSheet   TechnicalSheet @relation(fields: [technicalSheetId], references: [id], onDelete: Cascade)
+  ingredient       Ingredient     @relation(fields: [ingredientId], references: [id], onDelete: Restrict)
+
+  @@index([tenantId])
+  @@index([technicalSheetId])
+  @@index([ingredientId])
+  @@map("technical_sheet_lines")
+}
+
+model ProductCostSnapshot {
+  id                  String            @id @default(uuid()) @db.Uuid
+  tenantId            String            @map("tenant_id") @db.Uuid
+  productId           String            @map("product_id") @db.Uuid
+  orderPlatformId     String?           @map("order_platform_id") @db.Uuid
+  ingredientCmv       Decimal           @map("ingredient_cmv") @db.Decimal(10, 2)
+  packagingCost       Decimal           @map("packaging_cost") @db.Decimal(10, 2)
+  operationalLossCost Decimal           @map("operational_loss_cost") @db.Decimal(10, 2)
+  totalCmv            Decimal           @map("total_cmv") @db.Decimal(10, 2)
+  currentPrice        Decimal           @map("current_price") @db.Decimal(10, 2)
+  cmvRate             Decimal           @map("cmv_rate") @db.Decimal(7, 4)
+  desiredMarginRate   Decimal           @map("desired_margin_rate") @db.Decimal(5, 4)
+  feeRate             Decimal           @map("fee_rate") @db.Decimal(5, 4)
+  idealPrice          Decimal           @map("ideal_price") @db.Decimal(10, 2)
+  estimatedProfit     Decimal           @map("estimated_profit") @db.Decimal(10, 2)
+  estimatedMarginRate Decimal           @map("estimated_margin_rate") @db.Decimal(7, 4)
+  status              ProductCostStatus @default(MISSING_TECHNICAL_SHEET)
+  createdAt           DateTime          @default(now()) @map("created_at")
+  tenant              Tenant            @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  product             Product           @relation(fields: [productId], references: [id], onDelete: Cascade)
+  orderPlatform       OrderPlatform?    @relation(fields: [orderPlatformId], references: [id], onDelete: SetNull)
+
+  @@index([tenantId])
+  @@index([productId])
+  @@index([orderPlatformId])
+  @@map("product_cost_snapshots")
+}
+
+model StockMovement {
+  id           String            @id @default(uuid()) @db.Uuid
+  tenantId     String            @map("tenant_id") @db.Uuid
+  ingredientId String            @map("ingredient_id") @db.Uuid
+  orderId      String?           @map("order_id") @db.Uuid
+  orderItemId  String?           @map("order_item_id") @db.Uuid
+  movementType StockMovementType @map("movement_type")
+  quantity     Decimal           @db.Decimal(12, 3)
+  reason       String?
+  createdAt    DateTime          @default(now()) @map("created_at")
+  tenant       Tenant            @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  ingredient   Ingredient        @relation(fields: [ingredientId], references: [id], onDelete: Restrict)
+  order        Order?            @relation(fields: [orderId], references: [id], onDelete: SetNull)
+  orderItem    OrderItem?        @relation(fields: [orderItemId], references: [id], onDelete: SetNull)
+
+  @@index([tenantId])
+  @@index([ingredientId])
+  @@index([orderId])
+  @@map("stock_movements")
+}
+
+model OrderProfitabilitySnapshot {
+  id              String         @id @default(uuid()) @db.Uuid
+  tenantId        String         @map("tenant_id") @db.Uuid
+  orderId         String         @map("order_id") @db.Uuid
+  orderItemId     String?        @map("order_item_id") @db.Uuid
+  orderPlatformId String?        @map("order_platform_id") @db.Uuid
+  grossRevenue    Decimal        @map("gross_revenue") @db.Decimal(10, 2)
+  discount        Decimal        @default(0) @db.Decimal(10, 2)
+  netRevenue      Decimal        @map("net_revenue") @db.Decimal(10, 2)
+  cmv             Decimal        @db.Decimal(10, 2)
+  platformFee     Decimal        @map("platform_fee") @db.Decimal(10, 2)
+  taxAmount       Decimal        @map("tax_amount") @db.Decimal(10, 2)
+  paymentFee      Decimal        @map("payment_fee") @db.Decimal(10, 2)
+  grossProfit     Decimal        @map("gross_profit") @db.Decimal(10, 2)
+  createdAt       DateTime       @default(now()) @map("created_at")
+  tenant          Tenant         @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  order           Order          @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  orderItem       OrderItem?     @relation(fields: [orderItemId], references: [id], onDelete: SetNull)
+  orderPlatform   OrderPlatform? @relation(fields: [orderPlatformId], references: [id], onDelete: SetNull)
+
+  @@index([tenantId])
+  @@index([orderId])
+  @@index([orderPlatformId])
+  @@map("order_profitability_snapshots")
 }
