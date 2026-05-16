@@ -166,6 +166,16 @@ describe("platform foundation", () => {
       create: vi.fn(),
       update: vi.fn()
     },
+    ingredient: {
+      findMany: vi.fn()
+    },
+    technicalSheet: {
+      findMany: vi.fn()
+    },
+    stockMovement: {
+      findMany: vi.fn(),
+      createMany: vi.fn()
+    },
     order: {
       create: vi.fn(),
       findMany: vi.fn(),
@@ -318,6 +328,12 @@ describe("platform foundation", () => {
         ...data
       })
     );
+    prismaMock.ingredient.findMany.mockResolvedValue([]);
+    prismaMock.technicalSheet.findMany.mockResolvedValue([]);
+    prismaMock.stockMovement.findMany.mockResolvedValue([]);
+    prismaMock.stockMovement.createMany.mockImplementation(({ data }: { data: unknown[] }) => ({
+      count: data.length
+    }));
 
     prismaMock.order.create.mockImplementation(
       ({

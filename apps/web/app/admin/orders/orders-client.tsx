@@ -20,7 +20,7 @@ const statusLabels: Record<OrderStatus, string> = {
   PREPARING: "Preparando",
   SHIPPED: "Saiu",
   DELIVERED: "Entregue",
-  CANCELLED: "Cancelado"
+  CANCELLED: "Cancelado",
 };
 
 const nextStatuses: Record<OrderStatus, OrderStatus[]> = {
@@ -28,7 +28,7 @@ const nextStatuses: Record<OrderStatus, OrderStatus[]> = {
   PREPARING: ["SHIPPED", "DELIVERED", "CANCELLED"],
   SHIPPED: ["DELIVERED", "CANCELLED"],
   DELIVERED: [],
-  CANCELLED: []
+  CANCELLED: [],
 };
 
 export function OrdersClient({
@@ -36,7 +36,7 @@ export function OrdersClient({
   tenantId,
   token,
   initialActiveOrders,
-  initialHistoryOrders
+  initialHistoryOrders,
 }: OrdersClientProps) {
   const [activeOrders, setActiveOrders] = useState(initialActiveOrders);
   const [historyOrders, setHistoryOrders] = useState(initialHistoryOrders);
@@ -46,8 +46,8 @@ export function OrdersClient({
   useEffect(() => {
     const socket = io(apiUrl, {
       auth: {
-        tenantId
-      }
+        tenantId,
+      },
     });
 
     socket.on("connect", () => setConnected(true));
@@ -66,7 +66,7 @@ export function OrdersClient({
     () =>
       activeStatuses.map((status) => ({
         status,
-        orders: activeOrders.filter((order) => order.status === status)
+        orders: activeOrders.filter((order) => order.status === status),
       })),
     [activeOrders]
   );
@@ -134,6 +134,19 @@ export function OrdersClient({
                         </li>
                       ))}
                     </ul>
+                    {order.stockWarnings && order.stockWarnings.length > 0 ? (
+                      <div className="mt-3 rounded-md border border-amber-200 bg-amber-50 p-3 text-xs text-amber-900">
+                        <p className="font-semibold">Atenção no estoque</p>
+                        <ul className="mt-1 space-y-1">
+                          {order.stockWarnings.map((warning) => (
+                            <li key={warning.ingredientId}>
+                              {warning.ingredientName}: saldo estimado{" "}
+                              {warning.estimatedBalance.toFixed(3)}
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    ) : null}
                     <div className="mt-4 flex flex-wrap gap-2">
                       {nextStatuses[order.status].map((status) => (
                         <button
@@ -161,10 +174,7 @@ export function OrdersClient({
             <p className="p-4 text-sm text-slate-500">Sem pedidos finalizados.</p>
           ) : (
             historyOrders.map((order) => (
-              <div
-                className="grid gap-1 p-4 text-sm sm:grid-cols-[1fr_auto_auto]"
-                key={order.id}
-              >
+              <div className="grid gap-1 p-4 text-sm sm:grid-cols-[1fr_auto_auto]" key={order.id}>
                 <span className="font-medium">{order.customerName}</span>
                 <span>{statusLabels[order.status]}</span>
                 <span className="font-semibold">R$ {order.total}</span>

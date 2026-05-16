@@ -111,6 +111,16 @@ describe("pilot hardening e2e", () => {
       create: vi.fn(),
       update: vi.fn(),
     },
+    ingredient: {
+      findMany: vi.fn(),
+    },
+    technicalSheet: {
+      findMany: vi.fn(),
+    },
+    stockMovement: {
+      findMany: vi.fn(),
+      createMany: vi.fn(),
+    },
     order: {
       create: vi.fn(),
       findMany: vi.fn(),
@@ -565,6 +575,12 @@ describe("pilot hardening e2e", () => {
           (product) => product.id === where.id && product.tenantId === where.tenantId
         ) ?? null
     );
+    prismaMock.ingredient.findMany.mockResolvedValue([]);
+    prismaMock.technicalSheet.findMany.mockResolvedValue([]);
+    prismaMock.stockMovement.findMany.mockResolvedValue([]);
+    prismaMock.stockMovement.createMany.mockImplementation(({ data }: { data: unknown[] }) => ({
+      count: data.length,
+    }));
 
     prismaMock.product.create.mockImplementation(
       ({

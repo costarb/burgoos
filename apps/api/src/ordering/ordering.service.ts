@@ -1,5 +1,6 @@
 import { ConflictException, Inject, Injectable, Logger, NotFoundException } from "@nestjs/common";
 import { FulfillmentMethod, OrderStatus, Prisma } from "@prisma/client";
+import { InventoryService, OrderStockWarning } from "../operations/inventory/inventory.service";
 import { PrismaService } from "../platform/database/prisma.service";
 import { CreateOrderDto } from "./dto/create-order.dto";
 import { calculateOrderTotals, PricedOrderItem } from "./order-calculator";
@@ -13,22 +14,23 @@ export class OrderingService {
 
   constructor(
     @Inject(PrismaService) private readonly prisma: PrismaService,
-    @Inject(OrdersGateway) private readonly ordersGateway: OrdersGateway
+    @Inject(OrdersGateway) private readonly ordersGateway: OrdersGateway,
+    @Inject(InventoryService) private readonly inventoryService: InventoryService
   ) {}
 
   async createPublicOrder(slug: string, dto: CreateOrderDto) {
     const tenant = await this.prisma.tenant.findFirst({
       where: {
         slug,
-        active: true
+        active: true,
       },
       select: {
         id: true,
         name: true,
         slug: true,
         phone: true,
-        isOpen: true
-      }
+        isOpen: true,
+      },
     });
 
     if (!tenant) {
@@ -53,19 +55,19 @@ export class OrderingService {
     const products = await this.prisma.product.findMany({
       where: {
         id: {
-          in: requestedProductIds
+          in: requestedProductIds,
         },
         tenantId: tenant.id,
         active: true,
         category: {
-          active: true
-        }
+          active: true,
+        },
       },
       select: {
         id: true,
         name: true,
-        price: true
-      }
+        price: true,
+      },
     });
 
     if (products.length !== requestedProductIds.length) {
@@ -85,7 +87,7 @@ export class OrderingService {
         productId: product.id,
         productName: product.name,
         quantity: item.quantity,
-        unitPrice: product.price
+        unitPrice: product.price,
       };
     });
 
@@ -108,16 +110,17 @@ export class OrderingService {
             productNameSnapshot: item.productNameSnapshot,
             quantity: item.quantity,
             unitPrice: item.unitPrice,
-            total: item.total
-          }))
-        }
+            total: item.total,
+          })),
+        },
       },
       include: {
-        items: true
-      }
+        items: true,
+      },
     });
 
     this.logger.log(`Order created tenantId=${tenant.id} orderId=${order.id}`);
+    await this.inventoryService.reserveForOrder(order);
 
     const response = {
       id: order.id,
@@ -133,7 +136,7 @@ export class OrderingService {
         productNameSnapshot: item.productNameSnapshot,
         quantity: item.quantity,
         unitPrice: item.unitPrice.toFixed(2),
-        total: item.total.toFixed(2)
+        total: item.total.toFixed(2),
       })),
       whatsappUrl: buildWhatsAppOrderLink({
         tenantPhone: tenant.phone,
@@ -142,8 +145,8 @@ export class OrderingService {
         fulfillmentMethod: order.fulfillmentMethod,
         paymentMethod: order.paymentMethod,
         order: calculated,
-        notes: order.notes ?? undefined
-      })
+        notes: order.notes ?? undefined,
+      }),
     };
 
     this.ordersGateway.emitOrderCreated(tenant.id, response);
@@ -159,32 +162,39 @@ export class OrderingService {
         tenantId,
         status: history
           ? {
-              in: terminalStatuses
+              in: terminalStatuses,
             }
           : {
-              notIn: terminalStatuses
-            }
+              notIn: terminalStatuses,
+            },
       },
       orderBy: {
-        createdAt: "desc"
+        createdAt: "desc",
       },
       include: {
-        items: true
-      }
+        items: true,
+      },
     });
 
-    return orders.map((order) => this.toOrderResponse(order));
+    return Promise.all(
+      orders.map(async (order) =>
+        this.toOrderResponse(
+          order,
+          history ? [] : await this.inventoryService.getOrderStockWarnings(order)
+        )
+      )
+    );
   }
 
   async updateOrderStatus(tenantId: string, orderId: string, status: OrderStatus) {
     const order = await this.prisma.order.findFirst({
       where: {
         id: orderId,
-        tenantId
+        tenantId,
       },
       include: {
-        items: true
-      }
+        items: true,
+      },
     });
 
     if (!order) {
@@ -200,39 +210,57 @@ export class OrderingService {
 
     const updatedOrder = await this.prisma.order.update({
       where: {
-        id: orderId
+        id: orderId,
       },
       data: {
-        status
+        status,
       },
       include: {
-        items: true
-      }
+        items: true,
+      },
     });
 
-    this.logger.log(`Order status changed tenantId=${tenantId} orderId=${orderId} status=${status}`);
-    return this.toOrderResponse(updatedOrder);
+    if (status === OrderStatus.CANCELLED) {
+      await this.inventoryService.releaseOrderReservation(tenantId, orderId, "Pedido cancelado");
+    }
+
+    if (status === OrderStatus.DELIVERED) {
+      await this.inventoryService.consumeOrderReservation(tenantId, orderId);
+    }
+
+    this.logger.log(
+      `Order status changed tenantId=${tenantId} orderId=${orderId} status=${status}`
+    );
+    return this.toOrderResponse(
+      updatedOrder,
+      status === OrderStatus.CANCELLED || status === OrderStatus.DELIVERED
+        ? []
+        : await this.inventoryService.getOrderStockWarnings(updatedOrder)
+    );
   }
 
-  private toOrderResponse(order: {
-    id: string;
-    status: OrderStatus;
-    total: Prisma.Decimal;
-    customerName: string;
-    customerPhone: string;
-    fulfillmentMethod: string;
-    paymentMethod: string;
-    notes: string | null;
-    createdAt?: Date;
-    items: Array<{
+  private toOrderResponse(
+    order: {
       id: string;
-      productId: string;
-      productNameSnapshot: string;
-      quantity: number;
-      unitPrice: Prisma.Decimal;
+      status: OrderStatus;
       total: Prisma.Decimal;
-    }>;
-  }) {
+      customerName: string;
+      customerPhone: string;
+      fulfillmentMethod: string;
+      paymentMethod: string;
+      notes: string | null;
+      createdAt?: Date;
+      items: Array<{
+        id: string;
+        productId: string;
+        productNameSnapshot: string;
+        quantity: number;
+        unitPrice: Prisma.Decimal;
+        total: Prisma.Decimal;
+      }>;
+    },
+    stockWarnings: OrderStockWarning[] = []
+  ) {
     return {
       id: order.id,
       status: order.status,
@@ -249,8 +277,9 @@ export class OrderingService {
         productNameSnapshot: item.productNameSnapshot,
         quantity: item.quantity,
         unitPrice: item.unitPrice.toFixed(2),
-        total: item.total.toFixed(2)
-      }))
+        total: item.total.toFixed(2),
+      })),
+      stockWarnings,
     };
   }
 }

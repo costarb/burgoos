@@ -140,22 +140,22 @@
 ### Tests
 
 - [x] T058 [P] [US4] Add unit tests for stock movement reservation/release rules in `apps/api/test/inventory.spec.ts`
-- [ ] T059 [P] [US4] Add integration tests for order-created stock reservation in `apps/api/test/inventory-order.integration.spec.ts`
-- [ ] T060 [P] [US4] Add integration tests for cancelled order stock release in `apps/api/test/inventory-order.integration.spec.ts`
-- [ ] T061 [P] [US4] Add E2E test for order lifecycle stock impact in `apps/api/test/profitability-flow.e2e.spec.ts`
+- [x] T059 [P] [US4] Add integration tests for order-created stock reservation in `apps/api/test/inventory-order.integration.spec.ts`
+- [x] T060 [P] [US4] Add integration tests for cancelled order stock release in `apps/api/test/inventory-order.integration.spec.ts`
+- [x] T061 [P] [US4] Add E2E test for order lifecycle stock impact in `apps/api/test/profitability-flow.e2e.spec.ts`
 
 ### Implementation
 
 - [x] T062 [P] [US4] Implement stock movement calculation helpers in `apps/api/src/operations/inventory/stock-movement-calculator.ts`
 - [x] T063 [US4] Implement Inventory service in `apps/api/src/operations/inventory/inventory.service.ts`
-- [ ] T064 [US4] Implement order stock reservation integration in `apps/api/src/ordering/ordering.service.ts`
-- [ ] T065 [US4] Implement stock release/consumption on status changes in `apps/api/src/ordering/ordering.service.ts`
+- [x] T064 [US4] Implement order stock reservation integration in `apps/api/src/ordering/ordering.service.ts`
+- [x] T065 [US4] Implement stock release/consumption on status changes in `apps/api/src/ordering/ordering.service.ts`
 - [x] T066 [US4] Implement inventory controller in `apps/api/src/operations/inventory/inventory.controller.ts`
 - [x] T067 [US4] Register inventory module in `apps/api/src/operations/operations.module.ts`
 - [x] T068 [US4] Add admin API client methods for inventory balances and movements in `apps/web/lib/api.ts`
 - [x] T069 [US4] Build inventory balance page in `apps/web/app/admin/inventory/page.tsx`
 - [x] T070 [US4] Build manual stock movement form in `apps/web/app/admin/inventory/inventory-client.tsx`
-- [ ] T071 [US4] Add insufficient stock warnings to order/admin views in `apps/web/app/admin/orders/orders-client.tsx`
+- [x] T071 [US4] Add insufficient stock warnings to order/admin views in `apps/web/app/admin/orders/orders-client.tsx`
 
 **Checkpoint**: Estimated inventory responds to in-progress orders.
 

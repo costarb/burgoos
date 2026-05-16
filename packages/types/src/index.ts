@@ -72,6 +72,14 @@ export interface AdminOrderItem {
   total: string;
 }
 
+export interface AdminOrderStockWarning {
+  ingredientId: string;
+  ingredientName: string;
+  requiredQuantity: number;
+  estimatedBalance: number;
+  status: "BUY" | "INSUFFICIENT";
+}
+
 export interface AdminOrder {
   id: string;
   status: OrderStatus;
@@ -83,6 +91,7 @@ export interface AdminOrder {
   notes: string | null;
   createdAt?: string;
   items: AdminOrderItem[];
+  stockWarnings?: AdminOrderStockWarning[];
 }
 
 export type PurchaseUnitKind = "WEIGHT" | "VOLUME" | "COUNT" | "PACKAGE";
