@@ -24,6 +24,14 @@ npm run db:migrate
 npm run dev
 ```
 
+Implementation validation commands:
+
+```powershell
+npm.cmd run typecheck --workspaces --if-present
+npm.cmd run test -w @burgoos/api
+npm.cmd run lint
+```
+
 ## Manual Validation Script
 
 1. Open the admin dashboard.
@@ -78,6 +86,7 @@ npm run dev
 - Delivered orders preserve profitability snapshots.
 - DRE excludes cancelled orders.
 - Dashboard highlights CMV, margin, price review and stock alerts.
+- Menu engineering requires at least two products with delivered-order profitability snapshots in the selected period.
 
 ## Operational Fallback
 
@@ -88,3 +97,10 @@ If stock reservation fails during pilot:
 - Temporarily mark products unavailable when a key ingredient is at risk.
 - Reconcile manual stock adjustments after service.
 - Keep delivered order snapshots as the source for DRE once the issue is corrected.
+
+## Launch Caveats
+
+- Stock is estimated from current stock plus movements; it is not a fiscal inventory ledger.
+- Orders in progress reserve ingredients from the product technical sheet; missing sheets prevent reliable stock impact.
+- Delivered orders create profitability snapshots once, preserving historical CMV and fees for DRE and menu engineering.
+- Menu engineering classifications compare each product against the period averages, so early pilot data can move between classes quickly.

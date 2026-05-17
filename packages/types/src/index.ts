@@ -273,3 +273,53 @@ export interface StockMovementInput {
   quantity: number;
   reason?: string;
 }
+
+export interface FinancialDreSummary {
+  periodStart: string;
+  periodEnd: string;
+  grossRevenue: string;
+  discounts: string;
+  netRevenue: string;
+  cmv: string;
+  feesAndTaxes: string;
+  grossProfit: string;
+  fixedExpenses: string;
+  estimatedNetProfit: string;
+  netMarginRate: number;
+  breakEvenRevenue: string;
+}
+
+export interface FinancialDashboardIndicators {
+  periodStart: string;
+  periodEnd: string;
+  grossRevenue: string;
+  cmv: string;
+  grossProfit: string;
+  estimatedNetProfit: string;
+  netMarginRate: number;
+  deliveredOrderCount: number;
+  priceReviewCount: number;
+  stockAlertCount: number;
+}
+
+export type MenuEngineeringClassification = "STAR" | "WORKHORSE" | "PUZZLE" | "DOG";
+
+export interface MenuEngineeringItem {
+  productId: string;
+  productName: string;
+  volumeSold: number;
+  revenue: string;
+  cmv: string;
+  grossProfit: string;
+  marginRate: number;
+  classification: MenuEngineeringClassification;
+}
+
+export interface MenuEngineeringReport {
+  periodStart: string;
+  periodEnd: string;
+  insufficientData: boolean;
+  averageVolume: number;
+  averageMarginRate: number;
+  items: MenuEngineeringItem[];
+}

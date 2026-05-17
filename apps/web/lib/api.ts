@@ -4,9 +4,12 @@ import type {
   CreatePublicOrderInput,
   FinancialConfiguration,
   FinancialConfigurationInput,
+  FinancialDashboardIndicators,
+  FinancialDreSummary,
   Ingredient,
   IngredientInput,
   InventoryBalance,
+  MenuEngineeringReport,
   OrderPlatform,
   OrderPlatformInput,
   OrderStatus,
@@ -294,6 +297,52 @@ export async function getAdminDailySummary(): Promise<DailySummary> {
   }
 
   return response.json() as Promise<DailySummary>;
+}
+
+export async function getFinancialDashboard(): Promise<FinancialDashboardIndicators> {
+  const token = await getAdminToken();
+  return fetchAdmin<FinancialDashboardIndicators>(token, "/api/admin/reports/financial/dashboard");
+}
+
+export async function getFinancialDre(start?: string, end?: string): Promise<FinancialDreSummary> {
+  const token = await getAdminToken();
+  const params = new URLSearchParams();
+
+  if (start) {
+    params.set("start", start);
+  }
+
+  if (end) {
+    params.set("end", end);
+  }
+
+  const query = params.toString();
+  return fetchAdmin<FinancialDreSummary>(
+    token,
+    `/api/admin/reports/financial/dre${query ? `?${query}` : ""}`
+  );
+}
+
+export async function getMenuEngineeringReport(
+  dateFrom?: string,
+  dateTo?: string
+): Promise<MenuEngineeringReport> {
+  const token = await getAdminToken();
+  const params = new URLSearchParams();
+
+  if (dateFrom) {
+    params.set("dateFrom", dateFrom);
+  }
+
+  if (dateTo) {
+    params.set("dateTo", dateTo);
+  }
+
+  const query = params.toString();
+  return fetchAdmin<MenuEngineeringReport>(
+    token,
+    `/api/admin/reports/menu-engineering${query ? `?${query}` : ""}`
+  );
 }
 
 export async function getFinancialConfiguration(): Promise<FinancialConfiguration> {

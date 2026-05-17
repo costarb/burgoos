@@ -169,20 +169,20 @@
 
 ### Tests
 
-- [ ] T072 [P] [US5] Add unit tests for order profitability snapshot calculation in `apps/api/test/profitability.spec.ts`
-- [ ] T073 [P] [US5] Add unit tests for DRE period summary calculation in `apps/api/test/dre.spec.ts`
-- [ ] T074 [P] [US5] Add integration tests for cancelled order exclusion from DRE in `apps/api/test/dre.integration.spec.ts`
+- [x] T072 [P] [US5] Add unit tests for order profitability snapshot calculation in `apps/api/test/profitability.spec.ts`
+- [x] T073 [P] [US5] Add unit tests for DRE period summary calculation in `apps/api/test/dre.spec.ts`
+- [x] T074 [P] [US5] Add integration tests for cancelled order exclusion from DRE in `apps/api/test/dre.integration.spec.ts`
 
 ### Implementation
 
-- [ ] T075 [P] [US5] Implement order profitability snapshot service in `apps/api/src/management/reports/order-profitability.service.ts`
-- [ ] T076 [US5] Integrate profitability snapshot creation with order creation/status lifecycle in `apps/api/src/ordering/ordering.service.ts`
-- [ ] T077 [US5] Implement DRE report service in `apps/api/src/management/reports/dre.service.ts`
-- [ ] T078 [US5] Implement dashboard indicator service in `apps/api/src/management/reports/financial-dashboard.service.ts`
-- [ ] T079 [US5] Implement DRE and dashboard controllers in `apps/api/src/management/reports/financial-reports.controller.ts`
-- [ ] T080 [US5] Add admin API client methods for DRE and dashboard indicators in `apps/web/lib/api.ts`
-- [ ] T081 [US5] Build DRE report page in `apps/web/app/admin/reports/dre/page.tsx`
-- [ ] T082 [US5] Extend admin dashboard with CMV, margin, price review and stock alerts in `apps/web/app/admin/page.tsx`
+- [x] T075 [P] [US5] Implement order profitability snapshot service in `apps/api/src/management/reports/order-profitability.service.ts`
+- [x] T076 [US5] Integrate profitability snapshot creation with order creation/status lifecycle in `apps/api/src/ordering/ordering.service.ts`
+- [x] T077 [US5] Implement DRE report service in `apps/api/src/management/reports/dre.service.ts`
+- [x] T078 [US5] Implement dashboard indicator service in `apps/api/src/management/reports/financial-dashboard.service.ts`
+- [x] T079 [US5] Implement DRE and dashboard controllers in `apps/api/src/management/reports/financial-reports.controller.ts`
+- [x] T080 [US5] Add admin API client methods for DRE and dashboard indicators in `apps/web/lib/api.ts`
+- [x] T081 [US5] Build DRE report page in `apps/web/app/admin/reports/dre/page.tsx`
+- [x] T082 [US5] Extend admin dashboard with CMV, margin, price review and stock alerts in `apps/web/app/admin/page.tsx`
 
 **Checkpoint**: Owner can validate operational profitability for a period.
 
@@ -196,16 +196,16 @@
 
 ### Tests
 
-- [ ] T083 [P] [US6] Add unit tests for menu engineering classification in `apps/api/test/menu-engineering.spec.ts`
-- [ ] T084 [P] [US6] Add API integration tests for menu engineering period report in `apps/api/test/menu-engineering.integration.spec.ts`
+- [x] T083 [P] [US6] Add unit tests for menu engineering classification in `apps/api/test/menu-engineering.spec.ts`
+- [x] T084 [P] [US6] Add API integration tests for menu engineering period report in `apps/api/test/menu-engineering.integration.spec.ts`
 
 ### Implementation
 
-- [ ] T085 [US6] Implement menu engineering service in `apps/api/src/management/reports/menu-engineering.service.ts`
-- [ ] T086 [US6] Implement menu engineering controller in `apps/api/src/management/reports/menu-engineering.controller.ts`
-- [ ] T087 [US6] Add admin API client methods for menu engineering in `apps/web/lib/api.ts`
-- [ ] T088 [US6] Build menu engineering page in `apps/web/app/admin/menu-engineering/page.tsx`
-- [ ] T089 [US6] Add insufficient data state for menu engineering in `apps/web/app/admin/menu-engineering/menu-engineering-client.tsx`
+- [x] T085 [US6] Implement menu engineering service in `apps/api/src/management/reports/menu-engineering.service.ts`
+- [x] T086 [US6] Implement menu engineering controller in `apps/api/src/management/reports/menu-engineering.controller.ts`
+- [x] T087 [US6] Add admin API client methods for menu engineering in `apps/web/lib/api.ts`
+- [x] T088 [US6] Build menu engineering page in `apps/web/app/admin/menu-engineering/page.tsx`
+- [x] T089 [US6] Add insufficient data state for menu engineering in `apps/web/app/admin/menu-engineering/menu-engineering-client.tsx`
 
 **Checkpoint**: Product classification is available when sales data is sufficient.
 
@@ -215,14 +215,14 @@
 
 **Purpose**: Validation, documentation and operational readiness across all stories.
 
-- [ ] T090 [P] Update feature quickstart with any implementation-specific commands in `specs/002-gestao-cmv-precificacao/quickstart.md`
-- [ ] T091 [P] Add admin navigation polish and empty states across new pages in `apps/web/app/admin`
-- [ ] T092 [P] Add OpenAPI examples for key request/response payloads in `specs/002-gestao-cmv-precificacao/contracts/openapi.yaml`
-- [ ] T093 Run full `npm.cmd run typecheck` validation
-- [ ] T094 Run full `npm.cmd run lint` validation
-- [ ] T095 Run full `npm.cmd run test` validation
+- [x] T090 [P] Update feature quickstart with any implementation-specific commands in `specs/002-gestao-cmv-precificacao/quickstart.md`
+- [x] T091 [P] Add admin navigation polish and empty states across new pages in `apps/web/app/admin`
+- [x] T092 [P] Add OpenAPI examples for key request/response payloads in `specs/002-gestao-cmv-precificacao/contracts/openapi.yaml`
+- [x] T093 Run full `npm.cmd run typecheck` validation
+- [x] T094 Run full `npm.cmd run lint` validation
+- [x] T095 Run full `npm.cmd run test` validation
 - [ ] T096 Execute quickstart validation from `specs/002-gestao-cmv-precificacao/quickstart.md`
-- [ ] T097 Document launch caveats for estimated operational stock in `specs/002-gestao-cmv-precificacao/quickstart.md`
+- [x] T097 Document launch caveats for estimated operational stock in `specs/002-gestao-cmv-precificacao/quickstart.md`
 
 ---
 

@@ -345,9 +345,7 @@ paths:
           content:
             application/json:
               schema:
-                type: array
-                items:
-                  $ref: "#/components/schemas/MenuEngineeringItem"
+                $ref: "#/components/schemas/MenuEngineeringReport"
 
 components:
   securitySchemes:
@@ -699,6 +697,17 @@ components:
 
     DreSummary:
       type: object
+      example:
+        grossRevenue: "1250.00"
+        discounts: "0.00"
+        netRevenue: "1250.00"
+        cmv: "412.50"
+        feesAndTaxes: "225.00"
+        grossProfit: "612.50"
+        fixedExpenses: "8000.00"
+        estimatedNetProfit: "-7387.50"
+        netMarginRate: -5.91
+        breakEvenRevenue: "16326.53"
       properties:
         grossRevenue:
           type: string
@@ -720,6 +729,41 @@ components:
           type: number
         breakEvenRevenue:
           type: string
+
+    MenuEngineeringReport:
+      type: object
+      example:
+        periodStart: "2026-05-01T00:00:00.000Z"
+        periodEnd: "2026-05-31T23:59:59.999Z"
+        insufficientData: false
+        averageVolume: 12.5
+        averageMarginRate: 0.42
+        items:
+          - productId: "33333333-3333-4333-8333-333333333333"
+            productName: "Burger Alto Giro"
+            volumeSold: 20
+            revenue: "1000.00"
+            cmv: "300.00"
+            grossProfit: "700.00"
+            marginRate: 0.7
+            classification: STAR
+      properties:
+        periodStart:
+          type: string
+          format: date-time
+        periodEnd:
+          type: string
+          format: date-time
+        insufficientData:
+          type: boolean
+        averageVolume:
+          type: number
+        averageMarginRate:
+          type: number
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/MenuEngineeringItem"
 
     MenuEngineeringItem:
       type: object

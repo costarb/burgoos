@@ -66,6 +66,11 @@ describe("inventory order integration", () => {
     tenant: { findFirst: vi.fn() },
     product: { findMany: vi.fn() },
     ingredient: { findMany: vi.fn() },
+    financialConfiguration: { upsert: vi.fn() },
+    orderProfitabilitySnapshot: {
+      findMany: vi.fn(),
+      createMany: vi.fn(),
+    },
     order: {
       create: vi.fn(),
       findFirst: vi.fn(),
@@ -216,6 +221,20 @@ describe("inventory order integration", () => {
         price: decimal("30.99"),
       },
     ]);
+    prismaMock.financialConfiguration.upsert.mockResolvedValue({
+      id: "88888888-8888-4888-8888-888888888888",
+      tenantId,
+      taxRate: decimal("0.06"),
+      cardFeeRate: decimal("0.02"),
+      operationalLossRate: decimal("0.00"),
+      monthlyFixedCost: decimal("0"),
+      createdAt,
+      updatedAt: createdAt,
+    });
+    prismaMock.orderProfitabilitySnapshot.findMany.mockResolvedValue([]);
+    prismaMock.orderProfitabilitySnapshot.createMany.mockImplementation(
+      ({ data }: { data: unknown[] }) => ({ count: data.length })
+    );
     prismaMock.ingredient.findMany.mockImplementation(
       ({ where }: { where: { tenantId: string; id: { in: string[] } } }) =>
         where.tenantId === tenantId && where.id.in.includes(ingredientId)
@@ -238,6 +257,7 @@ describe("inventory order integration", () => {
           {
             ingredientId,
             quantityUsed: decimal("180"),
+            itemCost: decimal("4.50"),
           },
         ],
       },

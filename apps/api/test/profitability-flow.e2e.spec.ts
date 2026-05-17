@@ -63,6 +63,11 @@ describe("profitability flow e2e", () => {
     tenant: { findFirst: vi.fn() },
     product: { findMany: vi.fn() },
     ingredient: { findMany: vi.fn() },
+    financialConfiguration: { upsert: vi.fn() },
+    orderProfitabilitySnapshot: {
+      findMany: vi.fn(),
+      createMany: vi.fn(),
+    },
     technicalSheet: { findMany: vi.fn() },
     stockMovement: {
       findMany: vi.fn(),
@@ -208,10 +213,24 @@ describe("profitability flow e2e", () => {
     prismaMock.product.findMany.mockResolvedValue([
       { id: productId, name: "Magnifico Burger", price: decimal("30.99") },
     ]);
+    prismaMock.financialConfiguration.upsert.mockResolvedValue({
+      id: "88888888-8888-4888-8888-888888888888",
+      tenantId,
+      taxRate: decimal("0.06"),
+      cardFeeRate: decimal("0.02"),
+      operationalLossRate: decimal("0.00"),
+      monthlyFixedCost: decimal("0"),
+      createdAt,
+      updatedAt: createdAt,
+    });
+    prismaMock.orderProfitabilitySnapshot.findMany.mockResolvedValue([]);
+    prismaMock.orderProfitabilitySnapshot.createMany.mockImplementation(
+      ({ data }: { data: unknown[] }) => ({ count: data.length })
+    );
     prismaMock.technicalSheet.findMany.mockResolvedValue([
       {
         productId,
-        lines: [{ ingredientId, quantityUsed: decimal("180") }],
+        lines: [{ ingredientId, quantityUsed: decimal("180"), itemCost: decimal("4.50") }],
       },
     ]);
     prismaMock.ingredient.findMany.mockImplementation(() => [

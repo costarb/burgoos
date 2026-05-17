@@ -111,6 +111,13 @@ describe("pilot hardening e2e", () => {
       create: vi.fn(),
       update: vi.fn(),
     },
+    financialConfiguration: {
+      upsert: vi.fn(),
+    },
+    orderProfitabilitySnapshot: {
+      findMany: vi.fn(),
+      createMany: vi.fn(),
+    },
     ingredient: {
       findMany: vi.fn(),
     },
@@ -581,6 +588,20 @@ describe("pilot hardening e2e", () => {
     prismaMock.stockMovement.createMany.mockImplementation(({ data }: { data: unknown[] }) => ({
       count: data.length,
     }));
+    prismaMock.financialConfiguration.upsert.mockResolvedValue({
+      id: "88888888-8888-4888-8888-888888888888",
+      tenantId,
+      taxRate: decimal("0.06"),
+      cardFeeRate: decimal("0.02"),
+      operationalLossRate: decimal("0"),
+      monthlyFixedCost: decimal("0"),
+      createdAt,
+      updatedAt: createdAt,
+    });
+    prismaMock.orderProfitabilitySnapshot.findMany.mockResolvedValue([]);
+    prismaMock.orderProfitabilitySnapshot.createMany.mockImplementation(
+      ({ data }: { data: unknown[] }) => ({ count: data.length })
+    );
 
     prismaMock.product.create.mockImplementation(
       ({
@@ -728,5 +749,9 @@ describe("pilot hardening e2e", () => {
         return order;
       }
     );
+  }
+
+  function decimal(value: number | string): Prisma.Decimal {
+    return new Prisma.Decimal(value);
   }
 });

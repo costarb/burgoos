@@ -1,5 +1,6 @@
 import { ConflictException, Inject, Injectable, Logger, NotFoundException } from "@nestjs/common";
 import { FulfillmentMethod, OrderStatus, Prisma } from "@prisma/client";
+import { OrderProfitabilityService } from "../management/reports/order-profitability.service";
 import { InventoryService, OrderStockWarning } from "../operations/inventory/inventory.service";
 import { PrismaService } from "../platform/database/prisma.service";
 import { CreateOrderDto } from "./dto/create-order.dto";
@@ -15,7 +16,9 @@ export class OrderingService {
   constructor(
     @Inject(PrismaService) private readonly prisma: PrismaService,
     @Inject(OrdersGateway) private readonly ordersGateway: OrdersGateway,
-    @Inject(InventoryService) private readonly inventoryService: InventoryService
+    @Inject(InventoryService) private readonly inventoryService: InventoryService,
+    @Inject(OrderProfitabilityService)
+    private readonly orderProfitabilityService: OrderProfitabilityService
   ) {}
 
   async createPublicOrder(slug: string, dto: CreateOrderDto) {
@@ -226,6 +229,7 @@ export class OrderingService {
 
     if (status === OrderStatus.DELIVERED) {
       await this.inventoryService.consumeOrderReservation(tenantId, orderId);
+      await this.orderProfitabilityService.createDeliveredOrderSnapshots(tenantId, orderId);
     }
 
     this.logger.log(

@@ -18,6 +18,12 @@ import { TechnicalSheetService } from "./financial/technical-sheet.service";
 import { PricingController } from "./pricing/pricing.controller";
 import { ProductCostSnapshotService } from "./pricing/product-cost-snapshot.service";
 import { ProductPricingService } from "./pricing/product-pricing.service";
+import { DreService } from "./reports/dre.service";
+import { FinancialDashboardService } from "./reports/financial-dashboard.service";
+import { FinancialReportsController } from "./reports/financial-reports.controller";
+import { MenuEngineeringController } from "./reports/menu-engineering.controller";
+import { MenuEngineeringService } from "./reports/menu-engineering.service";
+import { OrderProfitabilityService } from "./reports/order-profitability.service";
 import { ReportsService } from "./reports.service";
 import { TenantScopeService } from "./tenant-scope";
 
@@ -32,6 +38,8 @@ import { TenantScopeService } from "./tenant-scope";
     IngredientController,
     TechnicalSheetController,
     PricingController,
+    FinancialReportsController,
+    MenuEngineeringController,
   ],
   providers: [
     ReportsService,
@@ -43,8 +51,13 @@ import { TenantScopeService } from "./tenant-scope";
     TechnicalSheetService,
     ProductPricingService,
     ProductCostSnapshotService,
+    OrderProfitabilityService,
+    DreService,
+    FinancialDashboardService,
+    MenuEngineeringService,
     TenantScopeService,
     AuditLogService,
   ],
+  exports: [OrderProfitabilityService],
 })
 export class ManagementModule {}
