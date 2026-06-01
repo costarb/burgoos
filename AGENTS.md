@@ -2,6 +2,6 @@
 
 For additional context about technologies to be used, project structure,
 shell commands, and other important information, read
-`specs/002-gestao-cmv-precificacao/plan.md`
+`specs/003-store-onboarding-branding/plan.md`
 
 <!-- SPECKIT END -->
