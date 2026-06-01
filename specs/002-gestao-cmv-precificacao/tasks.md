@@ -221,7 +221,7 @@
 - [x] T093 Run full `npm.cmd run typecheck` validation
 - [x] T094 Run full `npm.cmd run lint` validation
 - [x] T095 Run full `npm.cmd run test` validation
-- [ ] T096 Execute quickstart validation from `specs/002-gestao-cmv-precificacao/quickstart.md`
+- [x] T096 Execute quickstart validation from `specs/002-gestao-cmv-precificacao/quickstart.md`
 - [x] T097 Document launch caveats for estimated operational stock in `specs/002-gestao-cmv-precificacao/quickstart.md`
 
 ---
