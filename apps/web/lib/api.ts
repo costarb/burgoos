@@ -1,7 +1,11 @@
 import type {
   AdminOrder,
+  BrandingDraftInput,
+  BrandingPreview,
+  BrandingState,
   CreatedOrder,
   CreatePublicOrderInput,
+  CreateStoreInput,
   FinancialConfiguration,
   FinancialConfigurationInput,
   FinancialDashboardIndicators,
@@ -17,12 +21,17 @@ import type {
   PurchaseUnit,
   PurchaseUnitInput,
   PublicMenu,
+  StoreDetail,
+  StoreSetupResult,
+  StoreSummary,
   Supplier,
   SupplierInput,
   StockMovementInput,
   TechnicalSheet,
   TechnicalSheetInput,
   TechnicalSheetSummary,
+  UpdateStoreInput,
+  VisualConfiguration,
 } from "@burgoos/types";
 
 const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3001";
@@ -91,6 +100,10 @@ async function fetchAdmin<T>(token: string, path: string, init?: RequestInit): P
   return response.json() as Promise<T>;
 }
 
+async function fetchPlatform<T>(token: string, path: string, init?: RequestInit): Promise<T> {
+  return fetchAdmin<T>(token, path, init);
+}
+
 export async function getPublicMenu(slug: string): Promise<PublicMenu | null> {
   const response = await fetch(`${apiUrl}/api/public/tenants/${slug}/menu`, {
     next: {
@@ -148,11 +161,105 @@ export async function loginAdmin(email: string, password: string): Promise<strin
   return data.accessToken;
 }
 
+export async function loginPlatformAdmin(email: string, password: string): Promise<string> {
+  const response = await fetch(`${apiUrl}/api/auth/platform/login`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ email, password }),
+    cache: "no-store",
+  });
+
+  if (!response.ok) {
+    throw new Error("Failed to login platform admin");
+  }
+
+  const data = (await response.json()) as { accessToken: string };
+  return data.accessToken;
+}
+
 export async function getAdminToken(): Promise<string> {
   return loginAdmin(
     process.env.DEMO_ADMIN_EMAIL ?? "admin@burgoos.local",
     process.env.DEMO_ADMIN_PASSWORD ?? "admin123"
   );
+}
+
+export async function getPlatformAdminToken(): Promise<string> {
+  return loginPlatformAdmin(
+    process.env.DEMO_PLATFORM_ADMIN_EMAIL ?? "platform@burgoos.local",
+    process.env.DEMO_PLATFORM_ADMIN_PASSWORD ?? "admin123"
+  );
+}
+
+export async function listPlatformStores(token: string): Promise<StoreSummary[]> {
+  return fetchPlatform<StoreSummary[]>(token, "/api/platform/stores");
+}
+
+export async function createPlatformStore(
+  token: string,
+  payload: CreateStoreInput
+): Promise<StoreSetupResult> {
+  return fetchPlatform<StoreSetupResult>(token, "/api/platform/stores", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function getPlatformStore(token: string, storeId: string): Promise<StoreDetail> {
+  return fetchPlatform<StoreDetail>(token, `/api/platform/stores/${storeId}`);
+}
+
+export async function updatePlatformStore(
+  token: string,
+  storeId: string,
+  payload: UpdateStoreInput
+): Promise<StoreDetail> {
+  return fetchPlatform<StoreDetail>(token, `/api/platform/stores/${storeId}`, {
+    method: "PATCH",
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function getBrandingState(token: string): Promise<BrandingState> {
+  return fetchAdmin<BrandingState>(token, "/api/admin/store/branding");
+}
+
+export async function saveBrandingDraft(
+  token: string,
+  payload: BrandingDraftInput
+): Promise<BrandingState["draft"]> {
+  return fetchAdmin<BrandingState["draft"]>(token, "/api/admin/store/branding", {
+    method: "PUT",
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function previewBranding(
+  token: string,
+  payload: BrandingDraftInput
+): Promise<BrandingPreview> {
+  return fetchAdmin<BrandingPreview>(token, "/api/admin/store/branding/preview", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function publishBranding(token: string): Promise<VisualConfiguration> {
+  return fetchAdmin<VisualConfiguration>(token, "/api/admin/store/branding/publish", {
+    method: "POST",
+  });
+}
+
+export async function getBrandingHistory(token: string): Promise<VisualConfiguration[]> {
+  return fetchAdmin<VisualConfiguration[]>(token, "/api/admin/store/branding/history");
+}
+
+export async function restoreBranding(token: string): Promise<VisualConfiguration> {
+  return fetchAdmin<VisualConfiguration>(token, "/api/admin/store/branding/restore", {
+    method: "POST",
+  });
 }
 
 export async function getAdminCatalog(): Promise<{
@@ -297,6 +404,11 @@ export async function getAdminDailySummary(): Promise<DailySummary> {
   }
 
   return response.json() as Promise<DailySummary>;
+}
+
+export async function getAdminTenantSummary(): Promise<AdminTenant> {
+  const token = await getAdminToken();
+  return fetchAdmin<AdminTenant>(token, "/api/admin/tenant");
 }
 
 export async function getFinancialDashboard(): Promise<FinancialDashboardIndicators> {

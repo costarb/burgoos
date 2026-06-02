@@ -12,4 +12,9 @@ export class AuthController {
   async login(@Body() dto: LoginDto): Promise<LoginResult> {
     return this.authService.login(dto);
   }
+
+  @Post("platform/login")
+  async loginPlatform(@Body() dto: LoginDto): Promise<LoginResult> {
+    return this.authService.loginPlatform(dto);
+  }
 }

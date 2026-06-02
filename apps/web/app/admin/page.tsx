@@ -1,11 +1,12 @@
-import { getAdminDailySummary, getFinancialDashboard } from "../../lib/api";
+import { getAdminDailySummary, getAdminTenantSummary, getFinancialDashboard } from "../../lib/api";
 
 export const dynamic = "force-dynamic";
 
 export default async function AdminPage() {
-  const [summary, financialDashboard] = await Promise.all([
+  const [summary, financialDashboard, tenant] = await Promise.all([
     getAdminDailySummary(),
     getFinancialDashboard(),
+    getAdminTenantSummary(),
   ]);
 
   return (
@@ -14,6 +15,9 @@ export default async function AdminPage() {
         <h1 className="text-3xl font-semibold">Painel BurgoOS</h1>
         <p className="mt-2 text-slate-600">
           Operacao piloto com catalogo, pedidos e fila em tempo real.
+        </p>
+        <p className="mt-3 w-fit rounded-md border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-700">
+          {tenant.name} /{tenant.slug}
         </p>
         <div className="mt-6 flex flex-wrap gap-3">
           <a
@@ -87,6 +91,18 @@ export default async function AdminPage() {
             href="/admin/menu-engineering"
           >
             Menu engineering
+          </a>
+          <a
+            className="rounded-md border border-slate-300 px-4 py-2 text-sm font-semibold"
+            href="/admin/branding"
+          >
+            Identidade visual
+          </a>
+          <a
+            className="rounded-md border border-slate-300 px-4 py-2 text-sm font-semibold"
+            href="/platform/stores"
+          >
+            Lojas
           </a>
           <a
             className="rounded-md border border-slate-300 px-4 py-2 text-sm font-semibold"

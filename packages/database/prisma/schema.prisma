@@ -13,6 +13,29 @@ enum UserRole {
   OPERATOR
 }
 
+enum PlatformUserRole {
+  SUPER_ADMIN
+  SUPPORT
+}
+
+enum VisualConfigurationStatus {
+  DRAFT
+  PUBLISHED
+  ARCHIVED
+}
+
+enum NeutralTheme {
+  LIGHT
+  DARK
+  SYSTEM_DEFAULT
+}
+
+enum LayoutPresetSurface {
+  PUBLIC_MENU
+  ADMIN_CUE
+  BOTH
+}
+
 enum OrderStatus {
   PENDING
   PREPARING
@@ -61,10 +84,17 @@ model Tenant {
   phone                       String
   active                      Boolean                      @default(true)
   isOpen                      Boolean                      @default(false) @map("is_open")
+  setupCompletedAt            DateTime?                    @map("setup_completed_at")
+  deactivatedAt               DateTime?                    @map("deactivated_at")
+  createdByPlatformUserId     String?                      @map("created_by_platform_user_id") @db.Uuid
+  defaultLayoutPresetKey      String                       @default("classic") @map("default_layout_preset_key")
   config                      Json                         @default("{}")
   createdAt                   DateTime                     @default(now()) @map("created_at")
   updatedAt                   DateTime                     @updatedAt @map("updated_at")
+  createdByPlatformUser       PlatformUser?                @relation(fields: [createdByPlatformUserId], references: [id], onDelete: SetNull)
+  defaultLayoutPreset         LayoutPreset                 @relation(fields: [defaultLayoutPresetKey], references: [key], onDelete: Restrict)
   users                       User[]
+  visualConfigurations        StoreVisualConfiguration[]
   categories                  Category[]
   products                    Product[]
   orders                      Order[]
@@ -79,22 +109,80 @@ model Tenant {
   stockMovements              StockMovement[]
   orderProfitabilitySnapshots OrderProfitabilitySnapshot[]
 
+  @@index([createdByPlatformUserId])
+  @@index([defaultLayoutPresetKey])
   @@map("tenants")
 }
 
+model PlatformUser {
+  id             String           @id @default(uuid()) @db.Uuid
+  role           PlatformUserRole @default(SUPPORT)
+  name           String
+  email          String           @unique
+  passwordHash   String           @map("password_hash")
+  active         Boolean          @default(true)
+  createdAt      DateTime         @default(now()) @map("created_at")
+  updatedAt      DateTime         @updatedAt @map("updated_at")
+  createdTenants Tenant[]
+
+  @@map("platform_users")
+}
+
+model LayoutPreset {
+  key                  String                     @id
+  name                 String
+  description          String
+  targetSurface        LayoutPresetSurface        @default(PUBLIC_MENU) @map("target_surface")
+  active               Boolean                    @default(true)
+  createdAt            DateTime                   @default(now()) @map("created_at")
+  updatedAt            DateTime                   @updatedAt @map("updated_at")
+  tenantsUsingDefault  Tenant[]
+  visualConfigurations StoreVisualConfiguration[]
+
+  @@map("layout_presets")
+}
+
 model User {
-  id           String   @id @default(uuid()) @db.Uuid
-  tenantId     String   @map("tenant_id") @db.Uuid
-  role         UserRole @default(OPERATOR)
-  name         String
-  email        String   @unique
-  passwordHash String   @map("password_hash")
-  createdAt    DateTime @default(now()) @map("created_at")
-  updatedAt    DateTime @updatedAt @map("updated_at")
-  tenant       Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  id                            String                     @id @default(uuid()) @db.Uuid
+  tenantId                      String                     @map("tenant_id") @db.Uuid
+  role                          UserRole                   @default(OPERATOR)
+  name                          String
+  email                         String                     @unique
+  passwordHash                  String                     @map("password_hash")
+  createdAt                     DateTime                   @default(now()) @map("created_at")
+  updatedAt                     DateTime                   @updatedAt @map("updated_at")
+  tenant                        Tenant                     @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  visualConfigurationsCreated   StoreVisualConfiguration[] @relation("VisualConfigurationCreatedBy")
+  visualConfigurationsPublished StoreVisualConfiguration[] @relation("VisualConfigurationPublishedBy")
 
   @@index([tenantId])
   @@map("users")
+}
+
+model StoreVisualConfiguration {
+  id                String                    @id @default(uuid()) @db.Uuid
+  tenantId          String                    @map("tenant_id") @db.Uuid
+  status            VisualConfigurationStatus @default(DRAFT)
+  logoUrl           String?                   @map("logo_url")
+  primaryColor      String                    @map("primary_color")
+  accentColor       String                    @map("accent_color")
+  neutralTheme      NeutralTheme              @default(LIGHT) @map("neutral_theme")
+  layoutPresetKey   String                    @map("layout_preset_key")
+  createdByUserId   String?                   @map("created_by_user_id") @db.Uuid
+  publishedByUserId String?                   @map("published_by_user_id") @db.Uuid
+  publishedAt       DateTime?                 @map("published_at")
+  createdAt         DateTime                  @default(now()) @map("created_at")
+  updatedAt         DateTime                  @updatedAt @map("updated_at")
+  tenant            Tenant                    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  layoutPreset      LayoutPreset              @relation(fields: [layoutPresetKey], references: [key], onDelete: Restrict)
+  createdByUser     User?                     @relation("VisualConfigurationCreatedBy", fields: [createdByUserId], references: [id], onDelete: SetNull)
+  publishedByUser   User?                     @relation("VisualConfigurationPublishedBy", fields: [publishedByUserId], references: [id], onDelete: SetNull)
+
+  @@index([tenantId, status])
+  @@index([layoutPresetKey])
+  @@index([createdByUserId])
+  @@index([publishedByUserId])
+  @@map("store_visual_configurations")
 }
 
 model Category {

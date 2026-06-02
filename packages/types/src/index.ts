@@ -23,8 +23,116 @@ export interface PublicMenu {
     name: string;
     slug: string;
     isOpen: boolean;
+    branding?: PublicStoreBranding;
   };
   categories: PublicMenuCategory[];
+}
+
+export type NeutralTheme = "LIGHT" | "DARK" | "SYSTEM_DEFAULT";
+
+export type VisualConfigurationStatus = "DRAFT" | "PUBLISHED" | "ARCHIVED";
+
+export type StoreLayoutPresetKey = "classic" | "compact" | "visual";
+
+export interface LayoutPreset {
+  key: StoreLayoutPresetKey;
+  name: string;
+  description: string;
+  active: boolean;
+}
+
+export interface PublicStoreBranding {
+  logoUrl: string | null;
+  primaryColor: string;
+  accentColor: string;
+  neutralTheme: NeutralTheme;
+  layoutPreset: StoreLayoutPresetKey;
+}
+
+export interface StoreOwnerInput {
+  name: string;
+  email: string;
+  temporaryPassword: string;
+}
+
+export interface CreateStoreInput {
+  name: string;
+  slug: string;
+  phone: string;
+  active?: boolean;
+  isOpen?: boolean;
+  owner: StoreOwnerInput;
+}
+
+export interface UpdateStoreInput {
+  name?: string;
+  slug?: string;
+  phone?: string;
+  active?: boolean;
+  isOpen?: boolean;
+}
+
+export interface LaunchReadinessCheck {
+  key: string;
+  passed: boolean;
+  message: string;
+}
+
+export interface LaunchReadiness {
+  ready: boolean;
+  checks: LaunchReadinessCheck[];
+}
+
+export interface StoreSummary {
+  id: string;
+  name: string;
+  slug: string;
+  active: boolean;
+  isOpen: boolean;
+  readiness?: LaunchReadiness;
+}
+
+export interface StoreResponsibleUser {
+  id: string;
+  name: string;
+  email: string;
+}
+
+export interface StoreDetail extends StoreSummary {
+  phone: string;
+  owner?: StoreResponsibleUser;
+  branding?: VisualConfiguration;
+}
+
+export interface StoreSetupResult {
+  store: StoreDetail;
+  owner: StoreResponsibleUser;
+}
+
+export interface BrandingDraftInput {
+  logoUrl?: string | null;
+  primaryColor: string;
+  accentColor: string;
+  neutralTheme: NeutralTheme;
+  layoutPreset: StoreLayoutPresetKey;
+}
+
+export interface VisualConfiguration extends PublicStoreBranding {
+  id: string;
+  status: VisualConfigurationStatus;
+  publishedAt: string | null;
+}
+
+export interface BrandingState {
+  draft?: VisualConfiguration | null;
+  published?: VisualConfiguration | null;
+  availableLayouts: LayoutPreset[];
+}
+
+export interface BrandingPreview {
+  safeToPublish: boolean;
+  warnings: string[];
+  configuration: VisualConfiguration;
 }
 
 export interface CartItemInput {

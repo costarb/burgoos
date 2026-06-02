@@ -1,4 +1,10 @@
-import { PrismaClient, PurchaseUnitKind, UserRole } from "@prisma/client";
+import {
+  LayoutPresetSurface,
+  PlatformUserRole,
+  PrismaClient,
+  PurchaseUnitKind,
+  UserRole,
+} from "@prisma/client";
 import { hash } from "bcryptjs";
 
 const prisma = new PrismaClient();
@@ -6,15 +12,71 @@ const prisma = new PrismaClient();
 async function main(): Promise<void> {
   const passwordHash = await hash("admin123", 10);
 
+  await prisma.platformUser.upsert({
+    where: { email: "platform@burgoos.local" },
+    update: {
+      active: true,
+      role: PlatformUserRole.SUPER_ADMIN,
+    },
+    create: {
+      role: PlatformUserRole.SUPER_ADMIN,
+      name: "Admin Plataforma",
+      email: "platform@burgoos.local",
+      passwordHash,
+      active: true,
+    },
+  });
+
+  const layoutPresets = [
+    {
+      key: "classic",
+      name: "Classico",
+      description: "Menu familiar com categorias em destaque.",
+      targetSurface: LayoutPresetSurface.PUBLIC_MENU,
+    },
+    {
+      key: "compact",
+      name: "Compacto",
+      description: "Menu denso para cardapios com muitas categorias e produtos.",
+      targetSurface: LayoutPresetSurface.PUBLIC_MENU,
+    },
+    {
+      key: "visual",
+      name: "Visual",
+      description: "Menu com mais destaque para fotos e identidade da marca.",
+      targetSurface: LayoutPresetSurface.PUBLIC_MENU,
+    },
+  ];
+
+  for (const preset of layoutPresets) {
+    await prisma.layoutPreset.upsert({
+      where: { key: preset.key },
+      update: {
+        name: preset.name,
+        description: preset.description,
+        targetSurface: preset.targetSurface,
+        active: true,
+      },
+      create: {
+        ...preset,
+        active: true,
+      },
+    });
+  }
+
   const tenant = await prisma.tenant.upsert({
     where: { slug: "piloto" },
-    update: {},
+    update: {
+      defaultLayoutPresetKey: "classic",
+    },
     create: {
       name: "Loja Piloto",
       slug: "piloto",
       phone: "5500000000000",
       active: true,
       isOpen: true,
+      setupCompletedAt: new Date(),
+      defaultLayoutPresetKey: "classic",
       config: {
         pixInstructions: "Chave PIX da loja piloto",
         openingHours: "18:00-23:00",

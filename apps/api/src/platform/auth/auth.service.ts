@@ -1,6 +1,7 @@
 import { Inject, Logger, UnauthorizedException } from "@nestjs/common";
 import { Injectable } from "@nestjs/common";
 import { JwtService } from "@nestjs/jwt";
+import { UserRole } from "@prisma/client";
 import { compare } from "bcryptjs";
 import { PrismaService } from "../database/prisma.service";
 import { LoginDto } from "./dto/login.dto";
@@ -27,8 +28,8 @@ export class AuthService {
     const user = await this.prisma.user.findUnique({
       where: { email: dto.email },
       include: {
-        tenant: true
-      }
+        tenant: true,
+      },
     });
 
     if (!user || !(await compare(dto.password, user.passwordHash))) {
@@ -46,33 +47,64 @@ export class AuthService {
       tenantId: user.tenantId,
       role: user.role,
       email: user.email,
-      name: user.name
+      name: user.name,
     };
 
     return {
       accessToken: await this.signAccessToken(authUser),
       refreshToken: await this.signRefreshToken(authUser),
-      user: authUser
+      user: authUser,
+    };
+  }
+
+  async loginPlatform(dto: LoginDto): Promise<LoginResult> {
+    const platformUser = await this.prisma.platformUser.findUnique({
+      where: { email: dto.email },
+    });
+
+    if (
+      !platformUser ||
+      !platformUser.active ||
+      !(await compare(dto.password, platformUser.passwordHash))
+    ) {
+      this.logger.warn(`Rejected platform login for email=${dto.email}`);
+      throw new UnauthorizedException("Invalid credentials");
+    }
+
+    const authUser: AuthUser = {
+      id: platformUser.id,
+      tenantId: "",
+      role: UserRole.ADMIN,
+      email: platformUser.email,
+      name: platformUser.name,
+      isPlatformAdmin: true,
+      platformRole: platformUser.role,
+    };
+
+    return {
+      accessToken: await this.signAccessToken(authUser),
+      refreshToken: await this.signRefreshToken(authUser),
+      user: authUser,
     };
   }
 
   async verifyAccessToken(token: string): Promise<JwtPayload> {
     return this.jwtService.verifyAsync<JwtPayload>(token, {
-      secret: this.accessSecret
+      secret: this.accessSecret,
     });
   }
 
   private async signAccessToken(user: AuthUser): Promise<string> {
     return this.jwtService.signAsync(this.toPayload(user), {
       secret: this.accessSecret,
-      expiresIn: "15m"
+      expiresIn: "15m",
     });
   }
 
   private async signRefreshToken(user: AuthUser): Promise<string> {
     return this.jwtService.signAsync(this.toPayload(user), {
       secret: this.refreshSecret,
-      expiresIn: "7d"
+      expiresIn: "7d",
     });
   }
 
@@ -82,7 +114,9 @@ export class AuthService {
       tenantId: user.tenantId,
       role: user.role,
       email: user.email,
-      name: user.name
+      name: user.name,
+      isPlatformAdmin: user.isPlatformAdmin,
+      platformRole: user.platformRole,
     };
   }
 

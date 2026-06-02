@@ -32,10 +32,20 @@ npm.cmd run lint --workspaces --if-present
 npm.cmd run test --workspaces --if-present
 ```
 
+Local URLs and seeded credentials:
+
+- Web: `http://localhost:3000`
+- API health: `http://localhost:3001/api/health`
+- Platform stores: `http://localhost:3000/platform/stores`
+- Store branding: `http://localhost:3000/admin/branding`
+- Public pilot menu: `http://localhost:3000/piloto`
+- Store admin credentials used by server-rendered admin pages: `admin@burgoos.local` / `admin123`
+- Platform admin credentials used by platform setup pages: `platform@burgoos.local` / `admin123`
+
 ## Manual Validation Script
 
-1. Log in as a platform administrator.
-2. Open the store setup area.
+1. Open `http://localhost:3000/platform/stores`.
+2. Confirm the store setup area loads with platform administrator access.
 3. Create a new store:
    - name: Loja Centro
    - slug: loja-centro
@@ -48,16 +58,16 @@ npm.cmd run test --workspaces --if-present
    - temporary password: trocar123
 5. Confirm the store appears in the platform store list.
 6. Confirm launch readiness indicates the required setup state.
-7. Log in as the new owner.
+7. Log in as the new owner through the API or configure demo credentials for server-rendered admin pages.
 8. Confirm the owner sees only Loja Centro data.
-9. Open store branding settings.
+9. Open `http://localhost:3000/admin/branding`.
 10. Save a draft with:
     - logo URL
     - primary color
     - accent color
     - neutral theme
     - layout preset
-11. Preview the draft and confirm there are no contrast warnings.
+11. Review the on-page preview and confirm there are no contrast warnings.
 12. Publish the draft.
 13. Open the public store page for `/loja-centro`.
 14. Confirm the public page shows the published visual identity.
@@ -80,3 +90,10 @@ npm.cmd run test --workspaces --if-present
 - Previous branding can be restored.
 - Inactive store blocks new public ordering.
 - Historical data remains available after deactivation.
+
+## Implemented Validation Coverage
+
+- API integration: `store-onboarding.integration.spec.ts`, `store-branding.integration.spec.ts`
+- API unit: `store-branding.spec.ts`, `store-layout.spec.ts`
+- API E2E: `store-onboarding-flow.e2e.spec.ts`
+- Web behavior: `apps/web/app/platform/stores/stores.spec.tsx`, `apps/web/app/admin/branding/branding.spec.tsx`

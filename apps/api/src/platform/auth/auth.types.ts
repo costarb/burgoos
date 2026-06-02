@@ -1,4 +1,4 @@
-import { UserRole } from "@prisma/client";
+import { PlatformUserRole, UserRole } from "@prisma/client";
 import { Request } from "express";
 
 export interface AuthUser {
@@ -7,6 +7,8 @@ export interface AuthUser {
   role: UserRole;
   email: string;
   name: string;
+  isPlatformAdmin?: boolean;
+  platformRole?: PlatformUserRole;
 }
 
 export interface JwtPayload {
@@ -15,6 +17,8 @@ export interface JwtPayload {
   role: UserRole;
   email: string;
   name: string;
+  isPlatformAdmin?: boolean;
+  platformRole?: PlatformUserRole;
 }
 
 export interface AuthenticatedRequest extends Request {

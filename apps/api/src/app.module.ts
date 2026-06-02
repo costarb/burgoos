@@ -7,7 +7,9 @@ import { HealthController } from "./platform/health.controller";
 import { ManagementModule } from "./management/management.module";
 import { OperationsModule } from "./operations/operations.module";
 import { OrderingModule } from "./ordering/ordering.module";
+import { BrandingModule } from "./customer-experience/branding/branding.module";
 import { TenantModule } from "./platform/tenant/tenant.module";
+import { PlatformStoreModule } from "./platform/stores/platform-store.module";
 
 @Module({
   imports: [
@@ -17,6 +19,8 @@ import { TenantModule } from "./platform/tenant/tenant.module";
     DatabaseModule,
     AuthModule,
     TenantModule,
+    PlatformStoreModule,
+    BrandingModule,
     CatalogModule,
     OrderingModule,
     OperationsModule,

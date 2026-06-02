@@ -7,7 +7,7 @@ import type {
   FulfillmentMethod,
   PaymentMethod,
   PublicMenu,
-  PublicMenuProduct
+  PublicMenuProduct,
 } from "@burgoos/types";
 import { createPublicOrder } from "../../../lib/api";
 
@@ -23,6 +23,10 @@ interface PublicMenuClientProps {
 const cartStorageKey = "burgoos:cart";
 
 export function PublicMenuClient({ menu }: PublicMenuClientProps) {
+  const branding = menu.tenant.branding;
+  const primaryColor = branding?.primaryColor ?? "#C92A2A";
+  const accentColor = branding?.accentColor ?? "#F59F00";
+  const layoutPreset = branding?.layoutPreset ?? "classic";
   const router = useRouter();
   const [cart, setCart] = useState<Record<string, CartLine>>({});
   const [customerName, setCustomerName] = useState("");
@@ -60,8 +64,8 @@ export function PublicMenuClient({ menu }: PublicMenuClientProps) {
       ...current,
       [product.id]: {
         product,
-        quantity: (current[product.id]?.quantity ?? 0) + 1
-      }
+        quantity: (current[product.id]?.quantity ?? 0) + 1,
+      },
     }));
   }
 
@@ -82,8 +86,8 @@ export function PublicMenuClient({ menu }: PublicMenuClientProps) {
         ...current,
         [productId]: {
           ...currentLine,
-          quantity
-        }
+          quantity,
+        },
       };
     });
   }
@@ -119,14 +123,14 @@ export function PublicMenuClient({ menu }: PublicMenuClientProps) {
         deliveryAddress:
           fulfillmentMethod === "DELIVERY"
             ? {
-                address: deliveryAddress
+                address: deliveryAddress,
               }
             : undefined,
         notes: notes.trim() || undefined,
         items: cartLines.map((line) => ({
           productId: line.product.id,
-          quantity: line.quantity
-        }))
+          quantity: line.quantity,
+        })),
       });
 
       setCreatedOrder(order);
@@ -144,12 +148,25 @@ export function PublicMenuClient({ menu }: PublicMenuClientProps) {
   }
 
   return (
-    <main className="min-h-screen bg-cream text-ink">
+    <main
+      className={`public-menu-layout public-menu-layout-${layoutPreset} min-h-screen bg-cream text-ink`}
+    >
       <header className="border-b border-orange-100 bg-white px-4 py-5 shadow-sm">
         <div className="mx-auto flex max-w-5xl items-center justify-between gap-4">
           <div>
-            <p className="text-xs font-semibold uppercase text-tomato">{menu.tenant.slug}</p>
-            <h1 className="mt-1 text-2xl font-bold">{menu.tenant.name}</h1>
+            <p className="text-xs font-semibold uppercase" style={{ color: primaryColor }}>
+              {menu.tenant.slug}
+            </p>
+            <div className="mt-1 flex items-center gap-3">
+              {branding?.logoUrl ? (
+                <img
+                  alt=""
+                  className="h-10 w-10 rounded-md object-contain"
+                  src={branding.logoUrl}
+                />
+              ) : null}
+              <h1 className="text-2xl font-bold">{menu.tenant.name}</h1>
+            </div>
           </div>
           <span className="rounded-md bg-leaf px-3 py-2 text-sm font-semibold text-white">
             {menu.tenant.isOpen ? "Aberto" : "Fechado"}
@@ -157,26 +174,29 @@ export function PublicMenuClient({ menu }: PublicMenuClientProps) {
         </div>
       </header>
 
-      <div className="mx-auto grid max-w-5xl gap-6 px-4 py-6 lg:grid-cols-[1fr_360px]">
-        <section className="space-y-8">
+      <div className="public-menu-shell mx-auto grid max-w-5xl gap-6 px-4 py-6 lg:grid-cols-[1fr_360px]">
+        <section className="public-menu-categories space-y-8">
           {menu.categories.map((category) => (
             <section key={category.id}>
               <h2 className="text-xl font-semibold">{category.name}</h2>
-              <div className="mt-3 divide-y divide-orange-100 rounded-md border border-orange-100 bg-white">
+              <div className="public-menu-product-list mt-3 divide-y divide-orange-100 rounded-md border border-orange-100 bg-white">
                 {category.products.map((product) => (
                   <article
                     key={product.id}
-                    className="grid grid-cols-[1fr_auto] items-center gap-4 p-4"
+                    className="public-menu-product grid grid-cols-[1fr_auto] items-center gap-4 p-4"
                   >
                     <div>
                       <h3 className="font-semibold">{product.name}</h3>
                       <p className="mt-1 text-sm text-slate-600">{product.description}</p>
-                      <p className="mt-2 font-semibold text-tomato">R$ {product.price}</p>
+                      <p className="mt-2 font-semibold" style={{ color: primaryColor }}>
+                        R$ {product.price}
+                      </p>
                     </div>
                     <button
-                      className="rounded-md bg-tomato px-3 py-2 text-sm font-semibold text-white disabled:bg-slate-300"
+                      className="rounded-md px-3 py-2 text-sm font-semibold text-white disabled:bg-slate-300"
                       disabled={!menu.tenant.isOpen}
                       onClick={() => addProduct(product)}
+                      style={{ backgroundColor: primaryColor }}
                       type="button"
                     >
                       Adicionar
@@ -188,7 +208,7 @@ export function PublicMenuClient({ menu }: PublicMenuClientProps) {
           ))}
         </section>
 
-        <aside className="h-fit rounded-md border border-orange-100 bg-white p-4 shadow-sm">
+        <aside className="public-menu-cart h-fit rounded-md border border-orange-100 bg-white p-4 shadow-sm">
           <h2 className="text-lg font-semibold">Seu pedido</h2>
 
           <div className="mt-4 space-y-3">
@@ -225,7 +245,9 @@ export function PublicMenuClient({ menu }: PublicMenuClientProps) {
 
           <div className="mt-4 flex items-center justify-between border-t border-slate-200 pt-4">
             <span className="font-semibold">Total estimado</span>
-            <span className="font-bold text-tomato">R$ {cartTotal.toFixed(2)}</span>
+            <span className="font-bold" style={{ color: primaryColor }}>
+              R$ {cartTotal.toFixed(2)}
+            </span>
           </div>
 
           <form className="mt-5 space-y-3" onSubmit={handleSubmit}>
@@ -276,20 +298,26 @@ export function PublicMenuClient({ menu }: PublicMenuClientProps) {
               value={notes}
             />
 
-            {error ? <p className="rounded-md bg-red-50 p-3 text-sm text-red-700">{error}</p> : null}
+            {error ? (
+              <p className="rounded-md bg-red-50 p-3 text-sm text-red-700">{error}</p>
+            ) : null}
 
             {createdOrder ? (
               <div className="rounded-md bg-green-50 p-3 text-sm text-green-800">
                 <p className="font-semibold">Pedido criado: R$ {createdOrder.total}</p>
-                <a className="mt-2 inline-block font-semibold underline" href={createdOrder.whatsappUrl}>
+                <a
+                  className="mt-2 inline-block font-semibold underline"
+                  href={createdOrder.whatsappUrl}
+                >
                   Enviar resumo no WhatsApp
                 </a>
               </div>
             ) : null}
 
             <button
-              className="w-full rounded-md bg-ink px-4 py-3 text-sm font-semibold text-white disabled:bg-slate-300"
+              className="w-full rounded-md px-4 py-3 text-sm font-semibold text-white disabled:bg-slate-300"
               disabled={submitting || !menu.tenant.isOpen}
+              style={{ backgroundColor: accentColor }}
               type="submit"
             >
               {submitting ? "Finalizando..." : "Finalizar pedido"}

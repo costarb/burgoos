@@ -12,11 +12,11 @@
 
 **Purpose**: Prepare shared structure for platform store setup and store branding.
 
-- [ ] T001 Create API module folders for platform stores and branding in `apps/api/src/platform/stores` and `apps/api/src/customer-experience/branding`
-- [ ] T002 Create web route folders for platform store setup and admin branding in `apps/web/app/platform/stores` and `apps/web/app/admin/branding`
-- [ ] T003 [P] Add shared store onboarding and branding DTO/type exports in `packages/types/src/index.ts`
-- [ ] T004 [P] Add seed data for a platform administrator and default layout presets in `packages/database/prisma/seed.ts`
-- [ ] T005 Verify OpenAPI contract path coverage against `specs/003-store-onboarding-branding/contracts/openapi.yaml`
+- [x] T001 Create API module folders for platform stores and branding in `apps/api/src/platform/stores` and `apps/api/src/customer-experience/branding`
+- [x] T002 Create web route folders for platform store setup and admin branding in `apps/web/app/platform/stores` and `apps/web/app/admin/branding`
+- [x] T003 [P] Add shared store onboarding and branding DTO/type exports in `packages/types/src/index.ts`
+- [x] T004 [P] Add seed data for a platform administrator and default layout presets in `packages/database/prisma/seed.ts`
+- [x] T005 Verify OpenAPI contract path coverage against `specs/003-store-onboarding-branding/contracts/openapi.yaml`
 
 ---
 
@@ -26,15 +26,15 @@
 
 **CRITICAL**: No user story work should begin until this phase is complete.
 
-- [ ] T006 Add Prisma enums/models for PlatformUser or platform role, StoreVisualConfiguration, LayoutPreset and visual configuration status in `packages/database/prisma/schema.prisma`
-- [ ] T007 Extend Tenant model with explicit setup/branding fields needed for launch readiness in `packages/database/prisma/schema.prisma`
-- [ ] T008 Create Prisma migration for store onboarding and visual configuration schema in `packages/database/prisma/migrations`
-- [ ] T009 Regenerate Prisma client and validate schema with `packages/database/prisma/schema.prisma`
-- [ ] T010 [P] Add slug normalization and reserved-word validation helpers in `apps/api/src/platform/stores/store-slug.ts`
-- [ ] T011 [P] Add color contrast and hex color validation helpers in `apps/api/src/customer-experience/branding/color-contrast.ts`
-- [ ] T012 [P] Add platform-admin authorization guard/decorator in `apps/api/src/platform/auth/platform-admin.guard.ts`
-- [ ] T013 [P] Add shared admin/platform API client primitives for stores and branding in `apps/web/lib/api.ts`
-- [ ] T014 Add structured audit logging for store setup and branding publication in `apps/api/src/platform/stores/store-audit.ts`
+- [x] T006 Add Prisma enums/models for PlatformUser or platform role, StoreVisualConfiguration, LayoutPreset and visual configuration status in `packages/database/prisma/schema.prisma`
+- [x] T007 Extend Tenant model with explicit setup/branding fields needed for launch readiness in `packages/database/prisma/schema.prisma`
+- [x] T008 Create Prisma migration for store onboarding and visual configuration schema in `packages/database/prisma/migrations`
+- [x] T009 Regenerate Prisma client and validate schema with `packages/database/prisma/schema.prisma`
+- [x] T010 [P] Add slug normalization and reserved-word validation helpers in `apps/api/src/platform/stores/store-slug.ts`
+- [x] T011 [P] Add color contrast and hex color validation helpers in `apps/api/src/customer-experience/branding/color-contrast.ts`
+- [x] T012 [P] Add platform-admin authorization guard/decorator in `apps/api/src/platform/auth/platform-admin.guard.ts`
+- [x] T013 [P] Add shared admin/platform API client primitives for stores and branding in `apps/web/lib/api.ts`
+- [x] T014 Add structured audit logging for store setup and branding publication in `apps/api/src/platform/stores/store-audit.ts`
 
 **Checkpoint**: Foundation ready; user story implementation can proceed.
 
@@ -48,23 +48,23 @@
 
 ### Tests
 
-- [ ] T015 [P] [US1] Add API integration tests for platform store creation and owner creation in `apps/api/test/store-onboarding.integration.spec.ts`
-- [ ] T016 [P] [US1] Add API integration tests for slug uniqueness, reserved slugs and slug normalization in `apps/api/test/store-onboarding.integration.spec.ts`
-- [ ] T017 [P] [US1] Add API integration tests for owner login and tenant scoping in `apps/api/test/store-onboarding.integration.spec.ts`
-- [ ] T018 [P] [US1] Add web form behavior tests for platform store setup in `apps/web/app/platform/stores/stores.spec.tsx`
+- [x] T015 [P] [US1] Add API integration tests for platform store creation and owner creation in `apps/api/test/store-onboarding.integration.spec.ts`
+- [x] T016 [P] [US1] Add API integration tests for slug uniqueness, reserved slugs and slug normalization in `apps/api/test/store-onboarding.integration.spec.ts`
+- [x] T017 [P] [US1] Add API integration tests for owner login and tenant scoping in `apps/api/test/store-onboarding.integration.spec.ts`
+- [x] T018 [P] [US1] Add web form behavior tests for platform store setup in `apps/web/app/platform/stores/stores.spec.tsx`
 
 ### Implementation
 
-- [ ] T019 [P] [US1] Implement store onboarding DTOs in `apps/api/src/platform/stores/dto/store-onboarding.dto.ts`
-- [ ] T020 [P] [US1] Implement launch readiness calculator in `apps/api/src/platform/stores/launch-readiness.ts`
-- [ ] T021 [US1] Implement platform store service with tenant and owner creation in `apps/api/src/platform/stores/platform-store.service.ts`
-- [ ] T022 [US1] Implement platform store controller for list, create, detail, update and readiness in `apps/api/src/platform/stores/platform-store.controller.ts`
-- [ ] T023 [US1] Register store setup providers/controllers in `apps/api/src/platform/stores/platform-store.module.ts` and `apps/api/src/app.module.ts`
-- [ ] T024 [US1] Update authentication flow to support platform administrator access without breaking tenant owner access in `apps/api/src/platform/auth/auth.service.ts`
-- [ ] T025 [US1] Add admin API client methods for platform store setup in `apps/web/lib/api.ts`
-- [ ] T026 [US1] Build platform store list and create form page in `apps/web/app/platform/stores/page.tsx`
-- [ ] T027 [US1] Build platform store detail/readiness page in `apps/web/app/platform/stores/[storeId]/page.tsx`
-- [ ] T028 [US1] Add platform navigation entry for store setup in `apps/web/app/admin/page.tsx`
+- [x] T019 [P] [US1] Implement store onboarding DTOs in `apps/api/src/platform/stores/dto/store-onboarding.dto.ts`
+- [x] T020 [P] [US1] Implement launch readiness calculator in `apps/api/src/platform/stores/launch-readiness.ts`
+- [x] T021 [US1] Implement platform store service with tenant and owner creation in `apps/api/src/platform/stores/platform-store.service.ts`
+- [x] T022 [US1] Implement platform store controller for list, create, detail, update and readiness in `apps/api/src/platform/stores/platform-store.controller.ts`
+- [x] T023 [US1] Register store setup providers/controllers in `apps/api/src/platform/stores/platform-store.module.ts` and `apps/api/src/app.module.ts`
+- [x] T024 [US1] Update authentication flow to support platform administrator access without breaking tenant owner access in `apps/api/src/platform/auth/auth.service.ts`
+- [x] T025 [US1] Add admin API client methods for platform store setup in `apps/web/lib/api.ts`
+- [x] T026 [US1] Build platform store list and create form page in `apps/web/app/platform/stores/page.tsx`
+- [x] T027 [US1] Build platform store detail/readiness page in `apps/web/app/platform/stores/[storeId]/page.tsx`
+- [x] T028 [US1] Add platform navigation entry for store setup in `apps/web/app/admin/page.tsx`
 
 **Checkpoint**: New stores can be created without seed/script edits and owners are tenant-scoped.
 
@@ -78,23 +78,23 @@
 
 ### Tests
 
-- [ ] T029 [P] [US2] Add unit tests for hex color and contrast validation in `apps/api/test/store-branding.spec.ts`
-- [ ] T030 [P] [US2] Add API integration tests for saving branding drafts and rejecting unsafe contrast in `apps/api/test/store-branding.integration.spec.ts`
-- [ ] T031 [P] [US2] Add API integration tests for public tenant branding exposure in `apps/api/test/store-branding.integration.spec.ts`
-- [ ] T032 [P] [US2] Add web form behavior tests for branding settings in `apps/web/app/admin/branding/branding.spec.tsx`
+- [x] T029 [P] [US2] Add unit tests for hex color and contrast validation in `apps/api/test/store-branding.spec.ts`
+- [x] T030 [P] [US2] Add API integration tests for saving branding drafts and rejecting unsafe contrast in `apps/api/test/store-branding.integration.spec.ts`
+- [x] T031 [P] [US2] Add API integration tests for public tenant branding exposure in `apps/api/test/store-branding.integration.spec.ts`
+- [x] T032 [P] [US2] Add web form behavior tests for branding settings in `apps/web/app/admin/branding/branding.spec.tsx`
 
 ### Implementation
 
-- [ ] T033 [P] [US2] Implement branding DTOs in `apps/api/src/customer-experience/branding/dto/store-branding.dto.ts`
-- [ ] T034 [P] [US2] Implement default branding resolver in `apps/api/src/customer-experience/branding/default-branding.ts`
-- [ ] T035 [US2] Implement store branding service for draft save, preview validation and published lookup in `apps/api/src/customer-experience/branding/store-branding.service.ts`
-- [ ] T036 [US2] Implement store branding controller for get, save draft and preview in `apps/api/src/customer-experience/branding/store-branding.controller.ts`
-- [ ] T037 [US2] Register branding module in `apps/api/src/customer-experience/branding/branding.module.ts` and `apps/api/src/app.module.ts`
-- [ ] T038 [US2] Extend public tenant/menu responses with published or default branding in `apps/api/src/platform/tenant/tenant-context.service.ts` and `apps/api/src/catalog/catalog.service.ts`
-- [ ] T039 [US2] Add admin API client methods for branding state, draft save and preview in `apps/web/lib/api.ts`
-- [ ] T040 [US2] Build branding settings page with logo URL and color controls in `apps/web/app/admin/branding/page.tsx`
-- [ ] T041 [US2] Apply published branding tokens to public menu rendering in `apps/web/app/(public-menu)/[slug]/public-menu-client.tsx`
-- [ ] T042 [US2] Add lightweight store identity cue to admin dashboard in `apps/web/app/admin/page.tsx`
+- [x] T033 [P] [US2] Implement branding DTOs in `apps/api/src/customer-experience/branding/dto/store-branding.dto.ts`
+- [x] T034 [P] [US2] Implement default branding resolver in `apps/api/src/customer-experience/branding/default-branding.ts`
+- [x] T035 [US2] Implement store branding service for draft save, preview validation and published lookup in `apps/api/src/customer-experience/branding/store-branding.service.ts`
+- [x] T036 [US2] Implement store branding controller for get, save draft and preview in `apps/api/src/customer-experience/branding/store-branding.controller.ts`
+- [x] T037 [US2] Register branding module in `apps/api/src/customer-experience/branding/branding.module.ts` and `apps/api/src/app.module.ts`
+- [x] T038 [US2] Extend public tenant/menu responses with published or default branding in `apps/api/src/platform/tenant/tenant-context.service.ts` and `apps/api/src/catalog/catalog.service.ts`
+- [x] T039 [US2] Add admin API client methods for branding state, draft save and preview in `apps/web/lib/api.ts`
+- [x] T040 [US2] Build branding settings page with logo URL and color controls in `apps/web/app/admin/branding/page.tsx`
+- [x] T041 [US2] Apply published branding tokens to public menu rendering in `apps/web/app/(public-menu)/[slug]/public-menu-client.tsx`
+- [x] T042 [US2] Add lightweight store identity cue to admin dashboard in `apps/web/app/admin/page.tsx`
 
 **Checkpoint**: Store branding can be configured and appears on public store pages.
 
@@ -108,18 +108,18 @@
 
 ### Tests
 
-- [ ] T043 [P] [US3] Add unit tests for layout preset availability and fallback rules in `apps/api/test/store-layout.spec.ts`
-- [ ] T044 [P] [US3] Add API integration tests for layout preset selection in branding drafts in `apps/api/test/store-branding.integration.spec.ts`
-- [ ] T045 [P] [US3] Add web tests for layout selector and preview state in `apps/web/app/admin/branding/branding.spec.tsx`
+- [x] T043 [P] [US3] Add unit tests for layout preset availability and fallback rules in `apps/api/test/store-layout.spec.ts`
+- [x] T044 [P] [US3] Add API integration tests for layout preset selection in branding drafts in `apps/api/test/store-branding.integration.spec.ts`
+- [x] T045 [P] [US3] Add web tests for layout selector and preview state in `apps/web/app/admin/branding/branding.spec.tsx`
 
 ### Implementation
 
-- [ ] T046 [P] [US3] Implement layout preset registry in `apps/api/src/customer-experience/branding/layout-presets.ts`
-- [ ] T047 [US3] Extend branding service to validate active layout presets in `apps/api/src/customer-experience/branding/store-branding.service.ts`
-- [ ] T048 [US3] Add layout preset options to branding API responses in `apps/api/src/customer-experience/branding/store-branding.controller.ts`
-- [ ] T049 [US3] Add layout selector UI to branding page in `apps/web/app/admin/branding/page.tsx`
-- [ ] T050 [US3] Implement public menu layout variants in `apps/web/app/(public-menu)/[slug]/public-menu-client.tsx`
-- [ ] T051 [US3] Add responsive styling for classic, compact and visual menu presets in `apps/web/app/globals.css`
+- [x] T046 [P] [US3] Implement layout preset registry in `apps/api/src/customer-experience/branding/layout-presets.ts`
+- [x] T047 [US3] Extend branding service to validate active layout presets in `apps/api/src/customer-experience/branding/store-branding.service.ts`
+- [x] T048 [US3] Add layout preset options to branding API responses in `apps/api/src/customer-experience/branding/store-branding.controller.ts`
+- [x] T049 [US3] Add layout selector UI to branding page in `apps/web/app/admin/branding/page.tsx`
+- [x] T050 [US3] Implement public menu layout variants in `apps/web/app/(public-menu)/[slug]/public-menu-client.tsx`
+- [x] T051 [US3] Add responsive styling for classic, compact and visual menu presets in `apps/web/app/globals.css`
 
 **Checkpoint**: Layout presets are selectable, previewable and reflected in public menu.
 
@@ -133,17 +133,17 @@
 
 ### Tests
 
-- [ ] T052 [P] [US4] Add API integration tests for publish, history and restore flows in `apps/api/test/store-branding.integration.spec.ts`
-- [ ] T053 [P] [US4] Add E2E test for create store, owner login, publish branding and restore previous branding in `apps/api/test/store-onboarding-flow.e2e.spec.ts`
-- [ ] T054 [P] [US4] Add web behavior tests for publish/history/restore controls in `apps/web/app/admin/branding/branding.spec.tsx`
+- [x] T052 [P] [US4] Add API integration tests for publish, history and restore flows in `apps/api/test/store-branding.integration.spec.ts`
+- [x] T053 [P] [US4] Add E2E test for create store, owner login, publish branding and restore previous branding in `apps/api/test/store-onboarding-flow.e2e.spec.ts`
+- [x] T054 [P] [US4] Add web behavior tests for publish/history/restore controls in `apps/web/app/admin/branding/branding.spec.tsx`
 
 ### Implementation
 
-- [ ] T055 [US4] Extend store branding service with publish, archive and restore transitions in `apps/api/src/customer-experience/branding/store-branding.service.ts`
-- [ ] T056 [US4] Add publish, history and restore endpoints in `apps/api/src/customer-experience/branding/store-branding.controller.ts`
-- [ ] T057 [US4] Add admin API client methods for publish, history and restore in `apps/web/lib/api.ts`
-- [ ] T058 [US4] Add preview, publish, history and restore controls to branding page in `apps/web/app/admin/branding/page.tsx`
-- [ ] T059 [US4] Add published branding audit entries in `apps/api/src/platform/stores/store-audit.ts`
+- [x] T055 [US4] Extend store branding service with publish, archive and restore transitions in `apps/api/src/customer-experience/branding/store-branding.service.ts`
+- [x] T056 [US4] Add publish, history and restore endpoints in `apps/api/src/customer-experience/branding/store-branding.controller.ts`
+- [x] T057 [US4] Add admin API client methods for publish, history and restore in `apps/web/lib/api.ts`
+- [x] T058 [US4] Add preview, publish, history and restore controls to branding page in `apps/web/app/admin/branding/page.tsx`
+- [x] T059 [US4] Add published branding audit entries in `apps/api/src/platform/stores/store-audit.ts`
 
 **Checkpoint**: Visual configuration can be safely published and restored.
 
@@ -153,14 +153,14 @@
 
 **Purpose**: Validation, documentation and operational readiness across all stories.
 
-- [ ] T060 [P] Update feature quickstart with implementation-specific details in `specs/003-store-onboarding-branding/quickstart.md`
-- [ ] T061 [P] Add OpenAPI examples for key request/response payloads in `specs/003-store-onboarding-branding/contracts/openapi.yaml`
-- [ ] T062 [P] Add empty/loading/error states across platform store and branding pages in `apps/web/app/platform/stores` and `apps/web/app/admin/branding`
-- [ ] T063 Verify public menu mobile usability for all layout presets in `apps/web/app/(public-menu)/[slug]/public-menu-client.tsx`
-- [ ] T064 Run full `npm.cmd run typecheck --workspaces --if-present` validation
-- [ ] T065 Run full `npm.cmd run lint --workspaces --if-present` validation
-- [ ] T066 Run full `npm.cmd run test --workspaces --if-present` validation
-- [ ] T067 Execute quickstart validation from `specs/003-store-onboarding-branding/quickstart.md`
+- [x] T060 [P] Update feature quickstart with implementation-specific details in `specs/003-store-onboarding-branding/quickstart.md`
+- [x] T061 [P] Add OpenAPI examples for key request/response payloads in `specs/003-store-onboarding-branding/contracts/openapi.yaml`
+- [x] T062 [P] Add empty/loading/error states across platform store and branding pages in `apps/web/app/platform/stores` and `apps/web/app/admin/branding`
+- [x] T063 Verify public menu mobile usability for all layout presets in `apps/web/app/(public-menu)/[slug]/public-menu-client.tsx`
+- [x] T064 Run full `npm.cmd run typecheck --workspaces --if-present` validation
+- [x] T065 Run full `npm.cmd run lint --workspaces --if-present` validation
+- [x] T066 Run full `npm.cmd run test --workspaces --if-present` validation
+- [x] T067 Execute quickstart validation from `specs/003-store-onboarding-branding/quickstart.md`
 
 ---
 

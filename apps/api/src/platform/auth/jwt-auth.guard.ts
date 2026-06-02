@@ -1,4 +1,10 @@
-import { CanActivate, ExecutionContext, Inject, Injectable, UnauthorizedException } from "@nestjs/common";
+import {
+  CanActivate,
+  ExecutionContext,
+  Inject,
+  Injectable,
+  UnauthorizedException,
+} from "@nestjs/common";
 import { AuthenticatedRequest, AuthUser } from "./auth.types";
 import { AuthService } from "./auth.service";
 
@@ -20,7 +26,9 @@ export class JwtAuthGuard implements CanActivate {
       tenantId: payload.tenantId,
       role: payload.role,
       email: payload.email,
-      name: payload.name
+      name: payload.name,
+      isPlatformAdmin: payload.isPlatformAdmin,
+      platformRole: payload.platformRole,
     };
 
     request.user = user;

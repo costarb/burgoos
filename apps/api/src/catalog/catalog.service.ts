@@ -1,5 +1,6 @@
 import { BadRequestException, Inject, Injectable, Logger, NotFoundException } from "@nestjs/common";
 import { Prisma, Product } from "@prisma/client";
+import { StoreBrandingService } from "../customer-experience/branding/store-branding.service";
 import { PrismaService } from "../platform/database/prisma.service";
 import { CreateCategoryDto } from "./dto/create-category.dto";
 import { CreateProductDto } from "./dto/create-product.dto";
@@ -11,6 +12,13 @@ interface PublicMenuResponse {
     name: string;
     slug: string;
     isOpen: boolean;
+    branding: {
+      logoUrl: string | null;
+      primaryColor: string;
+      accentColor: string;
+      neutralTheme: string;
+      layoutPreset: string;
+    };
   };
   categories: Array<{
     id: string;
@@ -29,12 +37,15 @@ interface PublicMenuResponse {
 export class CatalogService {
   private readonly logger = new Logger(CatalogService.name);
 
-  constructor(@Inject(PrismaService) private readonly prisma: PrismaService) {}
+  constructor(
+    @Inject(PrismaService) private readonly prisma: PrismaService,
+    @Inject(StoreBrandingService) private readonly brandingService: StoreBrandingService
+  ) {}
 
   async listCategories(tenantId: string) {
     return this.prisma.category.findMany({
       where: { tenantId },
-      orderBy: [{ sortOrder: "asc" }, { name: "asc" }]
+      orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
     });
   }
 
@@ -44,8 +55,8 @@ export class CatalogService {
         tenantId,
         name: dto.name,
         sortOrder: dto.sortOrder ?? 0,
-        active: dto.active ?? true
-      }
+        active: dto.active ?? true,
+      },
     });
   }
 
@@ -57,15 +68,15 @@ export class CatalogService {
       data: {
         name: dto.name,
         sortOrder: dto.sortOrder,
-        active: dto.active
-      }
+        active: dto.active,
+      },
     });
   }
 
   async listProducts(tenantId: string) {
     return this.prisma.product.findMany({
       where: { tenantId },
-      orderBy: [{ category: { sortOrder: "asc" } }, { name: "asc" }]
+      orderBy: [{ category: { sortOrder: "asc" } }, { name: "asc" }],
     });
   }
 
@@ -73,11 +84,15 @@ export class CatalogService {
     await this.ensureCategoryBelongsToTenant(tenantId, dto.categoryId);
 
     return this.prisma.product.create({
-      data: this.toProductCreateInput(tenantId, dto)
+      data: this.toProductCreateInput(tenantId, dto),
     });
   }
 
-  async updateProduct(tenantId: string, productId: string, dto: UpdateProductDto): Promise<Product> {
+  async updateProduct(
+    tenantId: string,
+    productId: string,
+    dto: UpdateProductDto
+  ): Promise<Product> {
     await this.ensureProductBelongsToTenant(tenantId, productId);
 
     if (dto.categoryId) {
@@ -92,8 +107,8 @@ export class CatalogService {
         description: dto.description,
         price: dto.price === undefined ? undefined : new Prisma.Decimal(dto.price),
         imageUrl: dto.imageUrl,
-        active: dto.active
-      }
+        active: dto.active,
+      },
     });
   }
 
@@ -101,14 +116,14 @@ export class CatalogService {
     const tenant = await this.prisma.tenant.findFirst({
       where: {
         slug,
-        active: true
+        active: true,
       },
       select: {
         id: true,
         name: true,
         slug: true,
-        isOpen: true
-      }
+        isOpen: true,
+      },
     });
 
     if (!tenant) {
@@ -122,9 +137,9 @@ export class CatalogService {
         active: true,
         products: {
           some: {
-            active: true
-          }
-        }
+            active: true,
+          },
+        },
       },
       orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
       select: {
@@ -132,27 +147,30 @@ export class CatalogService {
         name: true,
         products: {
           where: {
-            active: true
+            active: true,
           },
           orderBy: {
-            name: "asc"
+            name: "asc",
           },
           select: {
             id: true,
             name: true,
             description: true,
             price: true,
-            imageUrl: true
-          }
-        }
-      }
+            imageUrl: true,
+          },
+        },
+      },
     });
+
+    const branding = await this.brandingService.getPublicBranding(tenant.id);
 
     return {
       tenant: {
         name: tenant.name,
         slug: tenant.slug,
-        isOpen: tenant.isOpen
+        isOpen: tenant.isOpen,
+        branding,
       },
       categories: categories.map((category) => ({
         id: category.id,
@@ -162,9 +180,9 @@ export class CatalogService {
           name: product.name,
           description: product.description,
           price: product.price.toFixed(2),
-          imageUrl: product.imageUrl
-        }))
-      }))
+          imageUrl: product.imageUrl,
+        })),
+      })),
     };
   }
 
@@ -172,15 +190,17 @@ export class CatalogService {
     const category = await this.prisma.category.findFirst({
       where: {
         id: categoryId,
-        tenantId
+        tenantId,
       },
       select: {
-        id: true
-      }
+        id: true,
+      },
     });
 
     if (!category) {
-      this.logger.warn(`Category tenant scope rejected tenantId=${tenantId} categoryId=${categoryId}`);
+      this.logger.warn(
+        `Category tenant scope rejected tenantId=${tenantId} categoryId=${categoryId}`
+      );
       throw new NotFoundException("Category not found");
     }
   }
@@ -189,11 +209,11 @@ export class CatalogService {
     const product = await this.prisma.product.findFirst({
       where: {
         id: productId,
-        tenantId
+        tenantId,
       },
       select: {
-        id: true
-      }
+        id: true,
+      },
     });
 
     if (!product) {
@@ -217,7 +237,7 @@ export class CatalogService {
       description: dto.description ?? "",
       price: new Prisma.Decimal(dto.price),
       imageUrl: dto.imageUrl,
-      active: dto.active ?? true
+      active: dto.active ?? true,
     };
   }
 }
