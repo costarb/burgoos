@@ -74,6 +74,34 @@ npm.cmd run lint
 19. Open dashboard and verify alerts for price review, stock purchase and margin.
 20. Open menu engineering and verify classification appears when there is enough sales data.
 
+## Historical Payment Extract Import Validation
+
+Use this flow when the operation has sales in payment institution extracts but no item-level order history.
+
+1. Open `/admin/orders/import`.
+2. Select layout `Mercado Pago` and paste the original Mercado Pago extract.
+3. Import the file and verify the screen shows processing, then a completion message with valid/imported/ignored counts.
+4. Verify imported orders use:
+   - payment institution `MERCADO_PAGO`
+   - payment method mapped from `PAYMENT_METHOD_DETAIL`
+   - external payment ID from `PAYMENT_ID`
+   - gross value from `GROSS_VALUE`
+   - fee from `SALES_DISCOUNTS`
+   - net received from `NET`
+   - order/snapshot date from `OPERATION_DATETIME`
+5. Select layout `PagBank` and paste the original PagBank extract.
+6. Verify imported orders use:
+   - payment institution `PAGBANK`
+   - payment method mapped from `Forma de Pagamento`
+   - external payment ID from `Codigo da Transacao`
+   - gross value from `Valor Bruto`
+   - fee from `Valor Taxa`
+   - net received from `Valor Liquido`
+   - order/snapshot date from `Data da Transacao`
+7. For local cash sales, select layout `Simples`, choose `CAIXA_LOCAL` or `DINHEIRO` as the default institution, and import `Data;Valor` or `Data;Instituicao;Meio;Valor`.
+8. Reimport the same extract and verify duplicates are ignored.
+9. Open DRE filtered to the original sale date and verify gross revenue and received net revenue appear for that day, not for the import day.
+
 ## Launch Readiness Checklist
 
 - Required domains can be maintained from admin screens.
@@ -85,6 +113,9 @@ npm.cmd run lint
 - Cancelled orders release stock impact.
 - Delivered orders preserve profitability snapshots.
 - DRE excludes cancelled orders.
+- DRE shows both operational net revenue and received net revenue from payment institutions.
+- Historical imports preserve transaction date, external payment ID, gross amount, fee amount and net amount.
+- Import screen gives visible processing, success and error feedback.
 - Dashboard highlights CMV, margin, price review and stock alerts.
 - Menu engineering requires at least two products with delivered-order profitability snapshots in the selected period.
 

@@ -226,6 +226,28 @@
 
 ---
 
+## Phase 10: Completed Increment - Historical Payment Extract Import & Reconciliation
+
+**Purpose**: Document implemented additions for importing historical bank/payment extracts, reconciling gross/net values, and showing accurate DRE period results.
+
+- [x] T098 [US5] Extend payment enums and order reconciliation fields in `packages/database/prisma/schema.prisma`
+- [x] T099 [US5] Add Prisma migrations for payment institution and order payment reconciliation fields in `packages/database/prisma/migrations`
+- [x] T100 [US5] Implement historical order import DTO and layout selection in `apps/api/src/ordering/dto/import-orders.dto.ts`
+- [x] T101 [US5] Implement simple, Mercado Pago and PagBank import parsing with duplicate detection in `apps/api/src/ordering/historical-order-import.service.ts`
+- [x] T102 [US5] Add admin import endpoint for historical orders in `apps/api/src/ordering/admin-order.controller.ts`
+- [x] T103 [US5] Persist imported order payment institution, method, external ID, gross amount, fee amount, net amount and brand in `apps/api/src/ordering/historical-order-import.service.ts`
+- [x] T104 [US5] Ensure imported order profitability snapshots use the original sale date in `apps/api/src/management/reports/order-profitability.service.ts`
+- [x] T105 [US5] Adjust DRE and menu engineering period filters to use local business dates in `apps/api/src/management/reports/financial-reports.controller.ts` and `apps/api/src/management/reports/menu-engineering.controller.ts`
+- [x] T106 [US5] Add acquired net revenue to DRE output in `apps/api/src/management/reports/dre.service.ts` and `packages/types/src/index.ts`
+- [x] T107 [US5] Build admin import screen with layout selector, optional defaults, progress, success and error messages in `apps/web/app/admin/orders/import/order-import-client.tsx`
+- [x] T108 [US5] Add import navigation and payment summary display in `apps/web/app/admin/page.tsx` and `apps/web/app/admin/orders/orders-client.tsx`
+- [x] T109 [US5] Update DRE page to show received/acquired net revenue in `apps/web/app/admin/reports/dre/page.tsx`
+- [x] T110 [US5] Add shared API/types for historical import and payment reconciliation in `apps/web/lib/api.ts` and `packages/types/src/index.ts`
+- [x] T111 [US5] Add CAIXA_LOCAL as a supported payment institution in `packages/database/prisma/schema.prisma`, `packages/types/src/index.ts` and import UI labels
+- [x] T112 Update feature specification, data model, quickstart and OpenAPI contract for completed payment import/reconciliation scope in `specs/002-gestao-cmv-precificacao`
+
+---
+
 ## Dependencies & Execution Order
 
 ### Phase Dependencies

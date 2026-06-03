@@ -86,14 +86,17 @@ Como dono da operacao, quero acompanhar faturamento, CMV, taxas, lucro bruto, de
 
 **Why this priority**: A DRE transforma pedidos reais e custos cadastrados em leitura financeira minima para tomada de decisao.
 
-**Independent Test**: Registrar pedidos entregues em diferentes plataformas, configurar despesas fixas e verificar DRE, indicadores de dashboard, alertas de CMV alto e margem baixa.
+**Independent Test**: Registrar ou importar pedidos entregues em diferentes plataformas e instituicoes de pagamento, configurar despesas fixas e verificar DRE, indicadores de dashboard, alertas de CMV alto, margem baixa e conciliacao entre valor bruto e valor liquido recebido.
 
 **Acceptance Scenarios**:
 
-1. **Given** pedidos entregues com produtos precificados, **When** o admin consulta DRE de um periodo, **Then** o sistema mostra faturamento bruto, descontos, faturamento liquido, CMV, taxas/impostos, lucro bruto, despesas fixas e lucro liquido estimado.
+1. **Given** pedidos entregues com produtos precificados, **When** o admin consulta DRE de um periodo, **Then** o sistema mostra faturamento bruto, descontos, faturamento liquido, recebido liquido das instituicoes de pagamento, CMV, taxas/impostos, lucro bruto, despesas fixas e lucro liquido estimado.
 2. **Given** pedidos cancelados, **When** a DRE e calculada, **Then** eles nao entram como faturamento nem como resultado financeiro realizado.
 3. **Given** o CMV percentual supera a referencia configurada, **When** o admin abre o dashboard, **Then** o sistema exibe alerta de CMV alto.
 4. **Given** o faturamento esta abaixo da meta ou o lucro liquido e negativo, **When** o admin abre o dashboard, **Then** o sistema exibe status de atencao para faturamento, lucro e margem.
+5. **Given** um extrato original do Mercado Pago, PagBank ou caixa local, **When** o admin importa as vendas historicas, **Then** o sistema cria pedidos entregues com data real da venda, valor bruto, taxa, valor liquido, instituicao de pagamento, meio de pagamento e identificador externo.
+6. **Given** uma importacao de pedidos esta em andamento, **When** o admin aciona o processamento, **Then** a tela informa o andamento, bloqueia novo envio duplicado e mostra mensagem de conclusao ou erro.
+7. **Given** vendas importadas de dias anteriores, **When** o admin filtra a DRE por esses dias, **Then** os resultados usam a data da venda informada no arquivo, nao a data da importacao.
 
 ---
 
@@ -126,6 +129,11 @@ Como dono da operacao, quero classificar produtos por volume vendido e margem, p
 - Mudanca de custo de insumo depois de pedidos ja entregues.
 - Pedidos de plataformas diferentes com taxas distintas no mesmo periodo.
 - Configuracoes financeiras alteradas no meio de um periodo de DRE.
+- Extratos de instituicoes com encoding, colunas ou status diferentes do esperado.
+- Reimportacao do mesmo extrato ou da mesma transacao bancaria.
+- Importacao de arquivo de caixa simplificado sem produto vendido informado.
+- Vendas com valor bruto, taxa e valor liquido divergentes entre instituicoes de pagamento.
+- Vendas em dinheiro ou caixa local sem identificador externo de adquirente.
 
 ## Requirements _(mandatory)_
 
@@ -149,12 +157,18 @@ Como dono da operacao, quero classificar produtos por volume vendido e margem, p
 - **FR-016**: System MUST preserve historical order profitability snapshots so later ingredient cost or configuration changes do not rewrite already delivered order results.
 - **FR-017**: System MUST calculate estimated stock balance from current stock, manual entries, manual adjustments, reservations/outputs from in-progress orders and completed sales.
 - **FR-018**: System MUST alert when estimated stock balance is at or below minimum stock or when a product is at risk because a required ingredient is insufficient.
-- **FR-019**: System MUST provide a DRE view by period with gross revenue, discounts, net revenue, CMV, platform/payment/tax costs, gross profit, fixed expenses, estimated net profit, net margin and break-even point.
+- **FR-019**: System MUST provide a DRE view by period with gross revenue, discounts, net revenue, acquired/payment net revenue, CMV, platform/payment/tax costs, gross profit, fixed expenses, estimated net profit, net margin and break-even point.
 - **FR-020**: System MUST exclude cancelled orders from realized revenue and realized DRE results.
 - **FR-021**: System MUST provide dashboard indicators for revenue goal, CMV percentage, net profit, net margin, average ticket, products needing price review and ingredients needing purchase.
 - **FR-022**: System MUST classify products by menu engineering using sales volume and margin into Estrela, Cavalo, Quebra-cabeca or Abacaxi.
 - **FR-023**: System MUST keep all financial, stock and catalog operations tenant-scoped.
 - **FR-024**: System MUST log relevant changes to costs, parameters, stock adjustments, technical sheets and price recommendations for auditability.
+- **FR-025**: System MUST support importing delivered historical orders from a simple CSV layout and institution-specific layouts for Mercado Pago and PagBank.
+- **FR-026**: System MUST persist payment institution, payment method, external payment identifier, gross amount, fee amount, net amount and payment brand when those values are available in imported payment extracts.
+- **FR-027**: System MUST prevent duplicate imports by recognizing previously imported payment identifiers or import keys.
+- **FR-028**: System MUST use the sale/transaction date from the imported file for orders and profitability snapshots used by DRE and menu engineering.
+- **FR-029**: System MUST support payment institutions PagBank, Mercado Pago, Dinheiro and Caixa Local, and payment methods debit, credit, voucher, pix and cash.
+- **FR-030**: System MUST show visible import progress, completion and error messages when admins import historical orders.
 
 ### Key Entities _(include if feature involves data)_
 
@@ -162,11 +176,13 @@ Como dono da operacao, quero classificar produtos por volume vendido e margem, p
 - **Purchase Unit**: Domain record for units such as gram, kilogram, unit, liter and package.
 - **Supplier**: Provider of ingredients or packaging, with contact and category information.
 - **Order Platform**: Sales channel such as iFood, 99Food, Keeta, WhatsApp or own channel, including fee configuration and active state.
+- **Payment Institution**: Payment processor or local cash source such as PagBank, Mercado Pago, Dinheiro or Caixa Local.
+- **Payment Reconciliation Data**: Payment fields linked to an order, including external transaction identifier, gross amount, fee amount, net amount and card/payment brand.
 - **Ingredient/Input**: Purchasable item used in products, with purchase quantity, purchase cost, unit cost, stock level, minimum stock and supplier.
 - **Technical Sheet**: Product recipe/composition defining which ingredients and quantities are consumed by one sellable product.
 - **Product Cost Snapshot**: Calculated CMV and pricing values for a product at a point in time or for a specific channel.
 - **Stock Movement**: Entry, adjustment, reservation, consumption or release that changes estimated stock.
-- **Order Profitability Snapshot**: Per-order financial snapshot containing revenue, discounts, CMV, channel fees, taxes and gross profit.
+- **Order Profitability Snapshot**: Per-order financial snapshot containing revenue, discounts, CMV, channel fees, taxes and gross profit, dated by the realized sale date.
 - **DRE Period Summary**: Aggregated financial result for a selected period.
 - **Menu Engineering Classification**: Product classification based on volume and margin for a selected period.
 

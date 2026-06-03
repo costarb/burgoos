@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { io } from "socket.io-client";
-import type { AdminOrder, OrderStatus } from "@burgoos/types";
+import type { AdminOrder, OrderStatus, PaymentInstitution, PaymentMethod } from "@burgoos/types";
 import { updateAdminOrderStatus } from "../../../lib/api";
 
 interface OrdersClientProps {
@@ -98,9 +98,17 @@ export function OrdersClient({
           <p className="text-sm font-semibold uppercase text-tomato">Pedidos</p>
           <h1 className="mt-1 text-3xl font-semibold">Fila operacional</h1>
         </div>
-        <span className="rounded-md border border-slate-200 px-3 py-2 text-sm">
-          {connected ? "Realtime conectado" : "Realtime desconectado"}
-        </span>
+        <div className="flex flex-wrap items-center gap-3">
+          <a
+            className="rounded-md border border-slate-300 px-4 py-2 text-sm font-semibold"
+            href="/admin/orders/import"
+          >
+            Importar historico
+          </a>
+          <span className="rounded-md border border-slate-200 px-3 py-2 text-sm">
+            {connected ? "Realtime conectado" : "Realtime desconectado"}
+          </span>
+        </div>
       </div>
 
       {error ? <p className="mt-4 rounded-md bg-red-50 p-3 text-sm text-red-700">{error}</p> : null}
@@ -124,6 +132,7 @@ export function OrdersClient({
                       <div>
                         <p className="font-semibold">{order.customerName}</p>
                         <p className="text-sm text-slate-600">{order.customerPhone}</p>
+                        <p className="mt-1 text-xs text-slate-500">{paymentSummary(order)}</p>
                       </div>
                       <p className="font-bold text-tomato">R$ {order.total}</p>
                     </div>
@@ -175,7 +184,10 @@ export function OrdersClient({
           ) : (
             historyOrders.map((order) => (
               <div className="grid gap-1 p-4 text-sm sm:grid-cols-[1fr_auto_auto]" key={order.id}>
-                <span className="font-medium">{order.customerName}</span>
+                <span>
+                  <span className="block font-medium">{order.customerName}</span>
+                  <span className="block text-xs text-slate-500">{paymentSummary(order)}</span>
+                </span>
                 <span>{statusLabels[order.status]}</span>
                 <span className="font-semibold">R$ {order.total}</span>
               </div>
@@ -185,6 +197,37 @@ export function OrdersClient({
       </section>
     </div>
   );
+}
+
+function paymentSummary(order: AdminOrder): string {
+  return `${paymentInstitutionLabel(order.paymentInstitution ?? null)} / ${paymentMethodLabel(
+    order.paymentMethod
+  )}`;
+}
+
+function paymentInstitutionLabel(value: PaymentInstitution | null): string {
+  const labels: Record<PaymentInstitution, string> = {
+    PAGBANK: "PagBank",
+    MERCADO_PAGO: "Mercado Pago",
+    DINHEIRO: "Dinheiro",
+    CAIXA_LOCAL: "Caixa local",
+  };
+
+  return value ? labels[value] : "Nao informado";
+}
+
+function paymentMethodLabel(value: PaymentMethod): string {
+  const labels: Record<PaymentMethod, string> = {
+    CASH: "Dinheiro",
+    PIX_MANUAL: "PIX",
+    CARD_ON_DELIVERY: "Cartao",
+    DEBIT_CARD: "Debito",
+    CREDIT_CARD: "Credito",
+    VOUCHER: "Voucher",
+    PIX: "Pix",
+  };
+
+  return labels[value];
 }
 
 function playOrderAlert(): void {

@@ -27,6 +27,12 @@ export default async function AdminPage() {
             Pedidos
           </a>
           <a
+            className="rounded-md border border-slate-300 px-4 py-2 text-sm font-semibold"
+            href="/admin/orders/import"
+          >
+            Importar pedidos
+          </a>
+          <a
             className="rounded-md bg-tomato px-4 py-2 text-sm font-semibold text-white"
             href="/admin/catalog"
           >

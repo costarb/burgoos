@@ -10,6 +10,8 @@ import type {
   FinancialConfigurationInput,
   FinancialDashboardIndicators,
   FinancialDreSummary,
+  HistoricalOrderImportInput,
+  HistoricalOrderImportResult,
   Ingredient,
   IngredientInput,
   InventoryBalance,
@@ -388,6 +390,16 @@ export async function updateAdminOrderStatus(
   }
 
   return response.json() as Promise<AdminOrder>;
+}
+
+export async function importHistoricalOrders(
+  token: string,
+  payload: HistoricalOrderImportInput
+): Promise<HistoricalOrderImportResult> {
+  return fetchAdmin<HistoricalOrderImportResult>(token, "/api/admin/orders/import", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
 }
 
 export async function getAdminDailySummary(): Promise<DailySummary> {

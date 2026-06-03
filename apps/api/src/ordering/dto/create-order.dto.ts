@@ -1,4 +1,4 @@
-import { FulfillmentMethod, PaymentMethod } from "@prisma/client";
+import { FulfillmentMethod, PaymentInstitution, PaymentMethod } from "@prisma/client";
 import {
   ArrayMinSize,
   IsArray,
@@ -40,6 +40,10 @@ export class CreateOrderDto {
 
   @IsEnum(PaymentMethod)
   paymentMethod!: PaymentMethod;
+
+  @IsOptional()
+  @IsEnum(PaymentInstitution)
+  paymentInstitution?: PaymentInstitution;
 
   @IsOptional()
   @IsObject()

@@ -17,6 +17,7 @@ export default async function DrePage({ searchParams }: DrePageProps) {
     ["Receita bruta", summary.grossRevenue],
     ["Descontos", summary.discounts],
     ["Receita liquida", summary.netRevenue],
+    ["Recebido liquido", summary.acquiredNetRevenue],
     ["CMV", summary.cmv],
     ["Taxas e impostos", summary.feesAndTaxes],
     ["Lucro bruto", summary.grossProfit],

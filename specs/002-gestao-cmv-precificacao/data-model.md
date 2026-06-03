@@ -89,6 +89,64 @@ Validation:
 - Fee percentages must be between 0 and 1.
 - Inactive platforms cannot be selected for new orders but remain linked to history.
 
+## PaymentInstitution
+
+Payment processor or local cash source used for reconciliation.
+
+Values:
+
+- `PAGBANK`
+- `MERCADO_PAGO`
+- `DINHEIRO`
+- `CAIXA_LOCAL`
+
+Validation:
+
+- Imported Mercado Pago extracts always use `MERCADO_PAGO`.
+- Imported PagBank extracts always use `PAGBANK`.
+- Simple cash/local files may use `DINHEIRO` or `CAIXA_LOCAL`.
+
+## PaymentMethod
+
+Customer payment method used for fee classification and reporting.
+
+Values:
+
+- `CASH`
+- `PIX_MANUAL`
+- `CARD_ON_DELIVERY`
+- `DEBIT_CARD`
+- `CREDIT_CARD`
+- `VOUCHER`
+- `PIX`
+
+Validation:
+
+- Mercado Pago and PagBank layouts map their payment method columns to debit, credit, voucher or pix.
+- Simple imports may use defaults selected by the admin or values provided in the file.
+
+## OrderPaymentReconciliation
+
+Payment reconciliation fields stored on delivered orders when imported from payment extracts.
+
+Fields:
+
+- `payment_institution`: enum nullable
+- `payment_method`: enum
+- `external_payment_id`: string nullable
+- `payment_gross_amount`: decimal money nullable
+- `payment_fee_amount`: decimal money nullable
+- `payment_net_amount`: decimal money nullable
+- `payment_brand`: string nullable
+
+Validation:
+
+- External payment ID should be unique enough per tenant to prevent duplicate imports.
+- Gross amount is the sales amount used as order total.
+- Fee amount is stored as a positive money value.
+- Net amount is the amount effectively received from the institution.
+- Missing net amount falls back to gross amount in acquired net revenue reporting.
+
 ## Ingredient
 
 Purchasable input used in product recipes and stock.
@@ -239,6 +297,7 @@ Validation:
 
 - Snapshot is immutable after order reaches terminal status.
 - Cancelled orders do not count as realized revenue in DRE.
+- Snapshot date must match the realized order sale date, including imported historical orders, so period filters do not depend on import time.
 
 ## DREPeriodSummary
 
@@ -252,6 +311,7 @@ Fields:
 - `gross_revenue`: decimal money
 - `discounts`: decimal money
 - `net_revenue`: decimal money
+- `acquired_net_revenue`: decimal money
 - `cmv`: decimal money
 - `fees_and_taxes`: decimal money
 - `gross_profit`: decimal money
@@ -264,6 +324,7 @@ Validation:
 
 - Includes delivered/realized orders for the period.
 - Excludes cancelled orders.
+- Acquired net revenue sums payment net amounts from institutions and falls back to gross revenue when no payment net amount exists.
 
 ## MenuEngineeringClassification
 

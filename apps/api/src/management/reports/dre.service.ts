@@ -1,5 +1,5 @@
 import { Inject, Injectable } from "@nestjs/common";
-import { OrderStatus } from "@prisma/client";
+import { OrderStatus, Prisma } from "@prisma/client";
 import { PrismaService } from "../../platform/database/prisma.service";
 import { toMoneyString } from "../financial/money";
 import { calculateDreSummary } from "./dre-calculator";
@@ -26,12 +26,23 @@ export class DreService {
             status: OrderStatus.DELIVERED,
           },
         },
+        include: {
+          order: {
+            select: {
+              paymentNetAmount: true,
+            },
+          },
+        },
       }),
     ]);
     const summary = calculateDreSummary({
       snapshots,
       fixedExpenses: configuration.monthlyFixedCost,
     });
+    const acquiredNetRevenue = snapshots.reduce(
+      (total, snapshot) => total.add(snapshot.order.paymentNetAmount ?? snapshot.grossRevenue),
+      new Prisma.Decimal(0)
+    );
 
     return {
       periodStart: periodStart.toISOString(),
@@ -39,6 +50,7 @@ export class DreService {
       grossRevenue: toMoneyString(summary.grossRevenue),
       discounts: toMoneyString(summary.discounts),
       netRevenue: toMoneyString(summary.netRevenue),
+      acquiredNetRevenue: toMoneyString(acquiredNetRevenue),
       cmv: toMoneyString(summary.cmv),
       feesAndTaxes: toMoneyString(summary.feesAndTaxes),
       grossProfit: toMoneyString(summary.grossProfit),

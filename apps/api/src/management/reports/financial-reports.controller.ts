@@ -22,8 +22,8 @@ export class FinancialReportsController {
     @Query("start") start?: string,
     @Query("end") end?: string
   ) {
-    const periodStart = start ? new Date(`${start}T00:00:00.000Z`) : firstDayOfCurrentMonth();
-    const periodEnd = end ? new Date(`${end}T23:59:59.999Z`) : lastDayOfCurrentMonth();
+    const periodStart = start ? localDayStart(start) : firstDayOfCurrentMonth();
+    const periodEnd = end ? localDayEnd(end) : lastDayOfCurrentMonth();
 
     return this.dreService.getSummary(user.tenantId, periodStart, periodEnd);
   }
@@ -36,10 +36,20 @@ export class FinancialReportsController {
 
 function firstDayOfCurrentMonth(): Date {
   const now = new Date();
-  return new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1));
+  return new Date(now.getFullYear(), now.getMonth(), 1, 0, 0, 0, 0);
 }
 
 function lastDayOfCurrentMonth(): Date {
   const now = new Date();
-  return new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + 1, 0, 23, 59, 59, 999));
+  return new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
+}
+
+function localDayStart(date: string): Date {
+  const [year, month, day] = date.split("-").map(Number);
+  return new Date(year, month - 1, day, 0, 0, 0, 0);
+}
+
+function localDayEnd(date: string): Date {
+  const [year, month, day] = date.split("-").map(Number);
+  return new Date(year, month - 1, day, 23, 59, 59, 999);
 }

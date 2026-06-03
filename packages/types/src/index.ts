@@ -2,7 +2,16 @@ export type OrderStatus = "PENDING" | "PREPARING" | "SHIPPED" | "DELIVERED" | "C
 
 export type FulfillmentMethod = "DELIVERY" | "PICKUP";
 
-export type PaymentMethod = "CASH" | "PIX_MANUAL" | "CARD_ON_DELIVERY";
+export type PaymentMethod =
+  | "CASH"
+  | "PIX_MANUAL"
+  | "CARD_ON_DELIVERY"
+  | "DEBIT_CARD"
+  | "CREDIT_CARD"
+  | "VOUCHER"
+  | "PIX";
+
+export type PaymentInstitution = "PAGBANK" | "MERCADO_PAGO" | "DINHEIRO" | "CAIXA_LOCAL";
 
 export interface PublicMenuProduct {
   id: string;
@@ -145,6 +154,7 @@ export interface CreatePublicOrderInput {
   customerPhone: string;
   fulfillmentMethod: FulfillmentMethod;
   paymentMethod: PaymentMethod;
+  paymentInstitution?: PaymentInstitution;
   deliveryAddress?: Record<string, unknown>;
   notes?: string;
   items: CartItemInput[];
@@ -167,6 +177,12 @@ export interface CreatedOrder {
   customerPhone: string;
   fulfillmentMethod: FulfillmentMethod;
   paymentMethod: PaymentMethod;
+  paymentInstitution?: PaymentInstitution | null;
+  externalPaymentId?: string | null;
+  paymentGrossAmount?: string | null;
+  paymentFeeAmount?: string | null;
+  paymentNetAmount?: string | null;
+  paymentBrand?: string | null;
   items: CreatedOrderItem[];
   whatsappUrl: string;
 }
@@ -196,10 +212,57 @@ export interface AdminOrder {
   customerPhone: string;
   fulfillmentMethod: FulfillmentMethod;
   paymentMethod: PaymentMethod;
+  paymentInstitution?: PaymentInstitution | null;
+  externalPaymentId?: string | null;
+  paymentGrossAmount?: string | null;
+  paymentFeeAmount?: string | null;
+  paymentNetAmount?: string | null;
+  paymentBrand?: string | null;
   notes: string | null;
   createdAt?: string;
   items: AdminOrderItem[];
   stockWarnings?: AdminOrderStockWarning[];
+}
+
+export type HistoricalOrderImportStrategy = "PRICE_WEIGHTED" | "FIXED_PRODUCT";
+export type HistoricalOrderImportLayout = "SIMPLE" | "MERCADO_PAGO" | "PAGBANK";
+
+export interface HistoricalOrderImportInput {
+  csvText: string;
+  layout?: HistoricalOrderImportLayout;
+  strategy?: HistoricalOrderImportStrategy;
+  fixedProductId?: string;
+  orderPlatformName?: string;
+  paymentInstitution?: PaymentInstitution;
+  paymentMethod?: PaymentMethod;
+}
+
+export interface HistoricalOrderImportItem {
+  rowNumber: number;
+  orderId: string;
+  date: string;
+  amount: string;
+  productId: string;
+  productName: string;
+  paymentInstitution: PaymentInstitution | null;
+  paymentMethod: PaymentMethod;
+  externalPaymentId: string | null;
+  grossAmount: string;
+  feeAmount: string | null;
+  netAmount: string | null;
+}
+
+export interface HistoricalOrderImportSkippedItem {
+  rowNumber: number;
+  reason: string;
+}
+
+export interface HistoricalOrderImportResult {
+  parsedRows: number;
+  importedCount: number;
+  skippedCount: number;
+  imported: HistoricalOrderImportItem[];
+  skipped: HistoricalOrderImportSkippedItem[];
 }
 
 export type PurchaseUnitKind = "WEIGHT" | "VOLUME" | "COUNT" | "PACKAGE";
@@ -388,6 +451,7 @@ export interface FinancialDreSummary {
   grossRevenue: string;
   discounts: string;
   netRevenue: string;
+  acquiredNetRevenue: string;
   cmv: string;
   feesAndTaxes: string;
   grossProfit: string;

@@ -1,4 +1,4 @@
-import { FulfillmentMethod, PaymentMethod } from "@prisma/client";
+import { FulfillmentMethod, PaymentInstitution, PaymentMethod } from "@prisma/client";
 import { CalculatedOrder } from "./order-calculator";
 
 interface BuildWhatsAppLinkInput {
@@ -7,6 +7,7 @@ interface BuildWhatsAppLinkInput {
   customerPhone: string;
   fulfillmentMethod: FulfillmentMethod;
   paymentMethod: PaymentMethod;
+  paymentInstitution?: PaymentInstitution | null;
   order: CalculatedOrder;
   notes?: string;
 }
@@ -14,7 +15,11 @@ interface BuildWhatsAppLinkInput {
 const paymentLabels: Record<PaymentMethod, string> = {
   CASH: "Dinheiro",
   PIX_MANUAL: "PIX",
-  CARD_ON_DELIVERY: "Cartao na entrega"
+  CARD_ON_DELIVERY: "Cartao na entrega",
+  DEBIT_CARD: "Debito",
+  CREDIT_CARD: "Credito",
+  VOUCHER: "Voucher",
+  PIX: "PIX"
 };
 
 const fulfillmentLabels: Record<FulfillmentMethod, string> = {

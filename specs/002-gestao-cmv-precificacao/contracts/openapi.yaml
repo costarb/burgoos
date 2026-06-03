@@ -701,6 +701,7 @@ components:
         grossRevenue: "1250.00"
         discounts: "0.00"
         netRevenue: "1250.00"
+        acquiredNetRevenue: "1225.00"
         cmv: "412.50"
         feesAndTaxes: "225.00"
         grossProfit: "612.50"
@@ -714,6 +715,8 @@ components:
         discounts:
           type: string
         netRevenue:
+          type: string
+        acquiredNetRevenue:
           type: string
         cmv:
           type: string

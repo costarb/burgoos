@@ -105,6 +105,7 @@ export class OrderingService {
         fulfillmentMethod: dto.fulfillmentMethod,
         deliveryAddress: dto.deliveryAddress as Prisma.InputJsonValue | undefined,
         paymentMethod: dto.paymentMethod,
+        paymentInstitution: dto.paymentInstitution,
         notes: dto.notes,
         items: {
           create: calculated.items.map((item) => ({
@@ -133,6 +134,12 @@ export class OrderingService {
       customerPhone: order.customerPhone,
       fulfillmentMethod: order.fulfillmentMethod,
       paymentMethod: order.paymentMethod,
+      paymentInstitution: order.paymentInstitution,
+      externalPaymentId: order.externalPaymentId,
+      paymentGrossAmount: order.paymentGrossAmount?.toFixed(2) ?? null,
+      paymentFeeAmount: order.paymentFeeAmount?.toFixed(2) ?? null,
+      paymentNetAmount: order.paymentNetAmount?.toFixed(2) ?? null,
+      paymentBrand: order.paymentBrand,
       items: order.items.map((item) => ({
         id: item.id,
         productId: item.productId,
@@ -144,10 +151,11 @@ export class OrderingService {
       whatsappUrl: buildWhatsAppOrderLink({
         tenantPhone: tenant.phone,
         customerName: order.customerName,
-        customerPhone: order.customerPhone,
-        fulfillmentMethod: order.fulfillmentMethod,
-        paymentMethod: order.paymentMethod,
-        order: calculated,
+      customerPhone: order.customerPhone,
+      fulfillmentMethod: order.fulfillmentMethod,
+      paymentMethod: order.paymentMethod,
+      paymentInstitution: order.paymentInstitution,
+      order: calculated,
         notes: order.notes ?? undefined,
       }),
     };
@@ -252,6 +260,12 @@ export class OrderingService {
       customerPhone: string;
       fulfillmentMethod: string;
       paymentMethod: string;
+      paymentInstitution?: string | null;
+      externalPaymentId?: string | null;
+      paymentGrossAmount?: Prisma.Decimal | null;
+      paymentFeeAmount?: Prisma.Decimal | null;
+      paymentNetAmount?: Prisma.Decimal | null;
+      paymentBrand?: string | null;
       notes: string | null;
       createdAt?: Date;
       items: Array<{
@@ -273,6 +287,12 @@ export class OrderingService {
       customerPhone: order.customerPhone,
       fulfillmentMethod: order.fulfillmentMethod,
       paymentMethod: order.paymentMethod,
+      paymentInstitution: order.paymentInstitution,
+      externalPaymentId: order.externalPaymentId ?? null,
+      paymentGrossAmount: order.paymentGrossAmount?.toFixed(2) ?? null,
+      paymentFeeAmount: order.paymentFeeAmount?.toFixed(2) ?? null,
+      paymentNetAmount: order.paymentNetAmount?.toFixed(2) ?? null,
+      paymentBrand: order.paymentBrand ?? null,
       notes: order.notes,
       createdAt: order.createdAt?.toISOString(),
       items: order.items.map((item) => ({

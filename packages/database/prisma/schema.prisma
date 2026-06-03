@@ -53,6 +53,17 @@ enum PaymentMethod {
   CASH
   PIX_MANUAL
   CARD_ON_DELIVERY
+  DEBIT_CARD
+  CREDIT_CARD
+  VOUCHER
+  PIX
+}
+
+enum PaymentInstitution {
+  PAGBANK
+  MERCADO_PAGO
+  DINHEIRO
+  CAIXA_LOCAL
 }
 
 enum PurchaseUnitKind {
@@ -232,6 +243,12 @@ model Order {
   fulfillmentMethod      FulfillmentMethod            @map("fulfillment_method")
   deliveryAddress        Json?                        @map("delivery_address")
   paymentMethod          PaymentMethod                @map("payment_method")
+  paymentInstitution     PaymentInstitution?          @map("payment_institution")
+  externalPaymentId      String?                      @map("external_payment_id")
+  paymentGrossAmount     Decimal?                     @map("payment_gross_amount") @db.Decimal(10, 2)
+  paymentFeeAmount       Decimal?                     @map("payment_fee_amount") @db.Decimal(10, 2)
+  paymentNetAmount       Decimal?                     @map("payment_net_amount") @db.Decimal(10, 2)
+  paymentBrand           String?                      @map("payment_brand")
   orderPlatformId        String?                      @map("order_platform_id") @db.Uuid
   notes                  String?
   createdAt              DateTime                     @default(now()) @map("created_at")
@@ -244,6 +261,7 @@ model Order {
 
   @@index([tenantId, status])
   @@index([tenantId, createdAt])
+  @@index([tenantId, externalPaymentId])
   @@index([orderPlatformId])
   @@map("orders")
 }

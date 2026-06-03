@@ -3,6 +3,12 @@ import { OrderStatus, PaymentMethod, Prisma } from "@prisma/client";
 import { PrismaService } from "../../platform/database/prisma.service";
 import { calculateOrderProfitability } from "./profitability-calculator";
 
+const cardPaymentMethods: PaymentMethod[] = [
+  PaymentMethod.CARD_ON_DELIVERY,
+  PaymentMethod.DEBIT_CARD,
+  PaymentMethod.CREDIT_CARD,
+];
+
 @Injectable()
 export class OrderProfitabilityService {
   constructor(@Inject(PrismaService) private readonly prisma: PrismaService) {}
@@ -55,7 +61,7 @@ export class OrderProfitabilityService {
     const platformFeeRate = order.orderPlatform?.feeRate ?? new Prisma.Decimal(0);
     const paymentFeeRate =
       order.orderPlatform?.paymentFeeRate ??
-      (order.paymentMethod === PaymentMethod.CARD_ON_DELIVERY
+      (cardPaymentMethods.includes(order.paymentMethod)
         ? configuration.cardFeeRate
         : new Prisma.Decimal(0));
 
@@ -90,6 +96,7 @@ export class OrderProfitabilityService {
         taxAmount: profitability.taxAmount,
         paymentFee: profitability.paymentFee,
         grossProfit: profitability.grossProfit,
+        createdAt: order.createdAt,
       };
     });
 

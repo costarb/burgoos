@@ -21,8 +21,8 @@ export class MenuEngineeringController {
     @Query("dateFrom") dateFrom?: string,
     @Query("dateTo") dateTo?: string
   ) {
-    const periodStart = dateFrom ? new Date(`${dateFrom}T00:00:00.000Z`) : firstDayOfCurrentMonth();
-    const periodEnd = dateTo ? new Date(`${dateTo}T23:59:59.999Z`) : lastDayOfCurrentMonth();
+    const periodStart = dateFrom ? localDayStart(dateFrom) : firstDayOfCurrentMonth();
+    const periodEnd = dateTo ? localDayEnd(dateTo) : lastDayOfCurrentMonth();
 
     return this.menuEngineeringService.getReport(user.tenantId, periodStart, periodEnd);
   }
@@ -30,10 +30,20 @@ export class MenuEngineeringController {
 
 function firstDayOfCurrentMonth(): Date {
   const now = new Date();
-  return new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1));
+  return new Date(now.getFullYear(), now.getMonth(), 1, 0, 0, 0, 0);
 }
 
 function lastDayOfCurrentMonth(): Date {
   const now = new Date();
-  return new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + 1, 0, 23, 59, 59, 999));
+  return new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
+}
+
+function localDayStart(date: string): Date {
+  const [year, month, day] = date.split("-").map(Number);
+  return new Date(year, month - 1, day, 0, 0, 0, 0);
+}
+
+function localDayEnd(date: string): Date {
+  const [year, month, day] = date.split("-").map(Number);
+  return new Date(year, month - 1, day, 23, 59, 59, 999);
 }
