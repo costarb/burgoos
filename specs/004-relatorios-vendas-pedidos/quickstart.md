@@ -7,9 +7,10 @@ Validate the first sales reports module:
 1. Admin opens a sales/orders report page.
 2. Admin selects a period.
 3. Admin sees daily sales evolution.
-4. Admin filters by payment institution, payment method and channel.
-5. Admin drills down into analytical orders.
-6. Admin verifies totals against imported payment extracts and DRE-style values.
+4. Admin sees a visual chart of daily sales evolution.
+5. Admin filters by payment institution, payment method and channel.
+6. Admin drills down into analytical orders.
+7. Admin verifies totals against imported payment extracts and DRE-style values.
 
 ## Expected Commands
 
@@ -41,12 +42,15 @@ npm.cmd run test --workspaces --if-present
    - payment fees
    - average ticket
 5. Verify the daily evolution lists every date in the period, including days with zero orders.
-6. Filter by `MERCADO_PAGO` and verify only Mercado Pago totals remain.
-7. Filter by `PAGBANK` and verify only PagBank totals remain.
-8. Filter by payment method `PIX`, `DEBIT_CARD`, `CREDIT_CARD` or `VOUCHER` and verify totals change.
-9. Filter by channel/platform and verify totals change consistently.
-10. Open or inspect the analytical list for a day with sales.
-11. Verify analytical rows include:
+6. Verify the daily evolution chart appears above or near the daily table.
+7. Verify the chart identifies daily movement for gross revenue and received/acquired net revenue.
+8. Verify days with zero orders remain visible in the chart timeline.
+9. Filter by `MERCADO_PAGO` and verify only Mercado Pago totals remain.
+10. Filter by `PAGBANK` and verify only PagBank totals remain.
+11. Filter by payment method `PIX`, `DEBIT_CARD`, `CREDIT_CARD` or `VOUCHER` and verify totals change.
+12. Filter by channel/platform and verify totals change consistently.
+13. Open or inspect the analytical list for a day with sales.
+14. Verify analytical rows include:
     - date/time
     - status
     - channel
@@ -57,12 +61,15 @@ npm.cmd run test --workspaces --if-present
     - fee amount
     - acquired net amount
     - assigned product summary
-12. Compare one daily row total with the sum of analytical orders for the same day and filters.
-13. Select a period with no sales and verify the empty state.
+15. Compare one daily row total with the sum of analytical orders for the same day and filters.
+16. Compare one chart point with the corresponding daily table row.
+17. Select a period with no sales and verify the empty state.
 
 ## Launch Readiness Checklist
 
 - Daily report groups orders by local business date.
+- Daily chart uses the same daily rows and filters as the daily table.
+- Chart remains readable with zero-sale days and on narrow screens.
 - Cancelled/non-delivered orders are excluded by default.
 - Gross revenue and acquired net revenue are clearly distinguished.
 - Filters update all report sections consistently.

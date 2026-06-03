@@ -16,7 +16,7 @@ Como dono ou gestor da loja, quero visualizar a evolucao diaria de vendas e pedi
 
 **Why this priority**: A visao diaria e a primeira leitura operacional para acompanhar movimento, sazonalidade, efeito de campanhas, dias fracos e fechamento de turno.
 
-**Independent Test**: Selecionar um periodo com pedidos importados ou cadastrados e verificar se o relatorio mostra, por dia, quantidade de pedidos, receita bruta, recebido liquido, taxas, ticket medio e variacao em relacao ao dia anterior.
+**Independent Test**: Selecionar um periodo com pedidos importados ou cadastrados e verificar se o relatorio mostra, por dia, quantidade de pedidos, receita bruta, recebido liquido, taxas, ticket medio, variacao em relacao ao dia anterior e um grafico visual da evolucao diaria.
 
 **Acceptance Scenarios**:
 
@@ -24,6 +24,9 @@ Como dono ou gestor da loja, quero visualizar a evolucao diaria de vendas e pedi
 2. **Given** um dia nao possui pedidos entregues, **When** o periodo inclui esse dia, **Then** o sistema exibe o dia com valores zerados ou indica ausencia de vendas sem quebrar a sequencia diaria.
 3. **Given** os pedidos possuem dados de conciliacao de pagamento, **When** o admin consulta a evolucao diaria, **Then** o sistema diferencia receita bruta de recebido liquido.
 4. **Given** ha taxas de pagamento registradas, **When** o admin consulta o periodo, **Then** o sistema mostra o total de taxas por dia e permite comparar com o faturamento bruto.
+5. **Given** o periodo possui dois ou mais dias, **When** o admin abre a evolucao diaria, **Then** o sistema apresenta um grafico de tendencia por dia antes da tabela analitica diaria.
+6. **Given** o admin altera periodo ou filtros, **When** o relatorio e atualizado, **Then** o grafico usa exatamente os mesmos dados consolidados exibidos nos cards e na tabela diaria.
+7. **Given** existem dias sem venda no periodo, **When** o grafico e exibido, **Then** esses dias aparecem na linha temporal com valor zero para preservar a leitura da sequencia.
 
 ---
 
@@ -87,6 +90,9 @@ Como gestor financeiro, quero resumir vendas por instituicao, meio de pagamento 
 - Produto atribuido automaticamente em importacao, sem item real vendido informado.
 - Volume alto de pedidos no analitico, exigindo paginacao.
 - Filtros combinados que retornam vazio.
+- Periodos muito curtos, como apenas um dia, em que o grafico deve continuar legivel ou mostrar comparacao limitada.
+- Periodos com muitos dias, em que o grafico deve permanecer legivel sem sobrepor rotulos.
+- Diferencas grandes entre receita bruta e recebida liquida, em que o grafico deve deixar claro qual serie esta sendo visualizada.
 
 ## Requirements *(mandatory)*
 
@@ -108,11 +114,17 @@ Como gestor financeiro, quero resumir vendas por instituicao, meio de pagamento 
 - **FR-014**: System MUST handle orders without acquired net amount by using gross amount as fallback for received net reporting.
 - **FR-015**: System MUST keep all report data tenant-scoped.
 - **FR-016**: System SHOULD allow exporting or copying analytical results in a later increment, but export is not required for the first release.
+- **FR-017**: System MUST show a visual daily evolution chart for the selected period.
+- **FR-018**: The daily evolution chart MUST support comparing at least gross revenue and acquired net revenue over time.
+- **FR-019**: The daily evolution chart MUST use the same active period and filters as the summary cards, daily table and analytical list.
+- **FR-020**: The daily evolution chart MUST remain readable on desktop and mobile layouts, including periods with zero-sale days.
+- **FR-021**: The daily evolution chart MUST provide clear empty-state feedback when no sales exist for the selected period or filters.
 
 ### Key Entities *(include if feature involves data)*
 
 - **Sales Report Period**: Date interval selected by the admin for all summaries and analytical queries.
 - **Daily Sales Summary**: Aggregated sales metrics for one local business day.
+- **Daily Sales Trend Chart**: Visual representation of daily sales metrics across the selected period, derived from the same daily summary data.
 - **Sales Analytical Order**: Order-level row containing operational, payment and reconciliation details.
 - **Payment Dimension Summary**: Aggregation by payment institution or payment method.
 - **Channel Summary**: Aggregation by order platform/channel.
@@ -128,6 +140,8 @@ Como gestor financeiro, quero resumir vendas por instituicao, meio de pagamento 
 - **SC-004**: Imported sales from previous days appear on their original sale date in the report in 100% of sampled imports.
 - **SC-005**: Admin can locate a specific imported payment transaction by external ID in under 1 minute.
 - **SC-006**: Report handles periods with no sales without errors and clearly communicates that no records were found.
+- **SC-007**: Admin can identify the highest and lowest sales day in a selected period from the chart in under 15 seconds.
+- **SC-008**: Chart values and daily table values match for 100% of sampled validation periods.
 
 ## Assumptions
 
@@ -136,3 +150,4 @@ Como gestor financeiro, quero resumir vendas por instituicao, meio de pagamento 
 - The first release prioritizes on-screen analysis; export can be added later.
 - Period filters use local business dates for the operation.
 - Reports are for admin/owner usage and are scoped to the authenticated tenant.
+- The first chart increment focuses on daily trend readability; advanced interactions such as custom series selection, export and annotations can be added later.

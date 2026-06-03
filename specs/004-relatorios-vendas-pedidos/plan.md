@@ -6,7 +6,7 @@
 
 ## Summary
 
-Create an admin reports module focused on sales/orders. The first increment adds a period-based sales report with daily evolution, filters by payment institution/method/channel/status, analytical order drill-down, and summaries by payment and channel dimensions. The implementation reuses existing order, payment reconciliation, platform and profitability data introduced in the CMV/DRE feature; no new persistence entity is required for the first release.
+Create an admin reports module focused on sales/orders. The first increment adds a period-based sales report with daily evolution, filters by payment institution/method/channel/status, analytical order drill-down, summaries by payment and channel dimensions, and a visual daily evolution chart. The implementation reuses existing order, payment reconciliation, platform and profitability data introduced in the CMV/DRE feature; no new persistence entity is required for the first release.
 
 ## Technical Context
 
@@ -18,7 +18,7 @@ Create an admin reports module focused on sales/orders. The first increment adds
 
 **Testing**: Vitest unit/integration tests for report aggregation and tenant filtering; focused web tests for filter behavior if non-trivial
 
-**Target Platform**: Admin web application for owner/manager usage, desktop-first with responsive table behavior
+**Target Platform**: Admin web application for owner/manager usage, desktop-first with responsive table and chart behavior
 
 **Project Type**: Web app with API backend and frontend in the existing monorepo
 
@@ -95,6 +95,8 @@ Research is captured in [research.md](./research.md). Main decisions:
 - Group by local business day, not UTC day, to match DRE and sales operations.
 - Provide daily summary and analytical list through separate endpoint views to keep the UI responsive.
 - Include zero-sale days in the daily evolution so trends are visually honest.
+- Render the first daily evolution chart from the existing daily summary payload so the API contract and database model do not need to change.
+- Prefer a lightweight in-app chart implementation for the first release unless richer interactions become necessary later.
 
 ## Phase 1: Design
 

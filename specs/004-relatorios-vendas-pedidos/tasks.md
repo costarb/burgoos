@@ -145,6 +145,19 @@
 
 ---
 
+## Phase 8: Enhancement - Grafico de Evolucao Diaria (Priority: P1)
+
+**Purpose**: Add a visual daily trend chart using the same daily report data already shown in the table.
+
+- [x] T041 [P] [US1] Add a focused web test for rendering daily chart labels, zero-sale days and gross/net values in `apps/web/app/admin/reports/sales/sales-report-client.spec.tsx`
+- [x] T042 [US1] Add a responsive daily trend chart component in `apps/web/app/admin/reports/sales/sales-report-client.tsx`
+- [x] T043 [US1] Ensure the chart displays gross revenue and acquired net revenue from `report.daily` without introducing a new API contract in `apps/web/app/admin/reports/sales/sales-report-client.tsx`
+- [x] T044 [US1] Add readable empty and single-day chart states in `apps/web/app/admin/reports/sales/sales-report-client.tsx`
+- [x] T045 [P] Update the manual validation steps in `specs/004-relatorios-vendas-pedidos/quickstart.md` after implementation details are finalized
+- [x] T046 Run `npm.cmd run typecheck --workspaces --if-present`, `npm.cmd run lint --workspaces --if-present` and `npm.cmd run test --workspaces --if-present`
+
+---
+
 ## Dependencies & Execution Order
 
 ### Phase Dependencies
@@ -156,6 +169,7 @@
 - **User Story 3 (Phase 5)**: Depends on Phase 2; can be implemented after the base endpoint exists.
 - **User Story 4 (Phase 6)**: Depends on Phase 2; can be implemented after core aggregation helpers exist.
 - **Polish (Phase 7)**: Depends on all desired user stories.
+- **Chart Enhancement (Phase 8)**: Depends on US1 daily data and can be implemented without API/database changes.
 
 ### User Story Dependencies
 
@@ -181,6 +195,7 @@
 - T022 and T023 can run in parallel because one is integration-level and the other is unit-level.
 - T029 and T030 can run in parallel for the same reason.
 - T035 and T036 can run in parallel during polish.
+- T041 and T045 can run in parallel with chart component implementation once the intended chart behavior is confirmed.
 
 ---
 

@@ -2,6 +2,7 @@
 
 import type { OrderPlatform, SalesReportResponse } from "@burgoos/types";
 import { useSearchParams } from "next/navigation";
+import React from "react";
 
 const paymentInstitutions = [
   ["", "Todas instituicoes"],
@@ -117,6 +118,8 @@ export function SalesReportClient({ report, orderPlatforms }: SalesReportClientP
         <SummaryCard label="Taxas" value={`R$ ${report.summary.paymentFeeAmount}`} />
         <SummaryCard label="Ticket medio" value={`R$ ${report.summary.averageTicket}`} />
       </section>
+
+      <DailyTrendChart daily={report.daily} />
 
       <section className="overflow-hidden rounded-md border border-slate-200 bg-white shadow-sm">
         <SectionTitle title="Evolucao diaria" />
@@ -239,6 +242,168 @@ function SummaryCard({ label, value }: { label: string; value: string }) {
       <p className="text-sm text-slate-500">{label}</p>
       <p className="mt-2 text-2xl font-semibold">{value}</p>
     </article>
+  );
+}
+
+function DailyTrendChart({ daily }: { daily: SalesReportResponse["daily"] }) {
+  const hasSales = daily.some(
+    (day) => parseMoney(day.grossRevenue) > 0 || parseMoney(day.acquiredNetRevenue) > 0
+  );
+  const width = 760;
+  const height = 260;
+  const padding = { top: 24, right: 24, bottom: 44, left: 64 };
+  const plotWidth = width - padding.left - padding.right;
+  const plotHeight = height - padding.top - padding.bottom;
+  const values = daily.flatMap((day) => [parseMoney(day.grossRevenue), parseMoney(day.acquiredNetRevenue)]);
+  const maxValue = Math.max(...values, 0);
+  const scaleMax = maxValue === 0 ? 1 : maxValue;
+  const grossPoints = daily.map((day, index) =>
+    toPoint(index, daily.length, parseMoney(day.grossRevenue), scaleMax, plotWidth, plotHeight, padding)
+  );
+  const netPoints = daily.map((day, index) =>
+    toPoint(
+      index,
+      daily.length,
+      parseMoney(day.acquiredNetRevenue),
+      scaleMax,
+      plotWidth,
+      plotHeight,
+      padding
+    )
+  );
+  const labelStep = Math.max(1, Math.ceil(daily.length / 8));
+
+  return (
+    <section
+      aria-label="Grafico de evolucao diaria"
+      className="overflow-hidden rounded-md border border-slate-200 bg-white shadow-sm"
+    >
+      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 px-4 py-3">
+        <div>
+          <h2 className="text-lg font-semibold">Grafico de evolucao diaria</h2>
+          <p className="text-sm text-slate-500">Receita bruta e recebido liquido por dia.</p>
+        </div>
+        <div className="flex flex-wrap gap-3 text-xs font-semibold text-slate-600">
+          <span className="flex items-center gap-2">
+            <span className="h-2 w-5 rounded-full bg-ink" />
+            Bruto
+          </span>
+          <span className="flex items-center gap-2">
+            <span className="h-2 w-5 rounded-full bg-tomato" />
+            Recebido liquido
+          </span>
+        </div>
+      </div>
+
+      {daily.length === 0 ? (
+        <p className="px-4 py-6 text-sm text-slate-500">Sem dias no periodo selecionado.</p>
+      ) : (
+        <div className="overflow-x-auto px-3 py-4">
+          {!hasSales ? (
+            <p className="mb-3 rounded-md bg-slate-50 px-3 py-2 text-sm text-slate-500">
+              Nenhuma venda encontrada para desenhar a evolucao.
+            </p>
+          ) : null}
+          {daily.length === 1 ? (
+            <p className="mb-3 rounded-md bg-slate-50 px-3 py-2 text-sm text-slate-500">
+              Periodo com um unico dia; o grafico mostra os pontos do dia selecionado.
+            </p>
+          ) : null}
+          <svg
+            className="min-w-[720px] max-w-full"
+            role="img"
+            viewBox={`0 0 ${width} ${height}`}
+          >
+            <title>Evolucao diaria de vendas</title>
+            <desc>
+              Grafico com receita bruta e recebido liquido para cada dia do periodo selecionado.
+            </desc>
+            <line
+              stroke="#CBD5E1"
+              strokeWidth="1"
+              x1={padding.left}
+              x2={width - padding.right}
+              y1={height - padding.bottom}
+              y2={height - padding.bottom}
+            />
+            <line
+              stroke="#CBD5E1"
+              strokeWidth="1"
+              x1={padding.left}
+              x2={padding.left}
+              y1={padding.top}
+              y2={height - padding.bottom}
+            />
+            {[0, 0.5, 1].map((ratio) => {
+              const y = padding.top + plotHeight * (1 - ratio);
+              return (
+                <g key={ratio}>
+                  <line
+                    stroke="#E2E8F0"
+                    strokeDasharray="4 4"
+                    x1={padding.left}
+                    x2={width - padding.right}
+                    y1={y}
+                    y2={y}
+                  />
+                  <text
+                    fill="#64748B"
+                    fontSize="12"
+                    textAnchor="end"
+                    x={padding.left - 10}
+                    y={y + 4}
+                  >
+                    {formatCompactMoney(scaleMax * ratio)}
+                  </text>
+                </g>
+              );
+            })}
+            <polyline
+              fill="none"
+              points={grossPoints.map((point) => `${point.x},${point.y}`).join(" ")}
+              stroke="#111827"
+              strokeWidth="3"
+            />
+            <polyline
+              fill="none"
+              points={netPoints.map((point) => `${point.x},${point.y}`).join(" ")}
+              stroke="#E54B36"
+              strokeWidth="3"
+            />
+            {grossPoints.map((point, index) => (
+              <g key={`gross-${daily[index].date}`}>
+                <circle cx={point.x} cy={point.y} fill="#111827" r="4" />
+                <title>{`${daily[index].date} bruto R$ ${daily[index].grossRevenue}`}</title>
+              </g>
+            ))}
+            {netPoints.map((point, index) => (
+              <g key={`net-${daily[index].date}`}>
+                <circle cx={point.x} cy={point.y} fill="#E54B36" r="4" />
+                <title>{`${daily[index].date} liquido R$ ${daily[index].acquiredNetRevenue}`}</title>
+              </g>
+            ))}
+            {daily.map((day, index) => {
+              if (index % labelStep !== 0 && index !== daily.length - 1) {
+                return null;
+              }
+              const point = toPoint(index, daily.length, 0, scaleMax, plotWidth, plotHeight, padding);
+              return (
+                <text
+                  fill="#64748B"
+                  fontSize="12"
+                  key={day.date}
+                  textAnchor="middle"
+                  x={point.x}
+                  y={height - 18}
+                >
+                  {formatDayLabel(day.date)}
+                </text>
+              );
+            })}
+          </svg>
+        </div>
+      )}
+    </section>
   );
 }
 
@@ -366,4 +531,39 @@ function formatRate(value: number | null): string {
   }
 
   return `${(value * 100).toFixed(1)}%`;
+}
+
+function parseMoney(value: string): number {
+  if (value.includes(",")) {
+    return Number(value.replace(/\./g, "").replace(",", "."));
+  }
+
+  return Number(value);
+}
+
+function toPoint(
+  index: number,
+  total: number,
+  value: number,
+  maxValue: number,
+  plotWidth: number,
+  plotHeight: number,
+  padding: { top: number; left: number; bottom: number; right: number }
+) {
+  const x = padding.left + (total <= 1 ? plotWidth / 2 : (plotWidth / (total - 1)) * index);
+  const y = padding.top + plotHeight - (value / maxValue) * plotHeight;
+  return { x, y };
+}
+
+function formatCompactMoney(value: number): string {
+  if (value >= 1000) {
+    return `R$ ${(value / 1000).toFixed(1)}k`;
+  }
+
+  return `R$ ${value.toFixed(0)}`;
+}
+
+function formatDayLabel(date: string): string {
+  const [, month, day] = date.split("-");
+  return `${day}/${month}`;
 }
