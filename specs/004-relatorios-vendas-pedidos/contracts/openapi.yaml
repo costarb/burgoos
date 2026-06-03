@@ -76,6 +76,7 @@ components:
     SalesReportResponse:
       type: object
       required:
+        - filters
         - summary
         - daily
         - byPaymentInstitution
@@ -83,6 +84,32 @@ components:
         - byChannel
         - analytical
       properties:
+        filters:
+          type: object
+          required: [start, end, page, pageSize]
+          properties:
+            start:
+              type: string
+              format: date
+            end:
+              type: string
+              format: date
+            paymentInstitution:
+              type: string
+              nullable: true
+            paymentMethod:
+              type: string
+              nullable: true
+            orderPlatformId:
+              type: string
+              nullable: true
+            status:
+              type: string
+              nullable: true
+            page:
+              type: integer
+            pageSize:
+              type: integer
         summary:
           $ref: "#/components/schemas/SalesReportSummary"
         daily:
@@ -104,6 +131,11 @@ components:
         analytical:
           $ref: "#/components/schemas/SalesAnalyticalPage"
       example:
+        filters:
+          start: "2026-05-30"
+          end: "2026-06-01"
+          page: 1
+          pageSize: 50
         summary:
           orderCount: 98
           grossRevenue: "2777.00"

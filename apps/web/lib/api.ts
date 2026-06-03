@@ -23,6 +23,8 @@ import type {
   PurchaseUnit,
   PurchaseUnitInput,
   PublicMenu,
+  SalesReportFilters,
+  SalesReportResponse,
   StoreDetail,
   StoreSetupResult,
   StoreSummary,
@@ -466,6 +468,25 @@ export async function getMenuEngineeringReport(
   return fetchAdmin<MenuEngineeringReport>(
     token,
     `/api/admin/reports/menu-engineering${query ? `?${query}` : ""}`
+  );
+}
+
+export async function getSalesReport(
+  filters: SalesReportFilters = {}
+): Promise<SalesReportResponse> {
+  const token = await getAdminToken();
+  const params = new URLSearchParams();
+
+  Object.entries(filters).forEach(([key, value]) => {
+    if (value !== undefined && value !== null && value !== "") {
+      params.set(key, String(value));
+    }
+  });
+
+  const query = params.toString();
+  return fetchAdmin<SalesReportResponse>(
+    token,
+    `/api/admin/reports/sales${query ? `?${query}` : ""}`
   );
 }
 

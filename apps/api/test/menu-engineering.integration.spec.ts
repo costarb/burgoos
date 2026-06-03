@@ -64,8 +64,8 @@ describe("menu engineering integration", () => {
       where: {
         tenantId,
         createdAt: {
-          gte: new Date("2026-05-01T00:00:00.000Z"),
-          lte: new Date("2026-05-31T23:59:59.999Z"),
+          gte: new Date("2026-05-01T03:00:00.000Z"),
+          lte: new Date("2026-06-01T02:59:59.999Z"),
         },
         order: {
           status: OrderStatus.DELIVERED,

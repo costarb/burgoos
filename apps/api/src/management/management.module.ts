@@ -24,6 +24,8 @@ import { FinancialReportsController } from "./reports/financial-reports.controll
 import { MenuEngineeringController } from "./reports/menu-engineering.controller";
 import { MenuEngineeringService } from "./reports/menu-engineering.service";
 import { OrderProfitabilityService } from "./reports/order-profitability.service";
+import { SalesReportController } from "./reports/sales-report.controller";
+import { SalesReportService } from "./reports/sales-report.service";
 import { ReportsService } from "./reports.service";
 import { TenantScopeService } from "./tenant-scope";
 
@@ -40,6 +42,7 @@ import { TenantScopeService } from "./tenant-scope";
     PricingController,
     FinancialReportsController,
     MenuEngineeringController,
+    SalesReportController,
   ],
   providers: [
     ReportsService,
@@ -55,6 +58,7 @@ import { TenantScopeService } from "./tenant-scope";
     DreService,
     FinancialDashboardService,
     MenuEngineeringService,
+    SalesReportService,
     TenantScopeService,
     AuditLogService,
   ],

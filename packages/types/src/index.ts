@@ -265,6 +265,99 @@ export interface HistoricalOrderImportResult {
   skipped: HistoricalOrderImportSkippedItem[];
 }
 
+export interface SalesReportFilters {
+  start?: string;
+  end?: string;
+  paymentInstitution?: PaymentInstitution;
+  paymentMethod?: PaymentMethod;
+  orderPlatformId?: string;
+  status?: OrderStatus;
+  page?: number;
+  pageSize?: number;
+}
+
+export interface SalesReportSummary {
+  orderCount: number;
+  grossRevenue: string;
+  acquiredNetRevenue: string;
+  paymentFeeAmount: string;
+  averageTicket: string;
+  periodStart: string;
+  periodEnd: string;
+}
+
+export interface DailySalesSummary {
+  date: string;
+  orderCount: number;
+  grossRevenue: string;
+  acquiredNetRevenue: string;
+  paymentFeeAmount: string;
+  averageTicket: string;
+  grossRevenueDeltaRate: number | null;
+  orderCountDeltaRate: number | null;
+}
+
+export interface PaymentDimensionSummary {
+  dimensionKey: string;
+  dimensionLabel: string;
+  orderCount: number;
+  grossRevenue: string;
+  acquiredNetRevenue: string;
+  paymentFeeAmount: string;
+  shareOfGrossRevenue: number;
+}
+
+export interface ChannelSummary {
+  orderPlatformId: string | null;
+  orderPlatformName: string;
+  orderCount: number;
+  grossRevenue: string;
+  acquiredNetRevenue: string;
+  paymentFeeAmount: string;
+  averageTicket: string;
+}
+
+export interface SalesAnalyticalProduct {
+  quantity: number;
+  productName: string;
+}
+
+export interface SalesAnalyticalOrder {
+  orderId: string;
+  createdAt: string;
+  status: OrderStatus;
+  customerName: string;
+  orderPlatformName: string | null;
+  paymentInstitution: PaymentInstitution | null;
+  paymentMethod: PaymentMethod;
+  externalPaymentId: string | null;
+  paymentBrand: string | null;
+  grossAmount: string;
+  paymentFeeAmount: string | null;
+  acquiredNetAmount: string;
+  itemCount: number;
+  assignedProducts: SalesAnalyticalProduct[];
+  imported: boolean;
+}
+
+export interface SalesAnalyticalPage {
+  page: number;
+  pageSize: number;
+  total: number;
+  items: SalesAnalyticalOrder[];
+}
+
+export interface SalesReportResponse {
+  filters: Required<Pick<SalesReportFilters, "start" | "end" | "page" | "pageSize">> &
+    Omit<SalesReportFilters, "start" | "end" | "page" | "pageSize">;
+  summary: SalesReportSummary;
+  daily: DailySalesSummary[];
+  byPaymentInstitution: PaymentDimensionSummary[];
+  byPaymentMethod: PaymentDimensionSummary[];
+  byChannel: ChannelSummary[];
+  analytical: SalesAnalyticalPage;
+}
+
 export type PurchaseUnitKind = "WEIGHT" | "VOLUME" | "COUNT" | "PACKAGE";
 
 export interface FinancialConfiguration {

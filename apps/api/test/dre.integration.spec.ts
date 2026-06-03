@@ -69,11 +69,18 @@ describe("DRE integration", () => {
       where: {
         tenantId,
         createdAt: {
-          gte: new Date("2026-05-01T00:00:00.000Z"),
-          lte: new Date("2026-05-31T23:59:59.999Z"),
+          gte: new Date("2026-05-01T03:00:00.000Z"),
+          lte: new Date("2026-06-01T02:59:59.999Z"),
         },
         order: {
           status: OrderStatus.DELIVERED,
+        },
+      },
+      include: {
+        order: {
+          select: {
+            paymentNetAmount: true,
+          },
         },
       },
     });
@@ -124,6 +131,9 @@ describe("DRE integration", () => {
         taxAmount: decimal("6.00"),
         paymentFee: decimal("3.00"),
         grossProfit: decimal("44.00"),
+        order: {
+          paymentNetAmount: decimal("97.00"),
+        },
       },
     ]);
     prismaMock.productCostSnapshot.count.mockResolvedValue(0);
