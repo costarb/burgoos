@@ -4,6 +4,7 @@ import {
   OrderStatus,
   PaymentInstitution,
   PaymentMethod,
+  PaymentReleaseSource,
   Prisma,
 } from "@prisma/client";
 import { createHash } from "node:crypto";
@@ -26,6 +27,8 @@ interface ParsedImportRow {
   paymentMethod?: PaymentMethod;
   externalPaymentId?: string;
   paymentBrand?: string;
+  paymentReleaseExpectedAt?: Date;
+  paymentReleaseSource?: PaymentReleaseSource;
   importKey: string;
 }
 
@@ -48,6 +51,8 @@ interface ImportedOrderResult {
   grossAmount: string;
   feeAmount: string | null;
   netAmount: string | null;
+  paymentReleaseExpectedAt: string | null;
+  paymentReleaseSource: PaymentReleaseSource | null;
 }
 
 interface SkippedOrderResult {
@@ -109,6 +114,8 @@ export class HistoricalOrderImportService {
           paymentFeeAmount: row.feeAmount,
           paymentNetAmount: row.netAmount,
           paymentBrand: row.paymentBrand,
+          paymentReleaseExpectedAt: row.paymentReleaseExpectedAt,
+          paymentReleaseSource: row.paymentReleaseSource,
           orderPlatformId: orderPlatform.id,
           notes: this.buildImportNote(row, product, strategy, layout, {
             paymentInstitution: row.paymentInstitution ?? dto.paymentInstitution,
@@ -145,6 +152,8 @@ export class HistoricalOrderImportService {
         grossAmount: row.amount.toFixed(2),
         feeAmount: row.feeAmount?.toFixed(2) ?? null,
         netAmount: row.netAmount?.toFixed(2) ?? null,
+        paymentReleaseExpectedAt: row.paymentReleaseExpectedAt?.toISOString() ?? null,
+        paymentReleaseSource: row.paymentReleaseSource ?? null,
       });
     }
 
@@ -331,6 +340,11 @@ export class HistoricalOrderImportService {
         this.column(columns, header, "pagamento")
     );
     const date = this.parseDate(dateText, rowNumber);
+    const effectiveDate = this.withImportTime(date, rowNumber);
+    const paymentRelease = this.resolvePaymentRelease(effectiveDate, undefined, {
+      paymentInstitution,
+      paymentMethod,
+    });
     const importKey = createHash("sha256")
       .update(
         `${rowNumber}|${dateText}|${description}|${amount.toFixed(2)}|${paymentInstitution ?? ""}|${
@@ -342,11 +356,13 @@ export class HistoricalOrderImportService {
 
     return {
       rowNumber,
-      date: this.withImportTime(date, rowNumber),
+      date: effectiveDate,
       description: description.trim(),
       amount,
       paymentInstitution,
       paymentMethod,
+      paymentReleaseExpectedAt: paymentRelease.expectedAt,
+      paymentReleaseSource: paymentRelease.source,
       importKey,
     };
   }
@@ -378,6 +394,18 @@ export class HistoricalOrderImportService {
     const chargeMethod = this.column(columns, header, "CHARGE_METHOD") ?? "";
     const description = [chargeMethod, methodDetail, brand].filter(Boolean).join(" / ");
     const date = this.parseDateTime(dateText, rowNumber);
+    const paymentMethod =
+      this.parseKnownPaymentMethod(methodDetail) ??
+      this.parseKnownPaymentMethod(chargeMethod) ??
+      PaymentMethod.PIX;
+    const paymentRelease = this.resolvePaymentRelease(
+      date,
+      this.parseOptionalDateTime(this.column(columns, header, "RELEASE_DATETIME"), rowNumber),
+      {
+        paymentInstitution: PaymentInstitution.MERCADO_PAGO,
+        paymentMethod,
+      }
+    );
     const importKey = this.externalImportKey(PaymentInstitution.MERCADO_PAGO, externalPaymentId);
 
     return {
@@ -388,12 +416,11 @@ export class HistoricalOrderImportService {
       feeAmount: fee,
       netAmount: net,
       paymentInstitution: PaymentInstitution.MERCADO_PAGO,
-      paymentMethod:
-        this.parseKnownPaymentMethod(methodDetail) ??
-        this.parseKnownPaymentMethod(chargeMethod) ??
-        PaymentMethod.PIX,
+      paymentMethod,
       externalPaymentId,
       paymentBrand: brand,
+      paymentReleaseExpectedAt: paymentRelease.expectedAt,
+      paymentReleaseSource: paymentRelease.source,
       importKey,
     };
   }
@@ -426,6 +453,19 @@ export class HistoricalOrderImportService {
     const paymentText = this.requiredColumn(columns, header, "Forma de Pagamento", rowNumber);
     const brand = this.column(columns, header, "Bandeira") || undefined;
     const date = this.parseDateTime(dateText, rowNumber);
+    const paymentMethod = this.parseKnownPaymentMethod(paymentText) ?? PaymentMethod.PIX;
+    const paymentRelease = this.resolvePaymentRelease(
+      date,
+      this.parseOptionalDateTime(
+        this.column(columns, header, "Data prevista de liberação") ??
+          this.column(columns, header, "Data prevista de liberacao"),
+        rowNumber
+      ),
+      {
+        paymentInstitution: PaymentInstitution.PAGBANK,
+        paymentMethod,
+      }
+    );
     const importKey = this.externalImportKey(PaymentInstitution.PAGBANK, externalPaymentId);
 
     return {
@@ -436,9 +476,11 @@ export class HistoricalOrderImportService {
       feeAmount: fee,
       netAmount: net,
       paymentInstitution: PaymentInstitution.PAGBANK,
-      paymentMethod: this.parseKnownPaymentMethod(paymentText) ?? PaymentMethod.PIX,
+      paymentMethod,
       externalPaymentId,
       paymentBrand: brand,
+      paymentReleaseExpectedAt: paymentRelease.expectedAt,
+      paymentReleaseSource: paymentRelease.source,
       importKey,
     };
   }
@@ -507,10 +549,53 @@ export class HistoricalOrderImportService {
     );
   }
 
+  private parseOptionalDateTime(dateText: string | undefined, rowNumber: number): Date | undefined {
+    if (!dateText?.trim()) {
+      return undefined;
+    }
+
+    return this.parseDateTime(dateText, rowNumber);
+  }
+
   private withImportTime(date: Date, rowNumber: number): Date {
     const copy = new Date(date);
     copy.setMinutes(rowNumber % 60, rowNumber % 60, 0);
     return copy;
+  }
+
+  private resolvePaymentRelease(
+    saleDate: Date,
+    explicitReleaseDate: Date | undefined,
+    payment: {
+      paymentInstitution?: PaymentInstitution;
+      paymentMethod?: PaymentMethod;
+    }
+  ):
+    | { expectedAt: Date; source: PaymentReleaseSource }
+    | { expectedAt: undefined; source: undefined } {
+    if (explicitReleaseDate) {
+      return { expectedAt: explicitReleaseDate, source: PaymentReleaseSource.EXTRACT };
+    }
+
+    if (this.isImmediatePayment(payment.paymentInstitution, payment.paymentMethod)) {
+      return { expectedAt: saleDate, source: PaymentReleaseSource.IMMEDIATE };
+    }
+
+    const fallback = new Date(saleDate);
+    fallback.setDate(fallback.getDate() + 30);
+    return { expectedAt: fallback, source: PaymentReleaseSource.D_PLUS_30_FALLBACK };
+  }
+
+  private isImmediatePayment(
+    paymentInstitution: PaymentInstitution | undefined,
+    paymentMethod: PaymentMethod | undefined
+  ): boolean {
+    return (
+      paymentInstitution === PaymentInstitution.DINHEIRO ||
+      paymentInstitution === PaymentInstitution.CAIXA_LOCAL ||
+      paymentMethod === PaymentMethod.CASH ||
+      paymentMethod === PaymentMethod.PIX_MANUAL
+    );
   }
 
   private parseDecimal(value: string): Prisma.Decimal | null {
@@ -704,6 +789,8 @@ export class HistoricalOrderImportService {
       `taxa=${row.feeAmount?.toFixed(2) ?? "nao informada"}`,
       `liquido=${row.netAmount?.toFixed(2) ?? "nao informado"}`,
       `bandeira=${row.paymentBrand ?? "nao informada"}`,
+      `liberacaoPrevista=${row.paymentReleaseExpectedAt?.toISOString() ?? "nao informada"}`,
+      `origemLiberacao=${row.paymentReleaseSource ?? "nao informada"}`,
       `instituicaoPagamento=${payment.paymentInstitution ?? "nao informada"}`,
       `meioPagamento=${payment.paymentMethod}`,
       `produtoReferencia=${product.name}`,

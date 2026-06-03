@@ -83,6 +83,7 @@ components:
         - byPaymentMethod
         - byChannel
         - analytical
+        - receivables
       properties:
         filters:
           type: object
@@ -130,6 +131,8 @@ components:
             $ref: "#/components/schemas/ChannelSummary"
         analytical:
           $ref: "#/components/schemas/SalesAnalyticalPage"
+        receivables:
+          $ref: "#/components/schemas/ReceivablesSummary"
       example:
         filters:
           start: "2026-05-30"
@@ -140,6 +143,8 @@ components:
           orderCount: 98
           grossRevenue: "2777.00"
           acquiredNetRevenue: "2748.55"
+          releasedNetRevenue: "2400.00"
+          receivableNetAmount: "348.55"
           paymentFeeAmount: "28.45"
           averageTicket: "28.34"
           periodStart: "2026-05-30"
@@ -149,6 +154,8 @@ components:
             orderCount: 65
             grossRevenue: "2061.00"
             acquiredNetRevenue: "2048.55"
+            releasedNetRevenue: "1800.00"
+            receivableNetAmount: "248.55"
             paymentFeeAmount: "12.45"
             averageTicket: "31.71"
             grossRevenueDeltaRate: null
@@ -159,6 +166,8 @@ components:
             orderCount: 90
             grossRevenue: "2374.00"
             acquiredNetRevenue: "2361.55"
+            releasedNetRevenue: "2100.00"
+            receivableNetAmount: "261.55"
             paymentFeeAmount: "12.45"
             shareOfGrossRevenue: 0.85
         byPaymentMethod:
@@ -167,6 +176,8 @@ components:
             orderCount: 20
             grossRevenue: "650.00"
             acquiredNetRevenue: "650.00"
+            releasedNetRevenue: "650.00"
+            receivableNetAmount: "0.00"
             paymentFeeAmount: "0.00"
             shareOfGrossRevenue: 0.23
         byChannel:
@@ -175,6 +186,8 @@ components:
             orderCount: 98
             grossRevenue: "2777.00"
             acquiredNetRevenue: "2748.55"
+            releasedNetRevenue: "2400.00"
+            receivableNetAmount: "348.55"
             paymentFeeAmount: "28.45"
             averageTicket: "28.34"
         analytical:
@@ -194,11 +207,17 @@ components:
               grossAmount: "46.00"
               paymentFeeAmount: "0.34"
               acquiredNetAmount: "45.66"
+              paymentReleaseExpectedAt: "2026-06-29T18:31:52.000-03:00"
+              paymentReleaseStatus: "PENDING_RELEASE"
               itemCount: 1
               assignedProducts:
                 - quantity: 1
                   productName: "X-BURGUER"
               imported: true
+        receivables:
+          pendingOrderCount: 12
+          receivableNetAmount: "348.55"
+          nextExpectedReleaseDate: "2026-06-29"
 
     SalesReportSummary:
       type: object
@@ -208,6 +227,10 @@ components:
         grossRevenue:
           type: string
         acquiredNetRevenue:
+          type: string
+        releasedNetRevenue:
+          type: string
+        receivableNetAmount:
           type: string
         paymentFeeAmount:
           type: string
@@ -231,6 +254,10 @@ components:
         grossRevenue:
           type: string
         acquiredNetRevenue:
+          type: string
+        releasedNetRevenue:
+          type: string
+        receivableNetAmount:
           type: string
         paymentFeeAmount:
           type: string
@@ -256,6 +283,10 @@ components:
           type: string
         acquiredNetRevenue:
           type: string
+        releasedNetRevenue:
+          type: string
+        receivableNetAmount:
+          type: string
         paymentFeeAmount:
           type: string
         shareOfGrossRevenue:
@@ -275,6 +306,10 @@ components:
         grossRevenue:
           type: string
         acquiredNetRevenue:
+          type: string
+        releasedNetRevenue:
+          type: string
+        receivableNetAmount:
           type: string
         paymentFeeAmount:
           type: string
@@ -329,6 +364,13 @@ components:
           nullable: true
         acquiredNetAmount:
           type: string
+        paymentReleaseExpectedAt:
+          type: string
+          format: date-time
+          nullable: true
+        paymentReleaseStatus:
+          type: string
+          enum: [RELEASED, PENDING_RELEASE]
         itemCount:
           type: integer
         assignedProducts:
@@ -342,3 +384,15 @@ components:
                 type: string
         imported:
           type: boolean
+
+    ReceivablesSummary:
+      type: object
+      properties:
+        pendingOrderCount:
+          type: integer
+        receivableNetAmount:
+          type: string
+        nextExpectedReleaseDate:
+          type: string
+          format: date
+          nullable: true

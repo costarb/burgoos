@@ -158,6 +158,27 @@
 
 ---
 
+## Phase 9: Enhancement - Valores a Receber e Liberacao de Pagamento (Priority: P1)
+
+**Purpose**: Persist payment release expected date from bank extracts and separate released/available values from pending receivables.
+
+- [x] T047 [P] Add payment release fields to shared order/report types in `packages/types/src/index.ts`
+- [x] T048 Add Prisma fields `paymentReleaseExpectedAt` and `paymentReleaseSource` to `packages/database/prisma/schema.prisma`
+- [x] T049 Add a Prisma migration for order payment release fields in `packages/database/prisma/migrations/`
+- [x] T050 [P] Add import parser tests for Mercado Pago `RELEASE_DATETIME`, PagBank `Data prevista de liberação`, and empty-release D+30 fallback in `apps/api/test/historical-order-import.spec.ts`
+- [x] T051 Update parsed import row mapping to capture payment release expected date and release source in `apps/api/src/ordering/historical-order-import.service.ts`
+- [x] T052 Persist payment release expected date/source on imported orders in `apps/api/src/ordering/historical-order-import.service.ts`
+- [x] T053 [P] Add sales report unit tests for released net revenue, receivable net amount and D+30 pending voucher logic in `apps/api/test/sales-report.spec.ts`
+- [x] T054 Add released/receivable aggregation to `apps/api/src/management/reports/sales-report.service.ts`
+- [x] T055 Add release expected date/status fields to analytical report rows in `apps/api/src/management/reports/sales-report.service.ts`
+- [x] T056 Update the OpenAPI response schema with released/receivable totals and payment release fields in `specs/004-relatorios-vendas-pedidos/contracts/openapi.yaml`
+- [x] T057 Add "Valores a receber" and "Liberado/disponível" summary cards in `apps/web/app/admin/reports/sales/sales-report-client.tsx`
+- [x] T058 Show release expected date and release status in analytical rows in `apps/web/app/admin/reports/sales/sales-report-client.tsx`
+- [x] T059 [P] Add focused web tests for receivable summary and analytical release status in `apps/web/app/admin/reports/sales/sales-report-client.spec.tsx`
+- [x] T060 Run `npm.cmd run typecheck --workspaces --if-present`, `npm.cmd run lint --workspaces --if-present` and `npm.cmd run test --workspaces --if-present`
+
+---
+
 ## Dependencies & Execution Order
 
 ### Phase Dependencies
@@ -170,6 +191,7 @@
 - **User Story 4 (Phase 6)**: Depends on Phase 2; can be implemented after core aggregation helpers exist.
 - **Polish (Phase 7)**: Depends on all desired user stories.
 - **Chart Enhancement (Phase 8)**: Depends on US1 daily data and can be implemented without API/database changes.
+- **Receivables Enhancement (Phase 9)**: Depends on existing import/payment reconciliation fields and requires a Prisma migration before API/web changes.
 
 ### User Story Dependencies
 
@@ -196,6 +218,8 @@
 - T029 and T030 can run in parallel for the same reason.
 - T035 and T036 can run in parallel during polish.
 - T041 and T045 can run in parallel with chart component implementation once the intended chart behavior is confirmed.
+- T047, T050 and T053 can run in parallel after the settlement field names are confirmed.
+- T057 and T058 depend on API response fields from T054 and T055.
 
 ---
 

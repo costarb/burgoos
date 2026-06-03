@@ -140,6 +140,8 @@ export class OrderingService {
       paymentFeeAmount: order.paymentFeeAmount?.toFixed(2) ?? null,
       paymentNetAmount: order.paymentNetAmount?.toFixed(2) ?? null,
       paymentBrand: order.paymentBrand,
+      paymentReleaseExpectedAt: order.paymentReleaseExpectedAt?.toISOString() ?? null,
+      paymentReleaseSource: order.paymentReleaseSource,
       items: order.items.map((item) => ({
         id: item.id,
         productId: item.productId,
@@ -266,6 +268,8 @@ export class OrderingService {
       paymentFeeAmount?: Prisma.Decimal | null;
       paymentNetAmount?: Prisma.Decimal | null;
       paymentBrand?: string | null;
+      paymentReleaseExpectedAt?: Date | null;
+      paymentReleaseSource?: string | null;
       notes: string | null;
       createdAt?: Date;
       items: Array<{
@@ -293,6 +297,8 @@ export class OrderingService {
       paymentFeeAmount: order.paymentFeeAmount?.toFixed(2) ?? null,
       paymentNetAmount: order.paymentNetAmount?.toFixed(2) ?? null,
       paymentBrand: order.paymentBrand ?? null,
+      paymentReleaseExpectedAt: order.paymentReleaseExpectedAt?.toISOString() ?? null,
+      paymentReleaseSource: order.paymentReleaseSource ?? null,
       notes: order.notes,
       createdAt: order.createdAt?.toISOString(),
       items: order.items.map((item) => ({

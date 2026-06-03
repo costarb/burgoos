@@ -11,6 +11,7 @@ Validate the first sales reports module:
 5. Admin filters by payment institution, payment method and channel.
 6. Admin drills down into analytical orders.
 7. Admin verifies totals against imported payment extracts and DRE-style values.
+8. Admin verifies released values and values to receive using payment release dates.
 
 ## Expected Commands
 
@@ -64,12 +65,22 @@ npm.cmd run test --workspaces --if-present
 15. Compare one daily row total with the sum of analytical orders for the same day and filters.
 16. Compare one chart point with the corresponding daily table row.
 17. Select a period with no sales and verify the empty state.
+18. Import or inspect a Mercado Pago row with `RELEASE_DATETIME` and confirm the analytical order shows the release date.
+19. Import or inspect a PagBank row with `Data prevista de liberação` and confirm the analytical order shows the release date.
+20. Import or inspect a voucher row with empty release date and confirm the release date is sale date plus 30 days.
+21. Confirm future-release rows are excluded from released/available net values and included in "Valores a receber".
+22. Confirm released net amount plus values to receive equals acquired net amount for the same filters.
 
 ## Launch Readiness Checklist
 
 - Daily report groups orders by local business date.
 - Daily chart uses the same daily rows and filters as the daily table.
 - Chart remains readable with zero-sale days and on narrow screens.
+- Mercado Pago `RELEASE_DATETIME` is persisted when available.
+- PagBank `Data prevista de liberação` is persisted when available.
+- Empty release dates on imported rows use D+30.
+- A "Valores a receber" summary appears when filtered operations include future-release payments.
+- Released/available net amount excludes future-release payments.
 - Cancelled/non-delivered orders are excluded by default.
 - Gross revenue and acquired net revenue are clearly distinguished.
 - Filters update all report sections consistently.

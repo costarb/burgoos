@@ -15,6 +15,8 @@ interface AggregateBucket {
   orderCount: number;
   grossRevenue: Prisma.Decimal;
   acquiredNetRevenue: Prisma.Decimal;
+  releasedNetRevenue: Prisma.Decimal;
+  receivableNetAmount: Prisma.Decimal;
   paymentFeeAmount: Prisma.Decimal;
 }
 
@@ -24,6 +26,7 @@ export class SalesReportService {
 
   async getReport(tenantId: string, query: ParsedSalesReportQuery) {
     const where = this.buildWhere(tenantId, query);
+    const reportReferenceDate = new Date();
     const [orders, total] = await Promise.all([
       this.prisma.order.findMany({
         where,
@@ -38,7 +41,7 @@ export class SalesReportService {
       this.prisma.order.count({ where }),
     ]);
 
-    const summary = this.createSummary(orders);
+    const summary = this.createSummary(orders, reportReferenceDate);
     const totalGross = summary.grossRevenue;
 
     return {
@@ -57,21 +60,30 @@ export class SalesReportService {
         periodStart: query.start,
         periodEnd: query.end,
       },
-      daily: this.createDailySummaries(orders, query.periodStart, query.periodEnd),
+      daily: this.createDailySummaries(orders, query.periodStart, query.periodEnd, reportReferenceDate),
       byPaymentInstitution: this.createPaymentDimensionSummary(
         orders,
         totalGross,
         (order) => order.paymentInstitution ?? "NOT_INFORMED",
-        (key) => paymentInstitutionLabel(key)
+        (key) => paymentInstitutionLabel(key),
+        reportReferenceDate
       ),
       byPaymentMethod: this.createPaymentDimensionSummary(
         orders,
         totalGross,
         (order) => order.paymentMethod,
-        (key) => paymentMethodLabel(key)
+        (key) => paymentMethodLabel(key),
+        reportReferenceDate
       ),
-      byChannel: this.createChannelSummary(orders),
-      analytical: this.createAnalyticalPage(orders, total, query.page, query.pageSize),
+      byChannel: this.createChannelSummary(orders, reportReferenceDate),
+      analytical: this.createAnalyticalPage(
+        orders,
+        total,
+        query.page,
+        query.pageSize,
+        reportReferenceDate
+      ),
+      receivables: this.createReceivablesSummary(orders, reportReferenceDate),
     };
   }
 
@@ -89,16 +101,24 @@ export class SalesReportService {
     };
   }
 
-  private createSummary(orders: ReportOrder[]): AggregateBucket {
-    return orders.reduce((bucket, order) => addOrderToBucket(bucket, order), emptyBucket());
+  private createSummary(orders: ReportOrder[], referenceDate: Date): AggregateBucket {
+    return orders.reduce(
+      (bucket, order) => addOrderToBucket(bucket, order, referenceDate),
+      emptyBucket()
+    );
   }
 
-  private createDailySummaries(orders: ReportOrder[], periodStart: Date, periodEnd: Date) {
+  private createDailySummaries(
+    orders: ReportOrder[],
+    periodStart: Date,
+    periodEnd: Date,
+    referenceDate: Date
+  ) {
     const buckets = new Map<string, AggregateBucket>();
 
     orders.forEach((order) => {
       const key = formatLocalDate(order.createdAt);
-      buckets.set(key, addOrderToBucket(buckets.get(key) ?? emptyBucket(), order));
+      buckets.set(key, addOrderToBucket(buckets.get(key) ?? emptyBucket(), order, referenceDate));
     });
 
     const rows = [];
@@ -146,12 +166,13 @@ export class SalesReportService {
     orders: ReportOrder[],
     totalGross: Prisma.Decimal,
     keyResolver: (order: ReportOrder) => string,
-    labelResolver: (key: string) => string
+    labelResolver: (key: string) => string,
+    referenceDate: Date
   ) {
     const buckets = new Map<string, AggregateBucket>();
     orders.forEach((order) => {
       const key = keyResolver(order);
-      buckets.set(key, addOrderToBucket(buckets.get(key) ?? emptyBucket(), order));
+      buckets.set(key, addOrderToBucket(buckets.get(key) ?? emptyBucket(), order, referenceDate));
     });
 
     return [...buckets.entries()]
@@ -166,7 +187,7 @@ export class SalesReportService {
       .sort((left, right) => Number(right.grossRevenue) - Number(left.grossRevenue));
   }
 
-  private createChannelSummary(orders: ReportOrder[]) {
+  private createChannelSummary(orders: ReportOrder[], referenceDate: Date) {
     const buckets = new Map<
       string,
       AggregateBucket & { orderPlatformId: string | null; orderPlatformName: string }
@@ -181,7 +202,7 @@ export class SalesReportService {
       };
       buckets.set(key, {
         ...current,
-        ...addOrderToBucket(current, order),
+        ...addOrderToBucket(current, order, referenceDate),
       });
     });
 
@@ -194,7 +215,13 @@ export class SalesReportService {
       .sort((left, right) => Number(right.grossRevenue) - Number(left.grossRevenue));
   }
 
-  private createAnalyticalPage(orders: ReportOrder[], total: number, page: number, pageSize: number) {
+  private createAnalyticalPage(
+    orders: ReportOrder[],
+    total: number,
+    page: number,
+    pageSize: number,
+    referenceDate: Date
+  ) {
     const start = (page - 1) * pageSize;
     const pageOrders = orders.slice(start, start + pageSize);
 
@@ -219,6 +246,10 @@ export class SalesReportService {
           grossAmount: toMoneyString(grossAmount),
           paymentFeeAmount: order.paymentFeeAmount ? toMoneyString(order.paymentFeeAmount) : null,
           acquiredNetAmount: toMoneyString(acquiredNetAmount),
+          paymentReleaseExpectedAt: order.paymentReleaseExpectedAt?.toISOString() ?? null,
+          paymentReleaseStatus: isPaymentReleased(order, referenceDate)
+            ? "RELEASED"
+            : "PENDING_RELEASE",
           itemCount: order.items.reduce((totalItems, item) => totalItems + item.quantity, 0),
           assignedProducts: order.items.map((item) => ({
             quantity: item.quantity,
@@ -230,11 +261,33 @@ export class SalesReportService {
     };
   }
 
+  private createReceivablesSummary(orders: ReportOrder[], referenceDate: Date) {
+    const pending = orders.filter((order) => !isPaymentReleased(order, referenceDate));
+    const nextExpectedReleaseDate = pending
+      .map((order) => order.paymentReleaseExpectedAt)
+      .filter((date): date is Date => Boolean(date))
+      .sort((left, right) => left.getTime() - right.getTime())[0];
+    const receivableNetAmount = pending.reduce(
+      (totalAmount, order) => totalAmount.add(acquiredNetAmountForOrder(order)),
+      new Prisma.Decimal(0)
+    );
+
+    return {
+      pendingOrderCount: pending.length,
+      receivableNetAmount: toMoneyString(receivableNetAmount),
+      nextExpectedReleaseDate: nextExpectedReleaseDate
+        ? formatLocalDate(nextExpectedReleaseDate)
+        : null,
+    };
+  }
+
   private formatAggregate(bucket: AggregateBucket) {
     return {
       orderCount: bucket.orderCount,
       grossRevenue: toMoneyString(bucket.grossRevenue),
       acquiredNetRevenue: toMoneyString(bucket.acquiredNetRevenue),
+      releasedNetRevenue: toMoneyString(bucket.releasedNetRevenue),
+      receivableNetAmount: toMoneyString(bucket.receivableNetAmount),
       paymentFeeAmount: toMoneyString(bucket.paymentFeeAmount),
       averageTicket: toMoneyString(
         bucket.orderCount === 0
@@ -250,20 +303,41 @@ function emptyBucket(): AggregateBucket {
     orderCount: 0,
     grossRevenue: new Prisma.Decimal(0),
     acquiredNetRevenue: new Prisma.Decimal(0),
+    releasedNetRevenue: new Prisma.Decimal(0),
+    receivableNetAmount: new Prisma.Decimal(0),
     paymentFeeAmount: new Prisma.Decimal(0),
   };
 }
 
-function addOrderToBucket(bucket: AggregateBucket, order: ReportOrder): AggregateBucket {
+function addOrderToBucket(
+  bucket: AggregateBucket,
+  order: ReportOrder,
+  referenceDate: Date
+): AggregateBucket {
   const grossAmount = order.paymentGrossAmount ?? order.total;
-  const acquiredNetAmount = order.paymentNetAmount ?? grossAmount;
+  const acquiredNetAmount = acquiredNetAmountForOrder(order);
+  const released = isPaymentReleased(order, referenceDate);
 
   return {
     orderCount: bucket.orderCount + 1,
     grossRevenue: bucket.grossRevenue.add(grossAmount),
     acquiredNetRevenue: bucket.acquiredNetRevenue.add(acquiredNetAmount),
+    releasedNetRevenue: released
+      ? bucket.releasedNetRevenue.add(acquiredNetAmount)
+      : bucket.releasedNetRevenue,
+    receivableNetAmount: released
+      ? bucket.receivableNetAmount
+      : bucket.receivableNetAmount.add(acquiredNetAmount),
     paymentFeeAmount: bucket.paymentFeeAmount.add(order.paymentFeeAmount ?? new Prisma.Decimal(0)),
   };
+}
+
+function acquiredNetAmountForOrder(order: ReportOrder): Prisma.Decimal {
+  return order.paymentNetAmount ?? order.paymentGrossAmount ?? order.total;
+}
+
+function isPaymentReleased(order: ReportOrder, referenceDate: Date): boolean {
+  return !order.paymentReleaseExpectedAt || order.paymentReleaseExpectedAt <= referenceDate;
 }
 
 function calculateDelta(current: Prisma.Decimal, previous: Prisma.Decimal): number | null {

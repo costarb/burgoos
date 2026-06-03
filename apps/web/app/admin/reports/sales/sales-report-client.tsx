@@ -111,10 +111,22 @@ export function SalesReportClient({ report, orderPlatforms }: SalesReportClientP
         </button>
       </form>
 
-      <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
+      <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-6">
         <SummaryCard label="Pedidos" value={String(report.summary.orderCount)} />
         <SummaryCard label="Receita bruta" value={`R$ ${report.summary.grossRevenue}`} />
         <SummaryCard label="Recebido liquido" value={`R$ ${report.summary.acquiredNetRevenue}`} />
+        <SummaryCard label="Liberado/disponivel" value={`R$ ${report.summary.releasedNetRevenue}`} />
+        {Number(report.receivables.receivableNetAmount) > 0 ? (
+          <SummaryCard
+            detail={
+              report.receivables.nextExpectedReleaseDate
+                ? `Prox. ${formatDate(report.receivables.nextExpectedReleaseDate)}`
+                : undefined
+            }
+            label="Valores a receber"
+            value={`R$ ${report.receivables.receivableNetAmount}`}
+          />
+        ) : null}
         <SummaryCard label="Taxas" value={`R$ ${report.summary.paymentFeeAmount}`} />
         <SummaryCard label="Ticket medio" value={`R$ ${report.summary.averageTicket}`} />
       </section>
@@ -131,6 +143,8 @@ export function SalesReportClient({ report, orderPlatforms }: SalesReportClientP
                 <th className="px-4 py-3">Pedidos</th>
                 <th className="px-4 py-3">Bruto</th>
                 <th className="px-4 py-3">Liquido</th>
+                <th className="px-4 py-3">Liberado</th>
+                <th className="px-4 py-3">A receber</th>
                 <th className="px-4 py-3">Taxas</th>
                 <th className="px-4 py-3">Ticket</th>
                 <th className="px-4 py-3">Var. bruto</th>
@@ -145,6 +159,8 @@ export function SalesReportClient({ report, orderPlatforms }: SalesReportClientP
                   <td className="px-4 py-3">{day.orderCount}</td>
                   <td className="px-4 py-3">R$ {day.grossRevenue}</td>
                   <td className="px-4 py-3">R$ {day.acquiredNetRevenue}</td>
+                  <td className="px-4 py-3">R$ {day.releasedNetRevenue}</td>
+                  <td className="px-4 py-3">R$ {day.receivableNetAmount}</td>
                   <td className="px-4 py-3">R$ {day.paymentFeeAmount}</td>
                   <td className="px-4 py-3">R$ {day.averageTicket}</td>
                   <td className="px-4 py-3">{formatRate(day.grossRevenueDeltaRate)}</td>
@@ -178,6 +194,7 @@ export function SalesReportClient({ report, orderPlatforms }: SalesReportClientP
                   <th className="px-4 py-3">Bruto</th>
                   <th className="px-4 py-3">Taxa</th>
                   <th className="px-4 py-3">Liquido</th>
+                  <th className="px-4 py-3">Liberacao</th>
                   <th className="px-4 py-3">Produtos</th>
                 </tr>
               </thead>
@@ -200,6 +217,14 @@ export function SalesReportClient({ report, orderPlatforms }: SalesReportClientP
                       {order.paymentFeeAmount ? `R$ ${order.paymentFeeAmount}` : "-"}
                     </td>
                     <td className="px-4 py-3">R$ {order.acquiredNetAmount}</td>
+                    <td className="px-4 py-3">
+                      <p>{releaseStatusLabel(order.paymentReleaseStatus)}</p>
+                      <p className="text-xs text-slate-500">
+                        {order.paymentReleaseExpectedAt
+                          ? formatDate(order.paymentReleaseExpectedAt)
+                          : "Sem data"}
+                      </p>
+                    </td>
                     <td className="px-4 py-3">
                       {order.assignedProducts
                         .map((product) => `${product.quantity}x ${product.productName}`)
@@ -236,11 +261,20 @@ export function SalesReportClient({ report, orderPlatforms }: SalesReportClientP
   );
 }
 
-function SummaryCard({ label, value }: { label: string; value: string }) {
+function SummaryCard({
+  detail,
+  label,
+  value,
+}: {
+  detail?: string;
+  label: string;
+  value: string;
+}) {
   return (
     <article className="rounded-md border border-slate-200 bg-white p-4 shadow-sm">
       <p className="text-sm text-slate-500">{label}</p>
       <p className="mt-2 text-2xl font-semibold">{value}</p>
+      {detail ? <p className="mt-1 text-xs text-slate-500">{detail}</p> : null}
     </article>
   );
 }
@@ -566,4 +600,12 @@ function formatCompactMoney(value: number): string {
 function formatDayLabel(date: string): string {
   const [, month, day] = date.split("-");
   return `${day}/${month}`;
+}
+
+function releaseStatusLabel(status: string): string {
+  return status === "PENDING_RELEASE" ? "A receber" : "Liberado";
+}
+
+function formatDate(date: string): string {
+  return new Date(date).toLocaleDateString("pt-BR", { timeZone: "America/Sao_Paulo" });
 }

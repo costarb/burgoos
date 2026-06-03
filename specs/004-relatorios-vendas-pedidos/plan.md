@@ -6,7 +6,7 @@
 
 ## Summary
 
-Create an admin reports module focused on sales/orders. The first increment adds a period-based sales report with daily evolution, filters by payment institution/method/channel/status, analytical order drill-down, summaries by payment and channel dimensions, and a visual daily evolution chart. The implementation reuses existing order, payment reconciliation, platform and profitability data introduced in the CMV/DRE feature; no new persistence entity is required for the first release.
+Create an admin reports module focused on sales/orders. The first increment adds a period-based sales report with daily evolution, filters by payment institution/method/channel/status, analytical order drill-down, summaries by payment and channel dimensions, a visual daily evolution chart, and payment release/receivable visibility. The implementation reuses existing order, payment reconciliation, platform and profitability data introduced in the CMV/DRE feature, with an additional order-level settlement field for expected payment release.
 
 ## Technical Context
 
@@ -14,7 +14,7 @@ Create an admin reports module focused on sales/orders. The first increment adds
 
 **Primary Dependencies**: NestJS, Next.js App Router, Prisma, PostgreSQL, TailwindCSS
 
-**Storage**: PostgreSQL through Prisma; report data is read from existing tenant-scoped orders, order items, order platforms and payment reconciliation fields
+**Storage**: PostgreSQL through Prisma; report data is read from tenant-scoped orders, order items, order platforms and payment reconciliation fields; expected payment release date must be persisted on orders
 
 **Testing**: Vitest unit/integration tests for report aggregation and tenant filtering; focused web tests for filter behavior if non-trivial
 
@@ -24,7 +24,7 @@ Create an admin reports module focused on sales/orders. The first increment adds
 
 **Performance Goals**: Pilot-scale report queries respond within 2 seconds for monthly ranges; analytical list remains usable with pagination for high-volume periods
 
-**Constraints**: Tenant isolation; strict typing; local business-date grouping; cancelled/non-delivered orders excluded from realized sales by default; existing DRE semantics must not be changed
+**Constraints**: Tenant isolation; strict typing; local business-date grouping; cancelled/non-delivered orders excluded from realized sales by default; existing DRE semantics must distinguish sold/acquired values from released/available cash
 
 **Scale/Scope**: One pilot store initially, with month-level periods, tens to hundreds of daily orders, and report dimensions for payment institution, payment method and order platform
 
@@ -81,6 +81,10 @@ apps/
         `-- api.ts
 
 packages/
+|-- database/
+|   `-- prisma/
+|       |-- schema.prisma
+|       `-- migrations/
 `-- types/
     `-- src/index.ts
 ```
@@ -97,6 +101,9 @@ Research is captured in [research.md](./research.md). Main decisions:
 - Include zero-sale days in the daily evolution so trends are visually honest.
 - Render the first daily evolution chart from the existing daily summary payload so the API contract and database model do not need to change.
 - Prefer a lightweight in-app chart implementation for the first release unless richer interactions become necessary later.
+- Persist expected payment release date on imported orders because Mercado Pago and PagBank provide release fields and voucher operations may be paid D+30.
+- Use D+30 fallback for imported payment rows where the release field is empty, especially voucher sales.
+- Add released vs receivable totals to the report response rather than changing the meaning of gross sales.
 
 ## Phase 1: Design
 

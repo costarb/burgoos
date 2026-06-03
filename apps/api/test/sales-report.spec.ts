@@ -20,6 +20,7 @@ describe("sales report service", () => {
             paymentNetAmount: "28.50",
             paymentInstitution: PaymentInstitution.MERCADO_PAGO,
             paymentMethod: PaymentMethod.CREDIT_CARD,
+            paymentReleaseExpectedAt: new Date("2026-05-31T21:00:00.000Z"),
           }),
           order({
             id: "44444444-4444-4444-8444-444444444444",
@@ -31,6 +32,7 @@ describe("sales report service", () => {
             paymentInstitution: PaymentInstitution.CAIXA_LOCAL,
             paymentMethod: PaymentMethod.CASH,
             externalPaymentId: null,
+            paymentReleaseExpectedAt: new Date("2026-07-01T18:00:00.000Z"),
           }),
         ]),
         count: vi.fn().mockResolvedValue(2),
@@ -47,6 +49,8 @@ describe("sales report service", () => {
       orderCount: 2,
       grossRevenue: "50.00",
       acquiredNetRevenue: "48.50",
+      releasedNetRevenue: "28.50",
+      receivableNetAmount: "20.00",
       paymentFeeAmount: "1.50",
       averageTicket: "25.00",
     });
@@ -77,7 +81,13 @@ describe("sales report service", () => {
     });
     expect(report.analytical.items[1]).toMatchObject({
       acquiredNetAmount: "20.00",
+      paymentReleaseStatus: "PENDING_RELEASE",
       imported: false,
+    });
+    expect(report.receivables).toEqual({
+      pendingOrderCount: 1,
+      receivableNetAmount: "20.00",
+      nextExpectedReleaseDate: "2026-07-01",
     });
   });
 
@@ -99,6 +109,7 @@ function order(overrides: {
   paymentInstitution: PaymentInstitution | null;
   paymentMethod: PaymentMethod;
   externalPaymentId?: string | null;
+  paymentReleaseExpectedAt?: Date | null;
 }) {
   return {
     id: overrides.id,
@@ -117,6 +128,8 @@ function order(overrides: {
     paymentFeeAmount: overrides.paymentFeeAmount ? decimal(overrides.paymentFeeAmount) : null,
     paymentNetAmount: overrides.paymentNetAmount ? decimal(overrides.paymentNetAmount) : null,
     paymentBrand: "Visa",
+    paymentReleaseExpectedAt: overrides.paymentReleaseExpectedAt ?? null,
+    paymentReleaseSource: null,
     orderPlatformId: platformId,
     notes: null,
     createdAt: overrides.createdAt,

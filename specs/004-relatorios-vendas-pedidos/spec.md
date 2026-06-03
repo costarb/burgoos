@@ -78,6 +78,26 @@ Como gestor financeiro, quero resumir vendas por instituicao, meio de pagamento 
 2. **Given** existem meios de pagamento diferentes, **When** o admin consulta o resumo por meio, **Then** o sistema mostra participacao de cada meio no total.
 3. **Given** existem vendas por canais diferentes, **When** o admin consulta o resumo por canal, **Then** o sistema mostra quais canais geram maior receita e maior custo de taxa.
 
+---
+
+### User Story 5 - Acompanhar valores a receber por liberacao de pagamento (Priority: P1)
+
+Como dono ou gestor financeiro, quero diferenciar valores ja liberados pelo banco/adquirente dos valores ainda a receber, para entender o saldo real disponivel sem confundir vendas aprovadas com dinheiro efetivamente liberado.
+
+**Why this priority**: Vendas em voucher e alguns meios de pagamento podem ser aprovadas no dia da venda, mas liberadas apenas depois, como D+30. Sem essa separacao, o relatorio superestima o saldo disponivel no periodo.
+
+**Independent Test**: Importar extratos Mercado Pago e PagBank com data de liberacao preenchida e vazia, filtrar o periodo das vendas e verificar se o relatorio mostra valores liberados, valores a receber e data prevista de liberacao conforme a regra.
+
+**Acceptance Scenarios**:
+
+1. **Given** uma venda importada do Mercado Pago possui `RELEASE_DATETIME`, **When** o pedido e importado, **Then** o sistema guarda essa data como data prevista de liberacao do pagamento.
+2. **Given** uma venda importada do PagBank possui `Data prevista de liberacao`, **When** o pedido e importado, **Then** o sistema guarda essa data como data prevista de liberacao do pagamento.
+3. **Given** a data prevista de liberacao veio vazia no extrato, **When** o pedido e importado, **Then** o sistema define a liberacao prevista como 30 dias apos a data da venda.
+4. **Given** uma venda possui liberacao prevista futura, **When** o admin consulta o relatorio de vendas, **Then** o valor liquido dessa venda nao entra no total de valores liberados/disponiveis do dia.
+5. **Given** existem vendas filtradas com liberacao prevista futura, **When** o admin consulta o relatorio, **Then** o sistema mostra uma caixa de "Valores a receber" somando os valores liquidos pendentes.
+6. **Given** o admin aplica filtros por instituicao, meio de pagamento, canal ou status, **When** existem valores pendentes nesse subconjunto, **Then** a caixa de "Valores a receber" considera apenas as operacoes filtradas.
+7. **Given** um pedido aparece no analitico, **When** ele possui data prevista de liberacao, **Then** o sistema mostra essa data e indica se o pagamento esta liberado ou a receber.
+
 ### Edge Cases
 
 - Periodo sem pedidos entregues.
@@ -93,6 +113,11 @@ Como gestor financeiro, quero resumir vendas por instituicao, meio de pagamento 
 - Periodos muito curtos, como apenas um dia, em que o grafico deve continuar legivel ou mostrar comparacao limitada.
 - Periodos com muitos dias, em que o grafico deve permanecer legivel sem sobrepor rotulos.
 - Diferencas grandes entre receita bruta e recebida liquida, em que o grafico deve deixar claro qual serie esta sendo visualizada.
+- Extratos de pagamento sem data prevista de liberacao.
+- Vendas de voucher aprovadas no dia, mas com repasse previsto apenas em D+30.
+- Data prevista de liberacao anterior ou igual ao dia atual.
+- Data prevista de liberacao futura fora do periodo filtrado.
+- Operacoes manuais/dinheiro/caixa local sem dependencia de banco adquirente.
 
 ## Requirements *(mandatory)*
 
@@ -119,6 +144,13 @@ Como gestor financeiro, quero resumir vendas por instituicao, meio de pagamento 
 - **FR-019**: The daily evolution chart MUST use the same active period and filters as the summary cards, daily table and analytical list.
 - **FR-020**: The daily evolution chart MUST remain readable on desktop and mobile layouts, including periods with zero-sale days.
 - **FR-021**: The daily evolution chart MUST provide clear empty-state feedback when no sales exist for the selected period or filters.
+- **FR-022**: System MUST persist the payment release expected date when imported extracts provide it.
+- **FR-023**: System MUST map Mercado Pago `RELEASE_DATETIME` and PagBank `Data prevista de liberacao` into the order payment reconciliation data.
+- **FR-024**: System MUST set payment release expected date to sale date plus 30 calendar days when an imported payment row has no release date.
+- **FR-025**: System MUST separate net payment amount into released/available and pending receivable amounts.
+- **FR-026**: System MUST exclude payments with future release expected date from released/available daily totals.
+- **FR-027**: System MUST show a "Valores a receber" summary for the active filters when one or more payments are pending release.
+- **FR-028**: Analytical order rows MUST show payment release expected date and release status when available.
 
 ### Key Entities *(include if feature involves data)*
 
@@ -129,6 +161,8 @@ Como gestor financeiro, quero resumir vendas por instituicao, meio de pagamento 
 - **Payment Dimension Summary**: Aggregation by payment institution or payment method.
 - **Channel Summary**: Aggregation by order platform/channel.
 - **Report Filter Set**: Selected period, institution, method, channel and status constraints applied consistently across the report.
+- **Payment Release Expected Date**: Date when the bank, acquirer or voucher provider is expected to release the net payment amount.
+- **Receivable Amount**: Net payment amount from approved sales whose release expected date is later than the report reference date.
 
 ## Success Criteria *(mandatory)*
 
@@ -142,6 +176,9 @@ Como gestor financeiro, quero resumir vendas por instituicao, meio de pagamento 
 - **SC-006**: Report handles periods with no sales without errors and clearly communicates that no records were found.
 - **SC-007**: Admin can identify the highest and lowest sales day in a selected period from the chart in under 15 seconds.
 - **SC-008**: Chart values and daily table values match for 100% of sampled validation periods.
+- **SC-009**: Voucher or other imported sales without release date are classified as receivable with D+30 release in 100% of sampled imports.
+- **SC-010**: Released/available net amount plus receivable amount equals total acquired net amount in 100% of sampled filtered periods.
+- **SC-011**: Admin can identify pending receivables for the current filter set in under 15 seconds.
 
 ## Assumptions
 
@@ -151,3 +188,5 @@ Como gestor financeiro, quero resumir vendas por instituicao, meio de pagamento 
 - Period filters use local business dates for the operation.
 - Reports are for admin/owner usage and are scoped to the authenticated tenant.
 - The first chart increment focuses on daily trend readability; advanced interactions such as custom series selection, export and annotations can be added later.
+- For imported payment rows without release date, the default release rule is D+30 from the sale date.
+- Cash, manual pix and caixa local operations are considered immediately available unless a payment release expected date is explicitly provided.

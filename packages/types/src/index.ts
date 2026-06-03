@@ -12,6 +12,8 @@ export type PaymentMethod =
   | "PIX";
 
 export type PaymentInstitution = "PAGBANK" | "MERCADO_PAGO" | "DINHEIRO" | "CAIXA_LOCAL";
+export type PaymentReleaseSource = "EXTRACT" | "D_PLUS_30_FALLBACK" | "IMMEDIATE";
+export type PaymentReleaseStatus = "RELEASED" | "PENDING_RELEASE";
 
 export interface PublicMenuProduct {
   id: string;
@@ -183,6 +185,8 @@ export interface CreatedOrder {
   paymentFeeAmount?: string | null;
   paymentNetAmount?: string | null;
   paymentBrand?: string | null;
+  paymentReleaseExpectedAt?: string | null;
+  paymentReleaseSource?: PaymentReleaseSource | null;
   items: CreatedOrderItem[];
   whatsappUrl: string;
 }
@@ -218,6 +222,8 @@ export interface AdminOrder {
   paymentFeeAmount?: string | null;
   paymentNetAmount?: string | null;
   paymentBrand?: string | null;
+  paymentReleaseExpectedAt?: string | null;
+  paymentReleaseSource?: PaymentReleaseSource | null;
   notes: string | null;
   createdAt?: string;
   items: AdminOrderItem[];
@@ -250,6 +256,8 @@ export interface HistoricalOrderImportItem {
   grossAmount: string;
   feeAmount: string | null;
   netAmount: string | null;
+  paymentReleaseExpectedAt: string | null;
+  paymentReleaseSource: PaymentReleaseSource | null;
 }
 
 export interface HistoricalOrderImportSkippedItem {
@@ -280,6 +288,8 @@ export interface SalesReportSummary {
   orderCount: number;
   grossRevenue: string;
   acquiredNetRevenue: string;
+  releasedNetRevenue: string;
+  receivableNetAmount: string;
   paymentFeeAmount: string;
   averageTicket: string;
   periodStart: string;
@@ -291,6 +301,8 @@ export interface DailySalesSummary {
   orderCount: number;
   grossRevenue: string;
   acquiredNetRevenue: string;
+  releasedNetRevenue: string;
+  receivableNetAmount: string;
   paymentFeeAmount: string;
   averageTicket: string;
   grossRevenueDeltaRate: number | null;
@@ -303,6 +315,8 @@ export interface PaymentDimensionSummary {
   orderCount: number;
   grossRevenue: string;
   acquiredNetRevenue: string;
+  releasedNetRevenue: string;
+  receivableNetAmount: string;
   paymentFeeAmount: string;
   shareOfGrossRevenue: number;
 }
@@ -313,6 +327,8 @@ export interface ChannelSummary {
   orderCount: number;
   grossRevenue: string;
   acquiredNetRevenue: string;
+  releasedNetRevenue: string;
+  receivableNetAmount: string;
   paymentFeeAmount: string;
   averageTicket: string;
 }
@@ -335,6 +351,8 @@ export interface SalesAnalyticalOrder {
   grossAmount: string;
   paymentFeeAmount: string | null;
   acquiredNetAmount: string;
+  paymentReleaseExpectedAt: string | null;
+  paymentReleaseStatus: PaymentReleaseStatus;
   itemCount: number;
   assignedProducts: SalesAnalyticalProduct[];
   imported: boolean;
@@ -347,6 +365,12 @@ export interface SalesAnalyticalPage {
   items: SalesAnalyticalOrder[];
 }
 
+export interface ReceivablesSummary {
+  pendingOrderCount: number;
+  receivableNetAmount: string;
+  nextExpectedReleaseDate: string | null;
+}
+
 export interface SalesReportResponse {
   filters: Required<Pick<SalesReportFilters, "start" | "end" | "page" | "pageSize">> &
     Omit<SalesReportFilters, "start" | "end" | "page" | "pageSize">;
@@ -356,6 +380,7 @@ export interface SalesReportResponse {
   byPaymentMethod: PaymentDimensionSummary[];
   byChannel: ChannelSummary[];
   analytical: SalesAnalyticalPage;
+  receivables: ReceivablesSummary;
 }
 
 export type PurchaseUnitKind = "WEIGHT" | "VOLUME" | "COUNT" | "PACKAGE";

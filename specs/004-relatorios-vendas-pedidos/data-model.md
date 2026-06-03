@@ -31,6 +31,8 @@ Fields:
 - `order_count`: integer
 - `gross_revenue`: decimal money
 - `acquired_net_revenue`: decimal money
+- `released_net_revenue`: decimal money
+- `receivable_net_amount`: decimal money
 - `payment_fee_amount`: decimal money
 - `average_ticket`: decimal money
 - `period_start`: date
@@ -41,6 +43,9 @@ Validation:
 - Includes only orders matching the selected filters.
 - Cancelled/non-delivered orders are excluded by default.
 - Acquired net revenue uses payment net amount when present, otherwise gross amount.
+- Released net revenue includes only orders with payment release expected date on or before the report reference date, or immediately available payment types.
+- Receivable net amount includes orders with payment release expected date after the report reference date.
+- Released net revenue plus receivable net amount must equal acquired net revenue for the same filter set.
 - Average ticket is zero when order count is zero.
 
 ## DailySalesSummary
@@ -53,6 +58,8 @@ Fields:
 - `order_count`: integer
 - `gross_revenue`: decimal money
 - `acquired_net_revenue`: decimal money
+- `released_net_revenue`: decimal money
+- `receivable_net_amount`: decimal money
 - `payment_fee_amount`: decimal money
 - `average_ticket`: decimal money
 - `gross_revenue_delta_rate`: decimal nullable
@@ -63,6 +70,7 @@ Validation:
 - Every day in the selected period appears once.
 - Days without sales return zero values.
 - Delta rates are null for the first day or when the previous denominator is zero.
+- Future-release payments remain visible as sales for the original sale day, but are excluded from released net revenue and included in receivable net amount.
 
 ## SalesAnalyticalOrder
 
@@ -82,6 +90,8 @@ Fields:
 - `gross_amount`: decimal money
 - `payment_fee_amount`: decimal money nullable
 - `acquired_net_amount`: decimal money
+- `payment_release_expected_at`: datetime nullable
+- `payment_release_status`: enum `RELEASED` or `PENDING_RELEASE`
 - `item_count`: integer
 - `assigned_products`: list of product names and quantities
 - `imported`: boolean
@@ -91,6 +101,8 @@ Validation:
 - Row belongs to the authenticated tenant.
 - Acquired net amount falls back to gross amount when no payment net amount exists.
 - Imported is true when external payment ID or import metadata exists.
+- Release status is pending when payment release expected date is later than the report reference date.
+- Imported rows without release date use sale date plus 30 calendar days.
 
 ## PaymentDimensionSummary
 
@@ -103,6 +115,8 @@ Fields:
 - `order_count`: integer
 - `gross_revenue`: decimal money
 - `acquired_net_revenue`: decimal money
+- `released_net_revenue`: decimal money
+- `receivable_net_amount`: decimal money
 - `payment_fee_amount`: decimal money
 - `share_of_gross_revenue`: decimal percentage
 
@@ -110,6 +124,7 @@ Validation:
 
 - Shares sum approximately to 100% when total gross revenue is greater than zero.
 - Null institution values appear under a clear "Nao informado" label.
+- Released and receivable amounts respect the same dimension and filter constraints.
 
 ## ChannelSummary
 
@@ -122,6 +137,8 @@ Fields:
 - `order_count`: integer
 - `gross_revenue`: decimal money
 - `acquired_net_revenue`: decimal money
+- `released_net_revenue`: decimal money
+- `receivable_net_amount`: decimal money
 - `payment_fee_amount`: decimal money
 - `average_ticket`: decimal money
 
@@ -142,8 +159,27 @@ Fields:
 - `by_payment_method`: list of PaymentDimensionSummary
 - `by_channel`: list of ChannelSummary
 - `analytical`: paginated list of SalesAnalyticalOrder
+- `receivables`: summary of pending receivable values for the selected filters
 
 Validation:
 
 - All sections use the same filter set.
 - Analytical totals for the returned page do not replace summary totals for the full filter set.
+- Receivable totals use the same report reference date as released net calculations.
+
+## PaymentRelease
+
+Settlement metadata attached to an order payment.
+
+Fields:
+
+- `payment_release_expected_at`: datetime nullable
+- `payment_release_source`: enum/string describing `EXTRACT`, `D_PLUS_30_FALLBACK`, or `IMMEDIATE`
+- `payment_release_status`: derived status `RELEASED` or `PENDING_RELEASE`
+
+Validation:
+
+- Mercado Pago imports use `RELEASE_DATETIME` when present.
+- PagBank imports use `Data prevista de liberacao` when present.
+- Imported rows without release date use sale date plus 30 calendar days.
+- Cash, manual pix and caixa local use immediate release unless an explicit release date exists.
