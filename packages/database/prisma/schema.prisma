@@ -72,6 +72,11 @@ enum PaymentReleaseSource {
   IMMEDIATE
 }
 
+enum OrderMaintenanceAction {
+  EDIT
+  DELETE
+}
+
 enum PurchaseUnitKind {
   WEIGHT
   VOLUME
@@ -125,6 +130,7 @@ model Tenant {
   productCostSnapshots        ProductCostSnapshot[]
   stockMovements              StockMovement[]
   orderProfitabilitySnapshots OrderProfitabilitySnapshot[]
+  orderMaintenances           OrderMaintenance[]
 
   @@index([createdByPlatformUserId])
   @@index([defaultLayoutPresetKey])
@@ -171,6 +177,8 @@ model User {
   tenant                        Tenant                     @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   visualConfigurationsCreated   StoreVisualConfiguration[] @relation("VisualConfigurationCreatedBy")
   visualConfigurationsPublished StoreVisualConfiguration[] @relation("VisualConfigurationPublishedBy")
+  deletedOrders                 Order[]                    @relation("OrderDeletedBy")
+  orderMaintenances             OrderMaintenance[]
 
   @@index([tenantId])
   @@map("users")
@@ -259,19 +267,48 @@ model Order {
   paymentReleaseSource     PaymentReleaseSource?        @map("payment_release_source")
   orderPlatformId          String?                      @map("order_platform_id") @db.Uuid
   notes                    String?
+  deletedAt                DateTime?                    @map("deleted_at")
+  deletedByUserId          String?                      @map("deleted_by_user_id") @db.Uuid
+  deletionReason           String?                      @map("deletion_reason")
   createdAt                DateTime                     @default(now()) @map("created_at")
   updatedAt                DateTime                     @updatedAt @map("updated_at")
   tenant                   Tenant                       @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  deletedByUser            User?                        @relation("OrderDeletedBy", fields: [deletedByUserId], references: [id], onDelete: SetNull)
   orderPlatform            OrderPlatform?               @relation(fields: [orderPlatformId], references: [id], onDelete: SetNull)
   items                    OrderItem[]
   stockMovements           StockMovement[]
   profitabilitySnapshots   OrderProfitabilitySnapshot[]
+  maintenances             OrderMaintenance[]
 
   @@index([tenantId, status])
   @@index([tenantId, createdAt])
   @@index([tenantId, externalPaymentId])
+  @@index([tenantId, deletedAt])
+  @@index([deletedByUserId])
   @@index([orderPlatformId])
   @@map("orders")
+}
+
+model OrderMaintenance {
+  id                String                 @id @default(uuid()) @db.Uuid
+  tenantId          String                 @map("tenant_id") @db.Uuid
+  orderId           String                 @map("order_id") @db.Uuid
+  actorUserId       String                 @map("actor_user_id") @db.Uuid
+  action            OrderMaintenanceAction
+  reason            String
+  expectedUpdatedAt DateTime               @map("expected_updated_at")
+  beforeSnapshot    Json                   @map("before_snapshot")
+  afterSnapshot     Json?                  @map("after_snapshot")
+  impactSummary     Json                   @map("impact_summary")
+  createdAt         DateTime               @default(now()) @map("created_at")
+  tenant            Tenant                 @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  order             Order                  @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  actorUser         User                   @relation(fields: [actorUserId], references: [id], onDelete: Restrict)
+
+  @@index([tenantId, orderId, createdAt])
+  @@index([tenantId, actorUserId, createdAt])
+  @@index([tenantId, action, createdAt])
+  @@map("order_maintenances")
 }
 
 model OrderItem {

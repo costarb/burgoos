@@ -276,9 +276,95 @@ export class InventoryService {
     });
   }
 
-  private async calculateOrderRequirements(order: OrderForInventory) {
+  async neutralizeOrderEffect(
+    tenantId: string,
+    orderId: string,
+    reason: string,
+    client: Prisma.TransactionClient | PrismaService = this.prisma
+  ): Promise<number> {
+    const movements = await client.stockMovement.findMany({
+      where: { tenantId, orderId },
+    });
+    const effects = new Map<string, Prisma.Decimal>();
+
+    for (const movement of movements) {
+      const current = effects.get(movement.ingredientId) ?? new Prisma.Decimal(0);
+      const next =
+        movement.movementType === StockMovementType.RESERVATION ||
+        movement.movementType === StockMovementType.CONSUMPTION
+          ? current.add(movement.quantity)
+          : movement.movementType === StockMovementType.RELEASE
+            ? current.sub(movement.quantity)
+            : current;
+      effects.set(movement.ingredientId, next);
+    }
+
+    const releases = [...effects.entries()].filter(([, quantity]) => quantity.gt(0));
+
+    if (releases.length > 0) {
+      await client.stockMovement.createMany({
+        data: releases.map(([ingredientId, quantity]) => ({
+          tenantId,
+          ingredientId,
+          orderId,
+          movementType: StockMovementType.RELEASE,
+          quantity,
+          reason,
+        })),
+      });
+    }
+
+    return releases.length;
+  }
+
+  async applyOrderEffect(
+    tenantId: string,
+    orderId: string,
+    status: string,
+    client: Prisma.TransactionClient | PrismaService = this.prisma
+  ): Promise<number> {
+    const order = await client.order.findFirst({
+      where: { id: orderId, tenantId, deletedAt: null },
+      include: { items: true },
+    });
+
+    if (!order) {
+      return 0;
+    }
+
+    const requirements = await this.calculateOrderRequirements(order, client);
+    const movementType =
+      status === "DELIVERED"
+        ? StockMovementType.CONSUMPTION
+        : status === "PENDING" || status === "PREPARING" || status === "SHIPPED"
+          ? StockMovementType.RESERVATION
+          : null;
+
+    if (!movementType || requirements.length === 0) {
+      return 0;
+    }
+
+    await client.stockMovement.createMany({
+      data: requirements.map((requirement) => ({
+        tenantId,
+        ingredientId: requirement.ingredientId,
+        orderId,
+        orderItemId: requirement.orderItemId,
+        movementType,
+        quantity: requirement.quantity,
+        reason: "Pedido corrigido por manutencao",
+      })),
+    });
+
+    return requirements.length;
+  }
+
+  private async calculateOrderRequirements(
+    order: OrderForInventory,
+    client: Prisma.TransactionClient | PrismaService = this.prisma
+  ) {
     const productIds = [...new Set(order.items.map((item) => item.productId))];
-    const technicalSheets = await this.prisma.technicalSheet.findMany({
+    const technicalSheets = await client.technicalSheet.findMany({
       where: {
         tenantId: order.tenantId,
         productId: {

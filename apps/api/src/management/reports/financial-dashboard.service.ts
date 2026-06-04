@@ -34,6 +34,7 @@ export class FinancialDashboardService {
         where: {
           tenantId,
           status: OrderStatus.DELIVERED,
+          deletedAt: null,
           createdAt: {
             gte: periodStart,
             lte: periodEnd,

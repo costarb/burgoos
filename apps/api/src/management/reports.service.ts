@@ -17,6 +17,7 @@ export class ReportsService {
       where: {
         tenantId,
         status: OrderStatus.DELIVERED,
+        deletedAt: null,
         createdAt: {
           gte: dayStart,
           lt: dayEnd

@@ -69,6 +69,7 @@ describe("menu engineering integration", () => {
         },
         order: {
           status: OrderStatus.DELIVERED,
+          deletedAt: null,
         },
       },
       include: {

@@ -1,5 +1,7 @@
 import type {
   AdminOrder,
+  DeleteOrderInput,
+  EditOrderInput,
   BrandingDraftInput,
   BrandingPreview,
   BrandingState,
@@ -18,6 +20,7 @@ import type {
   MenuEngineeringReport,
   OrderPlatform,
   OrderPlatformInput,
+  OrderMaintenanceRecord,
   OrderStatus,
   ProductPricing,
   PurchaseUnit,
@@ -392,6 +395,60 @@ export async function updateAdminOrderStatus(
   }
 
   return response.json() as Promise<AdminOrder>;
+}
+
+export async function editAdminOrder(
+  token: string,
+  orderId: string,
+  payload: EditOrderInput
+): Promise<AdminOrder> {
+  return fetchAdmin<AdminOrder>(token, `/api/admin/orders/${orderId}/maintenance`, {
+    method: "PATCH",
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function deleteAdminOrder(
+  token: string,
+  orderId: string,
+  payload: DeleteOrderInput
+): Promise<{ orderId: string; deletedAt: string; reason: string }> {
+  return fetchAdmin(token, `/api/admin/orders/${orderId}/maintenance`, {
+    method: "DELETE",
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function getOrderMaintenanceHistory(
+  token: string,
+  orderId: string
+): Promise<OrderMaintenanceRecord[]> {
+  return fetchAdmin<OrderMaintenanceRecord[]>(
+    token,
+    `/api/admin/orders/${orderId}/maintenance-history`
+  );
+}
+
+export async function getOrderMaintenanceSearch(filters: {
+  start?: string;
+  end?: string;
+  status?: OrderStatus;
+  includeDeleted?: boolean;
+  search?: string;
+}): Promise<{ token: string; orders: AdminOrder[] }> {
+  const token = await getAdminToken();
+  const params = new URLSearchParams();
+  if (filters.start) params.set("start", filters.start);
+  if (filters.end) params.set("end", filters.end);
+  if (filters.status) params.set("status", filters.status);
+  if (filters.includeDeleted) params.set("includeDeleted", "true");
+  if (filters.search) params.set("search", filters.search);
+  const query = params.toString();
+  const orders = await fetchAdmin<AdminOrder[]>(
+    token,
+    `/api/admin/orders/maintenance${query ? `?${query}` : ""}`
+  );
+  return { token, orders };
 }
 
 export async function importHistoricalOrders(

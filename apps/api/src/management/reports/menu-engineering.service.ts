@@ -18,6 +18,7 @@ export class MenuEngineeringService {
         },
         order: {
           status: OrderStatus.DELIVERED,
+          deletedAt: null,
         },
       },
       include: {

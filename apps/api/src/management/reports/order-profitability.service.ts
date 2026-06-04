@@ -13,8 +13,12 @@ const cardPaymentMethods: PaymentMethod[] = [
 export class OrderProfitabilityService {
   constructor(@Inject(PrismaService) private readonly prisma: PrismaService) {}
 
-  async createDeliveredOrderSnapshots(tenantId: string, orderId: string): Promise<void> {
-    const existing = await this.prisma.orderProfitabilitySnapshot.findMany({
+  async createDeliveredOrderSnapshots(
+    tenantId: string,
+    orderId: string,
+    client: Prisma.TransactionClient | PrismaService = this.prisma
+  ): Promise<void> {
+    const existing = await client.orderProfitabilitySnapshot.findMany({
       where: {
         tenantId,
         orderId,
@@ -26,8 +30,8 @@ export class OrderProfitabilityService {
     }
 
     const [configuration, order] = await Promise.all([
-      this.getFinancialConfiguration(tenantId),
-      this.prisma.order.findFirst({
+      this.getFinancialConfiguration(tenantId, client),
+      client.order.findFirst({
         where: {
           id: orderId,
           tenantId,
@@ -45,7 +49,7 @@ export class OrderProfitabilityService {
     }
 
     const productIds = [...new Set(order.items.map((item) => item.productId))];
-    const technicalSheets = await this.prisma.technicalSheet.findMany({
+    const technicalSheets = await client.technicalSheet.findMany({
       where: {
         tenantId,
         productId: {
@@ -104,13 +108,16 @@ export class OrderProfitabilityService {
       return;
     }
 
-    await this.prisma.orderProfitabilitySnapshot.createMany({
+    await client.orderProfitabilitySnapshot.createMany({
       data: snapshots,
     });
   }
 
-  private async getFinancialConfiguration(tenantId: string) {
-    return this.prisma.financialConfiguration.upsert({
+  private async getFinancialConfiguration(
+    tenantId: string,
+    client: Prisma.TransactionClient | PrismaService = this.prisma
+  ) {
+    return client.financialConfiguration.upsert({
       where: { tenantId },
       update: {},
       create: { tenantId },

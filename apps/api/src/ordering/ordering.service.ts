@@ -173,6 +173,7 @@ export class OrderingService {
     const orders = await this.prisma.order.findMany({
       where: {
         tenantId,
+        deletedAt: null,
         status: history
           ? {
               in: terminalStatuses,
@@ -204,6 +205,7 @@ export class OrderingService {
       where: {
         id: orderId,
         tenantId,
+        deletedAt: null,
       },
       include: {
         items: true,
@@ -270,8 +272,12 @@ export class OrderingService {
       paymentBrand?: string | null;
       paymentReleaseExpectedAt?: Date | null;
       paymentReleaseSource?: string | null;
+      orderPlatformId?: string | null;
       notes: string | null;
       createdAt?: Date;
+      updatedAt?: Date;
+      deletedAt?: Date | null;
+      deletionReason?: string | null;
       items: Array<{
         id: string;
         productId: string;
@@ -299,8 +305,12 @@ export class OrderingService {
       paymentBrand: order.paymentBrand ?? null,
       paymentReleaseExpectedAt: order.paymentReleaseExpectedAt?.toISOString() ?? null,
       paymentReleaseSource: order.paymentReleaseSource ?? null,
+      orderPlatformId: order.orderPlatformId ?? null,
       notes: order.notes,
       createdAt: order.createdAt?.toISOString(),
+      updatedAt: order.updatedAt?.toISOString(),
+      deletedAt: order.deletedAt?.toISOString() ?? null,
+      deletionReason: order.deletionReason ?? null,
       items: order.items.map((item) => ({
         id: item.id,
         productId: item.productId,

@@ -66,6 +66,7 @@ describe("sales report integration", () => {
     expect(prismaMock.order.findMany).toHaveBeenCalledWith({
       where: {
         tenantId,
+        deletedAt: null,
         createdAt: {
           gte: new Date("2026-05-30T03:00:00.000Z"),
           lte: new Date("2026-06-02T02:59:59.999Z"),

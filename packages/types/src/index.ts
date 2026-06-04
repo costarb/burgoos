@@ -14,6 +14,7 @@ export type PaymentMethod =
 export type PaymentInstitution = "PAGBANK" | "MERCADO_PAGO" | "DINHEIRO" | "CAIXA_LOCAL";
 export type PaymentReleaseSource = "EXTRACT" | "D_PLUS_30_FALLBACK" | "IMMEDIATE";
 export type PaymentReleaseStatus = "RELEASED" | "PENDING_RELEASE";
+export type OrderMaintenanceAction = "EDIT" | "DELETE";
 
 export interface PublicMenuProduct {
   id: string;
@@ -224,10 +225,60 @@ export interface AdminOrder {
   paymentBrand?: string | null;
   paymentReleaseExpectedAt?: string | null;
   paymentReleaseSource?: PaymentReleaseSource | null;
+  orderPlatformId?: string | null;
   notes: string | null;
   createdAt?: string;
+  updatedAt?: string;
+  deletedAt?: string | null;
+  deletionReason?: string | null;
   items: AdminOrderItem[];
   stockWarnings?: AdminOrderStockWarning[];
+}
+
+export interface MaintainableOrderItem {
+  id?: string | null;
+  productId: string;
+  productNameSnapshot: string;
+  quantity: number;
+  unitPrice: string;
+}
+
+export interface EditOrderInput {
+  expectedUpdatedAt: string;
+  reason?: string;
+  customerName: string;
+  customerPhone: string;
+  fulfillmentMethod: FulfillmentMethod;
+  deliveryAddress?: Record<string, unknown> | null;
+  notes?: string | null;
+  createdAt: string;
+  paymentMethod: PaymentMethod;
+  paymentInstitution?: PaymentInstitution | null;
+  externalPaymentId?: string | null;
+  paymentGrossAmount?: string | null;
+  paymentFeeAmount?: string | null;
+  paymentNetAmount?: string | null;
+  paymentBrand?: string | null;
+  paymentReleaseExpectedAt?: string | null;
+  orderPlatformId?: string | null;
+  items: MaintainableOrderItem[];
+}
+
+export interface DeleteOrderInput {
+  expectedUpdatedAt: string;
+  reason: string;
+}
+
+export interface OrderMaintenanceRecord {
+  id: string;
+  action: OrderMaintenanceAction;
+  actorUserId: string;
+  actorName: string;
+  reason: string;
+  beforeSnapshot: Record<string, unknown>;
+  afterSnapshot: Record<string, unknown> | null;
+  impactSummary: Record<string, unknown>;
+  createdAt: string;
 }
 
 export type HistoricalOrderImportStrategy = "PRICE_WEIGHTED" | "FIXED_PRODUCT";

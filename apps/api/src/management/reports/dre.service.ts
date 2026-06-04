@@ -24,6 +24,7 @@ export class DreService {
           },
           order: {
             status: OrderStatus.DELIVERED,
+            deletedAt: null,
           },
         },
         include: {

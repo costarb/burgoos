@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { io } from "socket.io-client";
 import type { AdminOrder, OrderStatus, PaymentInstitution, PaymentMethod } from "@burgoos/types";
 import { updateAdminOrderStatus } from "../../../lib/api";
+import { OrderMaintenanceDialog } from "./order-maintenance-dialog";
 
 interface OrdersClientProps {
   apiUrl: string;
@@ -42,6 +43,7 @@ export function OrdersClient({
   const [historyOrders, setHistoryOrders] = useState(initialHistoryOrders);
   const [error, setError] = useState<string | null>(null);
   const [connected, setConnected] = useState(false);
+  const [maintenanceOrder, setMaintenanceOrder] = useState<AdminOrder | null>(null);
 
   useEffect(() => {
     const socket = io(apiUrl, {
@@ -91,6 +93,22 @@ export function OrdersClient({
     }
   }
 
+  function replaceOrder(updatedOrder: AdminOrder): void {
+    setActiveOrders((current) =>
+      current.map((item) => (item.id === updatedOrder.id ? updatedOrder : item))
+    );
+    setHistoryOrders((current) =>
+      current.map((item) => (item.id === updatedOrder.id ? updatedOrder : item))
+    );
+    setMaintenanceOrder(null);
+  }
+
+  function removeOrder(orderId: string): void {
+    setActiveOrders((current) => current.filter((item) => item.id !== orderId));
+    setHistoryOrders((current) => current.filter((item) => item.id !== orderId));
+    setMaintenanceOrder(null);
+  }
+
   return (
     <div className="mx-auto max-w-6xl px-6 py-8 text-slate-900">
       <div className="flex flex-wrap items-end justify-between gap-4">
@@ -104,6 +122,12 @@ export function OrdersClient({
             href="/admin/orders/import"
           >
             Importar historico
+          </a>
+          <a
+            className="rounded-md border border-slate-300 px-4 py-2 text-sm font-semibold"
+            href="/admin/orders/maintenance"
+          >
+            Manutencao
           </a>
           <span className="rounded-md border border-slate-200 px-3 py-2 text-sm">
             {connected ? "Realtime conectado" : "Realtime desconectado"}
@@ -157,6 +181,13 @@ export function OrdersClient({
                       </div>
                     ) : null}
                     <div className="mt-4 flex flex-wrap gap-2">
+                      <button
+                        className="rounded-md border border-slate-300 px-3 py-2 text-xs font-semibold"
+                        onClick={() => setMaintenanceOrder(order)}
+                        type="button"
+                      >
+                        Alterar
+                      </button>
                       {nextStatuses[order.status].map((status) => (
                         <button
                           className="rounded-md bg-ink px-3 py-2 text-xs font-semibold text-white"
@@ -183,18 +214,34 @@ export function OrdersClient({
             <p className="p-4 text-sm text-slate-500">Sem pedidos finalizados.</p>
           ) : (
             historyOrders.map((order) => (
-              <div className="grid gap-1 p-4 text-sm sm:grid-cols-[1fr_auto_auto]" key={order.id}>
+              <div className="grid gap-2 p-4 text-sm sm:grid-cols-[1fr_auto_auto_auto]" key={order.id}>
                 <span>
                   <span className="block font-medium">{order.customerName}</span>
                   <span className="block text-xs text-slate-500">{paymentSummary(order)}</span>
                 </span>
                 <span>{statusLabels[order.status]}</span>
                 <span className="font-semibold">R$ {order.total}</span>
+                <button
+                  className="rounded-md border border-slate-300 px-3 py-1 text-xs font-semibold"
+                  onClick={() => setMaintenanceOrder(order)}
+                  type="button"
+                >
+                  Alterar
+                </button>
               </div>
             ))
           )}
         </div>
       </section>
+      {maintenanceOrder ? (
+        <OrderMaintenanceDialog
+          onClose={() => setMaintenanceOrder(null)}
+          onDeleted={removeOrder}
+          onSaved={replaceOrder}
+          order={maintenanceOrder}
+          token={token}
+        />
+      ) : null}
     </div>
   );
 }

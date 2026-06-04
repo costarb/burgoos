@@ -90,6 +90,7 @@ export class SalesReportService {
   private buildWhere(tenantId: string, query: ParsedSalesReportQuery): Prisma.OrderWhereInput {
     return {
       tenantId,
+      deletedAt: null,
       createdAt: {
         gte: query.periodStart,
         lte: query.periodEnd,

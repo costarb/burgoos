@@ -74,6 +74,7 @@ describe("DRE integration", () => {
         },
         order: {
           status: OrderStatus.DELIVERED,
+          deletedAt: null,
         },
       },
       include: {
