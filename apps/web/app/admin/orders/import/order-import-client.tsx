@@ -10,6 +10,7 @@ import type {
   PaymentMethod,
 } from "@burgoos/types";
 import { useRouter } from "next/navigation";
+import { OperationFeedback } from "../../../../components/admin/operation-feedback";
 import type { AdminProduct } from "../../../../lib/api";
 import { importHistoricalOrders } from "../../../../lib/api";
 
@@ -215,11 +216,19 @@ export function OrderImportClient({ token, products }: OrderImportClientProps) {
           </div>
         </form>
 
-        <ImportStatus
-          error={error}
-          isImporting={isImporting}
-          result={result}
-          statusMessage={statusMessage}
+        <OperationFeedback
+          className="mt-4"
+          state={{
+            status: error ? "error" : result ? "success" : isImporting ? "pending" : "idle",
+            message: error ?? statusMessage ?? undefined,
+            result: result
+              ? {
+                  processed: result.parsedRows,
+                  completed: result.importedCount,
+                  skipped: result.skippedCount,
+                }
+              : undefined,
+          }}
         />
 
         {result ? (
@@ -277,72 +286,6 @@ function SummaryItem({ label, value }: { label: string; value: number }) {
       <p className="text-sm text-slate-500">{label}</p>
       <p className="mt-1 text-2xl font-semibold">{value}</p>
     </article>
-  );
-}
-
-function ImportStatus({
-  error,
-  isImporting,
-  result,
-  statusMessage,
-}: {
-  error: string | null;
-  isImporting: boolean;
-  result: HistoricalOrderImportResult | null;
-  statusMessage: string | null;
-}) {
-  if (!isImporting && !error && !statusMessage && !result) {
-    return null;
-  }
-
-  const statusClass = error
-    ? "border-red-200 bg-red-50 text-red-800"
-    : result
-      ? "border-green-200 bg-green-50 text-green-800"
-      : "border-amber-200 bg-amber-50 text-amber-900";
-  const title = error ? "Importacao interrompida" : result ? "Importacao concluida" : "Importacao em andamento";
-  const message = error ?? statusMessage ?? "Processando arquivo.";
-
-  return (
-    <section
-      aria-live="polite"
-      className={`mt-4 rounded-md border p-4 text-sm shadow-sm ${statusClass}`}
-    >
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div>
-          <p className="font-semibold">{title}</p>
-          <p className="mt-1">{message}</p>
-        </div>
-        {isImporting ? (
-          <span className="rounded-md border border-current px-3 py-1 text-xs font-semibold">
-            Aguarde
-          </span>
-        ) : null}
-      </div>
-
-      {isImporting ? (
-        <div className="mt-4 h-2 overflow-hidden rounded-full bg-white/70">
-          <div className="h-full w-1/2 animate-pulse rounded-full bg-current" />
-        </div>
-      ) : null}
-
-      {result ? (
-        <div className="mt-3 grid gap-2 sm:grid-cols-3">
-          <MiniMetric label="Linhas validas" value={result.parsedRows} />
-          <MiniMetric label="Importados" value={result.importedCount} />
-          <MiniMetric label="Ignorados" value={result.skippedCount} />
-        </div>
-      ) : null}
-    </section>
-  );
-}
-
-function MiniMetric({ label, value }: { label: string; value: number }) {
-  return (
-    <span className="rounded-md border border-current/20 bg-white/60 px-3 py-2">
-      <span className="block text-xs opacity-80">{label}</span>
-      <span className="block text-lg font-semibold">{value}</span>
-    </span>
   );
 }
 

@@ -2,6 +2,6 @@
 
 For additional context about technologies to be used, project structure,
 shell commands, and other important information, read
-`specs/005-order-maintenance/plan.md`
+`specs/006-financial-operations-ux/plan.md`
 
 <!-- SPECKIT END -->

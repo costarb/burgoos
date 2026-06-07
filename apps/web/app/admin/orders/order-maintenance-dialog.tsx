@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState } from "react";
 import type { AdminOrder, EditOrderInput, OrderMaintenanceRecord } from "@burgoos/types";
+import { OperationFeedback } from "../../../components/admin/operation-feedback";
 import { deleteAdminOrder, editAdminOrder, getOrderMaintenanceHistory } from "../../../lib/api";
 
 interface OrderMaintenanceDialogProps {
@@ -26,10 +27,14 @@ export function OrderMaintenanceDialog({
   const [paymentGrossAmount, setPaymentGrossAmount] = useState(order.paymentGrossAmount ?? order.total);
   const [paymentFeeAmount, setPaymentFeeAmount] = useState(order.paymentFeeAmount ?? "0.00");
   const [paymentNetAmount, setPaymentNetAmount] = useState(order.paymentNetAmount ?? order.total);
+  const [paymentReleaseExpectedAt, setPaymentReleaseExpectedAt] = useState(
+    order.paymentReleaseExpectedAt ? toLocalDateTime(order.paymentReleaseExpectedAt) : ""
+  );
   const [reason, setReason] = useState("");
   const [items, setItems] = useState(order.items);
   const [busy, setBusy] = useState<"save" | "delete" | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [message, setMessage] = useState<string | null>(null);
   const [history, setHistory] = useState<OrderMaintenanceRecord[]>([]);
 
   useEffect(() => {
@@ -41,6 +46,7 @@ export function OrderMaintenanceDialog({
   async function save(): Promise<void> {
     setBusy("save");
     setError(null);
+    setMessage(null);
 
     try {
       const payload: EditOrderInput = {
@@ -58,7 +64,9 @@ export function OrderMaintenanceDialog({
         paymentFeeAmount,
         paymentNetAmount,
         paymentBrand: order.paymentBrand,
-        paymentReleaseExpectedAt: order.paymentReleaseExpectedAt,
+        paymentReleaseExpectedAt: paymentReleaseExpectedAt
+          ? new Date(paymentReleaseExpectedAt).toISOString()
+          : null,
         orderPlatformId: order.orderPlatformId,
         items: items.map((item) => ({
           id: item.id,
@@ -68,7 +76,9 @@ export function OrderMaintenanceDialog({
           unitPrice: item.unitPrice,
         })),
       };
-      onSaved(await editAdminOrder(token, order.id, payload));
+      const updated = await editAdminOrder(token, order.id, payload);
+      setMessage("Pedido salvo com sucesso.");
+      onSaved(updated);
     } catch (caughtError) {
       setError(caughtError instanceof Error ? caughtError.message : "Falha ao alterar pedido.");
     } finally {
@@ -84,6 +94,7 @@ export function OrderMaintenanceDialog({
 
     setBusy("delete");
     setError(null);
+    setMessage(null);
     try {
       await deleteAdminOrder(token, order.id, {
         expectedUpdatedAt: order.updatedAt ?? new Date().toISOString(),
@@ -129,10 +140,19 @@ export function OrderMaintenanceDialog({
           </label>
         </div>
 
-        <div className="mt-4 grid gap-3 sm:grid-cols-4">
+        <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
           <label className="text-sm">
             Data da venda
             <input className="mt-1 w-full rounded-md border p-2" onChange={(event) => setCreatedAt(event.target.value)} type="datetime-local" value={createdAt} />
+          </label>
+          <label className="text-sm">
+            Data de liberacao
+            <input
+              className="mt-1 w-full rounded-md border p-2"
+              onChange={(event) => setPaymentReleaseExpectedAt(event.target.value)}
+              type="datetime-local"
+              value={paymentReleaseExpectedAt}
+            />
           </label>
           <label className="text-sm">
             Valor bruto
@@ -199,7 +219,20 @@ export function OrderMaintenanceDialog({
           <textarea className="mt-1 w-full rounded-md border p-2" onChange={(event) => setReason(event.target.value)} value={reason} />
         </label>
 
-        {error ? <p className="mt-3 rounded-md bg-red-50 p-3 text-sm text-red-700">{error}</p> : null}
+        <OperationFeedback
+          className="mt-3"
+          state={{
+            status: error ? "error" : busy ? "pending" : message ? "success" : "idle",
+            message:
+              error ??
+              message ??
+              (busy === "save"
+                ? "Salvando alteracoes do pedido."
+                : busy === "delete"
+                  ? "Excluindo pedido."
+                  : undefined),
+          }}
+        />
 
         <div className="mt-5 flex flex-wrap justify-between gap-3">
           <button className="rounded-md border border-red-300 px-4 py-2 text-sm font-semibold text-red-700" disabled={busy !== null} onClick={() => void remove()} type="button">

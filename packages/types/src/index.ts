@@ -664,3 +664,266 @@ export interface MenuEngineeringReport {
   averageMarginRate: number;
   items: MenuEngineeringItem[];
 }
+
+export type OperationStatus = "idle" | "pending" | "success" | "error";
+
+export interface OperationProgress {
+  current: number;
+  total: number;
+  label?: string;
+}
+
+export interface OperationResultCounts {
+  processed?: number;
+  completed?: number;
+  skipped?: number;
+  failed?: number;
+}
+
+export interface OperationState {
+  status: OperationStatus;
+  message?: string;
+  progress?: OperationProgress;
+  result?: OperationResultCounts;
+}
+
+export type FinancialRecurrenceFrequency = "WEEKLY" | "MONTHLY" | "YEARLY";
+
+export type PayableStatus = "OPEN" | "OVERDUE" | "PARTIALLY_PAID" | "PAID" | "CANCELLED";
+
+export interface FinancialAccount {
+  id: string;
+  name: string;
+  paymentInstitution: PaymentInstitution | null;
+  openingBalance: string;
+  openingBalanceAt: string;
+  active: boolean;
+}
+
+export interface FinancialCategory {
+  id: string;
+  name: string;
+  active: boolean;
+}
+
+export interface FinancialAccountInput {
+  name: string;
+  paymentInstitution?: PaymentInstitution | null;
+  openingBalance: number;
+  openingBalanceAt: string;
+  active?: boolean;
+}
+
+export interface FinancialCategoryInput {
+  name: string;
+  active?: boolean;
+}
+
+export interface PayablePayment {
+  id: string;
+  payableId: string;
+  financialAccountId: string;
+  financialAccountName: string;
+  amount: string;
+  paidAt: string;
+  notes: string | null;
+  reversedAt: string | null;
+  reversalReason: string | null;
+}
+
+export interface Payable {
+  id: string;
+  categoryId: string;
+  categoryName: string;
+  supplierId: string | null;
+  supplierName: string | null;
+  recurrenceGroupId: string | null;
+  description: string;
+  documentReference: string | null;
+  competenceDate: string | null;
+  dueDate: string;
+  expectedAmount: string;
+  paidAmount: string;
+  remainingAmount: string;
+  status: PayableStatus;
+  notes: string | null;
+  cancelledAt: string | null;
+  cancellationReason: string | null;
+  payments: PayablePayment[];
+}
+
+export interface PayablesSummary {
+  totalExpected: string;
+  totalPaid: string;
+  totalRemaining: string;
+  overdueAmount: string;
+  openCount: number;
+  overdueCount: number;
+}
+
+export interface PayablesResponse {
+  items: Payable[];
+  summary: PayablesSummary;
+}
+
+export interface PayableOptions {
+  categories: FinancialCategory[];
+  accounts: FinancialAccount[];
+  suppliers: Pick<Supplier, "id" | "name" | "active">[];
+}
+
+export type FinancialAuditAction = "CREATE" | "UPDATE" | "CANCEL" | "PAY" | "REVERSE" | "ADJUST";
+
+export interface FinancialAuditRecord {
+  id: string;
+  entityType: string;
+  entityId: string;
+  action: FinancialAuditAction;
+  actorName: string;
+  actorEmail: string;
+  createdAt: string;
+}
+
+export type CashMovementType = "MANUAL_INFLOW" | "MANUAL_OUTFLOW" | "TRANSFER" | "ADJUSTMENT";
+
+export type CashLedgerSourceType =
+  | "OPENING_BALANCE"
+  | "ORDER_RECEIPT"
+  | "PAYABLE_PAYMENT"
+  | "CASH_MOVEMENT";
+
+export type CashRealizationStatus = "REALIZED" | "PROJECTED";
+
+export interface CashMovement {
+  id: string;
+  type: CashMovementType;
+  financialAccountId: string;
+  financialAccountName: string;
+  destinationAccountId: string | null;
+  destinationAccountName: string | null;
+  categoryId: string | null;
+  categoryName: string | null;
+  amount: string;
+  occurredAt: string;
+  description: string;
+  justification: string | null;
+  reversedAt: string | null;
+  reversalReason: string | null;
+}
+
+export interface CashMovementInput {
+  type: CashMovementType;
+  financialAccountId: string;
+  destinationAccountId?: string | null;
+  categoryId?: string | null;
+  amount: number;
+  occurredAt: string;
+  description: string;
+  justification?: string;
+}
+
+export interface CashAccountBalance {
+  financialAccountId: string | null;
+  financialAccountName: string;
+  balance: string;
+  unallocated: boolean;
+}
+
+export interface CashLedgerEntry {
+  sourceType: CashLedgerSourceType;
+  sourceId: string;
+  financialAccountId: string | null;
+  financialAccountName: string;
+  occurredAt: string;
+  description: string;
+  inflowAmount: string;
+  outflowAmount: string;
+  runningBalance: string;
+  realizationStatus: CashRealizationStatus;
+}
+
+export interface CashStatementEntry extends CashLedgerEntry {
+  entryType: "CREDIT" | "DEBIT";
+  amount: string;
+}
+
+export interface CashStatementDay {
+  date: string;
+  creditAmount: string;
+  debitAmount: string;
+  netAmount: string;
+  runningBalance: string;
+  entries: CashStatementEntry[];
+}
+
+export interface CashStatement {
+  start: string;
+  end: string;
+  financialAccountId: string | null;
+  openingBalance: string;
+  closingBalance: string;
+  totalCredit: string;
+  totalDebit: string;
+  netAmount: string;
+  days: CashStatementDay[];
+}
+
+export interface CashProjectionEntry {
+  sourceType: "ORDER_RECEIPT" | "PAYABLE";
+  sourceId: string;
+  financialAccountId: string | null;
+  financialAccountName: string;
+  occurredAt: string;
+  description: string;
+  inflowAmount: string;
+  outflowAmount: string;
+  projectedBalance: string;
+}
+
+export interface CashTimelineDay {
+  date: string;
+  inflowAmount: string;
+  outflowAmount: string;
+  netAmount: string;
+}
+
+export interface CashPosition {
+  asOf: string;
+  projectionEnd: string;
+  currentBalance: string;
+  receivableAmount: string;
+  payableAmount: string;
+  projectedBalance: string;
+  negativeBalanceDetected: boolean;
+  accounts: CashAccountBalance[];
+  ledger: CashLedgerEntry[];
+  projection: CashProjectionEntry[];
+  timeline: CashTimelineDay[];
+}
+
+export interface PayableRecurrenceInput {
+  frequency: FinancialRecurrenceFrequency;
+  interval: number;
+  startsOn: string;
+  endsOn?: string;
+  occurrenceCount?: number;
+}
+
+export interface PayableInput {
+  categoryId: string;
+  supplierId?: string | null;
+  description: string;
+  documentReference?: string;
+  competenceDate?: string;
+  dueDate: string;
+  expectedAmount: number;
+  notes?: string;
+  recurrence?: PayableRecurrenceInput | null;
+}
+
+export interface PayablePaymentInput {
+  financialAccountId: string;
+  amount: number;
+  paidAt: string;
+  notes?: string;
+}

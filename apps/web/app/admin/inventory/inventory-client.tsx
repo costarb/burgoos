@@ -4,6 +4,7 @@ import type { FormEvent } from "react";
 import { useState, useTransition } from "react";
 import type { Ingredient, InventoryBalance, StockMovementType } from "@burgoos/types";
 import { useRouter } from "next/navigation";
+import { OperationFeedback } from "../../../components/admin/operation-feedback";
 import { createStockMovement } from "../../../lib/api";
 
 interface InventoryClientProps {
@@ -28,12 +29,15 @@ export function InventoryClient({ token, balances, ingredients }: InventoryClien
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
+  const [message, setMessage] = useState<string | null>(null);
 
   function submit(event: FormEvent<HTMLFormElement>): void {
     event.preventDefault();
     setError(null);
+    setMessage(null);
 
-    const formData = new FormData(event.currentTarget);
+    const form = event.currentTarget;
+    const formData = new FormData(form);
     const ingredientId = String(formData.get("ingredientId") ?? "");
     const movementType = String(
       formData.get("movementType") ?? "MANUAL_ENTRY"
@@ -49,6 +53,8 @@ export function InventoryClient({ token, balances, ingredients }: InventoryClien
           quantity,
           reason: reason || undefined,
         });
+        setMessage("Movimentacao registrada com sucesso.");
+        form.reset();
         router.refresh();
       } catch (caughtError) {
         setError(
@@ -124,9 +130,13 @@ export function InventoryClient({ token, balances, ingredients }: InventoryClien
             Lançar
           </button>
         </form>
-        {error ? (
-          <p className="mt-4 rounded-md bg-red-50 p-3 text-sm text-red-700">{error}</p>
-        ) : null}
+        <OperationFeedback
+          className="mt-4"
+          state={{
+            status: error ? "error" : isPending ? "pending" : message ? "success" : "idle",
+            message: error ?? message ?? (isPending ? "Registrando movimentacao de estoque." : undefined),
+          }}
+        />
 
         <div className="mt-8 overflow-hidden rounded-md border border-slate-200 bg-white">
           <table className="w-full min-w-[760px] border-collapse text-left text-sm">

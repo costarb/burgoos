@@ -1,5 +1,8 @@
 import React from "react";
+import type { OperationState } from "@burgoos/types";
 import { revalidatePath } from "next/cache";
+import { OperationForm } from "../../../components/admin/operation-form";
+import { SubmitButton } from "../../../components/admin/submit-button";
 import {
   getAdminToken,
   getFinancialConfiguration,
@@ -15,22 +18,34 @@ function numberFromForm(formData: FormData, key: string): number {
 export default async function SettingsPage() {
   const configuration = await getFinancialConfiguration();
 
-  async function saveSettings(formData: FormData) {
+  async function saveSettings(
+    _previousState: OperationState,
+    formData: FormData,
+  ): Promise<OperationState> {
     "use server";
 
-    const token = await getAdminToken();
-    await updateFinancialConfiguration(token, {
-      taxRate: numberFromForm(formData, "taxRate"),
-      cardFeeRate: numberFromForm(formData, "cardFeeRate"),
-      operationalLossRate: numberFromForm(formData, "operationalLossRate"),
-      desiredMarginRate: numberFromForm(formData, "desiredMarginRate"),
-      averagePackagingCost: numberFromForm(formData, "averagePackagingCost"),
-      monthlyFixedCost: numberFromForm(formData, "monthlyFixedCost"),
-      monthlyRevenueGoal: numberFromForm(formData, "monthlyRevenueGoal"),
-      cmvWarningRate: numberFromForm(formData, "cmvWarningRate"),
-      netMarginGoalRate: numberFromForm(formData, "netMarginGoalRate"),
-    });
-    revalidatePath("/admin/settings");
+    try {
+      const token = await getAdminToken();
+      await updateFinancialConfiguration(token, {
+        taxRate: numberFromForm(formData, "taxRate"),
+        cardFeeRate: numberFromForm(formData, "cardFeeRate"),
+        operationalLossRate: numberFromForm(formData, "operationalLossRate"),
+        desiredMarginRate: numberFromForm(formData, "desiredMarginRate"),
+        averagePackagingCost: numberFromForm(formData, "averagePackagingCost"),
+        monthlyFixedCost: numberFromForm(formData, "monthlyFixedCost"),
+        monthlyRevenueGoal: numberFromForm(formData, "monthlyRevenueGoal"),
+        cmvWarningRate: numberFromForm(formData, "cmvWarningRate"),
+        netMarginGoalRate: numberFromForm(formData, "netMarginGoalRate"),
+      });
+      revalidatePath("/admin/settings");
+
+      return { status: "success", message: "Parametros financeiros salvos com sucesso." };
+    } catch (error) {
+      return {
+        status: "error",
+        message: error instanceof Error ? error.message : "Nao foi possivel salvar os parametros.",
+      };
+    }
   }
 
   return (
@@ -39,9 +54,10 @@ export default async function SettingsPage() {
         <p className="text-sm font-semibold uppercase text-tomato">Configuracoes</p>
         <h1 className="mt-1 text-3xl font-semibold">Parametros financeiros</h1>
 
-        <form
+        <OperationForm
           action={saveSettings}
           className="mt-8 grid gap-4 rounded-md border border-slate-200 bg-white p-5 shadow-sm md:grid-cols-2"
+          feedbackClassName="mt-4"
         >
           <NumberField
             label="Impostos"
@@ -97,13 +113,10 @@ export default async function SettingsPage() {
             step="0.0001"
             value={configuration.netMarginGoalRate}
           />
-          <button
-            className="rounded-md bg-ink px-4 py-2 text-sm font-semibold text-white md:col-span-2"
-            type="submit"
-          >
+          <SubmitButton className="md:col-span-2" pendingLabel="Salvando parametros...">
             Salvar parametros
-          </button>
-        </form>
+          </SubmitButton>
+        </OperationForm>
       </section>
     </main>
   );

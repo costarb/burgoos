@@ -4,12 +4,24 @@ import { AuthController } from "./auth.controller";
 import { AuthService } from "./auth.service";
 import { JwtAuthGuard } from "./jwt-auth.guard";
 import { PlatformAdminGuard } from "./platform-admin.guard";
-import { OrderMaintenanceRolesGuard } from "./roles.guard";
+import { FinancialManagementRolesGuard, OrderMaintenanceRolesGuard } from "./roles.guard";
 
 @Module({
   imports: [JwtModule.register({})],
   controllers: [AuthController],
-  providers: [AuthService, JwtAuthGuard, PlatformAdminGuard, OrderMaintenanceRolesGuard],
-  exports: [AuthService, JwtAuthGuard, PlatformAdminGuard, OrderMaintenanceRolesGuard],
+  providers: [
+    AuthService,
+    JwtAuthGuard,
+    PlatformAdminGuard,
+    OrderMaintenanceRolesGuard,
+    FinancialManagementRolesGuard,
+  ],
+  exports: [
+    AuthService,
+    JwtAuthGuard,
+    PlatformAdminGuard,
+    OrderMaintenanceRolesGuard,
+    FinancialManagementRolesGuard,
+  ],
 })
 export class AuthModule {}

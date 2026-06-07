@@ -1,5 +1,6 @@
 import {
   LayoutPresetSurface,
+  PaymentInstitution,
   PlatformUserRole,
   PrismaClient,
   PurchaseUnitKind,
@@ -112,6 +113,68 @@ async function main(): Promise<void> {
       netMarginGoalRate: 0.15,
     },
   });
+
+  const financialAccounts = [
+    { name: "PagBank", paymentInstitution: PaymentInstitution.PAGBANK },
+    { name: "Mercado Pago", paymentInstitution: PaymentInstitution.MERCADO_PAGO },
+    { name: "Dinheiro", paymentInstitution: PaymentInstitution.DINHEIRO },
+    { name: "Caixa Local", paymentInstitution: PaymentInstitution.CAIXA_LOCAL },
+  ];
+
+  for (const account of financialAccounts) {
+    const existingAccount = await prisma.financialAccount.findFirst({
+      where: {
+        tenantId: tenant.id,
+        OR: [{ name: account.name }, { paymentInstitution: account.paymentInstitution }],
+      },
+      select: { id: true },
+    });
+
+    if (!existingAccount) {
+      await prisma.financialAccount.create({
+        data: {
+          tenantId: tenant.id,
+          name: account.name,
+          paymentInstitution: account.paymentInstitution,
+          openingBalance: 0,
+          openingBalanceAt: new Date(),
+          active: true,
+        },
+      });
+    }
+  }
+
+  const financialCategories = [
+    "Insumos",
+    "Aluguel",
+    "Energia",
+    "Taxas",
+    "Equipamentos",
+    "Prestador de Serviço",
+    "Outros",
+  ];
+
+  for (const name of financialCategories) {
+    const existingCategory = await prisma.financialCategory.findUnique({
+      where: {
+        tenantId_name: {
+          tenantId: tenant.id,
+          name,
+        },
+      },
+      select: { id: true },
+    });
+
+    if (!existingCategory) {
+      await prisma.financialCategory.create({
+        data: {
+          tenantId: tenant.id,
+          name,
+          active: true,
+        },
+      });
+    }
+  }
 
   const purchaseUnits = [
     { name: "Grama", abbreviation: "g", kind: PurchaseUnitKind.WEIGHT },

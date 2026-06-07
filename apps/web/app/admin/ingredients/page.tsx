@@ -1,5 +1,8 @@
 import React from "react";
+import type { OperationState } from "@burgoos/types";
 import { revalidatePath } from "next/cache";
+import { OperationForm } from "../../../components/admin/operation-form";
+import { SubmitButton } from "../../../components/admin/submit-button";
 import {
   createIngredient,
   getAdminToken,
@@ -21,38 +24,54 @@ function optionalId(formData: FormData, key: string): string | undefined {
 export default async function IngredientsPage() {
   const { ingredients, purchaseUnits, suppliers } = await getIngredients();
 
-  async function create(formData: FormData) {
+  async function create(_previousState: OperationState, formData: FormData): Promise<OperationState> {
     "use server";
 
-    await createIngredient(await getAdminToken(), {
-      name: String(formData.get("name") ?? ""),
-      category: String(formData.get("category") ?? ""),
-      purchaseUnitId: String(formData.get("purchaseUnitId") ?? ""),
-      supplierId: optionalId(formData, "supplierId"),
-      purchaseQuantity: numberFromForm(formData, "purchaseQuantity"),
-      purchaseCost: numberFromForm(formData, "purchaseCost"),
-      currentStock: numberFromForm(formData, "currentStock"),
-      minimumStock: numberFromForm(formData, "minimumStock"),
-      active: formData.get("active") === "on",
-    });
-    revalidatePath("/admin/ingredients");
+    try {
+      await createIngredient(await getAdminToken(), {
+        name: String(formData.get("name") ?? ""),
+        category: String(formData.get("category") ?? ""),
+        purchaseUnitId: String(formData.get("purchaseUnitId") ?? ""),
+        supplierId: optionalId(formData, "supplierId"),
+        purchaseQuantity: numberFromForm(formData, "purchaseQuantity"),
+        purchaseCost: numberFromForm(formData, "purchaseCost"),
+        currentStock: numberFromForm(formData, "currentStock"),
+        minimumStock: numberFromForm(formData, "minimumStock"),
+        active: formData.get("active") === "on",
+      });
+      revalidatePath("/admin/ingredients");
+      return { status: "success", message: "Insumo criado com sucesso." };
+    } catch (error) {
+      return {
+        status: "error",
+        message: error instanceof Error ? error.message : "Nao foi possivel criar o insumo.",
+      };
+    }
   }
 
-  async function update(formData: FormData) {
+  async function update(_previousState: OperationState, formData: FormData): Promise<OperationState> {
     "use server";
 
-    await updateIngredient(await getAdminToken(), String(formData.get("id") ?? ""), {
-      name: String(formData.get("name") ?? ""),
-      category: String(formData.get("category") ?? ""),
-      purchaseUnitId: String(formData.get("purchaseUnitId") ?? ""),
-      supplierId: optionalId(formData, "supplierId"),
-      purchaseQuantity: numberFromForm(formData, "purchaseQuantity"),
-      purchaseCost: numberFromForm(formData, "purchaseCost"),
-      currentStock: numberFromForm(formData, "currentStock"),
-      minimumStock: numberFromForm(formData, "minimumStock"),
-      active: formData.get("active") === "on",
-    });
-    revalidatePath("/admin/ingredients");
+    try {
+      await updateIngredient(await getAdminToken(), String(formData.get("id") ?? ""), {
+        name: String(formData.get("name") ?? ""),
+        category: String(formData.get("category") ?? ""),
+        purchaseUnitId: String(formData.get("purchaseUnitId") ?? ""),
+        supplierId: optionalId(formData, "supplierId"),
+        purchaseQuantity: numberFromForm(formData, "purchaseQuantity"),
+        purchaseCost: numberFromForm(formData, "purchaseCost"),
+        currentStock: numberFromForm(formData, "currentStock"),
+        minimumStock: numberFromForm(formData, "minimumStock"),
+        active: formData.get("active") === "on",
+      });
+      revalidatePath("/admin/ingredients");
+      return { status: "success", message: "Insumo salvo com sucesso." };
+    } catch (error) {
+      return {
+        status: "error",
+        message: error instanceof Error ? error.message : "Nao foi possivel salvar o insumo.",
+      };
+    }
   }
 
   return (
@@ -74,24 +93,26 @@ export default async function IngredientsPage() {
             Montar fichas
           </a>
         </div>
-        <form
+        <OperationForm
           action={create}
           className="mt-8 grid gap-3 rounded-md border border-slate-200 bg-white p-4 shadow-sm md:grid-cols-4"
+          feedbackClassName="mt-4"
         >
           <IngredientFields purchaseUnits={purchaseUnits} suppliers={suppliers} />
-          <button
-            className="rounded-md bg-ink px-4 py-2 text-sm font-semibold text-white md:col-span-4"
+          <SubmitButton
+            className="md:col-span-4"
             disabled={purchaseUnits.length === 0}
-            type="submit"
+            pendingLabel="Criando insumo..."
           >
             Criar insumo
-          </button>
-        </form>
+          </SubmitButton>
+        </OperationForm>
         <div className="mt-6 space-y-3">
           {ingredients.map((ingredient) => (
-            <form
+            <OperationForm
               action={update}
               className="grid gap-3 rounded-md border border-slate-200 bg-white p-4 md:grid-cols-4"
+              feedbackClassName="mt-2"
               key={ingredient.id}
             >
               <input name="id" type="hidden" value={ingredient.id} />
@@ -103,13 +124,10 @@ export default async function IngredientsPage() {
               <p className="text-sm text-slate-500 md:col-span-3">
                 Custo unitario calculado: R$ {ingredient.unitCost}
               </p>
-              <button
-                className="rounded-md bg-slate-900 px-3 py-2 text-sm font-semibold text-white"
-                type="submit"
-              >
+              <SubmitButton className="bg-slate-900 px-3" pendingLabel="Salvando...">
                 Salvar
-              </button>
-            </form>
+              </SubmitButton>
+            </OperationForm>
           ))}
           {ingredients.length === 0 ? (
             <p className="rounded-md border border-slate-200 bg-white p-4 text-sm text-slate-500">

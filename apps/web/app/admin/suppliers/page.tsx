@@ -1,4 +1,7 @@
+import type { OperationState } from "@burgoos/types";
 import { revalidatePath } from "next/cache";
+import { OperationForm } from "../../../components/admin/operation-form";
+import { SubmitButton } from "../../../components/admin/submit-button";
 import { createSupplier, getAdminToken, getSuppliers, updateSupplier } from "../../../lib/api";
 
 export const dynamic = "force-dynamic";
@@ -11,34 +14,50 @@ function optionalText(formData: FormData, key: string): string | undefined {
 export default async function SuppliersPage() {
   const { suppliers } = await getSuppliers();
 
-  async function create(formData: FormData) {
+  async function create(_previousState: OperationState, formData: FormData): Promise<OperationState> {
     "use server";
 
-    await createSupplier(await getAdminToken(), {
-      name: String(formData.get("name") ?? ""),
-      category: String(formData.get("category") ?? ""),
-      contactName: optionalText(formData, "contactName"),
-      phone: optionalText(formData, "phone"),
-      email: optionalText(formData, "email"),
-      notes: optionalText(formData, "notes"),
-      active: formData.get("active") === "on",
-    });
-    revalidatePath("/admin/suppliers");
+    try {
+      await createSupplier(await getAdminToken(), {
+        name: String(formData.get("name") ?? ""),
+        category: String(formData.get("category") ?? ""),
+        contactName: optionalText(formData, "contactName"),
+        phone: optionalText(formData, "phone"),
+        email: optionalText(formData, "email"),
+        notes: optionalText(formData, "notes"),
+        active: formData.get("active") === "on",
+      });
+      revalidatePath("/admin/suppliers");
+      return { status: "success", message: "Fornecedor criado com sucesso." };
+    } catch (error) {
+      return {
+        status: "error",
+        message: error instanceof Error ? error.message : "Nao foi possivel criar o fornecedor.",
+      };
+    }
   }
 
-  async function update(formData: FormData) {
+  async function update(_previousState: OperationState, formData: FormData): Promise<OperationState> {
     "use server";
 
-    await updateSupplier(await getAdminToken(), String(formData.get("id") ?? ""), {
-      name: String(formData.get("name") ?? ""),
-      category: String(formData.get("category") ?? ""),
-      contactName: optionalText(formData, "contactName"),
-      phone: optionalText(formData, "phone"),
-      email: optionalText(formData, "email"),
-      notes: optionalText(formData, "notes"),
-      active: formData.get("active") === "on",
-    });
-    revalidatePath("/admin/suppliers");
+    try {
+      await updateSupplier(await getAdminToken(), String(formData.get("id") ?? ""), {
+        name: String(formData.get("name") ?? ""),
+        category: String(formData.get("category") ?? ""),
+        contactName: optionalText(formData, "contactName"),
+        phone: optionalText(formData, "phone"),
+        email: optionalText(formData, "email"),
+        notes: optionalText(formData, "notes"),
+        active: formData.get("active") === "on",
+      });
+      revalidatePath("/admin/suppliers");
+      return { status: "success", message: "Fornecedor salvo com sucesso." };
+    } catch (error) {
+      return {
+        status: "error",
+        message: error instanceof Error ? error.message : "Nao foi possivel salvar o fornecedor.",
+      };
+    }
   }
 
   return (
@@ -46,9 +65,10 @@ export default async function SuppliersPage() {
       <section className="mx-auto max-w-6xl">
         <p className="text-sm font-semibold uppercase text-tomato">Dominios</p>
         <h1 className="mt-1 text-3xl font-semibold">Fornecedores</h1>
-        <form
+        <OperationForm
           action={create}
           className="mt-8 grid gap-3 rounded-md border border-slate-200 bg-white p-4 shadow-sm md:grid-cols-3"
+          feedbackClassName="mt-4"
         >
           <input
             className="rounded-md border border-slate-200 px-3 py-2 text-sm"
@@ -93,18 +113,16 @@ export default async function SuppliersPage() {
             name="notes"
             placeholder="Observacoes"
           />
-          <button
-            className="rounded-md bg-ink px-4 py-2 text-sm font-semibold text-white md:col-span-3"
-            type="submit"
-          >
+          <SubmitButton className="md:col-span-3" pendingLabel="Criando fornecedor...">
             Criar fornecedor
-          </button>
-        </form>
+          </SubmitButton>
+        </OperationForm>
         <div className="mt-6 space-y-3">
           {suppliers.map((supplier) => (
-            <form
+            <OperationForm
               action={update}
               className="grid gap-3 rounded-md border border-slate-200 bg-white p-4 md:grid-cols-3"
+              feedbackClassName="mt-2"
               key={supplier.id}
             >
               <input name="id" type="hidden" value={supplier.id} />
@@ -145,13 +163,10 @@ export default async function SuppliersPage() {
                 defaultValue={supplier.notes ?? ""}
                 name="notes"
               />
-              <button
-                className="rounded-md bg-slate-900 px-3 py-2 text-sm font-semibold text-white"
-                type="submit"
-              >
+              <SubmitButton className="bg-slate-900 px-3" pendingLabel="Salvando...">
                 Salvar
-              </button>
-            </form>
+              </SubmitButton>
+            </OperationForm>
           ))}
           {suppliers.length === 0 ? (
             <p className="rounded-md border border-slate-200 bg-white p-4 text-sm text-slate-500">

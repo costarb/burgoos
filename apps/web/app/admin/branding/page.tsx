@@ -1,5 +1,8 @@
 import React from "react";
+import type { OperationState } from "@burgoos/types";
 import { revalidatePath } from "next/cache";
+import { OperationForm } from "../../../components/admin/operation-form";
+import { SubmitButton } from "../../../components/admin/submit-button";
 import {
   getAdminToken,
   getBrandingHistory,
@@ -12,36 +15,81 @@ import type { StoreLayoutPresetKey } from "@burgoos/types";
 
 export const dynamic = "force-dynamic";
 
-async function saveDraftAction(formData: FormData) {
+async function saveDraftAction(
+  _previousState: OperationState,
+  formData: FormData,
+): Promise<OperationState> {
   "use server";
 
-  const token = await getAdminToken();
+  try {
+    const token = await getAdminToken();
 
-  await saveBrandingDraft(token, {
-    logoUrl: String(formData.get("logoUrl") ?? "") || null,
-    primaryColor: String(formData.get("primaryColor") ?? "#C92A2A"),
-    accentColor: String(formData.get("accentColor") ?? "#F59F00"),
-    neutralTheme: String(formData.get("neutralTheme") ?? "LIGHT") as "LIGHT",
-    layoutPreset: String(formData.get("layoutPreset") ?? "classic") as StoreLayoutPresetKey,
-  });
+    await saveBrandingDraft(token, {
+      logoUrl: String(formData.get("logoUrl") ?? "") || null,
+      primaryColor: String(formData.get("primaryColor") ?? "#C92A2A"),
+      accentColor: String(formData.get("accentColor") ?? "#F59F00"),
+      neutralTheme: String(formData.get("neutralTheme") ?? "LIGHT") as "LIGHT",
+      layoutPreset: String(formData.get("layoutPreset") ?? "classic") as StoreLayoutPresetKey,
+    });
 
-  revalidatePath("/admin/branding");
+    revalidatePath("/admin/branding");
+    return { status: "success", message: "Rascunho salvo com sucesso." };
+  } catch (error) {
+    return {
+      status: "error",
+      message: error instanceof Error ? error.message : "Nao foi possivel salvar o rascunho.",
+    };
+  }
 }
 
-async function publishAction() {
+async function publishAction(): Promise<OperationState> {
   "use server";
 
-  const token = await getAdminToken();
-  await publishBranding(token);
-  revalidatePath("/admin/branding");
+  try {
+    const token = await getAdminToken();
+    await publishBranding(token);
+    revalidatePath("/admin/branding");
+    return { status: "success", message: "Identidade visual publicada." };
+  } catch (error) {
+    return {
+      status: "error",
+      message: error instanceof Error ? error.message : "Nao foi possivel publicar.",
+    };
+  }
 }
 
-async function restoreAction() {
+async function restoreAction(): Promise<OperationState> {
   "use server";
 
-  const token = await getAdminToken();
-  await restoreBranding(token);
-  revalidatePath("/admin/branding");
+  try {
+    const token = await getAdminToken();
+    await restoreBranding(token);
+    revalidatePath("/admin/branding");
+    return { status: "success", message: "Versao anterior restaurada." };
+  } catch (error) {
+    return {
+      status: "error",
+      message: error instanceof Error ? error.message : "Nao foi possivel restaurar.",
+    };
+  }
+}
+
+async function publishFormAction(
+  _previousState: OperationState,
+  _formData: FormData,
+): Promise<OperationState> {
+  "use server";
+
+  return publishAction();
+}
+
+async function restoreFormAction(
+  _previousState: OperationState,
+  _formData: FormData,
+): Promise<OperationState> {
+  "use server";
+
+  return restoreAction();
 }
 
 export default async function BrandingPage() {
@@ -56,9 +104,10 @@ export default async function BrandingPage() {
         <p className="mt-2 text-slate-600">Logo, cores e tema da loja.</p>
 
         <div className="mt-6 grid gap-6 lg:grid-cols-[1fr_320px]">
-          <form
+          <OperationForm
             action={saveDraftAction}
             className="grid gap-4 rounded-md border border-slate-200 bg-white p-5 shadow-sm"
+            feedbackClassName="mt-4"
           >
             <label className="grid gap-1 text-sm font-medium">
               Logo URL
@@ -126,13 +175,10 @@ export default async function BrandingPage() {
                 )}
               </div>
             </fieldset>
-            <button
-              className="w-fit rounded-md bg-ink px-4 py-2 text-sm font-semibold text-white"
-              type="submit"
-            >
+            <SubmitButton className="w-fit" pendingLabel="Salvando rascunho...">
               Salvar rascunho
-            </button>
-          </form>
+            </SubmitButton>
+          </OperationForm>
 
           <aside className="h-fit rounded-md border border-slate-200 bg-white p-5 shadow-sm">
             <h2 className="text-lg font-semibold">Previsualizacao</h2>
@@ -170,24 +216,24 @@ export default async function BrandingPage() {
               </p>
             </div>
             <div className="flex flex-wrap gap-2">
-              <form action={publishAction}>
-                <button
-                  className="rounded-md bg-ink px-4 py-2 text-sm font-semibold text-white disabled:bg-slate-300"
+              <OperationForm action={publishFormAction}>
+                <SubmitButton
+                  className="disabled:bg-slate-300"
                   disabled={!state.draft}
-                  type="submit"
+                  pendingLabel="Publicando..."
                 >
                   Publicar
-                </button>
-              </form>
-              <form action={restoreAction}>
-                <button
-                  className="rounded-md border border-slate-300 px-4 py-2 text-sm font-semibold disabled:text-slate-400"
+                </SubmitButton>
+              </OperationForm>
+              <OperationForm action={restoreFormAction}>
+                <SubmitButton
+                  className="border border-slate-300 bg-white text-slate-800 disabled:text-slate-400"
                   disabled={history.filter((item) => item.status === "ARCHIVED").length === 0}
-                  type="submit"
+                  pendingLabel="Restaurando..."
                 >
                   Restaurar anterior
-                </button>
-              </form>
+                </SubmitButton>
+              </OperationForm>
             </div>
           </div>
 

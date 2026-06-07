@@ -18,6 +18,30 @@ body {
     sans-serif;
 }
 
+button,
+a,
+input,
+select,
+textarea {
+  outline-offset: 2px;
+}
+
+:focus-visible {
+  outline: 2px solid #d83a2e;
+}
+
+.admin-shell-content > main {
+  min-height: auto;
+  background: transparent;
+}
+
+@media (max-width: 639px) {
+  .admin-shell-content > main {
+    padding-left: 1rem;
+    padding-right: 1rem;
+  }
+}
+
 .public-menu-layout-compact .public-menu-shell {
   gap: 1rem;
 }

@@ -9,9 +9,24 @@ import type {
   CreatePublicOrderInput,
   CreateStoreInput,
   FinancialConfiguration,
+  FinancialAccount,
+  FinancialAccountInput,
+  FinancialCategory,
+  FinancialCategoryInput,
   FinancialConfigurationInput,
   FinancialDashboardIndicators,
   FinancialDreSummary,
+  FinancialAuditRecord,
+  CashLedgerEntry,
+  CashMovement,
+  CashMovementInput,
+  CashPosition,
+  CashStatement,
+  Payable,
+  PayableInput,
+  PayableOptions,
+  PayablePaymentInput,
+  PayablesResponse,
   HistoricalOrderImportInput,
   HistoricalOrderImportResult,
   Ingredient,
@@ -41,7 +56,7 @@ import type {
   VisualConfiguration,
 } from "@burgoos/types";
 
-const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3001";
+const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? "http://127.0.0.1:3001";
 
 export interface AdminCategory {
   id: string;
@@ -560,6 +575,239 @@ export async function updateFinancialConfiguration(
     method: "PUT",
     body: JSON.stringify(payload),
   });
+}
+
+export async function listFinancialAccounts(token: string): Promise<FinancialAccount[]> {
+  return fetchAdmin<FinancialAccount[]>(token, "/api/admin/financial/accounts");
+}
+
+export async function createFinancialAccount(
+  token: string,
+  payload: FinancialAccountInput
+): Promise<FinancialAccount> {
+  return fetchAdmin<FinancialAccount>(token, "/api/admin/financial/accounts", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function updateFinancialAccount(
+  token: string,
+  id: string,
+  payload: FinancialAccountInput
+): Promise<FinancialAccount> {
+  return fetchAdmin<FinancialAccount>(token, `/api/admin/financial/accounts/${id}`, {
+    method: "PATCH",
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function listFinancialCategories(token: string): Promise<FinancialCategory[]> {
+  return fetchAdmin<FinancialCategory[]>(token, "/api/admin/financial/categories");
+}
+
+export async function getCashFlowSetup(): Promise<{
+  token: string;
+  accounts: FinancialAccount[];
+  categories: FinancialCategory[];
+}> {
+  const token = await getAdminToken();
+  const [accounts, categories] = await Promise.all([
+    listFinancialAccounts(token),
+    listFinancialCategories(token),
+  ]);
+
+  return { token, accounts, categories };
+}
+
+export async function createFinancialCategory(
+  token: string,
+  payload: FinancialCategoryInput
+): Promise<FinancialCategory> {
+  return fetchAdmin<FinancialCategory>(token, "/api/admin/financial/categories", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function updateFinancialCategory(
+  token: string,
+  id: string,
+  payload: FinancialCategoryInput
+): Promise<FinancialCategory> {
+  return fetchAdmin<FinancialCategory>(token, `/api/admin/financial/categories/${id}`, {
+    method: "PATCH",
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function getCashPosition(filters: {
+  asOf?: string;
+  projectionEnd?: string;
+  financialAccountId?: string;
+} = {}): Promise<{ token: string; position: CashPosition; accounts: FinancialAccount[]; categories: FinancialCategory[] }> {
+  const token = await getAdminToken();
+  const params = new URLSearchParams();
+
+  Object.entries(filters).forEach(([key, value]) => {
+    if (value) {
+      params.set(key, value);
+    }
+  });
+
+  const query = params.toString();
+  const [position, accounts, categories] = await Promise.all([
+    fetchAdmin<CashPosition>(token, `/api/admin/financial/cash-flow/position${query ? `?${query}` : ""}`),
+    listFinancialAccounts(token),
+    listFinancialCategories(token),
+  ]);
+
+  return { token, position, accounts, categories };
+}
+
+export async function getCashLedger(
+  token: string,
+  filters: { asOf?: string; financialAccountId?: string } = {}
+): Promise<CashLedgerEntry[]> {
+  const params = new URLSearchParams();
+
+  Object.entries(filters).forEach(([key, value]) => {
+    if (value) {
+      params.set(key, value);
+    }
+  });
+
+  const query = params.toString();
+  return fetchAdmin<CashLedgerEntry[]>(token, `/api/admin/financial/cash-flow/ledger${query ? `?${query}` : ""}`);
+}
+
+export async function getCashStatement(
+  token: string,
+  filters: { start?: string; end?: string; financialAccountId?: string } = {}
+): Promise<CashStatement> {
+  const params = new URLSearchParams();
+
+  Object.entries(filters).forEach(([key, value]) => {
+    if (value) {
+      params.set(key, value);
+    }
+  });
+
+  const query = params.toString();
+  return fetchAdmin<CashStatement>(token, `/api/admin/financial/cash-flow/statement${query ? `?${query}` : ""}`);
+}
+
+export async function listCashMovements(
+  token: string,
+  filters: { start?: string; end?: string } = {}
+): Promise<CashMovement[]> {
+  const params = new URLSearchParams();
+
+  Object.entries(filters).forEach(([key, value]) => {
+    if (value) {
+      params.set(key, value);
+    }
+  });
+
+  const query = params.toString();
+  return fetchAdmin<CashMovement[]>(token, `/api/admin/financial/cash-flow/movements${query ? `?${query}` : ""}`);
+}
+
+export async function createCashMovement(token: string, payload: CashMovementInput): Promise<CashMovement> {
+  return fetchAdmin<CashMovement>(token, "/api/admin/financial/cash-flow/movements", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function reverseCashMovement(
+  token: string,
+  movementId: string,
+  payload: { reason: string }
+): Promise<CashMovement> {
+  return fetchAdmin<CashMovement>(token, `/api/admin/financial/cash-flow/movements/${movementId}/reverse`, {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function getPayables(filters: {
+  start?: string;
+  end?: string;
+  status?: string;
+  categoryId?: string;
+  supplierId?: string;
+} = {}): Promise<{ token: string; payables: PayablesResponse; options: PayableOptions }> {
+  const token = await getAdminToken();
+  const params = new URLSearchParams();
+
+  Object.entries(filters).forEach(([key, value]) => {
+    if (value) {
+      params.set(key, value);
+    }
+  });
+
+  const query = params.toString();
+  const [payables, options] = await Promise.all([
+    fetchAdmin<PayablesResponse>(token, `/api/admin/financial/payables${query ? `?${query}` : ""}`),
+    fetchAdmin<PayableOptions>(token, "/api/admin/financial/payables/options"),
+  ]);
+
+  return { token, payables, options };
+}
+
+export async function createPayable(token: string, payload: PayableInput): Promise<PayablesResponse> {
+  return fetchAdmin<PayablesResponse>(token, "/api/admin/financial/payables", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function updatePayable(token: string, id: string, payload: PayableInput): Promise<Payable> {
+  return fetchAdmin<Payable>(token, `/api/admin/financial/payables/${id}`, {
+    method: "PATCH",
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function cancelPayable(
+  token: string,
+  id: string,
+  payload: { reason: string }
+): Promise<Payable> {
+  return fetchAdmin<Payable>(token, `/api/admin/financial/payables/${id}/cancel`, {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function addPayablePayment(
+  token: string,
+  id: string,
+  payload: PayablePaymentInput
+): Promise<Payable> {
+  return fetchAdmin<Payable>(token, `/api/admin/financial/payables/${id}/payments`, {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function reversePayablePayment(
+  token: string,
+  paymentId: string,
+  payload: { reason: string }
+): Promise<Payable> {
+  return fetchAdmin<Payable>(token, `/api/admin/financial/payables/payments/${paymentId}/reverse`, {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function getPayableAuditHistory(
+  token: string,
+  payableId: string
+): Promise<FinancialAuditRecord[]> {
+  return fetchAdmin<FinancialAuditRecord[]>(token, `/api/admin/financial/payables/${payableId}/audit`);
 }
 
 export async function getPurchaseUnits(): Promise<{

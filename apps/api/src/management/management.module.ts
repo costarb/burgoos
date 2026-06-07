@@ -9,8 +9,15 @@ import { PurchaseUnitController } from "./domains/purchase-unit.controller";
 import { PurchaseUnitService } from "./domains/purchase-unit.service";
 import { SupplierController } from "./domains/supplier.controller";
 import { SupplierService } from "./domains/supplier.service";
+import { AccountsPayableController } from "./financial/accounts-payable/accounts-payable.controller";
+import { AccountsPayableService } from "./financial/accounts-payable/accounts-payable.service";
+import { CashMovementService } from "./financial/cash-flow/cash-movement.service";
+import { CashFlowController } from "./financial/cash-flow/cash-flow.controller";
+import { CashFlowService } from "./financial/cash-flow/cash-flow.service";
+import { FinancialAccountService } from "./financial/cash-flow/financial-account.service";
 import { FinancialConfigurationController } from "./financial/financial-configuration.controller";
 import { FinancialConfigurationService } from "./financial/financial-configuration.service";
+import { FinancialAuditService } from "./financial/financial-audit.service";
 import { IngredientController } from "./financial/ingredient.controller";
 import { IngredientService } from "./financial/ingredient.service";
 import { TechnicalSheetController } from "./financial/technical-sheet.controller";
@@ -43,6 +50,8 @@ import { TenantScopeService } from "./tenant-scope";
     FinancialReportsController,
     MenuEngineeringController,
     SalesReportController,
+    AccountsPayableController,
+    CashFlowController,
   ],
   providers: [
     ReportsService,
@@ -61,6 +70,11 @@ import { TenantScopeService } from "./tenant-scope";
     SalesReportService,
     TenantScopeService,
     AuditLogService,
+    FinancialAuditService,
+    AccountsPayableService,
+    FinancialAccountService,
+    CashMovementService,
+    CashFlowService,
   ],
   exports: [OrderProfitabilityService],
 })

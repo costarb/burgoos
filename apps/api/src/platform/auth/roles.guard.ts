@@ -14,3 +14,16 @@ export class OrderMaintenanceRolesGuard implements CanActivate {
     return true;
   }
 }
+
+@Injectable()
+export class FinancialManagementRolesGuard implements CanActivate {
+  canActivate(context: ExecutionContext): boolean {
+    const request = context.switchToHttp().getRequest<AuthenticatedRequest>();
+
+    if (request.user.role !== UserRole.OWNER && request.user.role !== UserRole.ADMIN) {
+      throw new ForbiddenException("Gestao financeira requer acesso de proprietario ou administrador");
+    }
+
+    return true;
+  }
+}

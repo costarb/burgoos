@@ -1,3 +1,5 @@
+import { AlertTriangle, ArrowRight, ClipboardList, DollarSign, PackageSearch, TrendingUp } from "lucide-react";
+import Link from "next/link";
 import { getAdminDailySummary, getAdminTenantSummary, getFinancialDashboard } from "../../lib/api";
 
 export const dynamic = "force-dynamic";
@@ -8,155 +10,122 @@ export default async function AdminPage() {
     getFinancialDashboard(),
     getAdminTenantSummary(),
   ]);
+  const alertCount = financialDashboard.priceReviewCount + financialDashboard.stockAlertCount;
 
   return (
-    <main className="min-h-screen bg-slate-50 px-6 py-8 text-slate-900">
-      <section className="mx-auto max-w-5xl">
-        <h1 className="text-3xl font-semibold">Painel BurgoOS</h1>
-        <p className="mt-2 text-slate-600">
-          Operacao piloto com catalogo, pedidos e fila em tempo real.
-        </p>
-        <p className="mt-3 w-fit rounded-md border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-700">
-          {tenant.name} /{tenant.slug}
-        </p>
-        <div className="mt-6 flex flex-wrap gap-3">
-          <a
-            className="rounded-md bg-ink px-4 py-2 text-sm font-semibold text-white"
+    <main className="px-4 py-6 text-slate-900 sm:px-6 sm:py-8">
+      <section className="mx-auto max-w-6xl">
+        <div className="flex flex-wrap items-start justify-between gap-4">
+          <div>
+            <p className="text-sm font-semibold text-tomato">{tenant.name}</p>
+            <h1 className="mt-1 text-2xl font-semibold sm:text-3xl">Visao operacional</h1>
+            <p className="mt-1 text-sm text-slate-600">Acompanhe o movimento e acesse as rotinas mais frequentes.</p>
+          </div>
+          <Link
+            className="inline-flex min-h-10 items-center gap-2 rounded-md bg-ink px-4 py-2 text-sm font-semibold text-white"
             href="/admin/orders"
           >
-            Pedidos
-          </a>
-          <a
-            className="rounded-md border border-slate-300 px-4 py-2 text-sm font-semibold"
-            href="/admin/orders/import"
-          >
-            Importar pedidos
-          </a>
-          <a
-            className="rounded-md bg-tomato px-4 py-2 text-sm font-semibold text-white"
-            href="/admin/catalog"
-          >
-            Catalogo
-          </a>
-          <a
-            className="rounded-md border border-slate-300 px-4 py-2 text-sm font-semibold"
-            href="/admin/settings"
-          >
-            Configuracoes
-          </a>
-          <a
-            className="rounded-md border border-slate-300 px-4 py-2 text-sm font-semibold"
-            href="/admin/purchase-units"
-          >
-            Unidades
-          </a>
-          <a
-            className="rounded-md border border-slate-300 px-4 py-2 text-sm font-semibold"
-            href="/admin/suppliers"
-          >
-            Fornecedores
-          </a>
-          <a
-            className="rounded-md border border-slate-300 px-4 py-2 text-sm font-semibold"
-            href="/admin/order-platforms"
-          >
-            Plataformas
-          </a>
-          <a
-            className="rounded-md border border-slate-300 px-4 py-2 text-sm font-semibold"
-            href="/admin/ingredients"
-          >
-            Insumos
-          </a>
-          <a
-            className="rounded-md border border-slate-300 px-4 py-2 text-sm font-semibold"
-            href="/admin/technical-sheets"
-          >
-            Fichas tecnicas
-          </a>
-          <a
-            className="rounded-md border border-slate-300 px-4 py-2 text-sm font-semibold"
-            href="/admin/pricing"
-          >
-            Precificacao
-          </a>
-          <a
-            className="rounded-md border border-slate-300 px-4 py-2 text-sm font-semibold"
-            href="/admin/inventory"
-          >
-            Estoque
-          </a>
-          <a
-            className="rounded-md border border-slate-300 px-4 py-2 text-sm font-semibold"
-            href="/admin/reports/dre"
-          >
-            DRE
-          </a>
-          <a
-            className="rounded-md border border-slate-300 px-4 py-2 text-sm font-semibold"
-            href="/admin/reports/sales"
-          >
-            Relatorio de vendas
-          </a>
-          <a
-            className="rounded-md border border-slate-300 px-4 py-2 text-sm font-semibold"
-            href="/admin/menu-engineering"
-          >
-            Menu engineering
-          </a>
-          <a
-            className="rounded-md border border-slate-300 px-4 py-2 text-sm font-semibold"
-            href="/admin/branding"
-          >
-            Identidade visual
-          </a>
-          <a
-            className="rounded-md border border-slate-300 px-4 py-2 text-sm font-semibold"
-            href="/platform/stores"
-          >
-            Lojas
-          </a>
-          <a
-            className="rounded-md border border-slate-300 px-4 py-2 text-sm font-semibold"
-            href="/piloto"
-          >
-            Cardapio publico
-          </a>
+            Abrir pedidos
+            <ArrowRight aria-hidden className="h-4 w-4" />
+          </Link>
         </div>
 
-        <section className="mt-8 grid gap-4 sm:grid-cols-2">
-          <article className="rounded-md border border-slate-200 bg-white p-4 shadow-sm">
-            <p className="text-sm text-slate-500">Pedidos entregues hoje</p>
-            <p className="mt-2 text-3xl font-semibold">{summary.orderCount}</p>
-          </article>
-          <article className="rounded-md border border-slate-200 bg-white p-4 shadow-sm">
-            <p className="text-sm text-slate-500">Receita bruta hoje</p>
-            <p className="mt-2 text-3xl font-semibold">R$ {summary.grossRevenue}</p>
-          </article>
+        <section className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          <Metric
+            icon={ClipboardList}
+            label="Pedidos entregues hoje"
+            value={String(summary.orderCount)}
+          />
+          <Metric icon={DollarSign} label="Receita bruta hoje" value={`R$ ${summary.grossRevenue}`} />
+          <Metric icon={TrendingUp} label="Margem liquida" value={`${(financialDashboard.netMarginRate * 100).toFixed(1)}%`} />
+          <Metric icon={AlertTriangle} label="Alertas operacionais" value={String(alertCount)} warning={alertCount > 0} />
         </section>
-        <section className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          <article className="rounded-md border border-slate-200 bg-white p-4 shadow-sm">
-            <p className="text-sm text-slate-500">CMV no periodo</p>
-            <p className="mt-2 text-2xl font-semibold">R$ {financialDashboard.cmv}</p>
-          </article>
-          <article className="rounded-md border border-slate-200 bg-white p-4 shadow-sm">
-            <p className="text-sm text-slate-500">Lucro bruto</p>
-            <p className="mt-2 text-2xl font-semibold">R$ {financialDashboard.grossProfit}</p>
-          </article>
-          <article className="rounded-md border border-slate-200 bg-white p-4 shadow-sm">
-            <p className="text-sm text-slate-500">Margem liquida</p>
-            <p className="mt-2 text-2xl font-semibold">
-              {(financialDashboard.netMarginRate * 100).toFixed(1)}%
-            </p>
-          </article>
-          <article className="rounded-md border border-slate-200 bg-white p-4 shadow-sm">
-            <p className="text-sm text-slate-500">Alertas</p>
-            <p className="mt-2 text-2xl font-semibold">
-              {financialDashboard.priceReviewCount + financialDashboard.stockAlertCount}
-            </p>
-          </article>
+
+        <section className="mt-8 grid gap-6 lg:grid-cols-[1.35fr_1fr]">
+          <div>
+            <h2 className="text-base font-semibold">Acesso rapido</h2>
+            <div className="mt-3 grid gap-3 sm:grid-cols-2">
+              <QuickLink
+                description="Acompanhar fila, finalizar e corrigir pedidos."
+                href="/admin/orders"
+                label="Pedidos"
+              />
+              <QuickLink
+                description="Importar extratos e vendas realizadas."
+                href="/admin/orders/import"
+                label="Importar vendas"
+              />
+              <QuickLink
+                description="Consultar necessidade de compra e saldo estimado."
+                href="/admin/inventory"
+                label="Estoque"
+              />
+              <QuickLink
+                description="Analisar evolucao diaria e pagamentos a receber."
+                href="/admin/reports/sales"
+                label="Relatorio de vendas"
+              />
+            </div>
+          </div>
+
+          <div>
+            <h2 className="text-base font-semibold">Resultado do periodo</h2>
+            <dl className="mt-3 divide-y divide-slate-200 rounded-md border border-slate-200 bg-white px-4">
+              <SummaryRow label="CMV" value={`R$ ${financialDashboard.cmv}`} />
+              <SummaryRow label="Lucro bruto" value={`R$ ${financialDashboard.grossProfit}`} />
+              <SummaryRow label="Lucro liquido estimado" value={`R$ ${financialDashboard.estimatedNetProfit}`} />
+              <SummaryRow label="Itens para revisar preco" value={String(financialDashboard.priceReviewCount)} />
+              <SummaryRow label="Alertas de estoque" value={String(financialDashboard.stockAlertCount)} />
+            </dl>
+          </div>
         </section>
       </section>
     </main>
+  );
+}
+
+function Metric({
+  icon: Icon,
+  label,
+  value,
+  warning = false,
+}: {
+  icon: typeof PackageSearch;
+  label: string;
+  value: string;
+  warning?: boolean;
+}) {
+  return (
+    <article className="rounded-md border border-slate-200 bg-white p-4 shadow-sm">
+      <div className="flex items-center gap-2 text-sm text-slate-600">
+        <Icon aria-hidden className={`h-4 w-4 ${warning ? "text-amber-700" : "text-slate-500"}`} />
+        <span>{label}</span>
+      </div>
+      <p className="mt-3 text-2xl font-semibold">{value}</p>
+    </article>
+  );
+}
+
+function QuickLink({ href, label, description }: { href: string; label: string; description: string }) {
+  return (
+    <Link
+      className="group rounded-md border border-slate-200 bg-white p-4 shadow-sm transition hover:border-slate-400"
+      href={href}
+    >
+      <span className="flex items-center justify-between font-semibold">
+        {label}
+        <ArrowRight aria-hidden className="h-4 w-4 transition group-hover:translate-x-0.5" />
+      </span>
+      <span className="mt-1 block text-sm text-slate-600">{description}</span>
+    </Link>
+  );
+}
+
+function SummaryRow({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="flex items-center justify-between gap-4 py-3 text-sm">
+      <dt className="text-slate-600">{label}</dt>
+      <dd className="font-semibold text-slate-950">{value}</dd>
+    </div>
   );
 }

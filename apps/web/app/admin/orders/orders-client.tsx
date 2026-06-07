@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { io } from "socket.io-client";
 import type { AdminOrder, OrderStatus, PaymentInstitution, PaymentMethod } from "@burgoos/types";
 import { updateAdminOrderStatus } from "../../../lib/api";
+import { OperationFeedback } from "../../../components/admin/operation-feedback";
 import { OrderMaintenanceDialog } from "./order-maintenance-dialog";
 
 interface OrdersClientProps {
@@ -42,6 +43,8 @@ export function OrdersClient({
   const [activeOrders, setActiveOrders] = useState(initialActiveOrders);
   const [historyOrders, setHistoryOrders] = useState(initialHistoryOrders);
   const [error, setError] = useState<string | null>(null);
+  const [operationMessage, setOperationMessage] = useState<string | null>(null);
+  const [changingOrderId, setChangingOrderId] = useState<string | null>(null);
   const [connected, setConnected] = useState(false);
   const [maintenanceOrder, setMaintenanceOrder] = useState<AdminOrder | null>(null);
 
@@ -75,9 +78,12 @@ export function OrdersClient({
 
   async function changeStatus(order: AdminOrder, status: OrderStatus): Promise<void> {
     setError(null);
+    setOperationMessage(null);
+    setChangingOrderId(order.id);
 
     try {
       const updatedOrder = await updateAdminOrderStatus(token, order.id, status);
+      setOperationMessage(`Pedido de ${order.customerName} atualizado para ${statusLabels[status]}.`);
 
       if (status === "DELIVERED" || status === "CANCELLED") {
         setActiveOrders((current) => current.filter((item) => item.id !== order.id));
@@ -90,6 +96,8 @@ export function OrdersClient({
       );
     } catch (caughtError) {
       setError(caughtError instanceof Error ? caughtError.message : "Falha ao atualizar pedido.");
+    } finally {
+      setChangingOrderId(null);
     }
   }
 
@@ -135,7 +143,16 @@ export function OrdersClient({
         </div>
       </div>
 
-      {error ? <p className="mt-4 rounded-md bg-red-50 p-3 text-sm text-red-700">{error}</p> : null}
+      <OperationFeedback
+        className="mt-4"
+        state={{
+          status: error ? "error" : changingOrderId ? "pending" : operationMessage ? "success" : "idle",
+          message:
+            error ??
+            operationMessage ??
+            (changingOrderId ? "Atualizando status do pedido." : undefined),
+        }}
+      />
 
       <section className="mt-6 grid gap-4 lg:grid-cols-3">
         {groupedOrders.map((group) => (
@@ -183,6 +200,7 @@ export function OrdersClient({
                     <div className="mt-4 flex flex-wrap gap-2">
                       <button
                         className="rounded-md border border-slate-300 px-3 py-2 text-xs font-semibold"
+                        disabled={changingOrderId !== null}
                         onClick={() => setMaintenanceOrder(order)}
                         type="button"
                       >
@@ -190,7 +208,8 @@ export function OrdersClient({
                       </button>
                       {nextStatuses[order.status].map((status) => (
                         <button
-                          className="rounded-md bg-ink px-3 py-2 text-xs font-semibold text-white"
+                          className="rounded-md bg-ink px-3 py-2 text-xs font-semibold text-white disabled:cursor-not-allowed disabled:opacity-60"
+                          disabled={changingOrderId !== null}
                           key={status}
                           onClick={() => void changeStatus(order, status)}
                           type="button"

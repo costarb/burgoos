@@ -1,5 +1,7 @@
-import { PurchaseUnitKind } from "@burgoos/types";
+import type { OperationState, PurchaseUnitKind } from "@burgoos/types";
 import { revalidatePath } from "next/cache";
+import { OperationForm } from "../../../components/admin/operation-form";
+import { SubmitButton } from "../../../components/admin/submit-button";
 import {
   createPurchaseUnit,
   getAdminToken,
@@ -14,29 +16,45 @@ const kinds: PurchaseUnitKind[] = ["WEIGHT", "VOLUME", "COUNT", "PACKAGE"];
 export default async function PurchaseUnitsPage() {
   const { purchaseUnits } = await getPurchaseUnits();
 
-  async function create(formData: FormData) {
+  async function create(_previousState: OperationState, formData: FormData): Promise<OperationState> {
     "use server";
 
-    await createPurchaseUnit(await getAdminToken(), {
-      name: String(formData.get("name") ?? ""),
-      abbreviation: String(formData.get("abbreviation") ?? ""),
-      kind: String(formData.get("kind") ?? "COUNT") as PurchaseUnitKind,
-      active: formData.get("active") === "on",
-    });
-    revalidatePath("/admin/purchase-units");
+    try {
+      await createPurchaseUnit(await getAdminToken(), {
+        name: String(formData.get("name") ?? ""),
+        abbreviation: String(formData.get("abbreviation") ?? ""),
+        kind: String(formData.get("kind") ?? "COUNT") as PurchaseUnitKind,
+        active: formData.get("active") === "on",
+      });
+      revalidatePath("/admin/purchase-units");
+      return { status: "success", message: "Unidade criada com sucesso." };
+    } catch (error) {
+      return {
+        status: "error",
+        message: error instanceof Error ? error.message : "Nao foi possivel criar a unidade.",
+      };
+    }
   }
 
-  async function update(formData: FormData) {
+  async function update(_previousState: OperationState, formData: FormData): Promise<OperationState> {
     "use server";
 
-    const id = String(formData.get("id") ?? "");
-    await updatePurchaseUnit(await getAdminToken(), id, {
-      name: String(formData.get("name") ?? ""),
-      abbreviation: String(formData.get("abbreviation") ?? ""),
-      kind: String(formData.get("kind") ?? "COUNT") as PurchaseUnitKind,
-      active: formData.get("active") === "on",
-    });
-    revalidatePath("/admin/purchase-units");
+    try {
+      const id = String(formData.get("id") ?? "");
+      await updatePurchaseUnit(await getAdminToken(), id, {
+        name: String(formData.get("name") ?? ""),
+        abbreviation: String(formData.get("abbreviation") ?? ""),
+        kind: String(formData.get("kind") ?? "COUNT") as PurchaseUnitKind,
+        active: formData.get("active") === "on",
+      });
+      revalidatePath("/admin/purchase-units");
+      return { status: "success", message: "Unidade salva com sucesso." };
+    } catch (error) {
+      return {
+        status: "error",
+        message: error instanceof Error ? error.message : "Nao foi possivel salvar a unidade.",
+      };
+    }
   }
 
   return (
@@ -44,9 +62,10 @@ export default async function PurchaseUnitsPage() {
       <section className="mx-auto max-w-5xl">
         <p className="text-sm font-semibold uppercase text-tomato">Dominios</p>
         <h1 className="mt-1 text-3xl font-semibold">Unidades de compra</h1>
-        <form
+        <OperationForm
           action={create}
           className="mt-8 grid gap-3 rounded-md border border-slate-200 bg-white p-4 shadow-sm md:grid-cols-[1fr_140px_160px_100px]"
+          feedbackClassName="mt-4"
         >
           <input
             className="rounded-md border border-slate-200 px-3 py-2 text-sm"
@@ -73,18 +92,16 @@ export default async function PurchaseUnitsPage() {
             <input defaultChecked name="active" type="checkbox" />
             Ativa
           </label>
-          <button
-            className="rounded-md bg-ink px-4 py-2 text-sm font-semibold text-white md:col-span-4"
-            type="submit"
-          >
+          <SubmitButton className="md:col-span-4" pendingLabel="Criando unidade...">
             Criar unidade
-          </button>
-        </form>
+          </SubmitButton>
+        </OperationForm>
         <div className="mt-6 divide-y divide-slate-200 rounded-md border border-slate-200 bg-white">
           {purchaseUnits.map((unit) => (
-            <form
+            <OperationForm
               action={update}
               className="grid gap-3 p-4 md:grid-cols-[1fr_120px_160px_100px_100px]"
+              feedbackClassName="px-4 pb-4"
               key={unit.id}
             >
               <input name="id" type="hidden" value={unit.id} />
@@ -115,13 +132,10 @@ export default async function PurchaseUnitsPage() {
                 <input defaultChecked={unit.active} name="active" type="checkbox" />
                 Ativa
               </label>
-              <button
-                className="rounded-md bg-slate-900 px-3 py-2 text-sm font-semibold text-white"
-                type="submit"
-              >
+              <SubmitButton className="bg-slate-900 px-3" pendingLabel="Salvando...">
                 Salvar
-              </button>
-            </form>
+              </SubmitButton>
+            </OperationForm>
           ))}
           {purchaseUnits.length === 0 ? (
             <p className="p-4 text-sm text-slate-500">Nenhuma unidade cadastrada.</p>

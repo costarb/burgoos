@@ -1,5 +1,8 @@
 import React from "react";
+import type { OperationState } from "@burgoos/types";
 import { revalidatePath } from "next/cache";
+import { OperationForm } from "../../../../components/admin/operation-form";
+import { SubmitButton } from "../../../../components/admin/submit-button";
 import {
   getAdminCatalog,
   getAdminToken,
@@ -25,30 +28,38 @@ export default async function TechnicalSheetEditorPage({ params }: PageProps) {
   ]);
   const product = products.find((candidate) => candidate.id === params.productId);
 
-  async function save(formData: FormData) {
+  async function save(_previousState: OperationState, formData: FormData): Promise<OperationState> {
     "use server";
 
-    const lines = Array.from({ length: 8 })
-      .map((_, index) => {
-        const ingredientId = String(formData.get(`ingredientId-${index}`) ?? "");
-        const quantityUsed = Number(formData.get(`quantityUsed-${index}`) ?? 0);
+    try {
+      const lines = Array.from({ length: 8 })
+        .map((_, index) => {
+          const ingredientId = String(formData.get(`ingredientId-${index}`) ?? "");
+          const quantityUsed = Number(formData.get(`quantityUsed-${index}`) ?? 0);
 
-        if (!ingredientId || quantityUsed <= 0) {
-          return null;
-        }
+          if (!ingredientId || quantityUsed <= 0) {
+            return null;
+          }
 
-        return {
-          ingredientId,
-          quantityUsed,
-          isPackaging: formData.get(`isPackaging-${index}`) === "on",
-          notes: String(formData.get(`notes-${index}`) ?? "") || undefined,
-        };
-      })
-      .filter((line) => line !== null);
+          return {
+            ingredientId,
+            quantityUsed,
+            isPackaging: formData.get(`isPackaging-${index}`) === "on",
+            notes: String(formData.get(`notes-${index}`) ?? "") || undefined,
+          };
+        })
+        .filter((line) => line !== null);
 
-    await replaceTechnicalSheet(await getAdminToken(), params.productId, { lines });
-    revalidatePath(`/admin/technical-sheets/${params.productId}`);
-    revalidatePath("/admin/technical-sheets");
+      await replaceTechnicalSheet(await getAdminToken(), params.productId, { lines });
+      revalidatePath(`/admin/technical-sheets/${params.productId}`);
+      revalidatePath("/admin/technical-sheets");
+      return { status: "success", message: "Ficha tecnica salva com sucesso." };
+    } catch (error) {
+      return {
+        status: "error",
+        message: error instanceof Error ? error.message : "Nao foi possivel salvar a ficha tecnica.",
+      };
+    }
   }
 
   const rows = Array.from({ length: Math.max(8, sheet.lines.length) });
@@ -90,9 +101,10 @@ export default async function TechnicalSheetEditorPage({ params }: PageProps) {
           </article>
         </section>
 
-        <form
+        <OperationForm
           action={save}
           className="mt-8 rounded-md border border-slate-200 bg-white p-4 shadow-sm"
+          feedbackClassName="mt-4"
         >
           <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
             <div>
@@ -159,14 +171,14 @@ export default async function TechnicalSheetEditorPage({ params }: PageProps) {
               );
             })}
           </div>
-          <button
-            className="mt-4 rounded-md bg-ink px-4 py-2 text-sm font-semibold text-white"
+          <SubmitButton
+            className="mt-4"
             disabled={ingredients.length === 0}
-            type="submit"
+            pendingLabel="Salvando ficha..."
           >
             Salvar ficha tecnica
-          </button>
-        </form>
+          </SubmitButton>
+        </OperationForm>
       </section>
     </main>
   );

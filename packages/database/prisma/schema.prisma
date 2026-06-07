@@ -99,6 +99,28 @@ enum StockMovementType {
   RELEASE
 }
 
+enum FinancialRecurrenceFrequency {
+  WEEKLY
+  MONTHLY
+  YEARLY
+}
+
+enum CashMovementType {
+  MANUAL_INFLOW
+  MANUAL_OUTFLOW
+  TRANSFER
+  ADJUSTMENT
+}
+
+enum FinancialAuditAction {
+  CREATE
+  UPDATE
+  CANCEL
+  PAY
+  REVERSE
+  ADJUST
+}
+
 model Tenant {
   id                          String                       @id @default(uuid()) @db.Uuid
   name                        String
@@ -131,6 +153,13 @@ model Tenant {
   stockMovements              StockMovement[]
   orderProfitabilitySnapshots OrderProfitabilitySnapshot[]
   orderMaintenances           OrderMaintenance[]
+  financialAccounts           FinancialAccount[]
+  financialCategories         FinancialCategory[]
+  payableRecurrences          PayableRecurrence[]
+  payables                    Payable[]
+  payablePayments             PayablePayment[]
+  cashMovements               CashMovement[]
+  financialAudits             FinancialAudit[]
 
   @@index([createdByPlatformUserId])
   @@index([defaultLayoutPresetKey])
@@ -179,6 +208,12 @@ model User {
   visualConfigurationsPublished StoreVisualConfiguration[] @relation("VisualConfigurationPublishedBy")
   deletedOrders                 Order[]                    @relation("OrderDeletedBy")
   orderMaintenances             OrderMaintenance[]
+  payablesCreated               Payable[]                  @relation("PayableCreatedBy")
+  payablePaymentsCreated        PayablePayment[]           @relation("PayablePaymentCreatedBy")
+  payablePaymentsReversed       PayablePayment[]           @relation("PayablePaymentReversedBy")
+  cashMovementsCreated          CashMovement[]             @relation("CashMovementCreatedBy")
+  cashMovementsReversed         CashMovement[]             @relation("CashMovementReversedBy")
+  financialAudits               FinancialAudit[]           @relation("FinancialAuditActor")
 
   @@index([tenantId])
   @@map("users")
@@ -381,9 +416,172 @@ model Supplier {
   updatedAt   DateTime     @updatedAt @map("updated_at")
   tenant      Tenant       @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   ingredients Ingredient[]
+  payables    Payable[]
 
   @@index([tenantId])
   @@map("suppliers")
+}
+
+model FinancialAccount {
+  id                   String              @id @default(uuid()) @db.Uuid
+  tenantId             String              @map("tenant_id") @db.Uuid
+  name                 String
+  paymentInstitution   PaymentInstitution? @map("payment_institution")
+  openingBalance       Decimal             @default(0) @map("opening_balance") @db.Decimal(12, 2)
+  openingBalanceAt     DateTime            @map("opening_balance_at")
+  active               Boolean             @default(true)
+  createdAt            DateTime            @default(now()) @map("created_at")
+  updatedAt            DateTime            @updatedAt @map("updated_at")
+  tenant               Tenant              @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  payablePayments      PayablePayment[]
+  cashMovements        CashMovement[]       @relation("CashMovementAccount")
+  transferDestinations CashMovement[]       @relation("CashMovementDestination")
+
+  @@unique([tenantId, name])
+  @@unique([tenantId, paymentInstitution])
+  @@index([tenantId, active])
+  @@map("financial_accounts")
+}
+
+model FinancialCategory {
+  id            String         @id @default(uuid()) @db.Uuid
+  tenantId      String         @map("tenant_id") @db.Uuid
+  name          String
+  active        Boolean        @default(true)
+  createdAt     DateTime       @default(now()) @map("created_at")
+  updatedAt     DateTime       @updatedAt @map("updated_at")
+  tenant        Tenant         @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  payables      Payable[]
+  cashMovements CashMovement[]
+
+  @@unique([tenantId, name])
+  @@index([tenantId, active])
+  @@map("financial_categories")
+}
+
+model PayableRecurrence {
+  id              String                       @id @default(uuid()) @db.Uuid
+  tenantId        String                       @map("tenant_id") @db.Uuid
+  frequency       FinancialRecurrenceFrequency
+  interval        Int                          @default(1)
+  startsOn        DateTime                     @map("starts_on")
+  endsOn          DateTime?                    @map("ends_on")
+  occurrenceCount Int?                         @map("occurrence_count")
+  active          Boolean                      @default(true)
+  createdAt       DateTime                     @default(now()) @map("created_at")
+  updatedAt       DateTime                     @updatedAt @map("updated_at")
+  tenant          Tenant                       @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  payables        Payable[]
+
+  @@index([tenantId, active])
+  @@map("payable_recurrences")
+}
+
+model Payable {
+  id                 String              @id @default(uuid()) @db.Uuid
+  tenantId           String              @map("tenant_id") @db.Uuid
+  categoryId         String              @map("category_id") @db.Uuid
+  supplierId         String?             @map("supplier_id") @db.Uuid
+  recurrenceGroupId  String?             @map("recurrence_group_id") @db.Uuid
+  description        String
+  documentReference  String?             @map("document_reference")
+  competenceDate     DateTime?           @map("competence_date")
+  dueDate            DateTime            @map("due_date")
+  expectedAmount     Decimal             @map("expected_amount") @db.Decimal(12, 2)
+  notes              String?
+  cancelledAt        DateTime?           @map("cancelled_at")
+  cancellationReason String?             @map("cancellation_reason")
+  createdByUserId    String              @map("created_by_user_id") @db.Uuid
+  createdAt          DateTime            @default(now()) @map("created_at")
+  updatedAt          DateTime            @updatedAt @map("updated_at")
+  tenant             Tenant              @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  category           FinancialCategory   @relation(fields: [categoryId], references: [id], onDelete: Restrict)
+  supplier           Supplier?           @relation(fields: [supplierId], references: [id], onDelete: SetNull)
+  recurrenceGroup    PayableRecurrence?  @relation(fields: [recurrenceGroupId], references: [id], onDelete: SetNull)
+  createdByUser      User                @relation("PayableCreatedBy", fields: [createdByUserId], references: [id], onDelete: Restrict)
+  payments           PayablePayment[]
+
+  @@index([tenantId, dueDate])
+  @@index([tenantId, supplierId, dueDate])
+  @@index([tenantId, categoryId, dueDate])
+  @@index([tenantId, recurrenceGroupId])
+  @@index([createdByUserId])
+  @@map("payables")
+}
+
+model PayablePayment {
+  id                 String           @id @default(uuid()) @db.Uuid
+  tenantId           String           @map("tenant_id") @db.Uuid
+  payableId          String           @map("payable_id") @db.Uuid
+  financialAccountId String           @map("financial_account_id") @db.Uuid
+  amount             Decimal          @db.Decimal(12, 2)
+  paidAt             DateTime         @map("paid_at")
+  notes              String?
+  reversedAt         DateTime?        @map("reversed_at")
+  reversalReason     String?          @map("reversal_reason")
+  createdByUserId    String           @map("created_by_user_id") @db.Uuid
+  reversedByUserId   String?          @map("reversed_by_user_id") @db.Uuid
+  createdAt          DateTime         @default(now()) @map("created_at")
+  tenant             Tenant           @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  payable            Payable          @relation(fields: [payableId], references: [id], onDelete: Cascade)
+  financialAccount   FinancialAccount @relation(fields: [financialAccountId], references: [id], onDelete: Restrict)
+  createdByUser      User             @relation("PayablePaymentCreatedBy", fields: [createdByUserId], references: [id], onDelete: Restrict)
+  reversedByUser     User?            @relation("PayablePaymentReversedBy", fields: [reversedByUserId], references: [id], onDelete: SetNull)
+
+  @@index([tenantId, payableId, paidAt])
+  @@index([tenantId, financialAccountId, paidAt])
+  @@index([createdByUserId])
+  @@index([reversedByUserId])
+  @@map("payable_payments")
+}
+
+model CashMovement {
+  id                     String             @id @default(uuid()) @db.Uuid
+  tenantId               String             @map("tenant_id") @db.Uuid
+  type                   CashMovementType
+  financialAccountId     String             @map("financial_account_id") @db.Uuid
+  destinationAccountId   String?            @map("destination_account_id") @db.Uuid
+  categoryId             String?            @map("category_id") @db.Uuid
+  amount                 Decimal            @db.Decimal(12, 2)
+  occurredAt             DateTime           @map("occurred_at")
+  description            String
+  justification          String?
+  reversedAt             DateTime?          @map("reversed_at")
+  reversalReason         String?            @map("reversal_reason")
+  createdByUserId        String             @map("created_by_user_id") @db.Uuid
+  reversedByUserId       String?            @map("reversed_by_user_id") @db.Uuid
+  createdAt              DateTime           @default(now()) @map("created_at")
+  tenant                 Tenant             @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  financialAccount       FinancialAccount   @relation("CashMovementAccount", fields: [financialAccountId], references: [id], onDelete: Restrict)
+  destinationAccount     FinancialAccount?  @relation("CashMovementDestination", fields: [destinationAccountId], references: [id], onDelete: Restrict)
+  category               FinancialCategory? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  createdByUser          User               @relation("CashMovementCreatedBy", fields: [createdByUserId], references: [id], onDelete: Restrict)
+  reversedByUser         User?              @relation("CashMovementReversedBy", fields: [reversedByUserId], references: [id], onDelete: SetNull)
+
+  @@index([tenantId, financialAccountId, occurredAt])
+  @@index([tenantId, destinationAccountId, occurredAt])
+  @@index([tenantId, categoryId, occurredAt])
+  @@index([createdByUserId])
+  @@index([reversedByUserId])
+  @@map("cash_movements")
+}
+
+model FinancialAudit {
+  id             String               @id @default(uuid()) @db.Uuid
+  tenantId       String               @map("tenant_id") @db.Uuid
+  actorUserId    String               @map("actor_user_id") @db.Uuid
+  entityType     String               @map("entity_type")
+  entityId       String               @map("entity_id") @db.Uuid
+  action         FinancialAuditAction
+  beforeSnapshot Json?                @map("before_snapshot")
+  afterSnapshot  Json?                @map("after_snapshot")
+  createdAt      DateTime             @default(now()) @map("created_at")
+  tenant         Tenant               @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  actorUser      User                 @relation("FinancialAuditActor", fields: [actorUserId], references: [id], onDelete: Restrict)
+
+  @@index([tenantId, entityType, entityId, createdAt])
+  @@index([tenantId, actorUserId, createdAt])
+  @@map("financial_audits")
 }
 
 model OrderPlatform {

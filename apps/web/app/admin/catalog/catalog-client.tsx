@@ -3,6 +3,7 @@
 import type { TechnicalSheetSummary } from "@burgoos/types";
 import { FormEvent, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
+import { OperationFeedback } from "../../../components/admin/operation-feedback";
 import {
   AdminCategory,
   AdminProduct,
@@ -133,12 +134,22 @@ export function CatalogClient({
           </a>
         </div>
 
-        {error ? (
-          <p className="mt-4 rounded-md bg-red-50 p-3 text-sm text-red-700">{error}</p>
-        ) : null}
-        {message ? (
-          <p className="mt-4 rounded-md bg-green-50 p-3 text-sm text-green-800">{message}</p>
-        ) : null}
+        <OperationFeedback
+          className="mt-4"
+          state={{
+            status: error
+              ? "error"
+              : categorySubmitting || productSubmitting
+                ? "pending"
+                : message
+                  ? "success"
+                  : "idle",
+            message:
+              error ??
+              message ??
+              (categorySubmitting ? "Criando categoria." : productSubmitting ? "Criando produto." : undefined),
+          }}
+        />
 
         <section className="mt-8 grid gap-4 lg:grid-cols-[320px_1fr]">
           <form

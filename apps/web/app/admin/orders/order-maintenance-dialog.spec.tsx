@@ -12,6 +12,7 @@ const order: AdminOrder = {
   customerPhone: "11999999999",
   fulfillmentMethod: "PICKUP",
   paymentMethod: "PIX",
+  paymentReleaseExpectedAt: "2026-06-05T12:00:00.000Z",
   notes: null,
   createdAt: "2026-06-03T12:00:00.000Z",
   updatedAt: "2026-06-03T12:00:00.000Z",
@@ -43,5 +44,6 @@ describe("order maintenance dialog", () => {
     expect(html).toContain("Salvar alteracoes");
     expect(html).toContain("Excluir pedido");
     expect(html).toContain("Motivo da manutencao");
+    expect(html).toContain("Data de liberacao");
   });
 });
