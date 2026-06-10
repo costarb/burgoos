@@ -5,6 +5,7 @@ import type {
   AccessUserDetail,
   AccessProfileDetail,
   AccessPermissionGroup,
+  AccessAuditEvent,
   DeleteOrderInput,
   EditOrderInput,
   BrandingDraftInput,
@@ -328,6 +329,37 @@ export async function duplicateAccessProfile(
     method: "POST",
     body: JSON.stringify(payload),
   });
+}
+
+export async function getAccessAudit(
+  filters: {
+    storeId?: string;
+    eventType?: string;
+    targetUserId?: string;
+    start?: string;
+    end?: string;
+  } = {}
+): Promise<{
+  token: string;
+  events: AccessAuditEvent[];
+  stores: AccessStoreSummary[];
+}> {
+  const token = await getAdminToken();
+  const params = new URLSearchParams();
+
+  Object.entries(filters).forEach(([key, value]) => {
+    if (value) {
+      params.set(key, value);
+    }
+  });
+
+  const query = params.toString();
+  const [events, userOptions] = await Promise.all([
+    fetchAdmin<AccessAuditEvent[]>(token, `/api/admin/access/audit${query ? `?${query}` : ""}`),
+    fetchAdmin<AccessUsersOptions>(token, "/api/admin/access/users/options"),
+  ]);
+
+  return { token, events, stores: userOptions.stores };
 }
 
 export async function listPlatformStores(token: string): Promise<StoreSummary[]> {

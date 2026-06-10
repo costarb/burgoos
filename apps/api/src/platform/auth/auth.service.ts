@@ -1,10 +1,18 @@
 import { ForbiddenException, Inject, Logger, UnauthorizedException } from "@nestjs/common";
 import { Injectable } from "@nestjs/common";
 import { JwtService } from "@nestjs/jwt";
-import { AccessProfileStatus, AccessUserStatus, User, UserRole } from "@prisma/client";
+import {
+  AccessAuditEventType,
+  AccessAuditResult,
+  AccessProfileStatus,
+  AccessUserStatus,
+  User,
+  UserRole,
+} from "@prisma/client";
 import { compare } from "bcryptjs";
 import { PasswordResetService } from "../../auth/password-reset.service";
 import { SessionTokenService } from "../../auth/session-token.service";
+import { AccessAuditService } from "../../management/access/access-audit.service";
 import { PrismaService } from "../database/prisma.service";
 import { LoginDto } from "./dto/login.dto";
 import { AuthUser, JwtPayload } from "./auth.types";
@@ -28,7 +36,9 @@ export class AuthService {
     @Inject(SessionTokenService)
     private readonly sessionTokens: SessionTokenService,
     @Inject(PasswordResetService)
-    private readonly passwordReset: PasswordResetService
+    private readonly passwordReset: PasswordResetService,
+    @Inject(AccessAuditService)
+    private readonly accessAudit: AccessAuditService
   ) {}
 
   async login(dto: LoginDto): Promise<LoginResult> {
@@ -56,6 +66,12 @@ export class AuthService {
 
     if (!user || !(await compare(dto.password, user.passwordHash))) {
       this.logger.warn(`Rejected login for email=${dto.email}`);
+      await this.accessAudit.record({
+        eventType: AccessAuditEventType.LOGIN_FAILURE,
+        result: AccessAuditResult.FAILED,
+        reason: "Invalid credentials",
+        metadata: { login: dto.email },
+      });
       throw new UnauthorizedException("Invalid credentials");
     }
 
@@ -107,6 +123,13 @@ export class AuthService {
     const refreshToken = await this.signRefreshToken(authUser);
 
     await this.sessionTokens.create(user.id, refreshToken, authUser.activeStoreId);
+    await this.accessAudit.record({
+      actorUserId: user.id,
+      targetUserId: user.id,
+      storeId: authUser.activeStoreId,
+      eventType: AccessAuditEventType.LOGIN_SUCCESS,
+      result: AccessAuditResult.SUCCESS,
+    });
 
     return {
       accessToken,
@@ -171,15 +194,31 @@ export class AuthService {
   async logout(refreshToken: string): Promise<void> {
     const payload = await this.verifyRefreshToken(refreshToken);
     await this.sessionTokens.revoke(payload.sub, refreshToken);
+    await this.accessAudit.record({
+      actorUserId: payload.sub,
+      targetUserId: payload.sub,
+      storeId: payload.activeStoreId ?? payload.tenantId,
+      eventType: AccessAuditEventType.LOGOUT,
+      result: AccessAuditResult.SUCCESS,
+    });
   }
 
   async requestPasswordReset(login: string) {
     await this.passwordReset.request(login);
+    await this.accessAudit.record({
+      eventType: AccessAuditEventType.PASSWORD_RESET_REQUESTED,
+      result: AccessAuditResult.SUCCESS,
+      metadata: { login },
+    });
     return { accepted: true };
   }
 
   async confirmPasswordReset(token: string, newPassword: string): Promise<void> {
     await this.passwordReset.confirm(token, newPassword);
+    await this.accessAudit.record({
+      eventType: AccessAuditEventType.PASSWORD_CHANGED,
+      result: AccessAuditResult.SUCCESS,
+    });
   }
 
   async changeActiveStore(

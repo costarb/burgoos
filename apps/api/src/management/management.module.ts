@@ -36,6 +36,7 @@ import { SalesReportService } from "./reports/sales-report.service";
 import { ReportsService } from "./reports.service";
 import { TenantScopeService } from "./tenant-scope";
 import { AccessAuditService } from "./access/access-audit.service";
+import { AccessAuditController } from "./access/access-audit.controller";
 import { AccessProfilesController } from "./access/profiles/access-profiles.controller";
 import { AccessProfilesService } from "./access/profiles/access-profiles.service";
 import { PermissionsController } from "./access/permissions/permissions.controller";
@@ -59,6 +60,7 @@ import { UsersService } from "./access/users/users.service";
     SalesReportController,
     AccountsPayableController,
     CashFlowController,
+    AccessAuditController,
     UsersController,
     AccessProfilesController,
     PermissionsController,

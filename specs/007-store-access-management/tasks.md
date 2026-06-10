@@ -168,11 +168,11 @@
 
 ### Implementation for User Story 5
 
-- [ ] T062 [US5] Implement scoped audit query service with sensitive metadata redaction in `apps/api/src/management/access/access-audit.service.ts`
-- [ ] T063 [US5] Implement access audit endpoint with master and store-admin filtering in `apps/api/src/management/access/access-audit.controller.ts`
-- [ ] T064 [US5] Ensure login failures, access denials, profile changes and password changes record audit events in `apps/api/src/auth/auth.service.ts` and `apps/api/src/management/access/profiles/access-profiles.service.ts`
-- [ ] T065 [P] [US5] Implement audit list, filters and event detail drawer in `apps/web/app/admin/access-audit/access-audit-client.tsx`
-- [ ] T066 [US5] Compose access audit route with scoped data loading in `apps/web/app/admin/access-audit/page.tsx`
+- [x] T062 [US5] Implement scoped audit query service with sensitive metadata redaction in `apps/api/src/management/access/access-audit.service.ts`
+- [x] T063 [US5] Implement access audit endpoint with master and store-admin filtering in `apps/api/src/management/access/access-audit.controller.ts`
+- [x] T064 [US5] Ensure login failures, access denials, profile changes and password changes record audit events in `apps/api/src/auth/auth.service.ts` and `apps/api/src/management/access/profiles/access-profiles.service.ts`
+- [x] T065 [P] [US5] Implement audit list, filters and event detail drawer in `apps/web/app/admin/access-audit/access-audit-client.tsx`
+- [x] T066 [US5] Compose access audit route with scoped data loading in `apps/web/app/admin/access-audit/page.tsx`
 - [ ] T067 [US5] Validate audit scenarios and record evidence in `specs/007-store-access-management/quickstart.md`
 
 **Checkpoint**: Access events are audit-ready, scoped correctly and free of sensitive secret values.

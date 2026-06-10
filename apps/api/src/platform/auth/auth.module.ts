@@ -7,6 +7,7 @@ import { StoreScopeGuard } from "../../auth/guards/store-scope.guard";
 import { PasswordResetService } from "../../auth/password-reset.service";
 import { SessionTokenService } from "../../auth/session-token.service";
 import { StoreContextController } from "../../auth/store-context.controller";
+import { AccessAuditService } from "../../management/access/access-audit.service";
 import { AuthController } from "./auth.controller";
 import { AuthService } from "./auth.service";
 import { JwtAuthGuard } from "./jwt-auth.guard";
@@ -28,6 +29,7 @@ import { FinancialManagementRolesGuard, OrderMaintenanceRolesGuard } from "./rol
     StoreScopeGuard,
     SessionTokenService,
     PasswordResetService,
+    AccessAuditService,
   ],
   exports: [
     AuthService,
@@ -41,6 +43,7 @@ import { FinancialManagementRolesGuard, OrderMaintenanceRolesGuard } from "./rol
     StoreScopeGuard,
     SessionTokenService,
     PasswordResetService,
+    AccessAuditService,
   ],
 })
 export class AuthModule {}
