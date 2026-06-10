@@ -83,7 +83,7 @@
 
 ### Tests for User Story 2
 
-- [ ] T028 [P] [US2] Add unit tests for master authority, unique login and last-active-master rules in `apps/api/src/management/access/users/user-access-rules.spec.ts`
+- [x] T028 [P] [US2] Add unit tests for master authority, unique login and last-active-master rules in `apps/api/src/management/access/users/user-access-rules.spec.ts`
 - [ ] T029 [P] [US2] Add integration tests for master user CRUD, filters, store assignments and last-master conflict in `apps/api/test/access-users-master.integration.spec.ts`
 - [ ] T030 [P] [US2] Add web tests for master user list, create/edit dialog, filters and deactivate flow in `apps/web/app/admin/users/users-page.spec.tsx`
 
@@ -110,7 +110,7 @@
 
 ### Tests for User Story 3
 
-- [ ] T039 [P] [US3] Add unit tests for store-admin assignment boundaries and forbidden master changes in `apps/api/src/management/access/users/store-admin-user-rules.spec.ts`
+- [x] T039 [P] [US3] Add unit tests for store-admin assignment boundaries and forbidden master changes in `apps/api/src/management/access/users/store-admin-user-rules.spec.ts`
 - [ ] T040 [P] [US3] Add integration tests for local admin user CRUD and cross-tenant denial in `apps/api/test/access-users-store-admin.integration.spec.ts`
 - [ ] T041 [P] [US3] Add E2E coverage for Store A admin local user creation and Store B denial in `apps/web/tests/access-store-admin.e2e.spec.ts`
 
@@ -135,7 +135,7 @@
 
 ### Tests for User Story 4
 
-- [ ] T048 [P] [US4] Add unit tests for profile name uniqueness, profile scope and permission grant validation in `apps/api/src/management/access/profiles/access-profiles.service.spec.ts`
+- [x] T048 [P] [US4] Add unit tests for profile name uniqueness, profile scope and permission grant validation in `apps/api/src/management/access/profiles/access-profiles.service.spec.ts`
 - [ ] T049 [P] [US4] Add integration tests for profile CRUD, duplicate, inactivation conflict and permission catalog in `apps/api/test/access-profiles.integration.spec.ts`
 - [ ] T050 [P] [US4] Add web tests for profile list, permission grouping, duplicate and edit flows in `apps/web/app/admin/access-profiles/access-profiles-page.spec.tsx`
 
@@ -162,7 +162,7 @@
 
 ### Tests for User Story 5
 
-- [ ] T059 [P] [US5] Add unit tests for audit event redaction and scoped audit filtering in `apps/api/src/management/access/access-audit.service.spec.ts`
+- [x] T059 [P] [US5] Add unit tests for audit event redaction and scoped audit filtering in `apps/api/src/management/access/access-audit.service.spec.ts`
 - [ ] T060 [P] [US5] Add integration tests for access audit query permissions and tenant isolation in `apps/api/test/access-audit.integration.spec.ts`
 - [ ] T061 [P] [US5] Add web tests for audit filters, empty state and scoped results in `apps/web/app/admin/access-audit/access-audit-page.spec.tsx`
 
