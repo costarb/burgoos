@@ -56,7 +56,7 @@
 ### Tests for User Story 1
 
 - [ ] T016 [P] [US1] Add unit tests for credential validation, inactive-user denial, token lifecycle and active-store validation in `apps/api/src/auth/auth.service.spec.ts`
-- [ ] T017 [P] [US1] Add integration tests for login, refresh, logout, password reset and store-switch endpoints in `apps/api/test/auth.integration.spec.ts`
+- [x] T017 [P] [US1] Add integration tests for login, refresh, logout, password reset and store-switch endpoints in `apps/api/test/auth.integration.spec.ts`
 - [ ] T018 [P] [US1] Add web tests for login form states, invalid credentials, multi-store selection and access denied rendering in `apps/web/app/login/login-page.spec.tsx`
 
 ### Implementation for User Story 1
