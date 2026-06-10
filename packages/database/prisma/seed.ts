@@ -1,4 +1,8 @@
 import {
+  AccessPermissionAction,
+  AccessProfileScope,
+  AccessProfileStatus,
+  AccessUserStatus,
   LayoutPresetSurface,
   PaymentInstitution,
   PlatformUserRole,
@@ -87,13 +91,328 @@ async function main(): Promise<void> {
 
   await prisma.user.upsert({
     where: { email: "admin@burgoos.local" },
-    update: {},
+    update: {
+      isMaster: true,
+      status: AccessUserStatus.ACTIVE,
+      role: UserRole.OWNER,
+    },
     create: {
       tenantId: tenant.id,
       role: UserRole.OWNER,
+      status: AccessUserStatus.ACTIVE,
+      isMaster: true,
       name: "Admin Piloto",
       email: "admin@burgoos.local",
       passwordHash,
+    },
+  });
+
+  const secondTenant = await prisma.tenant.upsert({
+    where: { slug: "filial-teste" },
+    update: {
+      defaultLayoutPresetKey: "classic",
+    },
+    create: {
+      name: "Filial Teste",
+      slug: "filial-teste",
+      phone: "5500000000001",
+      active: true,
+      isOpen: false,
+      setupCompletedAt: new Date(),
+      defaultLayoutPresetKey: "classic",
+      config: {
+        pixInstructions: "Chave PIX da filial teste",
+        openingHours: "18:00-23:00",
+      },
+    },
+  });
+
+  const accessPermissions = [
+    {
+      key: "orders.view",
+      area: "Operacao",
+      screen: "Pedidos",
+      action: AccessPermissionAction.VIEW,
+      description: "Visualizar pedidos e historico operacional",
+      sensitive: false,
+    },
+    {
+      key: "orders.manage",
+      area: "Operacao",
+      screen: "Pedidos",
+      action: AccessPermissionAction.MANAGE,
+      description: "Atualizar status e realizar manutencao de pedidos",
+      sensitive: true,
+    },
+    {
+      key: "catalog.manage",
+      area: "Cardapio",
+      screen: "Catalogo",
+      action: AccessPermissionAction.MANAGE,
+      description: "Criar e alterar categorias e produtos",
+      sensitive: false,
+    },
+    {
+      key: "finance.view",
+      area: "Financeiro",
+      screen: "Caixa e contas",
+      action: AccessPermissionAction.VIEW,
+      description: "Visualizar contas, saldo e relatorios financeiros",
+      sensitive: true,
+    },
+    {
+      key: "finance.manage",
+      area: "Financeiro",
+      screen: "Caixa e contas",
+      action: AccessPermissionAction.MANAGE,
+      description: "Gerenciar contas, pagamentos e movimentos financeiros",
+      sensitive: true,
+    },
+    {
+      key: "access.users.manage",
+      area: "Acessos",
+      screen: "Usuarios",
+      action: AccessPermissionAction.MANAGE,
+      description: "Criar, alterar, ativar e desativar usuarios",
+      sensitive: true,
+    },
+    {
+      key: "access.profiles.manage",
+      area: "Acessos",
+      screen: "Perfis",
+      action: AccessPermissionAction.MANAGE,
+      description: "Criar e alterar perfis e permissoes",
+      sensitive: true,
+    },
+    {
+      key: "access.audit.view",
+      area: "Acessos",
+      screen: "Auditoria",
+      action: AccessPermissionAction.VIEW,
+      description: "Consultar historico de autenticacao e mudancas de acesso",
+      sensitive: true,
+    },
+  ];
+
+  for (const permission of accessPermissions) {
+    await prisma.permission.upsert({
+      where: { key: permission.key },
+      update: permission,
+      create: permission,
+    });
+  }
+
+  async function ensureProfile(input: {
+    tenantId: string | null;
+    name: string;
+    description: string;
+    scope: AccessProfileScope;
+    permissionKeys: string[];
+  }) {
+    const existing = await prisma.accessProfile.findFirst({
+      where: {
+        tenantId: input.tenantId,
+        name: input.name,
+      },
+      select: { id: true },
+    });
+
+    const profile =
+      existing ??
+      (await prisma.accessProfile.create({
+        data: {
+          tenantId: input.tenantId,
+          name: input.name,
+          description: input.description,
+          scope: input.scope,
+          status: AccessProfileStatus.ACTIVE,
+        },
+        select: { id: true },
+      }));
+
+    for (const key of input.permissionKeys) {
+      const permission = await prisma.permission.findUniqueOrThrow({
+        where: { key },
+        select: { id: true },
+      });
+
+      await prisma.accessProfilePermission.upsert({
+        where: {
+          profileId_permissionId: {
+            profileId: profile.id,
+            permissionId: permission.id,
+          },
+        },
+        update: {},
+        create: {
+          profileId: profile.id,
+          permissionId: permission.id,
+        },
+      });
+    }
+
+    return profile;
+  }
+
+  const masterProfile = await ensureProfile({
+    tenantId: null,
+    name: "Master",
+    description: "Controle completo da plataforma administrativa.",
+    scope: AccessProfileScope.GLOBAL,
+    permissionKeys: accessPermissions.map((permission) => permission.key),
+  });
+
+  const storeAdminProfile = await ensureProfile({
+    tenantId: tenant.id,
+    name: "Admin da loja",
+    description: "Gerencia operacao e acessos da loja piloto.",
+    scope: AccessProfileScope.STORE,
+    permissionKeys: [
+      "orders.view",
+      "orders.manage",
+      "catalog.manage",
+      "finance.view",
+      "access.users.manage",
+      "access.audit.view",
+    ],
+  });
+
+  const operatorProfile = await ensureProfile({
+    tenantId: tenant.id,
+    name: "Operador",
+    description: "Acompanha e atualiza a operacao diaria.",
+    scope: AccessProfileScope.STORE,
+    permissionKeys: ["orders.view", "orders.manage"],
+  });
+
+  const masterUser = await prisma.user.findUniqueOrThrow({
+    where: { email: "admin@burgoos.local" },
+    select: { id: true },
+  });
+
+  await prisma.userStoreAssignment.upsert({
+    where: {
+      userId_tenantId: {
+        userId: masterUser.id,
+        tenantId: tenant.id,
+      },
+    },
+    update: {
+      profileId: masterProfile.id,
+      canManageStoreAccess: true,
+      status: AccessProfileStatus.ACTIVE,
+    },
+    create: {
+      userId: masterUser.id,
+      tenantId: tenant.id,
+      profileId: masterProfile.id,
+      canManageStoreAccess: true,
+      status: AccessProfileStatus.ACTIVE,
+    },
+  });
+
+  await prisma.userStoreAssignment.upsert({
+    where: {
+      userId_tenantId: {
+        userId: masterUser.id,
+        tenantId: secondTenant.id,
+      },
+    },
+    update: {
+      profileId: masterProfile.id,
+      canManageStoreAccess: true,
+      status: AccessProfileStatus.ACTIVE,
+    },
+    create: {
+      userId: masterUser.id,
+      tenantId: secondTenant.id,
+      profileId: masterProfile.id,
+      canManageStoreAccess: true,
+      status: AccessProfileStatus.ACTIVE,
+    },
+  });
+
+  const storeAdmin = await prisma.user.upsert({
+    where: { email: "loja.admin@burgoos.local" },
+    update: {
+      status: AccessUserStatus.ACTIVE,
+      isMaster: false,
+    },
+    create: {
+      tenantId: tenant.id,
+      role: UserRole.ADMIN,
+      status: AccessUserStatus.ACTIVE,
+      isMaster: false,
+      name: "Admin Loja Piloto",
+      email: "loja.admin@burgoos.local",
+      passwordHash,
+    },
+  });
+
+  await prisma.userStoreAssignment.upsert({
+    where: {
+      userId_tenantId: {
+        userId: storeAdmin.id,
+        tenantId: tenant.id,
+      },
+    },
+    update: {
+      profileId: storeAdminProfile.id,
+      canManageStoreAccess: true,
+      status: AccessProfileStatus.ACTIVE,
+    },
+    create: {
+      userId: storeAdmin.id,
+      tenantId: tenant.id,
+      profileId: storeAdminProfile.id,
+      canManageStoreAccess: true,
+      status: AccessProfileStatus.ACTIVE,
+    },
+  });
+
+  const operatorUser = await prisma.user.upsert({
+    where: { email: "operador@burgoos.local" },
+    update: {
+      status: AccessUserStatus.ACTIVE,
+      isMaster: false,
+    },
+    create: {
+      tenantId: tenant.id,
+      role: UserRole.OPERATOR,
+      status: AccessUserStatus.ACTIVE,
+      isMaster: false,
+      name: "Operador Piloto",
+      email: "operador@burgoos.local",
+      passwordHash,
+      storeAssignments: {
+        create: {
+          tenantId: tenant.id,
+          profileId: operatorProfile.id,
+          canManageStoreAccess: false,
+          status: AccessProfileStatus.ACTIVE,
+        },
+      },
+    },
+  });
+
+  await prisma.userStoreAssignment.upsert({
+    where: {
+      userId_tenantId: {
+        userId: operatorUser.id,
+        tenantId: tenant.id,
+      },
+    },
+    update: {
+      profileId: operatorProfile.id,
+      canManageStoreAccess: false,
+      status: AccessProfileStatus.ACTIVE,
+    },
+    create: {
+      userId: operatorUser.id,
+      tenantId: tenant.id,
+      profileId: operatorProfile.id,
+      canManageStoreAccess: false,
+      status: AccessProfileStatus.ACTIVE,
     },
   });
 

@@ -183,7 +183,7 @@
 
 **Purpose**: Validate the complete feature and prepare it for operational use.
 
-- [ ] T068 [P] Add master user, Store A admin, Store B and baseline profiles to non-destructive seed data in `packages/database/prisma/seed.ts`
+- [x] T068 [P] Add master user, Store A admin, Store B and baseline profiles to non-destructive seed data in `packages/database/prisma/seed.ts`
 - [x] T069 [P] Update admin navigation entries for users, profiles and audit in `apps/web/components/admin/admin-navigation.ts`
 - [ ] T070 [P] Update the implemented API contract examples and error responses in `specs/007-store-access-management/contracts/openapi.yaml`
 - [ ] T071 Run Prisma validation/generation, lint, typecheck and automated tests from `package.json`
