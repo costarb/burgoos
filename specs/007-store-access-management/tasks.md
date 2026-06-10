@@ -116,11 +116,11 @@
 
 ### Implementation for User Story 3
 
-- [ ] T042 [P] [US3] Implement store-admin scope helpers for allowed stores, assignable profiles and forbidden global changes in `apps/api/src/management/access/users/store-admin-user-rules.ts`
-- [ ] T043 [US3] Extend user service to apply store-admin list, create and update restrictions in `apps/api/src/management/access/users/users.service.ts`
-- [ ] T044 [US3] Add access-denied audit recording for cross-tenant user maintenance attempts in `apps/api/src/management/access/users/users.service.ts`
-- [ ] T045 [US3] Restrict user maintenance UI controls for store admins in `apps/web/app/admin/users/users-client.tsx`
-- [ ] T046 [US3] Restrict store and profile options in the user form according to current actor scope in `apps/web/app/admin/users/user-form.tsx`
+- [x] T042 [P] [US3] Implement store-admin scope helpers for allowed stores, assignable profiles and forbidden global changes in `apps/api/src/management/access/users/store-admin-user-rules.ts`
+- [x] T043 [US3] Extend user service to apply store-admin list, create and update restrictions in `apps/api/src/management/access/users/users.service.ts`
+- [x] T044 [US3] Add access-denied audit recording for cross-tenant user maintenance attempts in `apps/api/src/management/access/users/users.service.ts`
+- [x] T045 [US3] Restrict user maintenance UI controls for store admins in `apps/web/app/admin/users/users-client.tsx`
+- [x] T046 [US3] Restrict store and profile options in the user form according to current actor scope in `apps/web/app/admin/users/user-form.tsx`
 - [ ] T047 [US3] Document store-admin validation evidence in `specs/007-store-access-management/quickstart.md`
 
 **Checkpoint**: Store admins manage local users only, with server-side denial for every cross-tenant attempt.

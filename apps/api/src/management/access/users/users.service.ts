@@ -1,4 +1,9 @@
-import { ConflictException, Injectable, NotFoundException } from "@nestjs/common";
+import {
+  ConflictException,
+  ForbiddenException,
+  Injectable,
+  NotFoundException,
+} from "@nestjs/common";
 import {
   AccessAuditEventType,
   AccessAuditResult,
@@ -13,6 +18,11 @@ import { PrismaService } from "../../../platform/database/prisma.service";
 import { AccessAuditService } from "../access-audit.service";
 import { AccessUserDto, AccessUsersQueryDto, AccessUserUpdateDto } from "../dto/user-access.dto";
 import { assertCanRemoveMaster, assertMasterAccess } from "./user-access-rules";
+import {
+  assertCanManageAssignments,
+  assertCanManageTarget,
+  manageableStoreIds,
+} from "./store-admin-user-rules";
 
 @Injectable()
 export class UsersService {
@@ -23,12 +33,17 @@ export class UsersService {
   ) {}
 
   async list(actor: AuthUser, query: AccessUsersQueryDto = {}) {
-    assertMasterAccess(actor);
+    const localStoreIds = manageableStoreIds(actor);
 
     return this.prisma.user.findMany({
       where: {
         status: query.status,
-        storeAssignments: query.storeId ? { some: { tenantId: query.storeId } } : undefined,
+        storeAssignments:
+          actor.isMaster || actor.isPlatformAdmin
+            ? query.storeId
+              ? { some: { tenantId: query.storeId } }
+              : undefined
+            : { some: { tenantId: { in: localStoreIds } } },
         ...(query.search
           ? {
               OR: [
@@ -44,7 +59,6 @@ export class UsersService {
   }
 
   async get(actor: AuthUser, userId: string) {
-    assertMasterAccess(actor);
     const user = await this.prisma.user.findUnique({
       where: { id: userId },
       include: this.userInclude,
@@ -54,18 +68,31 @@ export class UsersService {
       throw new NotFoundException("Usuario nao encontrado");
     }
 
+    assertCanManageTarget(actor, user);
     return user;
   }
 
   async options(actor: AuthUser) {
-    assertMasterAccess(actor);
+    const localStoreIds = manageableStoreIds(actor);
 
     const [stores, profiles] = await Promise.all([
       this.prisma.tenant.findMany({
+        where:
+          actor.isMaster || actor.isPlatformAdmin
+            ? undefined
+            : {
+                id: { in: localStoreIds },
+              },
         orderBy: { name: "asc" },
         select: { id: true, name: true, slug: true, active: true },
       }),
       this.prisma.accessProfile.findMany({
+        where:
+          actor.isMaster || actor.isPlatformAdmin
+            ? undefined
+            : {
+                OR: [{ tenantId: { in: localStoreIds } }, { scope: "GLOBAL" }],
+              },
         orderBy: [{ scope: "asc" }, { name: "asc" }],
         select: { id: true, name: true, scope: true, tenantId: true, status: true },
       }),
@@ -75,7 +102,26 @@ export class UsersService {
   }
 
   async create(actor: AuthUser, dto: AccessUserDto) {
-    assertMasterAccess(actor);
+    if (!actor.isMaster && !actor.isPlatformAdmin && dto.isMaster) {
+      await this.recordAccessDenied(
+        actor,
+        dto.assignments[0]?.storeId ?? null,
+        "STORE_ADMIN_MASTER_CREATE"
+      );
+      throw new ForbiddenException("Admin de loja nao pode criar usuario master");
+    }
+
+    try {
+      assertCanManageAssignments(actor, dto.assignments);
+    } catch (error) {
+      await this.recordAccessDenied(
+        actor,
+        dto.assignments[0]?.storeId ?? null,
+        "STORE_ADMIN_ASSIGNMENT_SCOPE"
+      );
+      throw error;
+    }
+
     await this.ensureUniqueLogin(dto.login);
 
     const firstTenantId = dto.assignments[0]?.storeId ?? actor.tenantId;
@@ -123,7 +169,6 @@ export class UsersService {
   }
 
   async update(actor: AuthUser, userId: string, dto: AccessUserUpdateDto) {
-    assertMasterAccess(actor);
     const current = await this.prisma.user.findUnique({
       where: { id: userId },
       include: this.userInclude,
@@ -133,14 +178,28 @@ export class UsersService {
       throw new NotFoundException("Usuario nao encontrado");
     }
 
-    await assertCanRemoveMaster(current, dto, () =>
-      this.prisma.user.count({
-        where: {
-          isMaster: true,
-          status: AccessUserStatus.ACTIVE,
-        },
-      })
-    );
+    try {
+      assertCanManageTarget(actor, current);
+      assertCanManageAssignments(actor, dto.assignments);
+
+      if (!actor.isMaster && !actor.isPlatformAdmin && dto.isMaster !== undefined) {
+        throw new ForbiddenException("Admin de loja nao pode alterar perfil master");
+      }
+
+      if (actor.isMaster || actor.isPlatformAdmin) {
+        await assertCanRemoveMaster(current, dto, () =>
+          this.prisma.user.count({
+            where: {
+              isMaster: true,
+              status: AccessUserStatus.ACTIVE,
+            },
+          })
+        );
+      }
+    } catch (error) {
+      await this.recordAccessDenied(actor, current.tenantId, "STORE_ADMIN_USER_SCOPE", userId);
+      throw error;
+    }
 
     return this.prisma.$transaction(async (tx) => {
       if (dto.assignments) {
@@ -199,6 +258,22 @@ export class UsersService {
       changedFields: Object.keys(dto).filter((key) => key !== "assignments"),
       assignmentsChanged: Boolean(dto.assignments),
     };
+  }
+
+  private async recordAccessDenied(
+    actor: AuthUser,
+    storeId: string | null,
+    reason: string,
+    targetUserId?: string
+  ) {
+    await this.audit.record({
+      actorUserId: actor.id,
+      targetUserId,
+      storeId,
+      eventType: AccessAuditEventType.ACCESS_DENIED,
+      result: AccessAuditResult.DENIED,
+      reason,
+    });
   }
 
   private get userInclude() {

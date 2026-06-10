@@ -2,7 +2,8 @@
 
 import type { AccessUserDetail } from "@burgoos/types";
 import type { AccessUsersOptions } from "../../../lib/api";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { readAuthSession } from "../../../lib/auth-client";
 import { UserForm } from "./user-form";
 import { UserStatusDialog } from "./user-status-dialog";
 
@@ -15,6 +16,12 @@ interface UsersClientProps {
 export function UsersClient({ token, users, options }: UsersClientProps) {
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState("ALL");
+  const [isMasterActor, setIsMasterActor] = useState(false);
+
+  useEffect(() => {
+    const session = readAuthSession();
+    setIsMasterActor(Boolean(session?.user.isMaster));
+  }, []);
   const filteredUsers = useMemo(() => {
     const normalizedSearch = search.trim().toLowerCase();
 
@@ -102,7 +109,9 @@ export function UsersClient({ token, users, options }: UsersClientProps) {
                         : "Sem loja vinculada"}
                     </p>
                   </div>
-                  <UserStatusDialog token={token} user={user} />
+                  {isMasterActor || !user.isMaster ? (
+                    <UserStatusDialog token={token} user={user} />
+                  ) : null}
                 </div>
                 <div className="mt-4 border-t border-slate-100 pt-4">
                   <UserForm mode="edit" options={options} token={token} user={user} />

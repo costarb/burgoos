@@ -3,7 +3,8 @@
 import type { AccessUserDetail } from "@burgoos/types";
 import type { AccessUsersOptions } from "../../../lib/api";
 import { createAccessUser, updateAccessUser } from "../../../lib/api";
-import { FormEvent, useMemo, useState } from "react";
+import { FormEvent, useEffect, useMemo, useState } from "react";
+import { readAuthSession } from "../../../lib/auth-client";
 
 interface UserFormProps {
   token: string;
@@ -16,10 +17,43 @@ export function UserForm({ token, options, mode, user }: UserFormProps) {
   const firstAssignment = user?.assignments[0];
   const [pending, setPending] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
+  const [manageableStoreIds, setManageableStoreIds] = useState<string[] | null>(null);
+  const [isMasterActor, setIsMasterActor] = useState(false);
+  const scopedStores = useMemo(() => {
+    if (manageableStoreIds === null || isMasterActor) {
+      return options.stores;
+    }
+
+    return options.stores.filter((store) => manageableStoreIds.includes(store.id));
+  }, [isMasterActor, manageableStoreIds, options.stores]);
   const activeProfiles = useMemo(
-    () => options.profiles.filter((profile) => profile.status === "ACTIVE"),
-    [options.profiles]
+    () =>
+      options.profiles.filter((profile) => {
+        if (profile.status !== "ACTIVE") {
+          return false;
+        }
+
+        if (isMasterActor || manageableStoreIds === null) {
+          return true;
+        }
+
+        return (
+          profile.scope === "GLOBAL" ||
+          (profile.storeId ? manageableStoreIds.includes(profile.storeId) : false)
+        );
+      }),
+    [isMasterActor, manageableStoreIds, options.profiles]
   );
+
+  useEffect(() => {
+    const session = readAuthSession();
+    setIsMasterActor(Boolean(session?.user.isMaster));
+    setManageableStoreIds(
+      session?.user.isMaster
+        ? []
+        : ((session?.user as { manageableStoreIds?: string[] }).manageableStoreIds ?? [])
+    );
+  }, []);
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -96,7 +130,7 @@ export function UserForm({ token, options, mode, user }: UserFormProps) {
         defaultValue={firstAssignment?.store.id ?? options.stores[0]?.id ?? ""}
         name="storeId"
       >
-        {options.stores.map((store) => (
+        {scopedStores.map((store) => (
           <option key={store.id} value={store.id}>
             {store.name}
           </option>
@@ -114,7 +148,12 @@ export function UserForm({ token, options, mode, user }: UserFormProps) {
         ))}
       </select>
       <label className="flex items-center gap-2 text-sm">
-        <input defaultChecked={user?.isMaster ?? false} name="isMaster" type="checkbox" />
+        <input
+          defaultChecked={user?.isMaster ?? false}
+          disabled={!isMasterActor}
+          name="isMaster"
+          type="checkbox"
+        />
         Master
       </label>
       <label className="flex items-center gap-2 text-sm">
