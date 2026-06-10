@@ -13,6 +13,71 @@ enum UserRole {
   OPERATOR
 }
 
+enum AccessUserStatus {
+  INVITED
+  ACTIVE
+  INACTIVE
+  LOCKED
+}
+
+enum AccessProfileStatus {
+  ACTIVE
+  INACTIVE
+}
+
+enum AccessProfileScope {
+  GLOBAL
+  STORE
+}
+
+enum AccessPermissionAction {
+  VIEW
+  CREATE
+  UPDATE
+  DELETE
+  APPROVE
+  MANAGE
+}
+
+enum SessionTokenStatus {
+  ACTIVE
+  REVOKED
+  EXPIRED
+}
+
+enum PasswordResetPurpose {
+  FIRST_ACCESS
+  PASSWORD_RESET
+}
+
+enum PasswordResetTokenStatus {
+  ACTIVE
+  USED
+  EXPIRED
+}
+
+enum AccessAuditEventType {
+  LOGIN_SUCCESS
+  LOGIN_FAILURE
+  LOGOUT
+  USER_CREATED
+  USER_UPDATED
+  USER_STATUS_CHANGED
+  PROFILE_CREATED
+  PROFILE_UPDATED
+  PERMISSIONS_CHANGED
+  STORE_ASSIGNMENT_CHANGED
+  ACCESS_DENIED
+  PASSWORD_RESET_REQUESTED
+  PASSWORD_CHANGED
+}
+
+enum AccessAuditResult {
+  SUCCESS
+  DENIED
+  FAILED
+}
+
 enum PlatformUserRole {
   SUPER_ADMIN
   SUPPORT
@@ -160,6 +225,10 @@ model Tenant {
   payablePayments             PayablePayment[]
   cashMovements               CashMovement[]
   financialAudits             FinancialAudit[]
+  userStoreAssignments        UserStoreAssignment[]
+  accessProfiles              AccessProfile[]
+  sessionTokens               SessionToken[]
+  accessAuditEvents           AccessAuditEvent[]
 
   @@index([createdByPlatformUserId])
   @@index([defaultLayoutPresetKey])
@@ -198,9 +267,13 @@ model User {
   id                            String                     @id @default(uuid()) @db.Uuid
   tenantId                      String                     @map("tenant_id") @db.Uuid
   role                          UserRole                   @default(OPERATOR)
+  status                        AccessUserStatus           @default(ACTIVE)
+  isMaster                      Boolean                    @default(false) @map("is_master")
   name                          String
   email                         String                     @unique
+  phone                         String?
   passwordHash                  String                     @map("password_hash")
+  lastLoginAt                   DateTime?                  @map("last_login_at")
   createdAt                     DateTime                   @default(now()) @map("created_at")
   updatedAt                     DateTime                   @updatedAt @map("updated_at")
   tenant                        Tenant                     @relation(fields: [tenantId], references: [id], onDelete: Cascade)
@@ -214,9 +287,140 @@ model User {
   cashMovementsCreated          CashMovement[]             @relation("CashMovementCreatedBy")
   cashMovementsReversed         CashMovement[]             @relation("CashMovementReversedBy")
   financialAudits               FinancialAudit[]           @relation("FinancialAuditActor")
+  storeAssignments              UserStoreAssignment[]
+  sessionTokens                 SessionToken[]
+  passwordResetTokens           PasswordResetToken[]
+  accessAuditEventsAsActor      AccessAuditEvent[]         @relation("AccessAuditActor")
+  accessAuditEventsAsTarget     AccessAuditEvent[]         @relation("AccessAuditTarget")
+  accessProfilesCreated         AccessProfile[]            @relation("AccessProfileCreatedBy")
+  accessProfilesUpdated         AccessProfile[]            @relation("AccessProfileUpdatedBy")
 
   @@index([tenantId])
+  @@index([status])
+  @@index([isMaster])
   @@map("users")
+}
+
+model UserStoreAssignment {
+  id                   String              @id @default(uuid()) @db.Uuid
+  userId               String              @map("user_id") @db.Uuid
+  tenantId             String              @map("tenant_id") @db.Uuid
+  profileId            String              @map("profile_id") @db.Uuid
+  canManageStoreAccess Boolean             @default(false) @map("can_manage_store_access")
+  status               AccessProfileStatus @default(ACTIVE)
+  createdAt            DateTime            @default(now()) @map("created_at")
+  updatedAt            DateTime            @updatedAt @map("updated_at")
+  user                 User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tenant               Tenant              @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  profile              AccessProfile       @relation(fields: [profileId], references: [id], onDelete: Restrict)
+
+  @@unique([userId, tenantId])
+  @@index([tenantId, status])
+  @@index([profileId])
+  @@map("user_store_assignments")
+}
+
+model AccessProfile {
+  id              String                    @id @default(uuid()) @db.Uuid
+  tenantId        String?                   @map("tenant_id") @db.Uuid
+  name            String
+  description     String?
+  scope           AccessProfileScope        @default(STORE)
+  status          AccessProfileStatus       @default(ACTIVE)
+  createdByUserId String?                   @map("created_by_user_id") @db.Uuid
+  updatedByUserId String?                   @map("updated_by_user_id") @db.Uuid
+  createdAt       DateTime                  @default(now()) @map("created_at")
+  updatedAt       DateTime                  @updatedAt @map("updated_at")
+  tenant          Tenant?                   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  createdByUser   User?                     @relation("AccessProfileCreatedBy", fields: [createdByUserId], references: [id], onDelete: SetNull)
+  updatedByUser   User?                     @relation("AccessProfileUpdatedBy", fields: [updatedByUserId], references: [id], onDelete: SetNull)
+  permissions     AccessProfilePermission[]
+  assignments     UserStoreAssignment[]
+
+  @@unique([tenantId, name])
+  @@index([tenantId, status])
+  @@index([scope, status])
+  @@map("access_profiles")
+}
+
+model Permission {
+  id          String                    @id @default(uuid()) @db.Uuid
+  key         String                    @unique
+  area        String
+  screen      String
+  action      AccessPermissionAction
+  description String
+  sensitive   Boolean                   @default(false)
+  createdAt   DateTime                  @default(now()) @map("created_at")
+  updatedAt   DateTime                  @updatedAt @map("updated_at")
+  profiles    AccessProfilePermission[]
+
+  @@index([area, screen])
+  @@map("permissions")
+}
+
+model AccessProfilePermission {
+  profileId    String        @map("profile_id") @db.Uuid
+  permissionId String        @map("permission_id") @db.Uuid
+  createdAt    DateTime      @default(now()) @map("created_at")
+  profile      AccessProfile @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  permission   Permission    @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+
+  @@id([profileId, permissionId])
+  @@index([permissionId])
+  @@map("access_profile_permissions")
+}
+
+model SessionToken {
+  id               String             @id @default(uuid()) @db.Uuid
+  userId           String             @map("user_id") @db.Uuid
+  activeTenantId   String?            @map("active_tenant_id") @db.Uuid
+  refreshTokenHash String             @map("refresh_token_hash")
+  status           SessionTokenStatus @default(ACTIVE)
+  expiresAt        DateTime           @map("expires_at")
+  createdAt        DateTime           @default(now()) @map("created_at")
+  revokedAt        DateTime?          @map("revoked_at")
+  user             User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  activeTenant     Tenant?            @relation(fields: [activeTenantId], references: [id], onDelete: SetNull)
+
+  @@index([userId, status])
+  @@index([activeTenantId])
+  @@map("session_tokens")
+}
+
+model PasswordResetToken {
+  id        String                   @id @default(uuid()) @db.Uuid
+  userId    String                   @map("user_id") @db.Uuid
+  purpose   PasswordResetPurpose
+  tokenHash String                   @map("token_hash")
+  status    PasswordResetTokenStatus @default(ACTIVE)
+  expiresAt DateTime                 @map("expires_at")
+  createdAt DateTime                 @default(now()) @map("created_at")
+  usedAt    DateTime?                @map("used_at")
+  user      User                     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, status])
+  @@map("password_reset_tokens")
+}
+
+model AccessAuditEvent {
+  id           String               @id @default(uuid()) @db.Uuid
+  actorUserId  String?              @map("actor_user_id") @db.Uuid
+  targetUserId String?              @map("target_user_id") @db.Uuid
+  storeId      String?              @map("store_id") @db.Uuid
+  eventType    AccessAuditEventType @map("event_type")
+  result       AccessAuditResult
+  reason       String?
+  metadata     Json?
+  occurredAt   DateTime             @default(now()) @map("occurred_at")
+  actorUser    User?                @relation("AccessAuditActor", fields: [actorUserId], references: [id], onDelete: SetNull)
+  targetUser   User?                @relation("AccessAuditTarget", fields: [targetUserId], references: [id], onDelete: SetNull)
+  store        Tenant?              @relation(fields: [storeId], references: [id], onDelete: SetNull)
+
+  @@index([storeId, eventType, occurredAt])
+  @@index([actorUserId, occurredAt])
+  @@index([targetUserId, occurredAt])
+  @@map("access_audit_events")
 }
 
 model StoreVisualConfiguration {
@@ -434,8 +638,8 @@ model FinancialAccount {
   updatedAt            DateTime            @updatedAt @map("updated_at")
   tenant               Tenant              @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   payablePayments      PayablePayment[]
-  cashMovements        CashMovement[]       @relation("CashMovementAccount")
-  transferDestinations CashMovement[]       @relation("CashMovementDestination")
+  cashMovements        CashMovement[]      @relation("CashMovementAccount")
+  transferDestinations CashMovement[]      @relation("CashMovementDestination")
 
   @@unique([tenantId, name])
   @@unique([tenantId, paymentInstitution])
@@ -478,27 +682,27 @@ model PayableRecurrence {
 }
 
 model Payable {
-  id                 String              @id @default(uuid()) @db.Uuid
-  tenantId           String              @map("tenant_id") @db.Uuid
-  categoryId         String              @map("category_id") @db.Uuid
-  supplierId         String?             @map("supplier_id") @db.Uuid
-  recurrenceGroupId  String?             @map("recurrence_group_id") @db.Uuid
+  id                 String             @id @default(uuid()) @db.Uuid
+  tenantId           String             @map("tenant_id") @db.Uuid
+  categoryId         String             @map("category_id") @db.Uuid
+  supplierId         String?            @map("supplier_id") @db.Uuid
+  recurrenceGroupId  String?            @map("recurrence_group_id") @db.Uuid
   description        String
-  documentReference  String?             @map("document_reference")
-  competenceDate     DateTime?           @map("competence_date")
-  dueDate            DateTime            @map("due_date")
-  expectedAmount     Decimal             @map("expected_amount") @db.Decimal(12, 2)
+  documentReference  String?            @map("document_reference")
+  competenceDate     DateTime?          @map("competence_date")
+  dueDate            DateTime           @map("due_date")
+  expectedAmount     Decimal            @map("expected_amount") @db.Decimal(12, 2)
   notes              String?
-  cancelledAt        DateTime?           @map("cancelled_at")
-  cancellationReason String?             @map("cancellation_reason")
-  createdByUserId    String              @map("created_by_user_id") @db.Uuid
-  createdAt          DateTime            @default(now()) @map("created_at")
-  updatedAt          DateTime            @updatedAt @map("updated_at")
-  tenant             Tenant              @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  category           FinancialCategory   @relation(fields: [categoryId], references: [id], onDelete: Restrict)
-  supplier           Supplier?           @relation(fields: [supplierId], references: [id], onDelete: SetNull)
-  recurrenceGroup    PayableRecurrence?  @relation(fields: [recurrenceGroupId], references: [id], onDelete: SetNull)
-  createdByUser      User                @relation("PayableCreatedBy", fields: [createdByUserId], references: [id], onDelete: Restrict)
+  cancelledAt        DateTime?          @map("cancelled_at")
+  cancellationReason String?            @map("cancellation_reason")
+  createdByUserId    String             @map("created_by_user_id") @db.Uuid
+  createdAt          DateTime           @default(now()) @map("created_at")
+  updatedAt          DateTime           @updatedAt @map("updated_at")
+  tenant             Tenant             @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  category           FinancialCategory  @relation(fields: [categoryId], references: [id], onDelete: Restrict)
+  supplier           Supplier?          @relation(fields: [supplierId], references: [id], onDelete: SetNull)
+  recurrenceGroup    PayableRecurrence? @relation(fields: [recurrenceGroupId], references: [id], onDelete: SetNull)
+  createdByUser      User               @relation("PayableCreatedBy", fields: [createdByUserId], references: [id], onDelete: Restrict)
   payments           PayablePayment[]
 
   @@index([tenantId, dueDate])
@@ -536,27 +740,27 @@ model PayablePayment {
 }
 
 model CashMovement {
-  id                     String             @id @default(uuid()) @db.Uuid
-  tenantId               String             @map("tenant_id") @db.Uuid
-  type                   CashMovementType
-  financialAccountId     String             @map("financial_account_id") @db.Uuid
-  destinationAccountId   String?            @map("destination_account_id") @db.Uuid
-  categoryId             String?            @map("category_id") @db.Uuid
-  amount                 Decimal            @db.Decimal(12, 2)
-  occurredAt             DateTime           @map("occurred_at")
-  description            String
-  justification          String?
-  reversedAt             DateTime?          @map("reversed_at")
-  reversalReason         String?            @map("reversal_reason")
-  createdByUserId        String             @map("created_by_user_id") @db.Uuid
-  reversedByUserId       String?            @map("reversed_by_user_id") @db.Uuid
-  createdAt              DateTime           @default(now()) @map("created_at")
-  tenant                 Tenant             @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  financialAccount       FinancialAccount   @relation("CashMovementAccount", fields: [financialAccountId], references: [id], onDelete: Restrict)
-  destinationAccount     FinancialAccount?  @relation("CashMovementDestination", fields: [destinationAccountId], references: [id], onDelete: Restrict)
-  category               FinancialCategory? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
-  createdByUser          User               @relation("CashMovementCreatedBy", fields: [createdByUserId], references: [id], onDelete: Restrict)
-  reversedByUser         User?              @relation("CashMovementReversedBy", fields: [reversedByUserId], references: [id], onDelete: SetNull)
+  id                   String             @id @default(uuid()) @db.Uuid
+  tenantId             String             @map("tenant_id") @db.Uuid
+  type                 CashMovementType
+  financialAccountId   String             @map("financial_account_id") @db.Uuid
+  destinationAccountId String?            @map("destination_account_id") @db.Uuid
+  categoryId           String?            @map("category_id") @db.Uuid
+  amount               Decimal            @db.Decimal(12, 2)
+  occurredAt           DateTime           @map("occurred_at")
+  description          String
+  justification        String?
+  reversedAt           DateTime?          @map("reversed_at")
+  reversalReason       String?            @map("reversal_reason")
+  createdByUserId      String             @map("created_by_user_id") @db.Uuid
+  reversedByUserId     String?            @map("reversed_by_user_id") @db.Uuid
+  createdAt            DateTime           @default(now()) @map("created_at")
+  tenant               Tenant             @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  financialAccount     FinancialAccount   @relation("CashMovementAccount", fields: [financialAccountId], references: [id], onDelete: Restrict)
+  destinationAccount   FinancialAccount?  @relation("CashMovementDestination", fields: [destinationAccountId], references: [id], onDelete: Restrict)
+  category             FinancialCategory? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  createdByUser        User               @relation("CashMovementCreatedBy", fields: [createdByUserId], references: [id], onDelete: Restrict)
+  reversedByUser       User?              @relation("CashMovementReversedBy", fields: [reversedByUserId], references: [id], onDelete: SetNull)
 
   @@index([tenantId, financialAccountId, occurredAt])
   @@index([tenantId, destinationAccountId, occurredAt])

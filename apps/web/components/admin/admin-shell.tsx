@@ -5,14 +5,36 @@ import type { ReactNode } from "react";
 import { useState } from "react";
 import { ChevronRight, Menu, PanelLeftClose, PanelLeftOpen, X } from "lucide-react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
+import { useEffect } from "react";
+import { readAuthSession } from "../../lib/auth-client";
 import { adminNavigation, findNavigationItem, secondaryNavigation } from "./admin-navigation";
+import { StoreSwitcher } from "./store-switcher";
 
 export function AdminShell({ children }: { children: ReactNode }) {
   const pathname = usePathname();
+  const router = useRouter();
   const [mobileOpen, setMobileOpen] = useState(false);
   const [collapsed, setCollapsed] = useState(false);
+  const [sessionChecked, setSessionChecked] = useState(false);
   const current = findNavigationItem(pathname);
+
+  useEffect(() => {
+    if (!readAuthSession()) {
+      router.replace("/login");
+      return;
+    }
+
+    setSessionChecked(true);
+  }, [router]);
+
+  if (!sessionChecked) {
+    return (
+      <div className="grid min-h-screen place-items-center bg-slate-100 text-sm font-medium text-slate-600">
+        Carregando acesso...
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-slate-100 text-slate-950">
@@ -29,7 +51,11 @@ export function AdminShell({ children }: { children: ReactNode }) {
           title={collapsed ? "Expandir navegacao" : "Recolher navegacao"}
           type="button"
         >
-          {collapsed ? <PanelLeftOpen className="h-4 w-4" /> : <PanelLeftClose className="h-4 w-4" />}
+          {collapsed ? (
+            <PanelLeftOpen className="h-4 w-4" />
+          ) : (
+            <PanelLeftClose className="h-4 w-4" />
+          )}
         </button>
       </aside>
 
@@ -50,7 +76,11 @@ export function AdminShell({ children }: { children: ReactNode }) {
             >
               <X className="h-5 w-5" />
             </button>
-            <SidebarContent collapsed={false} onNavigate={() => setMobileOpen(false)} pathname={pathname} />
+            <SidebarContent
+              collapsed={false}
+              onNavigate={() => setMobileOpen(false)}
+              pathname={pathname}
+            />
           </aside>
         </div>
       ) : null}
@@ -72,8 +102,11 @@ export function AdminShell({ children }: { children: ReactNode }) {
                 <ChevronRight className="h-3 w-3" />
                 <span className="truncate">{current?.label ?? "Pagina"}</span>
               </div>
-              <p className="truncate text-sm font-semibold text-slate-950">{current?.description ?? "BurgoOS"}</p>
+              <p className="truncate text-sm font-semibold text-slate-950">
+                {current?.description ?? "BurgoOS"}
+              </p>
             </div>
+            <StoreSwitcher />
           </div>
         </header>
         <div className="admin-shell-content mx-auto max-w-[1600px]">{children}</div>
@@ -98,7 +131,9 @@ function SidebarContent({
         href="/admin"
         onClick={onNavigate}
       >
-        <span className="grid h-9 w-9 shrink-0 place-items-center rounded-md bg-tomato font-bold text-white">B</span>
+        <span className="grid h-9 w-9 shrink-0 place-items-center rounded-md bg-tomato font-bold text-white">
+          B
+        </span>
         {!collapsed ? (
           <span>
             <span className="block text-sm font-semibold">BurgoOS</span>
@@ -106,11 +141,16 @@ function SidebarContent({
           </span>
         ) : null}
       </Link>
-      <nav className="min-h-0 flex-1 overflow-y-auto px-3 py-4" aria-label="Navegacao administrativa">
+      <nav
+        className="min-h-0 flex-1 overflow-y-auto px-3 py-4"
+        aria-label="Navegacao administrativa"
+      >
         {adminNavigation.map((group) => (
           <div className="mb-5" key={group.label}>
             {!collapsed ? (
-              <p className="mb-2 px-2 text-xs font-semibold uppercase text-slate-500">{group.label}</p>
+              <p className="mb-2 px-2 text-xs font-semibold uppercase text-slate-500">
+                {group.label}
+              </p>
             ) : null}
             <div className="grid gap-1">
               {group.items.map((item) => (
@@ -152,7 +192,8 @@ function NavigationLink({
   pathname: string;
   onNavigate?: () => void;
 }) {
-  const active = pathname === item.href || (item.href !== "/admin" && pathname.startsWith(`${item.href}/`));
+  const active =
+    pathname === item.href || (item.href !== "/admin" && pathname.startsWith(`${item.href}/`));
   const Icon = item.icon;
 
   return (

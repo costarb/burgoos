@@ -7,6 +7,11 @@ export interface AuthUser {
   role: UserRole;
   email: string;
   name: string;
+  isMaster?: boolean;
+  activeStoreId?: string | null;
+  allowedStoreIds?: string[];
+  manageableStoreIds?: string[];
+  permissions?: string[];
   isPlatformAdmin?: boolean;
   platformRole?: PlatformUserRole;
 }
@@ -17,6 +22,11 @@ export interface JwtPayload {
   role: UserRole;
   email: string;
   name: string;
+  isMaster?: boolean;
+  activeStoreId?: string | null;
+  allowedStoreIds?: string[];
+  manageableStoreIds?: string[];
+  permissions?: string[];
   isPlatformAdmin?: boolean;
   platformRole?: PlatformUserRole;
 }

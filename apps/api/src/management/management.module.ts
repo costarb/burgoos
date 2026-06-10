@@ -35,6 +35,9 @@ import { SalesReportController } from "./reports/sales-report.controller";
 import { SalesReportService } from "./reports/sales-report.service";
 import { ReportsService } from "./reports.service";
 import { TenantScopeService } from "./tenant-scope";
+import { AccessAuditService } from "./access/access-audit.service";
+import { UsersController } from "./access/users/users.controller";
+import { UsersService } from "./access/users/users.service";
 
 @Module({
   imports: [AuthModule, DatabaseModule],
@@ -52,6 +55,7 @@ import { TenantScopeService } from "./tenant-scope";
     SalesReportController,
     AccountsPayableController,
     CashFlowController,
+    UsersController,
   ],
   providers: [
     ReportsService,
@@ -75,6 +79,8 @@ import { TenantScopeService } from "./tenant-scope";
     FinancialAccountService,
     CashMovementService,
     CashFlowService,
+    AccessAuditService,
+    UsersService,
   ],
   exports: [OrderProfitabilityService],
 })

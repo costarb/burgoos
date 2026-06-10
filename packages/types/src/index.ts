@@ -1,5 +1,96 @@
 export type OrderStatus = "PENDING" | "PREPARING" | "SHIPPED" | "DELIVERED" | "CANCELLED";
 
+export type AccessUserStatus = "INVITED" | "ACTIVE" | "INACTIVE" | "LOCKED";
+export type AccessProfileStatus = "ACTIVE" | "INACTIVE";
+export type AccessProfileScope = "GLOBAL" | "STORE";
+export type AccessPermissionAction = "VIEW" | "CREATE" | "UPDATE" | "DELETE" | "APPROVE" | "MANAGE";
+export type AccessAuditResult = "SUCCESS" | "DENIED" | "FAILED";
+export type SessionTokenStatus = "ACTIVE" | "REVOKED" | "EXPIRED";
+export type PasswordResetPurpose = "FIRST_ACCESS" | "PASSWORD_RESET";
+export type PasswordResetTokenStatus = "ACTIVE" | "USED" | "EXPIRED";
+
+export interface AccessStoreSummary {
+  id: string;
+  name: string;
+  slug: string;
+  active: boolean;
+}
+
+export interface AccessPermission {
+  key: string;
+  area: string;
+  screen: string;
+  action: AccessPermissionAction;
+  description: string;
+  sensitive: boolean;
+}
+
+export interface AccessPermissionScreenGroup {
+  screen: string;
+  permissions: AccessPermission[];
+}
+
+export interface AccessPermissionGroup {
+  area: string;
+  screens: AccessPermissionScreenGroup[];
+}
+
+export interface AccessProfileSummary {
+  id: string;
+  name: string;
+  scope: AccessProfileScope;
+  storeId: string | null;
+  status: AccessProfileStatus;
+}
+
+export interface AccessProfileDetail extends AccessProfileSummary {
+  description: string | null;
+  permissions: AccessPermission[];
+}
+
+export interface UserStoreAssignmentSummary {
+  store: AccessStoreSummary;
+  profile: AccessProfileSummary;
+  canManageStoreAccess: boolean;
+  status: AccessProfileStatus;
+}
+
+export interface AccessUserSummary {
+  id: string;
+  login: string;
+  name: string;
+  email: string;
+  status: AccessUserStatus;
+  isMaster: boolean;
+}
+
+export interface AccessUserDetail extends AccessUserSummary {
+  phone: string | null;
+  lastLoginAt: string | null;
+  assignments: UserStoreAssignmentSummary[];
+}
+
+export interface AuthSession {
+  accessToken: string;
+  refreshToken?: string;
+  user: AccessUserSummary;
+  activeStoreId: string | null;
+  allowedStores: AccessStoreSummary[];
+  permissions: string[];
+  accessTokenExpiresAt: string;
+}
+
+export interface AccessAuditEvent {
+  id: string;
+  actorUserId: string | null;
+  targetUserId: string | null;
+  storeId: string | null;
+  eventType: string;
+  result: AccessAuditResult;
+  reason: string | null;
+  occurredAt: string;
+}
+
 export type FulfillmentMethod = "DELIVERY" | "PICKUP";
 
 export type PaymentMethod =
