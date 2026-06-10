@@ -142,13 +142,13 @@
 ### Implementation for User Story 4
 
 - [x] T051 [P] [US4] Implement permission catalog service and grouped permission query in `apps/api/src/management/access/permissions/permissions.service.ts`
-- [ ] T052 [US4] Implement access profile create, update, duplicate, status changes and permission grants in `apps/api/src/management/access/profiles/access-profiles.service.ts`
+- [x] T052 [US4] Implement access profile create, update, duplicate, status changes and permission grants in `apps/api/src/management/access/profiles/access-profiles.service.ts`
 - [x] T053 [US4] Implement profile and permission endpoints with master/store-admin scope checks in `apps/api/src/management/access/profiles/access-profiles.controller.ts` and `apps/api/src/management/access/permissions/permissions.controller.ts`
 - [x] T054 [US4] Enforce profile permission changes in auth permission resolution in `apps/api/src/auth/current-user.service.ts`
-- [ ] T055 [P] [US4] Implement access profile list and filters in `apps/web/app/admin/access-profiles/access-profiles-client.tsx`
-- [ ] T056 [P] [US4] Implement profile form with grouped permission selector and sensitive-permission indicators in `apps/web/app/admin/access-profiles/access-profile-form.tsx`
-- [ ] T057 [P] [US4] Implement profile duplicate and deactivate dialogs in `apps/web/app/admin/access-profiles/access-profile-actions.tsx`
-- [ ] T058 [US4] Compose access profile route and permission catalog loading in `apps/web/app/admin/access-profiles/page.tsx`
+- [x] T055 [P] [US4] Implement access profile list and filters in `apps/web/app/admin/access-profiles/access-profiles-client.tsx`
+- [x] T056 [P] [US4] Implement profile form with grouped permission selector and sensitive-permission indicators in `apps/web/app/admin/access-profiles/access-profile-form.tsx`
+- [x] T057 [P] [US4] Implement profile duplicate and deactivate dialogs in `apps/web/app/admin/access-profiles/access-profile-actions.tsx`
+- [x] T058 [US4] Compose access profile route and permission catalog loading in `apps/web/app/admin/access-profiles/page.tsx`
 
 **Checkpoint**: Profiles and permission grants control visible screens and server-authorized actions.
 

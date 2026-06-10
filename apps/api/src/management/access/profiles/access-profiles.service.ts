@@ -135,6 +135,49 @@ export class AccessProfilesService {
     });
   }
 
+  async duplicate(actor: AuthUser, profileId: string, name: string, tenantId?: string | null) {
+    const current = await this.get(actor, profileId);
+    const targetTenantId = tenantId ?? current.tenantId;
+    const targetScope = targetTenantId ? AccessProfileScope.STORE : AccessProfileScope.GLOBAL;
+
+    this.assertCanManageProfileScope(actor, targetScope, targetTenantId);
+    await this.ensureUniqueName(name, targetTenantId);
+
+    const permissionKeys = current.permissions.map((grant) => grant.permission.key);
+
+    return this.prisma.$transaction(async (tx) => {
+      const profile = await tx.accessProfile.create({
+        data: {
+          tenantId: targetTenantId,
+          name,
+          description: current.description,
+          scope: targetScope,
+          createdByUserId: actor.isPlatformAdmin ? null : actor.id,
+          updatedByUserId: actor.isPlatformAdmin ? null : actor.id,
+          permissions: {
+            create: permissionKeys.map((key) => ({
+              permission: { connect: { key } },
+            })),
+          },
+        },
+        include: { permissions: { include: { permission: true } } },
+      });
+
+      await this.audit.record(
+        {
+          actorUserId: actor.isPlatformAdmin ? null : actor.id,
+          storeId: profile.tenantId,
+          eventType: AccessAuditEventType.PROFILE_CREATED,
+          result: AccessAuditResult.SUCCESS,
+          metadata: { duplicatedFromProfileId: profileId, profileId: profile.id },
+        },
+        tx
+      );
+
+      return profile;
+    });
+  }
+
   async ensurePermissionCatalog(
     permissionKeys = ACCESS_PERMISSIONS.map((permission) => permission.key)
   ) {

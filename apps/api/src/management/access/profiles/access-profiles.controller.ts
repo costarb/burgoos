@@ -29,6 +29,15 @@ export class AccessProfilesController {
     return this.profiles.get(user, id);
   }
 
+  @Post(":id/duplicate")
+  duplicate(
+    @CurrentUser() user: AuthUser,
+    @Param("id") id: string,
+    @Body() dto: { name: string; storeId?: string | null }
+  ) {
+    return this.profiles.duplicate(user, id, dto.name, dto.storeId);
+  }
+
   @Patch(":id")
   update(
     @CurrentUser() user: AuthUser,

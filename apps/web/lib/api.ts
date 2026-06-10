@@ -3,6 +3,8 @@ import type {
   AccessProfileSummary,
   AccessStoreSummary,
   AccessUserDetail,
+  AccessProfileDetail,
+  AccessPermissionGroup,
   DeleteOrderInput,
   EditOrderInput,
   BrandingDraftInput,
@@ -123,6 +125,14 @@ export interface AccessUserPayload {
     canManageStoreAccess: boolean;
     status: "ACTIVE" | "INACTIVE";
   }>;
+}
+
+export interface AccessProfilePayload {
+  name: string;
+  description?: string | null;
+  scope: "GLOBAL" | "STORE";
+  storeId?: string | null;
+  permissionKeys: string[];
 }
 
 async function fetchAdmin<T>(token: string, path: string, init?: RequestInit): Promise<T> {
@@ -268,6 +278,54 @@ export async function updateAccessUser(
 ): Promise<AccessUserDetail> {
   return fetchAdmin<AccessUserDetail>(token, `/api/admin/access/users/${id}`, {
     method: "PATCH",
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function getAccessProfiles(): Promise<{
+  token: string;
+  profiles: AccessProfileDetail[];
+  permissions: AccessPermissionGroup[];
+  stores: AccessStoreSummary[];
+}> {
+  const token = await getAdminToken();
+  const [profiles, permissions, userOptions] = await Promise.all([
+    fetchAdmin<AccessProfileDetail[]>(token, "/api/admin/access/profiles"),
+    fetchAdmin<AccessPermissionGroup[]>(token, "/api/admin/access/permissions"),
+    fetchAdmin<AccessUsersOptions>(token, "/api/admin/access/users/options"),
+  ]);
+
+  return { token, profiles, permissions, stores: userOptions.stores };
+}
+
+export async function createAccessProfile(
+  token: string,
+  payload: AccessProfilePayload
+): Promise<AccessProfileDetail> {
+  return fetchAdmin<AccessProfileDetail>(token, "/api/admin/access/profiles", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function updateAccessProfile(
+  token: string,
+  id: string,
+  payload: Partial<AccessProfilePayload> & { status?: "ACTIVE" | "INACTIVE" }
+): Promise<AccessProfileDetail> {
+  return fetchAdmin<AccessProfileDetail>(token, `/api/admin/access/profiles/${id}`, {
+    method: "PATCH",
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function duplicateAccessProfile(
+  token: string,
+  id: string,
+  payload: { name: string; storeId?: string | null }
+): Promise<AccessProfileDetail> {
+  return fetchAdmin<AccessProfileDetail>(token, `/api/admin/access/profiles/${id}/duplicate`, {
+    method: "POST",
     body: JSON.stringify(payload),
   });
 }
