@@ -93,10 +93,10 @@
 - [x] T032 [US2] Implement master-scoped user list, detail, create, update and status changes in `apps/api/src/management/access/users/users.service.ts`
 - [x] T033 [US2] Implement user maintenance endpoints with permission and store-scope checks in `apps/api/src/management/access/users/users.controller.ts`
 - [x] T034 [US2] Record audit events for master user maintenance and store assignment changes in `apps/api/src/management/access/users/users.service.ts`
-- [ ] T035 [P] [US2] Implement master-capable user list, search and filters in `apps/web/app/admin/users/users-client.tsx`
-- [ ] T036 [P] [US2] Implement user create/edit, store assignments, profile assignment and status form in `apps/web/app/admin/users/user-form.tsx`
-- [ ] T037 [P] [US2] Implement deactivate/reactivate confirmation dialog in `apps/web/app/admin/users/user-status-dialog.tsx`
-- [ ] T038 [US2] Compose users route with server-side data loading and permission denial states in `apps/web/app/admin/users/page.tsx`
+- [x] T035 [P] [US2] Implement master-capable user list, search and filters in `apps/web/app/admin/users/users-client.tsx`
+- [x] T036 [P] [US2] Implement user create/edit, store assignments, profile assignment and status form in `apps/web/app/admin/users/user-form.tsx`
+- [x] T037 [P] [US2] Implement deactivate/reactivate confirmation dialog in `apps/web/app/admin/users/user-status-dialog.tsx`
+- [x] T038 [US2] Compose users route with server-side data loading and permission denial states in `apps/web/app/admin/users/page.tsx`
 
 **Checkpoint**: Master user maintenance works across stores and cannot remove the last active master.
 
@@ -141,10 +141,10 @@
 
 ### Implementation for User Story 4
 
-- [ ] T051 [P] [US4] Implement permission catalog service and grouped permission query in `apps/api/src/management/access/permissions/permissions.service.ts`
+- [x] T051 [P] [US4] Implement permission catalog service and grouped permission query in `apps/api/src/management/access/permissions/permissions.service.ts`
 - [ ] T052 [US4] Implement access profile create, update, duplicate, status changes and permission grants in `apps/api/src/management/access/profiles/access-profiles.service.ts`
-- [ ] T053 [US4] Implement profile and permission endpoints with master/store-admin scope checks in `apps/api/src/management/access/profiles/access-profiles.controller.ts` and `apps/api/src/management/access/permissions/permissions.controller.ts`
-- [ ] T054 [US4] Enforce profile permission changes in auth permission resolution in `apps/api/src/auth/current-user.service.ts`
+- [x] T053 [US4] Implement profile and permission endpoints with master/store-admin scope checks in `apps/api/src/management/access/profiles/access-profiles.controller.ts` and `apps/api/src/management/access/permissions/permissions.controller.ts`
+- [x] T054 [US4] Enforce profile permission changes in auth permission resolution in `apps/api/src/auth/current-user.service.ts`
 - [ ] T055 [P] [US4] Implement access profile list and filters in `apps/web/app/admin/access-profiles/access-profiles-client.tsx`
 - [ ] T056 [P] [US4] Implement profile form with grouped permission selector and sensitive-permission indicators in `apps/web/app/admin/access-profiles/access-profile-form.tsx`
 - [ ] T057 [P] [US4] Implement profile duplicate and deactivate dialogs in `apps/web/app/admin/access-profiles/access-profile-actions.tsx`
@@ -184,7 +184,7 @@
 **Purpose**: Validate the complete feature and prepare it for operational use.
 
 - [ ] T068 [P] Add master user, Store A admin, Store B and baseline profiles to non-destructive seed data in `packages/database/prisma/seed.ts`
-- [ ] T069 [P] Update admin navigation entries for users, profiles and audit in `apps/web/components/admin/admin-navigation.ts`
+- [x] T069 [P] Update admin navigation entries for users, profiles and audit in `apps/web/components/admin/admin-navigation.ts`
 - [ ] T070 [P] Update the implemented API contract examples and error responses in `specs/007-store-access-management/contracts/openapi.yaml`
 - [ ] T071 Run Prisma validation/generation, lint, typecheck and automated tests from `package.json`
 - [ ] T072 Validate every quickstart scenario and record results in `specs/007-store-access-management/quickstart.md`

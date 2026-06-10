@@ -36,6 +36,10 @@ import { SalesReportService } from "./reports/sales-report.service";
 import { ReportsService } from "./reports.service";
 import { TenantScopeService } from "./tenant-scope";
 import { AccessAuditService } from "./access/access-audit.service";
+import { AccessProfilesController } from "./access/profiles/access-profiles.controller";
+import { AccessProfilesService } from "./access/profiles/access-profiles.service";
+import { PermissionsController } from "./access/permissions/permissions.controller";
+import { PermissionsService } from "./access/permissions/permissions.service";
 import { UsersController } from "./access/users/users.controller";
 import { UsersService } from "./access/users/users.service";
 
@@ -56,6 +60,8 @@ import { UsersService } from "./access/users/users.service";
     AccountsPayableController,
     CashFlowController,
     UsersController,
+    AccessProfilesController,
+    PermissionsController,
   ],
   providers: [
     ReportsService,
@@ -81,6 +87,8 @@ import { UsersService } from "./access/users/users.service";
     CashFlowService,
     AccessAuditService,
     UsersService,
+    AccessProfilesService,
+    PermissionsService,
   ],
   exports: [OrderProfitabilityService],
 })

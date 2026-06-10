@@ -57,6 +57,23 @@ export class UsersService {
     return user;
   }
 
+  async options(actor: AuthUser) {
+    assertMasterAccess(actor);
+
+    const [stores, profiles] = await Promise.all([
+      this.prisma.tenant.findMany({
+        orderBy: { name: "asc" },
+        select: { id: true, name: true, slug: true, active: true },
+      }),
+      this.prisma.accessProfile.findMany({
+        orderBy: [{ scope: "asc" }, { name: "asc" }],
+        select: { id: true, name: true, scope: true, tenantId: true, status: true },
+      }),
+    ]);
+
+    return { stores, profiles };
+  }
+
   async create(actor: AuthUser, dto: AccessUserDto) {
     assertMasterAccess(actor);
     await this.ensureUniqueLogin(dto.login);

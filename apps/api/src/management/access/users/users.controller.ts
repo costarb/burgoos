@@ -20,6 +20,11 @@ export class UsersController {
     return this.users.create(user, dto);
   }
 
+  @Get("options")
+  options(@CurrentUser() user: AuthUser) {
+    return this.users.options(user);
+  }
+
   @Get(":id")
   get(@CurrentUser() user: AuthUser, @Param("id") id: string) {
     return this.users.get(user, id);

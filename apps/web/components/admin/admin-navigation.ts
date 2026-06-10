@@ -14,12 +14,15 @@ import {
   PackageSearch,
   Palette,
   ReceiptText,
+  ScrollText,
   WalletCards,
+  ShieldCheck,
   Settings,
   ShoppingBag,
   Store,
   Tags,
   Truck,
+  Users,
   Utensils,
 } from "lucide-react";
 
@@ -50,7 +53,12 @@ export const adminNavigation: AdminNavigationGroup[] = [
   {
     label: "Operacao",
     items: [
-      { href: "/admin/orders", label: "Pedidos", icon: ClipboardList, description: "Fila e historico" },
+      {
+        href: "/admin/orders",
+        label: "Pedidos",
+        icon: ClipboardList,
+        description: "Fila e historico",
+      },
       {
         href: "/admin/orders/import",
         label: "Importar pedidos",
@@ -63,15 +71,30 @@ export const adminNavigation: AdminNavigationGroup[] = [
   {
     label: "Cardapio e custos",
     items: [
-      { href: "/admin/catalog", label: "Catalogo", icon: ShoppingBag, description: "Categorias e produtos" },
-      { href: "/admin/ingredients", label: "Insumos", icon: CookingPot, description: "Custos de ingredientes" },
+      {
+        href: "/admin/catalog",
+        label: "Catalogo",
+        icon: ShoppingBag,
+        description: "Categorias e produtos",
+      },
+      {
+        href: "/admin/ingredients",
+        label: "Insumos",
+        icon: CookingPot,
+        description: "Custos de ingredientes",
+      },
       {
         href: "/admin/technical-sheets",
         label: "Fichas tecnicas",
         icon: BookOpenText,
         description: "Composicao dos produtos",
       },
-      { href: "/admin/pricing", label: "Precificacao", icon: Calculator, description: "Margens e precos" },
+      {
+        href: "/admin/pricing",
+        label: "Precificacao",
+        icon: Calculator,
+        description: "Margens e precos",
+      },
       {
         href: "/admin/menu-engineering",
         label: "Menu engineering",
@@ -95,7 +118,12 @@ export const adminNavigation: AdminNavigationGroup[] = [
         icon: WalletCards,
         description: "Saldo e projecao",
       },
-      { href: "/admin/reports/dre", label: "DRE", icon: FileChartColumn, description: "Resultado financeiro" },
+      {
+        href: "/admin/reports/dre",
+        label: "DRE",
+        icon: FileChartColumn,
+        description: "Resultado financeiro",
+      },
       {
         href: "/admin/reports/sales",
         label: "Vendas",
@@ -107,7 +135,12 @@ export const adminNavigation: AdminNavigationGroup[] = [
   {
     label: "Cadastros",
     items: [
-      { href: "/admin/suppliers", label: "Fornecedores", icon: Truck, description: "Parceiros de compra" },
+      {
+        href: "/admin/suppliers",
+        label: "Fornecedores",
+        icon: Truck,
+        description: "Parceiros de compra",
+      },
       {
         href: "/admin/purchase-units",
         label: "Unidades",
@@ -120,15 +153,53 @@ export const adminNavigation: AdminNavigationGroup[] = [
         icon: Store,
         description: "Canais e taxas",
       },
-      { href: "/admin/branding", label: "Identidade visual", icon: Palette, description: "Marca e tema" },
-      { href: "/admin/settings", label: "Configuracoes", icon: Settings, description: "Parametros financeiros" },
+      {
+        href: "/admin/branding",
+        label: "Identidade visual",
+        icon: Palette,
+        description: "Marca e tema",
+      },
+      {
+        href: "/admin/settings",
+        label: "Configuracoes",
+        icon: Settings,
+        description: "Parametros financeiros",
+      },
+    ],
+  },
+  {
+    label: "Acessos",
+    items: [
+      { href: "/admin/users", label: "Usuarios", icon: Users, description: "Usuarios e lojas" },
+      {
+        href: "/admin/access-profiles",
+        label: "Perfis",
+        icon: ShieldCheck,
+        description: "Permissoes por perfil",
+      },
+      {
+        href: "/admin/access-audit",
+        label: "Auditoria",
+        icon: ScrollText,
+        description: "Historico de acessos",
+      },
     ],
   },
 ];
 
 export const secondaryNavigation: AdminNavigationItem[] = [
-  { href: "/platform/stores", label: "Lojas", icon: Building2, description: "Gestao da plataforma" },
-  { href: "/piloto", label: "Cardapio publico", icon: Tags, description: "Abrir experiencia publica" },
+  {
+    href: "/platform/stores",
+    label: "Lojas",
+    icon: Building2,
+    description: "Gestao da plataforma",
+  },
+  {
+    href: "/piloto",
+    label: "Cardapio publico",
+    icon: Tags,
+    description: "Abrir experiencia publica",
+  },
 ];
 
 export function findNavigationItem(pathname: string): AdminNavigationItem | undefined {
