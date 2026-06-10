@@ -21,6 +21,14 @@ export interface LoginResult {
   accessToken: string;
   refreshToken: string;
   user: AuthUser;
+  activeStoreId: string | null;
+  allowedStores: Array<{
+    id: string;
+    name: string;
+    slug: string;
+    active: boolean;
+  }>;
+  permissions: string[];
   accessTokenExpiresAt?: string;
 }
 
@@ -135,6 +143,9 @@ export class AuthService {
       accessToken,
       refreshToken,
       user: authUser,
+      activeStoreId: authUser.activeStoreId ?? null,
+      allowedStores: this.toAllowedStores(user),
+      permissions,
       accessTokenExpiresAt: this.accessTokenExpiresAt().toISOString(),
     };
   }
@@ -172,6 +183,9 @@ export class AuthService {
       accessToken: await this.signAccessToken(authUser),
       refreshToken: await this.signRefreshToken(authUser),
       user: authUser,
+      activeStoreId: null,
+      allowedStores: [],
+      permissions: [],
       accessTokenExpiresAt: this.accessTokenExpiresAt().toISOString(),
     };
   }
@@ -187,6 +201,9 @@ export class AuthService {
       accessToken: await this.signAccessToken(authUser),
       refreshToken,
       user: authUser,
+      activeStoreId: authUser.activeStoreId ?? null,
+      allowedStores: this.toAllowedStores(user),
+      permissions: authUser.permissions ?? [],
       accessTokenExpiresAt: this.accessTokenExpiresAt().toISOString(),
     };
   }
@@ -246,6 +263,14 @@ export class AuthService {
       accessToken: await this.signAccessToken(updatedUser),
       refreshToken: refreshToken ?? "",
       user: updatedUser,
+      activeStoreId: storeId,
+      allowedStores: allowedStoreIds.map((id) => ({
+        id,
+        name: id,
+        slug: id,
+        active: true,
+      })),
+      permissions: updatedUser.permissions ?? [],
       accessTokenExpiresAt: this.accessTokenExpiresAt().toISOString(),
     };
   }
@@ -325,9 +350,11 @@ export class AuthService {
 
   private toAuthUser(
     user: User & {
+      tenant: { id: string; name: string; slug: string; active: boolean };
       storeAssignments: Array<{
         tenantId: string;
         canManageStoreAccess: boolean;
+        tenant: { id: string; name: string; slug: string; active: boolean };
         profile: { permissions: Array<{ permission: { key: string } }> };
       }>;
     },
@@ -364,6 +391,23 @@ export class AuthService {
 
   private accessTokenExpiresAt(): Date {
     return new Date(Date.now() + 15 * 60 * 1000);
+  }
+
+  private toAllowedStores(user: {
+    tenant: { id: string; name: string; slug: string; active: boolean };
+    storeAssignments: Array<{
+      tenant: { id: string; name: string; slug: string; active: boolean };
+    }>;
+  }) {
+    const stores = [user.tenant, ...user.storeAssignments.map((assignment) => assignment.tenant)];
+    const uniqueStores = new Map(stores.map((store) => [store.id, store]));
+
+    return [...uniqueStores.values()].map((store) => ({
+      id: store.id,
+      name: store.name,
+      slug: store.slug,
+      active: store.active,
+    }));
   }
 
   private get accessSecret(): string {

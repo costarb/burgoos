@@ -14,7 +14,9 @@ export function StoreSwitcher() {
     setSession(readAuthSession());
   }, []);
 
-  if (!session || session.allowedStores.length <= 1) {
+  const allowedStores = session?.allowedStores ?? [];
+
+  if (!session || allowedStores.length <= 1) {
     return null;
   }
 
@@ -48,9 +50,9 @@ export function StoreSwitcher() {
       <select
         className="h-9 rounded-md border border-slate-200 bg-white px-2 text-sm text-slate-900"
         onChange={(event) => void changeStore(event.target.value)}
-        value={session.activeStoreId ?? session.allowedStores[0]?.id ?? ""}
+        value={session.activeStoreId ?? allowedStores[0]?.id ?? ""}
       >
-        {session.allowedStores.map((store) => (
+        {allowedStores.map((store) => (
           <option key={store.id} value={store.id}>
             {store.name}
           </option>
