@@ -35,7 +35,7 @@ export class UsersService {
   async list(actor: AuthUser, query: AccessUsersQueryDto = {}) {
     const localStoreIds = manageableStoreIds(actor);
 
-    return this.prisma.user.findMany({
+    const users = await this.prisma.user.findMany({
       where: {
         status: query.status,
         storeAssignments:
@@ -56,6 +56,8 @@ export class UsersService {
       orderBy: { name: "asc" },
       include: this.userInclude,
     });
+
+    return users.map((user) => this.toDetail(user));
   }
 
   async get(actor: AuthUser, userId: string) {
@@ -69,7 +71,7 @@ export class UsersService {
     }
 
     assertCanManageTarget(actor, user);
-    return user;
+    return this.toDetail(user);
   }
 
   async options(actor: AuthUser) {
@@ -98,7 +100,16 @@ export class UsersService {
       }),
     ]);
 
-    return { stores, profiles };
+    return {
+      stores,
+      profiles: profiles.map((profile) => ({
+        id: profile.id,
+        name: profile.name,
+        scope: profile.scope,
+        storeId: profile.tenantId,
+        status: profile.status,
+      })),
+    };
   }
 
   async create(actor: AuthUser, dto: AccessUserDto) {
@@ -165,7 +176,7 @@ export class UsersService {
       return user;
     });
 
-    return created;
+    return this.toDetail(created);
   }
 
   async update(actor: AuthUser, userId: string, dto: AccessUserUpdateDto) {
@@ -241,7 +252,7 @@ export class UsersService {
         tx
       );
 
-      return updated;
+      return this.toDetail(updated);
     });
   }
 
@@ -285,5 +296,46 @@ export class UsersService {
         },
       },
     } satisfies Prisma.UserInclude;
+  }
+
+  private toDetail(
+    user: Prisma.UserGetPayload<{
+      include: {
+        storeAssignments: {
+          include: {
+            tenant: true;
+            profile: true;
+          };
+        };
+      };
+    }>
+  ) {
+    return {
+      id: user.id,
+      login: user.email,
+      name: user.name,
+      email: user.email,
+      phone: user.phone,
+      status: user.status,
+      isMaster: user.isMaster,
+      lastLoginAt: user.lastLoginAt?.toISOString() ?? null,
+      assignments: user.storeAssignments.map((assignment) => ({
+        store: {
+          id: assignment.tenant.id,
+          name: assignment.tenant.name,
+          slug: assignment.tenant.slug,
+          active: assignment.tenant.active,
+        },
+        profile: {
+          id: assignment.profile.id,
+          name: assignment.profile.name,
+          scope: assignment.profile.scope,
+          storeId: assignment.profile.tenantId,
+          status: assignment.profile.status,
+        },
+        canManageStoreAccess: assignment.canManageStoreAccess,
+        status: assignment.status,
+      })),
+    };
   }
 }

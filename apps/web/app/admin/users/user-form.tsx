@@ -14,7 +14,7 @@ interface UserFormProps {
 }
 
 export function UserForm({ token, options, mode, user }: UserFormProps) {
-  const firstAssignment = user?.assignments[0];
+  const firstAssignment = user?.assignments?.[0];
   const [pending, setPending] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [manageableStoreIds, setManageableStoreIds] = useState<string[] | null>(null);

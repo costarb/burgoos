@@ -99,8 +99,8 @@ export function UsersClient({ token, users, options }: UsersClientProps) {
                     </div>
                     <p className="mt-1 text-sm text-slate-600">{user.email}</p>
                     <p className="mt-1 text-xs text-slate-500">
-                      {user.assignments.length
-                        ? user.assignments
+                      {(user.assignments ?? []).length
+                        ? (user.assignments ?? [])
                             .map(
                               (assignment) =>
                                 `${assignment.store.name} / ${assignment.profile.name}`
