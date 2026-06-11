@@ -1,6 +1,7 @@
 import {
   ConflictException,
   ForbiddenException,
+  Inject,
   Injectable,
   NotFoundException,
 } from "@nestjs/common";
@@ -17,7 +18,7 @@ import { AuthUser } from "../../../platform/auth/auth.types";
 import { PrismaService } from "../../../platform/database/prisma.service";
 import { AccessAuditService } from "../access-audit.service";
 import { AccessUserDto, AccessUsersQueryDto, AccessUserUpdateDto } from "../dto/user-access.dto";
-import { assertCanRemoveMaster, assertMasterAccess } from "./user-access-rules";
+import { assertCanRemoveMaster } from "./user-access-rules";
 import {
   assertCanManageAssignments,
   assertCanManageTarget,
@@ -27,8 +28,11 @@ import {
 @Injectable()
 export class UsersService {
   constructor(
+    @Inject(PrismaService)
     private readonly prisma: PrismaService,
+    @Inject(AuthCryptoService)
     private readonly crypto: AuthCryptoService,
+    @Inject(AccessAuditService)
     private readonly audit: AccessAuditService
   ) {}
 

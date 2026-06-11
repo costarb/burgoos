@@ -1,5 +1,7 @@
 import { AccessProfileStatus, AccessUserStatus } from "@prisma/client";
+import { Type } from "class-transformer";
 import {
+  IsArray,
   IsBoolean,
   IsEmail,
   IsEnum,
@@ -7,6 +9,7 @@ import {
   IsString,
   IsUUID,
   MaxLength,
+  ValidateNested,
 } from "class-validator";
 
 export class AccessUsersQueryDto {
@@ -61,6 +64,9 @@ export class AccessUserDto {
   @IsBoolean()
   isMaster!: boolean;
 
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => UserStoreAssignmentDto)
   assignments!: UserStoreAssignmentDto[];
 }
 
@@ -88,5 +94,8 @@ export class AccessUserUpdateDto {
   isMaster?: boolean;
 
   @IsOptional()
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => UserStoreAssignmentDto)
   assignments?: UserStoreAssignmentDto[];
 }

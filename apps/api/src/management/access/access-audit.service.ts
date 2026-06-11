@@ -1,4 +1,4 @@
-import { ForbiddenException, Injectable } from "@nestjs/common";
+import { ForbiddenException, Inject, Injectable } from "@nestjs/common";
 import { AccessAuditResult, AccessAuditEventType, Prisma } from "@prisma/client";
 import { AuthUser } from "../../platform/auth/auth.types";
 import { PrismaService } from "../../platform/database/prisma.service";
@@ -16,7 +16,7 @@ interface RecordAccessAuditInput {
 
 @Injectable()
 export class AccessAuditService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(@Inject(PrismaService) private readonly prisma: PrismaService) {}
 
   async record(input: RecordAccessAuditInput, tx: Prisma.TransactionClient = this.prisma) {
     return tx.accessAuditEvent.create({

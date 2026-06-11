@@ -8,7 +8,6 @@ import {
   ClipboardList,
   CookingPot,
   FileChartColumn,
-  Gauge,
   Import,
   LayoutDashboard,
   PackageSearch,

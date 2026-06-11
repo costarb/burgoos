@@ -1,4 +1,14 @@
-import { Body, Controller, Get, Param, Patch, Post, Query, UseGuards } from "@nestjs/common";
+import {
+  Body,
+  Controller,
+  Get,
+  Inject,
+  Param,
+  Patch,
+  Post,
+  Query,
+  UseGuards,
+} from "@nestjs/common";
 import { AuthUser } from "../../../platform/auth/auth.types";
 import { CurrentUser } from "../../../platform/auth/current-user.decorator";
 import { JwtAuthGuard } from "../../../platform/auth/jwt-auth.guard";
@@ -12,7 +22,7 @@ import { AccessProfilesService } from "./access-profiles.service";
 @Controller("admin/access/profiles")
 @UseGuards(JwtAuthGuard)
 export class AccessProfilesController {
-  constructor(private readonly profiles: AccessProfilesService) {}
+  constructor(@Inject(AccessProfilesService) private readonly profiles: AccessProfilesService) {}
 
   @Get()
   list(@CurrentUser() user: AuthUser, @Query() query: AccessProfilesQueryDto) {

@@ -1,8 +1,9 @@
-import { ConflictException, Injectable, NotFoundException } from "@nestjs/common";
+import { ConflictException, Inject, Injectable, NotFoundException } from "@nestjs/common";
 import {
   AccessAuditEventType,
   AccessAuditResult,
   AccessProfileScope,
+  AccessProfileStatus,
   Prisma,
 } from "@prisma/client";
 import { AuthUser } from "../../../platform/auth/auth.types";
@@ -18,7 +19,9 @@ import { ACCESS_PERMISSIONS } from "../permissions/permission-catalog";
 @Injectable()
 export class AccessProfilesService {
   constructor(
+    @Inject(PrismaService)
     private readonly prisma: PrismaService,
+    @Inject(AccessAuditService)
     private readonly audit: AccessAuditService
   ) {}
 
@@ -95,6 +98,16 @@ export class AccessProfilesService {
 
     if (dto.permissionKeys) {
       await this.ensurePermissionCatalog(dto.permissionKeys);
+    }
+
+    if (dto.status === AccessProfileStatus.INACTIVE) {
+      const activeAssignments = await this.prisma.userStoreAssignment.count({
+        where: { profileId, status: AccessProfileStatus.ACTIVE },
+      });
+
+      if (activeAssignments > 0) {
+        throw new ConflictException("Perfil em uso por usuarios ativos");
+      }
     }
 
     return this.prisma.$transaction(async (tx) => {

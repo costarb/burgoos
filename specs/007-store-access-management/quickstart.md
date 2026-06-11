@@ -71,3 +71,56 @@ Validate that master users control all stores while store admins manage access o
 - Unit tests for permission resolution, last-master rule and token state transitions.
 - Integration tests for user/profile mutations and cross-tenant denial.
 - E2E tests for login, store switcher, user creation by master and local admin denial outside scope.
+
+## Validation Evidence
+
+Recorded on 2026-06-10 for branch `007-store-access-management`.
+
+### Store Admin Scope
+
+- Covered by `apps/api/src/management/access/users/store-admin-user-rules.spec.ts`.
+- Covered by `apps/api/test/access-users-store-admin.integration.spec.ts`.
+- Validated that store admins can manage assignments only for stores in `manageableStoreIds`.
+- Validated that store admins cannot change master users or users assigned only to another store.
+- Cross-tenant denial is recorded through `UsersService.recordAccessDenied()` with `ACCESS_DENIED` and `DENIED` result.
+
+### Master User Maintenance
+
+- Covered by `apps/api/src/management/access/users/user-access-rules.spec.ts`.
+- Covered by `apps/api/test/access-users-master.integration.spec.ts`.
+- Validated master-scoped filters, user creation with store assignment and duplicate login/last-active-master protections.
+- Last master protection blocks deactivation or master removal when only one active master remains.
+
+### Audit Scenarios
+
+- Covered by `apps/api/src/management/access/access-audit.service.spec.ts`.
+- Covered by `apps/api/test/access-audit.integration.spec.ts`.
+- Validated metadata redaction for password/token/hash fields during audit writes and reads.
+- Validated that master audit queries are unrestricted by local store scope.
+- Validated that store-admin audit queries carry `manageableStoreIds` and require bearer authentication.
+
+### Profile Scenarios
+
+- Covered by `apps/api/src/management/access/profiles/access-profiles.service.spec.ts`.
+- Covered by `apps/api/test/access-profiles.integration.spec.ts`.
+- Validated profile name uniqueness, store-admin scope denial, permission catalog upsert, duplication with grants and conflict when inactivating a profile used by active assignments.
+
+### Automated Command Evidence
+
+- `npm.cmd run test --workspace apps/api -- auth access`: 10 files passed, 40 tests passed.
+- `npm.cmd run test --workspace apps/web -- login-page users-page access-profiles-page access-audit-page`: 4 files passed, 6 tests passed.
+- `npm.cmd run typecheck --workspace apps/api`: passed.
+
+### Web Screen Evidence
+
+- Covered by `apps/web/app/login/login-page.spec.tsx`.
+- Covered by `apps/web/app/admin/users/users-page.spec.tsx`.
+- Covered by `apps/web/app/admin/access-profiles/access-profiles-page.spec.tsx`.
+- Covered by `apps/web/app/admin/access-audit/access-audit-page.spec.tsx`.
+- Validated login first/error/success states, users page forms and filters, profile permission grouping/actions and audit filters/results.
+
+### Performance Evidence
+
+- Focused auth/access API test suite completed in about 21 seconds in the local Vitest environment.
+- Individual auth integration scenarios completed under 4 seconds total for four HTTP flows in the mocked Nest test server.
+- The implemented list endpoints apply bounded queries and scoped filters; audit queries are capped at 200 rows.

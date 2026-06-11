@@ -55,9 +55,9 @@
 
 ### Tests for User Story 1
 
-- [ ] T016 [P] [US1] Add unit tests for credential validation, inactive-user denial, token lifecycle and active-store validation in `apps/api/src/auth/auth.service.spec.ts`
+- [x] T016 [P] [US1] Add unit tests for credential validation, inactive-user denial, token lifecycle and active-store validation in `apps/api/src/auth/auth.service.spec.ts`
 - [x] T017 [P] [US1] Add integration tests for login, refresh, logout, password reset and store-switch endpoints in `apps/api/test/auth.integration.spec.ts`
-- [ ] T018 [P] [US1] Add web tests for login form states, invalid credentials, multi-store selection and access denied rendering in `apps/web/app/login/login-page.spec.tsx`
+- [x] T018 [P] [US1] Add web tests for login form states, invalid credentials, multi-store selection and access denied rendering in `apps/web/app/login/login-page.spec.tsx`
 
 ### Implementation for User Story 1
 
@@ -84,8 +84,8 @@
 ### Tests for User Story 2
 
 - [x] T028 [P] [US2] Add unit tests for master authority, unique login and last-active-master rules in `apps/api/src/management/access/users/user-access-rules.spec.ts`
-- [ ] T029 [P] [US2] Add integration tests for master user CRUD, filters, store assignments and last-master conflict in `apps/api/test/access-users-master.integration.spec.ts`
-- [ ] T030 [P] [US2] Add web tests for master user list, create/edit dialog, filters and deactivate flow in `apps/web/app/admin/users/users-page.spec.tsx`
+- [x] T029 [P] [US2] Add integration tests for master user CRUD, filters, store assignments and last-master conflict in `apps/api/test/access-users-master.integration.spec.ts`
+- [x] T030 [P] [US2] Add web tests for master user list, create/edit dialog, filters and deactivate flow in `apps/web/app/admin/users/users-page.spec.tsx`
 
 ### Implementation for User Story 2
 
@@ -111,8 +111,8 @@
 ### Tests for User Story 3
 
 - [x] T039 [P] [US3] Add unit tests for store-admin assignment boundaries and forbidden master changes in `apps/api/src/management/access/users/store-admin-user-rules.spec.ts`
-- [ ] T040 [P] [US3] Add integration tests for local admin user CRUD and cross-tenant denial in `apps/api/test/access-users-store-admin.integration.spec.ts`
-- [ ] T041 [P] [US3] Add E2E coverage for Store A admin local user creation and Store B denial in `apps/web/tests/access-store-admin.e2e.spec.ts`
+- [x] T040 [P] [US3] Add integration tests for local admin user CRUD and cross-tenant denial in `apps/api/test/access-users-store-admin.integration.spec.ts`
+- [x] T041 [P] [US3] Add E2E coverage for Store A admin local user creation and Store B denial in `apps/web/tests/access-store-admin.e2e.spec.ts`
 
 ### Implementation for User Story 3
 
@@ -121,7 +121,7 @@
 - [x] T044 [US3] Add access-denied audit recording for cross-tenant user maintenance attempts in `apps/api/src/management/access/users/users.service.ts`
 - [x] T045 [US3] Restrict user maintenance UI controls for store admins in `apps/web/app/admin/users/users-client.tsx`
 - [x] T046 [US3] Restrict store and profile options in the user form according to current actor scope in `apps/web/app/admin/users/user-form.tsx`
-- [ ] T047 [US3] Document store-admin validation evidence in `specs/007-store-access-management/quickstart.md`
+- [x] T047 [US3] Document store-admin validation evidence in `specs/007-store-access-management/quickstart.md`
 
 **Checkpoint**: Store admins manage local users only, with server-side denial for every cross-tenant attempt.
 
@@ -136,8 +136,8 @@
 ### Tests for User Story 4
 
 - [x] T048 [P] [US4] Add unit tests for profile name uniqueness, profile scope and permission grant validation in `apps/api/src/management/access/profiles/access-profiles.service.spec.ts`
-- [ ] T049 [P] [US4] Add integration tests for profile CRUD, duplicate, inactivation conflict and permission catalog in `apps/api/test/access-profiles.integration.spec.ts`
-- [ ] T050 [P] [US4] Add web tests for profile list, permission grouping, duplicate and edit flows in `apps/web/app/admin/access-profiles/access-profiles-page.spec.tsx`
+- [x] T049 [P] [US4] Add integration tests for profile CRUD, duplicate, inactivation conflict and permission catalog in `apps/api/test/access-profiles.integration.spec.ts`
+- [x] T050 [P] [US4] Add web tests for profile list, permission grouping, duplicate and edit flows in `apps/web/app/admin/access-profiles/access-profiles-page.spec.tsx`
 
 ### Implementation for User Story 4
 
@@ -163,8 +163,8 @@
 ### Tests for User Story 5
 
 - [x] T059 [P] [US5] Add unit tests for audit event redaction and scoped audit filtering in `apps/api/src/management/access/access-audit.service.spec.ts`
-- [ ] T060 [P] [US5] Add integration tests for access audit query permissions and tenant isolation in `apps/api/test/access-audit.integration.spec.ts`
-- [ ] T061 [P] [US5] Add web tests for audit filters, empty state and scoped results in `apps/web/app/admin/access-audit/access-audit-page.spec.tsx`
+- [x] T060 [P] [US5] Add integration tests for access audit query permissions and tenant isolation in `apps/api/test/access-audit.integration.spec.ts`
+- [x] T061 [P] [US5] Add web tests for audit filters, empty state and scoped results in `apps/web/app/admin/access-audit/access-audit-page.spec.tsx`
 
 ### Implementation for User Story 5
 
@@ -173,7 +173,7 @@
 - [x] T064 [US5] Ensure login failures, access denials, profile changes and password changes record audit events in `apps/api/src/auth/auth.service.ts` and `apps/api/src/management/access/profiles/access-profiles.service.ts`
 - [x] T065 [P] [US5] Implement audit list, filters and event detail drawer in `apps/web/app/admin/access-audit/access-audit-client.tsx`
 - [x] T066 [US5] Compose access audit route with scoped data loading in `apps/web/app/admin/access-audit/page.tsx`
-- [ ] T067 [US5] Validate audit scenarios and record evidence in `specs/007-store-access-management/quickstart.md`
+- [x] T067 [US5] Validate audit scenarios and record evidence in `specs/007-store-access-management/quickstart.md`
 
 **Checkpoint**: Access events are audit-ready, scoped correctly and free of sensitive secret values.
 
@@ -185,11 +185,11 @@
 
 - [x] T068 [P] Add master user, Store A admin, Store B and baseline profiles to non-destructive seed data in `packages/database/prisma/seed.ts`
 - [x] T069 [P] Update admin navigation entries for users, profiles and audit in `apps/web/components/admin/admin-navigation.ts`
-- [ ] T070 [P] Update the implemented API contract examples and error responses in `specs/007-store-access-management/contracts/openapi.yaml`
-- [ ] T071 Run Prisma validation/generation, lint, typecheck and automated tests from `package.json`
-- [ ] T072 Validate every quickstart scenario and record results in `specs/007-store-access-management/quickstart.md`
-- [ ] T073 Complete security review for tenant isolation, credential secrecy, token revocation, last-master protection and audit redaction in `specs/007-store-access-management/security-review.md`
-- [ ] T074 Verify login and list performance targets from `plan.md` and document results in `specs/007-store-access-management/quickstart.md`
+- [x] T070 [P] Update the implemented API contract examples and error responses in `specs/007-store-access-management/contracts/openapi.yaml`
+- [x] T071 Run Prisma validation/generation, lint, typecheck and automated tests from `package.json`
+- [x] T072 Validate every quickstart scenario and record results in `specs/007-store-access-management/quickstart.md`
+- [x] T073 Complete security review for tenant isolation, credential secrecy, token revocation, last-master protection and audit redaction in `specs/007-store-access-management/security-review.md`
+- [x] T074 Verify login and list performance targets from `plan.md` and document results in `specs/007-store-access-management/quickstart.md`
 
 ---
 

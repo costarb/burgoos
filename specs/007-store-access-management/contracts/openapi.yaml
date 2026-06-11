@@ -13,6 +13,11 @@ paths:
           application/json:
             schema:
               $ref: "#/components/schemas/LoginInput"
+            examples:
+              masterLogin:
+                value:
+                  email: master@burgoos.local
+                  password: admin123
       responses:
         "200":
           description: Authenticated session with allowed stores and permissions
@@ -20,8 +25,40 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/AuthSession"
+              examples:
+                multiStoreSession:
+                  value:
+                    accessToken: eyJhbGciOi...
+                    refreshToken: eyJhbGciOi...
+                    activeStoreId: 11111111-1111-4111-8111-111111111111
+                    allowedStores:
+                      - id: 11111111-1111-4111-8111-111111111111
+                        name: Loja Centro
+                        slug: loja-centro
+                        active: true
+                    permissions:
+                      - access.users.manage
+                      - access.profiles.manage
+                    accessTokenExpiresAt: "2026-06-10T22:15:00.000Z"
+                    user:
+                      id: 33333333-3333-4333-8333-333333333333
+                      login: master@burgoos.local
+                      name: Master
+                      email: master@burgoos.local
+                      status: ACTIVE
+                      isMaster: true
         "401":
           description: Invalid credentials or inactive user
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              examples:
+                invalidCredentials:
+                  value:
+                    statusCode: 401
+                    message: Invalid credentials
+                    error: Unauthorized
   /api/auth/refresh:
     post:
       summary: Refresh an administrative session
@@ -30,6 +67,10 @@ paths:
           description: Refreshed session
         "401":
           description: Refresh token invalid, revoked or expired
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
   /api/auth/logout:
     post:
       summary: Revoke the current administrative session
@@ -62,6 +103,10 @@ paths:
           description: Password changed
         "400":
           description: Token invalid, used or expired
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
   /api/admin/session/store:
     patch:
       summary: Change active store context for the current user
@@ -85,6 +130,10 @@ paths:
                 $ref: "#/components/schemas/AuthSession"
         "403":
           description: Store is not authorized for current user
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
   /api/admin/access/users:
     get:
       summary: List users visible to the current actor
@@ -129,8 +178,16 @@ paths:
           description: User created
         "403":
           description: Actor cannot assign requested store or profile
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
         "409":
           description: Login already exists
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
   /api/admin/access/users/{id}:
     get:
       summary: Get scoped user detail
@@ -226,6 +283,16 @@ paths:
           description: Actor cannot update this profile
         "409":
           description: Update conflicts with users assigned to this profile
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              examples:
+                profileInUse:
+                  value:
+                    statusCode: 409
+                    message: Perfil em uso por usuarios ativos
+                    error: Conflict
   /api/admin/access/profiles/{id}/duplicate:
     post:
       summary: Duplicate an access profile
@@ -309,10 +376,11 @@ components:
   schemas:
     LoginInput:
       type: object
-      required: [login, password]
+      required: [email, password]
       properties:
-        login:
+        email:
           type: string
+          format: email
         password:
           type: string
           format: password
@@ -343,8 +411,21 @@ components:
       enum: [GLOBAL, STORE]
     AuthSession:
       type: object
-      required: [user, allowedStores, permissions, accessTokenExpiresAt]
+      required:
+        [
+          accessToken,
+          refreshToken,
+          user,
+          activeStoreId,
+          allowedStores,
+          permissions,
+          accessTokenExpiresAt,
+        ]
       properties:
+        accessToken:
+          type: string
+        refreshToken:
+          type: string
         user:
           $ref: "#/components/schemas/UserSummary"
         activeStoreId:
@@ -364,7 +445,7 @@ components:
           format: date-time
     StoreSummary:
       type: object
-      required: [id, name, slug, status]
+      required: [id, name, slug, active]
       properties:
         id:
           type: string
@@ -373,9 +454,8 @@ components:
           type: string
         slug:
           type: string
-        status:
-          type: string
-          enum: [ACTIVE, INACTIVE]
+        active:
+          type: boolean
     UserSummary:
       type: object
       required: [id, login, name, status, isMaster]
@@ -606,3 +686,21 @@ components:
         occurredAt:
           type: string
           format: date-time
+        metadata:
+          type: object
+          nullable: true
+          additionalProperties: true
+    ErrorResponse:
+      type: object
+      required: [statusCode, message]
+      properties:
+        statusCode:
+          type: integer
+        message:
+          oneOf:
+            - type: string
+            - type: array
+              items:
+                type: string
+        error:
+          type: string
