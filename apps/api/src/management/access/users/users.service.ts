@@ -9,11 +9,13 @@ import {
   AccessAuditEventType,
   AccessAuditResult,
   AccessUserStatus,
+  PasswordResetPurpose,
   Prisma,
   UserRole,
 } from "@prisma/client";
 import { randomBytes } from "crypto";
 import { AuthCryptoService } from "../../../auth/auth-crypto.service";
+import { PasswordResetService } from "../../../auth/password-reset.service";
 import { AuthUser } from "../../../platform/auth/auth.types";
 import { PrismaService } from "../../../platform/database/prisma.service";
 import { AccessAuditService } from "../access-audit.service";
@@ -32,6 +34,8 @@ export class UsersService {
     private readonly prisma: PrismaService,
     @Inject(AuthCryptoService)
     private readonly crypto: AuthCryptoService,
+    @Inject(PasswordResetService)
+    private readonly passwordReset: PasswordResetService,
     @Inject(AccessAuditService)
     private readonly audit: AccessAuditService
   ) {}
@@ -260,6 +264,40 @@ export class UsersService {
     });
   }
 
+  async issueFirstAccess(actor: AuthUser, userId: string) {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      include: this.userInclude,
+    });
+
+    if (!user) {
+      throw new NotFoundException("Usuario nao encontrado");
+    }
+
+    assertCanManageTarget(actor, user);
+
+    const issued = await this.passwordReset.request(user.email, PasswordResetPurpose.FIRST_ACCESS);
+
+    if (!issued) {
+      throw new ConflictException("Usuario nao pode receber acesso neste status");
+    }
+
+    await this.audit.record({
+      actorUserId: actor.id,
+      targetUserId: user.id,
+      storeId: user.tenantId,
+      eventType: AccessAuditEventType.PASSWORD_RESET_REQUESTED,
+      result: AccessAuditResult.SUCCESS,
+      metadata: { purpose: "FIRST_ACCESS" },
+    });
+
+    return {
+      token: issued.token,
+      expiresAt: issued.expiresAt.toISOString(),
+      setupUrl: this.buildSetupUrl(issued.token),
+    };
+  }
+
   private async ensureUniqueLogin(login: string): Promise<void> {
     const existing = await this.prisma.user.findUnique({ where: { email: login } });
 
@@ -341,5 +379,10 @@ export class UsersService {
         status: assignment.status,
       })),
     };
+  }
+
+  private buildSetupUrl(token: string): string {
+    const webOrigin = process.env.WEB_ORIGIN ?? "http://localhost:3000";
+    return `${webOrigin.replace(/\/$/, "")}/reset-password?token=${encodeURIComponent(token)}`;
   }
 }

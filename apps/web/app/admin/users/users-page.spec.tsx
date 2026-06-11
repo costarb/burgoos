@@ -46,6 +46,7 @@ vi.mock("../../../lib/api", () => ({
       },
     ],
   })),
+  issueFirstAccessLink: vi.fn(),
   updateAccessUser: vi.fn(),
 }));
 
@@ -70,5 +71,6 @@ describe("users page", () => {
     expect(html).toContain("Loja Centro / Operador");
     expect(html).toContain("Criar usuario");
     expect(html).toContain("Salvar usuario");
+    expect(html).toContain("Redefinir senha");
   });
 });

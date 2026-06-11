@@ -10,6 +10,7 @@ import request from "supertest";
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { AppModule } from "../src/app.module";
 import { AuthCryptoService } from "../src/auth/auth-crypto.service";
+import { PasswordResetService } from "../src/auth/password-reset.service";
 import { AccessAuditService } from "../src/management/access/access-audit.service";
 import { AuthService } from "../src/platform/auth/auth.service";
 import { PrismaService } from "../src/platform/database/prisma.service";
@@ -51,6 +52,9 @@ describe("access users master integration", () => {
   const auditMock = {
     record: vi.fn(),
   };
+  const passwordResetMock = {
+    request: vi.fn(),
+  };
 
   beforeAll(async () => {
     const moduleRef = await Test.createTestingModule({
@@ -62,6 +66,8 @@ describe("access users master integration", () => {
       .useValue(authMock)
       .overrideProvider(AuthCryptoService)
       .useValue(cryptoMock)
+      .overrideProvider(PasswordResetService)
+      .useValue(passwordResetMock)
       .overrideProvider(AccessAuditService)
       .useValue(auditMock)
       .compile();
@@ -83,6 +89,10 @@ describe("access users master integration", () => {
     setupPrisma();
     authMock.verifyAccessToken.mockResolvedValue(masterPayload());
     cryptoMock.hashSecret.mockResolvedValue("hashed-temp-password");
+    passwordResetMock.request.mockResolvedValue({
+      token: "first-access-token",
+      expiresAt: new Date("2026-06-10T23:00:00.000Z"),
+    });
     auditMock.record.mockResolvedValue(undefined);
   });
 
@@ -180,6 +190,31 @@ describe("access users master integration", () => {
 
     expect(response.body.message).toBe("Pelo menos um usuario master ativo deve permanecer");
     expect(prismaMock.user.update).not.toHaveBeenCalled();
+  });
+
+  it("issues a first access setup link for a managed user", async () => {
+    prismaMock.user.findUnique.mockResolvedValueOnce(
+      userRecord({ id: "created-user", email: "novo@example.com" })
+    );
+
+    const response = await request(app.getHttpServer())
+      .post("/api/admin/access/users/created-user/first-access")
+      .set("Authorization", "Bearer master-token")
+      .expect(201);
+
+    expect(response.body).toMatchObject({
+      token: "first-access-token",
+      expiresAt: "2026-06-10T23:00:00.000Z",
+      setupUrl: expect.stringContaining("/reset-password?token=first-access-token"),
+    });
+    expect(passwordResetMock.request).toHaveBeenCalledWith("novo@example.com", "FIRST_ACCESS");
+    expect(auditMock.record).toHaveBeenCalledWith(
+      expect.objectContaining({
+        targetUserId: "created-user",
+        eventType: "PASSWORD_RESET_REQUESTED",
+        metadata: { purpose: "FIRST_ACCESS" },
+      })
+    );
   });
 
   function setupPrisma(): void {

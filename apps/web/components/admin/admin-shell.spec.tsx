@@ -14,6 +14,7 @@ vi.mock("next/navigation", () => ({
 }));
 
 vi.mock("../../lib/auth-client", () => ({
+  clearAuthSession: vi.fn(),
   readAuthSession: vi.fn(() => ({
     accessToken: "access-token",
     accessTokenExpiresAt: "2026-06-10T22:00:00.000Z",
@@ -83,6 +84,7 @@ describe("admin shell", () => {
     expect(html).toContain("Importar pedidos");
     expect(html).toContain('aria-current="page"');
     expect(html).toContain("Conteudo");
+    expect(html).toContain("Sair");
   });
 
   it("exposes implemented financial routes only", async () => {

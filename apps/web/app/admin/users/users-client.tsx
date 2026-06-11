@@ -4,6 +4,7 @@ import type { AccessUserDetail } from "@burgoos/types";
 import type { AccessUsersOptions } from "../../../lib/api";
 import { useEffect, useMemo, useState } from "react";
 import { readAuthSession } from "../../../lib/auth-client";
+import { FirstAccessAction } from "./first-access-action";
 import { UserForm } from "./user-form";
 import { UserStatusDialog } from "./user-status-dialog";
 
@@ -110,7 +111,10 @@ export function UsersClient({ token, users, options }: UsersClientProps) {
                     </p>
                   </div>
                   {isMasterActor || !user.isMaster ? (
-                    <UserStatusDialog token={token} user={user} />
+                    <div className="grid gap-2">
+                      <UserStatusDialog token={token} user={user} />
+                      <FirstAccessAction token={token} user={user} />
+                    </div>
                   ) : null}
                 </div>
                 <div className="mt-4 border-t border-slate-100 pt-4">

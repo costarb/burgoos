@@ -2,6 +2,7 @@
 
 import type { AuthSession } from "@burgoos/types";
 import { LogIn } from "lucide-react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { FormEvent, useState } from "react";
 import { writeAuthSession } from "../../lib/auth-client";
@@ -96,6 +97,12 @@ export default function LoginPage() {
             <LogIn aria-hidden className="h-4 w-4" />
             {pending ? "Entrando..." : "Entrar"}
           </button>
+          <Link
+            className="mt-4 block text-center text-sm font-medium text-slate-600 hover:text-slate-950"
+            href="/reset-password"
+          >
+            Definir senha ou recuperar acesso
+          </Link>
         </form>
       </section>
     </main>

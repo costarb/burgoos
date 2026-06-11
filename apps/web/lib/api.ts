@@ -128,6 +128,12 @@ export interface AccessUserPayload {
   }>;
 }
 
+export interface FirstAccessIssue {
+  token: string;
+  expiresAt: string;
+  setupUrl: string;
+}
+
 export interface AccessProfilePayload {
   name: string;
   description?: string | null;
@@ -281,6 +287,28 @@ export async function updateAccessUser(
     method: "PATCH",
     body: JSON.stringify(payload),
   });
+}
+
+export async function issueFirstAccessLink(token: string, id: string): Promise<FirstAccessIssue> {
+  return fetchAdmin<FirstAccessIssue>(token, `/api/admin/access/users/${id}/first-access`, {
+    method: "POST",
+  });
+}
+
+export async function confirmPasswordReset(token: string, newPassword: string): Promise<void> {
+  const response = await fetch(`${apiUrl}/api/auth/password-reset/confirm`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ token, newPassword }),
+    cache: "no-store",
+  });
+
+  if (!response.ok) {
+    const error = (await response.json().catch(() => null)) as { message?: string } | null;
+    throw new Error(error?.message ?? "Link invalido, expirado ou senha fora do padrao.");
+  }
 }
 
 export async function getAccessProfiles(): Promise<{

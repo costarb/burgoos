@@ -44,4 +44,9 @@ export class UsersController {
   update(@CurrentUser() user: AuthUser, @Param("id") id: string, @Body() dto: AccessUserUpdateDto) {
     return this.users.update(user, id, dto);
   }
+
+  @Post(":id/first-access")
+  issueFirstAccess(@CurrentUser() user: AuthUser, @Param("id") id: string) {
+    return this.users.issueFirstAccess(user, id);
+  }
 }

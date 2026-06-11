@@ -9,6 +9,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { useEffect } from "react";
 import { readAuthSession } from "../../lib/auth-client";
 import { adminNavigation, findNavigationItem, secondaryNavigation } from "./admin-navigation";
+import { SessionActions } from "./session-actions";
 import { StoreSwitcher } from "./store-switcher";
 
 export function AdminShell({ children }: { children: ReactNode }) {
@@ -107,6 +108,7 @@ export function AdminShell({ children }: { children: ReactNode }) {
               </p>
             </div>
             <StoreSwitcher />
+            <SessionActions />
           </div>
         </header>
         <div className="admin-shell-content mx-auto max-w-[1600px]">{children}</div>
