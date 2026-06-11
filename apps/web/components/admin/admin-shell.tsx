@@ -7,8 +7,16 @@ import { ChevronRight, Menu, PanelLeftClose, PanelLeftOpen, X } from "lucide-rea
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect } from "react";
+import type { AuthSession } from "@burgoos/types";
 import { readAuthSession } from "../../lib/auth-client";
-import { adminNavigation, findNavigationItem, secondaryNavigation } from "./admin-navigation";
+import { AccessDenied } from "./access-denied";
+import {
+  adminNavigation,
+  canAccessNavigationItem,
+  filterNavigationBySession,
+  findNavigationItem,
+  secondaryNavigation,
+} from "./admin-navigation";
 import { SessionActions } from "./session-actions";
 import { StoreSwitcher } from "./store-switcher";
 
@@ -18,14 +26,21 @@ export function AdminShell({ children }: { children: ReactNode }) {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [collapsed, setCollapsed] = useState(false);
   const [sessionChecked, setSessionChecked] = useState(false);
+  const [session, setSession] = useState<AuthSession | null>(null);
   const current = findNavigationItem(pathname);
+  const navigation = filterNavigationBySession(adminNavigation, session);
+  const secondary = secondaryNavigation.filter((item) => canAccessNavigationItem(item, session));
+  const currentAllowed = current ? canAccessNavigationItem(current, session) : true;
 
   useEffect(() => {
-    if (!readAuthSession()) {
+    const storedSession = readAuthSession();
+
+    if (!storedSession) {
       router.replace("/login");
       return;
     }
 
+    setSession(storedSession);
     setSessionChecked(true);
   }, [router]);
 
@@ -44,7 +59,12 @@ export function AdminShell({ children }: { children: ReactNode }) {
           collapsed ? "w-20" : "w-64"
         }`}
       >
-        <SidebarContent collapsed={collapsed} pathname={pathname} />
+        <SidebarContent
+          navigation={navigation}
+          pathname={pathname}
+          secondary={secondary}
+          collapsed={collapsed}
+        />
         <button
           aria-label={collapsed ? "Expandir navegacao" : "Recolher navegacao"}
           className="m-3 flex min-h-10 items-center justify-center rounded-md border border-slate-700 text-slate-300 hover:bg-slate-900 hover:text-white"
@@ -79,8 +99,10 @@ export function AdminShell({ children }: { children: ReactNode }) {
             </button>
             <SidebarContent
               collapsed={false}
+              navigation={navigation}
               onNavigate={() => setMobileOpen(false)}
               pathname={pathname}
+              secondary={secondary}
             />
           </aside>
         </div>
@@ -111,7 +133,9 @@ export function AdminShell({ children }: { children: ReactNode }) {
             <SessionActions />
           </div>
         </header>
-        <div className="admin-shell-content mx-auto max-w-[1600px]">{children}</div>
+        <div className="admin-shell-content mx-auto max-w-[1600px]">
+          {currentAllowed ? children : <AccessDenied />}
+        </div>
       </div>
     </div>
   );
@@ -119,11 +143,15 @@ export function AdminShell({ children }: { children: ReactNode }) {
 
 function SidebarContent({
   collapsed,
+  navigation,
   pathname,
+  secondary,
   onNavigate,
 }: {
   collapsed: boolean;
+  navigation: typeof adminNavigation;
   pathname: string;
+  secondary: typeof secondaryNavigation;
   onNavigate?: () => void;
 }) {
   return (
@@ -147,7 +175,7 @@ function SidebarContent({
         className="min-h-0 flex-1 overflow-y-auto px-3 py-4"
         aria-label="Navegacao administrativa"
       >
-        {adminNavigation.map((group) => (
+        {navigation.map((group) => (
           <div className="mb-5" key={group.label}>
             {!collapsed ? (
               <p className="mb-2 px-2 text-xs font-semibold uppercase text-slate-500">
@@ -168,7 +196,7 @@ function SidebarContent({
           </div>
         ))}
         <div className="border-t border-slate-800 pt-4">
-          {secondaryNavigation.map((item) => (
+          {secondary.map((item) => (
             <NavigationLink
               collapsed={collapsed}
               item={item}

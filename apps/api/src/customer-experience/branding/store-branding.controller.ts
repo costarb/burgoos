@@ -1,5 +1,7 @@
 import { Body, Controller, Get, Inject, Post, Put, UseGuards } from "@nestjs/common";
 import { ApiBearerAuth, ApiTags } from "@nestjs/swagger";
+import { PermissionGuard } from "../../auth/guards/permission.guard";
+import { RequirePermission } from "../../auth/guards/require-permission.decorator";
 import { AuthUser } from "../../platform/auth/auth.types";
 import { CurrentUser } from "../../platform/auth/current-user.decorator";
 import { JwtAuthGuard } from "../../platform/auth/jwt-auth.guard";
@@ -9,7 +11,8 @@ import { StoreBrandingService } from "./store-branding.service";
 @ApiTags("store branding")
 @ApiBearerAuth()
 @Controller("admin/store/branding")
-@UseGuards(JwtAuthGuard)
+@UseGuards(JwtAuthGuard, PermissionGuard)
+@RequirePermission("catalog.manage")
 export class StoreBrandingController {
   constructor(@Inject(StoreBrandingService) private readonly service: StoreBrandingService) {}
 

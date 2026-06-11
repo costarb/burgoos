@@ -1,5 +1,7 @@
 import { Controller, Get, Inject, Query, UseGuards } from "@nestjs/common";
 import { ApiBearerAuth, ApiTags } from "@nestjs/swagger";
+import { PermissionGuard } from "../../auth/guards/permission.guard";
+import { RequirePermission } from "../../auth/guards/require-permission.decorator";
 import { CurrentUser } from "../../platform/auth/current-user.decorator";
 import { AuthUser } from "../../platform/auth/auth.types";
 import { JwtAuthGuard } from "../../platform/auth/jwt-auth.guard";
@@ -8,7 +10,8 @@ import { ProductPricingService } from "./product-pricing.service";
 @ApiTags("admin pricing")
 @ApiBearerAuth()
 @Controller("admin/pricing/products")
-@UseGuards(JwtAuthGuard)
+@UseGuards(JwtAuthGuard, PermissionGuard)
+@RequirePermission("catalog.manage", "finance.view", "finance.manage")
 export class PricingController {
   constructor(@Inject(ProductPricingService) private readonly service: ProductPricingService) {}
 

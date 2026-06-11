@@ -1,6 +1,7 @@
 import type { AuthSession } from "@burgoos/types";
 
 const AUTH_SESSION_KEY = "burgoos.admin.session";
+const AUTH_ACCESS_COOKIE = "burgoos.admin.access_token";
 
 export function readAuthSession(): AuthSession | null {
   if (typeof window === "undefined") {
@@ -22,12 +23,18 @@ export function readAuthSession(): AuthSession | null {
 }
 
 export function writeAuthSession(session: AuthSession): void {
-  window.localStorage.setItem(AUTH_SESSION_KEY, JSON.stringify(normalizeAuthSession(session)));
+  const normalizedSession = normalizeAuthSession(session);
+
+  window.localStorage.setItem(AUTH_SESSION_KEY, JSON.stringify(normalizedSession));
+  document.cookie = `${AUTH_ACCESS_COOKIE}=${encodeURIComponent(
+    normalizedSession.accessToken
+  )}; Path=/; SameSite=Lax`;
 }
 
 export function clearAuthSession(): void {
   if (typeof window !== "undefined") {
     window.localStorage.removeItem(AUTH_SESSION_KEY);
+    document.cookie = `${AUTH_ACCESS_COOKIE}=; Path=/; Max-Age=0; SameSite=Lax`;
   }
 }
 

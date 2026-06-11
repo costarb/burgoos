@@ -1,5 +1,7 @@
 import { Body, Controller, Get, Inject, Param, Patch, Post, UseGuards } from "@nestjs/common";
 import { ApiBearerAuth, ApiTags } from "@nestjs/swagger";
+import { PermissionGuard } from "../../auth/guards/permission.guard";
+import { RequirePermission } from "../../auth/guards/require-permission.decorator";
 import { CurrentUser } from "../../platform/auth/current-user.decorator";
 import { AuthUser } from "../../platform/auth/auth.types";
 import { JwtAuthGuard } from "../../platform/auth/jwt-auth.guard";
@@ -9,7 +11,8 @@ import { PurchaseUnitService } from "./purchase-unit.service";
 @ApiTags("admin purchase units")
 @ApiBearerAuth()
 @Controller("admin/purchase-units")
-@UseGuards(JwtAuthGuard)
+@UseGuards(JwtAuthGuard, PermissionGuard)
+@RequirePermission("catalog.manage")
 export class PurchaseUnitController {
   constructor(@Inject(PurchaseUnitService) private readonly service: PurchaseUnitService) {}
 

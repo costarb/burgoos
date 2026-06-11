@@ -12,11 +12,14 @@ import {
 import { AuthUser } from "../../../platform/auth/auth.types";
 import { CurrentUser } from "../../../platform/auth/current-user.decorator";
 import { JwtAuthGuard } from "../../../platform/auth/jwt-auth.guard";
+import { PermissionGuard } from "../../../auth/guards/permission.guard";
+import { RequirePermission } from "../../../auth/guards/require-permission.decorator";
 import { AccessUserDto, AccessUsersQueryDto, AccessUserUpdateDto } from "../dto/user-access.dto";
 import { UsersService } from "./users.service";
 
 @Controller("admin/access/users")
-@UseGuards(JwtAuthGuard)
+@UseGuards(JwtAuthGuard, PermissionGuard)
+@RequirePermission("access.users.manage")
 export class UsersController {
   constructor(@Inject(UsersService) private readonly users: UsersService) {}
 

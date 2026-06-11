@@ -61,8 +61,10 @@ import type {
   UpdateStoreInput,
   VisualConfiguration,
 } from "@burgoos/types";
+import { readAuthSession } from "./auth-client";
 
 const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? "http://127.0.0.1:3001";
+const AUTH_ACCESS_COOKIE = "burgoos.admin.access_token";
 
 export interface AdminCategory {
   id: string;
@@ -241,10 +243,29 @@ export async function loginPlatformAdmin(email: string, password: string): Promi
 }
 
 export async function getAdminToken(): Promise<string> {
+  const sessionToken = await readSessionAccessToken();
+
+  if (sessionToken) {
+    return sessionToken;
+  }
+
   return loginAdmin(
     process.env.DEMO_ADMIN_EMAIL ?? "admin@burgoos.local",
     process.env.DEMO_ADMIN_PASSWORD ?? "admin123"
   );
+}
+
+async function readSessionAccessToken(): Promise<string | null> {
+  if (typeof window !== "undefined") {
+    return readAuthSession()?.accessToken ?? null;
+  }
+
+  try {
+    const { cookies } = await import("next/headers");
+    return cookies().get(AUTH_ACCESS_COOKIE)?.value ?? null;
+  } catch {
+    return null;
+  }
 }
 
 export async function getPlatformAdminToken(): Promise<string> {

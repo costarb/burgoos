@@ -12,6 +12,8 @@ import {
 import { AuthUser } from "../../../platform/auth/auth.types";
 import { CurrentUser } from "../../../platform/auth/current-user.decorator";
 import { JwtAuthGuard } from "../../../platform/auth/jwt-auth.guard";
+import { PermissionGuard } from "../../../auth/guards/permission.guard";
+import { RequirePermission } from "../../../auth/guards/require-permission.decorator";
 import {
   AccessProfileDto,
   AccessProfilesQueryDto,
@@ -20,7 +22,8 @@ import {
 import { AccessProfilesService } from "./access-profiles.service";
 
 @Controller("admin/access/profiles")
-@UseGuards(JwtAuthGuard)
+@UseGuards(JwtAuthGuard, PermissionGuard)
+@RequirePermission("access.profiles.manage")
 export class AccessProfilesController {
   constructor(@Inject(AccessProfilesService) private readonly profiles: AccessProfilesService) {}
 

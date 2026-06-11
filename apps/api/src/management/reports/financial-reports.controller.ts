@@ -1,5 +1,7 @@
 import { Controller, Get, Inject, Query, UseGuards } from "@nestjs/common";
 import { ApiBearerAuth, ApiTags } from "@nestjs/swagger";
+import { PermissionGuard } from "../../auth/guards/permission.guard";
+import { RequirePermission } from "../../auth/guards/require-permission.decorator";
 import { CurrentUser } from "../../platform/auth/current-user.decorator";
 import { AuthUser } from "../../platform/auth/auth.types";
 import { JwtAuthGuard } from "../../platform/auth/jwt-auth.guard";
@@ -9,7 +11,8 @@ import { FinancialDashboardService } from "./financial-dashboard.service";
 @ApiTags("admin financial reports")
 @ApiBearerAuth()
 @Controller("admin/reports/financial")
-@UseGuards(JwtAuthGuard)
+@UseGuards(JwtAuthGuard, PermissionGuard)
+@RequirePermission("finance.view", "finance.manage")
 export class FinancialReportsController {
   constructor(
     @Inject(DreService) private readonly dreService: DreService,

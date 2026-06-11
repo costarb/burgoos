@@ -1,96 +1,64 @@
-import React from "react";
-import { act } from "react";
-import { createRoot, type Root } from "react-dom/client";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { AdminShell } from "./admin-shell";
+import { describe, expect, it } from "vitest";
+import {
+  adminNavigation,
+  canAccessNavigationItem,
+  filterNavigationBySession,
+  findNavigationItem,
+  secondaryNavigation,
+} from "./admin-navigation";
 
-const usePathname = vi.fn();
-const replace = vi.fn();
-const refresh = vi.fn();
+const operatorSession = {
+  user: { isMaster: false },
+  permissions: ["orders.view"],
+};
 
-vi.mock("next/navigation", () => ({
-  usePathname: () => usePathname(),
-  useRouter: () => ({ refresh, replace }),
-}));
+const financeSession = {
+  user: { isMaster: false },
+  permissions: ["finance.view"],
+};
 
-vi.mock("../../lib/auth-client", () => ({
-  clearAuthSession: vi.fn(),
-  readAuthSession: vi.fn(() => ({
-    accessToken: "access-token",
-    accessTokenExpiresAt: "2026-06-10T22:00:00.000Z",
-    activeStoreId: "store-1",
-    allowedStores: [
-      {
-        id: "store-1",
-        name: "Loja Centro",
-        slug: "loja-centro",
-        active: true,
-      },
-    ],
-    permissions: [],
-    refreshToken: "refresh-token",
-    user: {
-      id: "user-1",
-      email: "admin@burgoos.local",
-      login: "admin@burgoos.local",
-      name: "Admin",
-      status: "ACTIVE",
-      isMaster: true,
-    },
-  })),
-  writeAuthSession: vi.fn(),
-}));
+const masterSession = {
+  user: { isMaster: true },
+  permissions: [],
+};
 
-describe("admin shell", () => {
-  let container: HTMLDivElement;
-  let root: Root;
+describe("admin navigation permissions", () => {
+  it("filters menu entries by the logged user permissions", () => {
+    const groups = filterNavigationBySession(adminNavigation, operatorSession);
+    const labels = groups.flatMap((group) => group.items.map((item) => item.label));
 
-  beforeEach(() => {
-    vi.stubGlobal("React", React);
-    container = document.createElement("div");
-    document.body.appendChild(container);
-    root = createRoot(container);
-    replace.mockReset();
-    refresh.mockReset();
-    usePathname.mockReturnValue("/admin/orders/import");
+    expect(labels).toContain("Pedidos");
+    expect(labels).toContain("Estoque");
+    expect(labels).not.toContain("Contas a pagar");
+    expect(labels).not.toContain("Usuarios");
+    expect(labels).not.toContain("Perfis");
   });
 
-  afterEach(() => {
-    act(() => {
-      root.unmount();
-    });
-    container.remove();
-    vi.unstubAllGlobals();
+  it("allows financial views only to financial profiles", () => {
+    const groups = filterNavigationBySession(adminNavigation, financeSession);
+    const labels = groups.flatMap((group) => group.items.map((item) => item.label));
+
+    expect(labels).toContain("Contas a pagar");
+    expect(labels).toContain("Caixa");
+    expect(labels).toContain("DRE");
+    expect(labels).not.toContain("Usuarios");
   });
 
-  async function renderShell() {
-    await act(async () => {
-      root.render(
-        <AdminShell>
-          <main>Conteudo</main>
-        </AdminShell>
-      );
-    });
+  it("keeps master-only links restricted to master users", () => {
+    const stores = secondaryNavigation.find((item) => item.href === "/platform/stores");
 
-    return container.innerHTML;
-  }
-
-  it("renders grouped navigation and current route", async () => {
-    const html = await renderShell();
-
-    expect(html).toContain("Operacao");
-    expect(html).toContain("Cardapio e custos");
-    expect(html).toContain("Financeiro");
-    expect(html).toContain("Importar pedidos");
-    expect(html).toContain('aria-current="page"');
-    expect(html).toContain("Conteudo");
-    expect(html).toContain("Sair");
+    expect(stores).toBeDefined();
+    expect(canAccessNavigationItem(stores!, operatorSession)).toBe(false);
+    expect(canAccessNavigationItem(stores!, masterSession)).toBe(true);
   });
 
-  it("exposes implemented financial routes only", async () => {
-    const html = await renderShell();
+  it("resolves direct route access using the same permission metadata", () => {
+    const users = findNavigationItem("/admin/users");
+    const orders = findNavigationItem("/admin/orders/123");
 
-    expect(html).toContain("/admin/finance/payables");
-    expect(html).toContain("/admin/finance/cash-flow");
+    expect(users).toBeDefined();
+    expect(orders).toBeDefined();
+    expect(canAccessNavigationItem(users!, operatorSession)).toBe(false);
+    expect(canAccessNavigationItem(orders!, operatorSession)).toBe(true);
   });
 });

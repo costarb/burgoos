@@ -1,5 +1,7 @@
 import { Controller, Get, Inject, Query, UseGuards } from "@nestjs/common";
 import { ApiBearerAuth, ApiTags } from "@nestjs/swagger";
+import { PermissionGuard } from "../../auth/guards/permission.guard";
+import { RequirePermission } from "../../auth/guards/require-permission.decorator";
 import { AuthUser } from "../../platform/auth/auth.types";
 import { CurrentUser } from "../../platform/auth/current-user.decorator";
 import { JwtAuthGuard } from "../../platform/auth/jwt-auth.guard";
@@ -8,7 +10,8 @@ import { MenuEngineeringService } from "./menu-engineering.service";
 @ApiTags("admin menu engineering")
 @ApiBearerAuth()
 @Controller("admin/reports/menu-engineering")
-@UseGuards(JwtAuthGuard)
+@UseGuards(JwtAuthGuard, PermissionGuard)
+@RequirePermission("finance.view", "finance.manage")
 export class MenuEngineeringController {
   constructor(
     @Inject(MenuEngineeringService)
