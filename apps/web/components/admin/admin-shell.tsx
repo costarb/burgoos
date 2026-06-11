@@ -119,7 +119,7 @@ export function AdminShell({ children }: { children: ReactNode }) {
             >
               <Menu className="h-5 w-5" />
             </button>
-            <div className="min-w-0">
+            <div className="min-w-0 flex-1">
               <div className="flex items-center gap-1 text-xs font-medium text-slate-500">
                 <span>Administracao</span>
                 <ChevronRight className="h-3 w-3" />
@@ -129,8 +129,10 @@ export function AdminShell({ children }: { children: ReactNode }) {
                 {current?.description ?? "BurgoOS"}
               </p>
             </div>
-            <StoreSwitcher />
-            <SessionActions />
+            <div className="ml-auto flex min-w-0 items-center justify-end gap-3">
+              <StoreSwitcher />
+              <SessionActions session={session} />
+            </div>
           </div>
         </header>
         <div className="admin-shell-content mx-auto max-w-[1600px]">

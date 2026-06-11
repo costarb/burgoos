@@ -45,10 +45,10 @@ export function StoreSwitcher() {
   }
 
   return (
-    <label className="ml-auto flex items-center gap-2 text-xs font-medium text-slate-600">
+    <label className="flex items-center gap-2 text-xs font-medium text-slate-600">
       <Building2 aria-hidden className="h-4 w-4" />
       <select
-        className="h-9 rounded-md border border-slate-200 bg-white px-2 text-sm text-slate-900"
+        className="h-9 max-w-48 rounded-md border border-slate-200 bg-white px-2 text-sm text-slate-900"
         onChange={(event) => void changeStore(event.target.value)}
         value={session.activeStoreId ?? allowedStores[0]?.id ?? ""}
       >
