@@ -145,8 +145,8 @@ SELECT
   NULL,
   'Master',
   'Controle completo da plataforma administrativa.',
-  'GLOBAL',
-  'ACTIVE',
+  'GLOBAL'::"AccessProfileScope",
+  'ACTIVE'::"AccessProfileStatus",
   now(),
   now()
 WHERE NOT EXISTS (
@@ -158,8 +158,8 @@ WHERE NOT EXISTS (
 UPDATE access_profiles
 SET
   description = 'Controle completo da plataforma administrativa.',
-  scope = 'GLOBAL',
-  status = 'ACTIVE',
+  scope = 'GLOBAL'::"AccessProfileScope",
+  status = 'ACTIVE'::"AccessProfileStatus",
   updated_at = now()
 WHERE tenant_id IS NULL AND name = 'Master';
 
@@ -173,14 +173,27 @@ INSERT INTO access_profiles (
   created_at,
   updated_at
 )
-VALUES
-  ('20000000-0000-4000-8000-000000000002', '00000000-0000-4000-8000-000000000001', 'Admin da loja', 'Gerencia operacao e acessos da loja piloto.', 'STORE', 'ACTIVE', now(), now()),
-  ('20000000-0000-4000-8000-000000000003', '00000000-0000-4000-8000-000000000001', 'Operador', 'Acompanha e atualiza a operacao diaria.', 'STORE', 'ACTIVE', now(), now())
+SELECT
+  profile_seed.id,
+  tenant.id,
+  profile_seed.name,
+  profile_seed.description,
+  profile_seed.scope,
+  profile_seed.status,
+  now(),
+  now()
+FROM tenants tenant
+CROSS JOIN (
+  VALUES
+    ('20000000-0000-4000-8000-000000000002'::uuid, 'Admin da loja', 'Gerencia operacao e acessos da loja piloto.', 'STORE'::"AccessProfileScope", 'ACTIVE'::"AccessProfileStatus"),
+    ('20000000-0000-4000-8000-000000000003'::uuid, 'Operador', 'Acompanha e atualiza a operacao diaria.', 'STORE'::"AccessProfileScope", 'ACTIVE'::"AccessProfileStatus")
+) AS profile_seed(id, name, description, scope, status)
+WHERE tenant.slug = 'piloto'
 ON CONFLICT (tenant_id, name) DO UPDATE
 SET
   description = EXCLUDED.description,
   scope = EXCLUDED.scope,
-  status = 'ACTIVE',
+  status = 'ACTIVE'::"AccessProfileStatus",
   updated_at = now();
 
 INSERT INTO access_profile_permissions (profile_id, permission_id, created_at)
@@ -202,7 +215,8 @@ JOIN permissions permission ON permission.key IN (
   'access.users.manage',
   'access.audit.view'
 )
-WHERE profile.tenant_id = '00000000-0000-4000-8000-000000000001'
+JOIN tenants tenant ON tenant.id = profile.tenant_id
+WHERE tenant.slug = 'piloto'
   AND profile.name = 'Admin da loja'
 ON CONFLICT (profile_id, permission_id) DO NOTHING;
 
@@ -210,7 +224,8 @@ INSERT INTO access_profile_permissions (profile_id, permission_id, created_at)
 SELECT profile.id, permission.id, now()
 FROM access_profiles profile
 JOIN permissions permission ON permission.key IN ('orders.view', 'orders.manage')
-WHERE profile.tenant_id = '00000000-0000-4000-8000-000000000001'
+JOIN tenants tenant ON tenant.id = profile.tenant_id
+WHERE tenant.slug = 'piloto'
   AND profile.name = 'Operador'
 ON CONFLICT (profile_id, permission_id) DO NOTHING;
 
@@ -226,15 +241,30 @@ INSERT INTO users (
   created_at,
   updated_at
 )
-VALUES
-  ('30000000-0000-4000-8000-000000000001', '00000000-0000-4000-8000-000000000001', 'OWNER', 'ACTIVE', true, 'Admin Piloto', 'admin@burgoos.local', '$2a$10$SvsgcvCTvdXaPh.6jm/wAeKt.lHjyHmYidoERHb4bM6zuH4UliI8a', now(), now()),
-  ('30000000-0000-4000-8000-000000000002', '00000000-0000-4000-8000-000000000001', 'ADMIN', 'ACTIVE', false, 'Admin Loja Piloto', 'loja.admin@burgoos.local', '$2a$10$SvsgcvCTvdXaPh.6jm/wAeKt.lHjyHmYidoERHb4bM6zuH4UliI8a', now(), now()),
-  ('30000000-0000-4000-8000-000000000003', '00000000-0000-4000-8000-000000000001', 'OPERATOR', 'ACTIVE', false, 'Operador Piloto', 'operador@burgoos.local', '$2a$10$SvsgcvCTvdXaPh.6jm/wAeKt.lHjyHmYidoERHb4bM6zuH4UliI8a', now(), now())
+SELECT
+  user_seed.id,
+  tenant.id,
+  user_seed.role,
+  user_seed.status,
+  user_seed.is_master,
+  user_seed.name,
+  user_seed.email,
+  user_seed.password_hash,
+  now(),
+  now()
+FROM tenants tenant
+CROSS JOIN (
+  VALUES
+    ('30000000-0000-4000-8000-000000000001'::uuid, 'OWNER'::"UserRole", 'ACTIVE'::"AccessUserStatus", true, 'Admin Piloto', 'admin@burgoos.local', '$2a$10$SvsgcvCTvdXaPh.6jm/wAeKt.lHjyHmYidoERHb4bM6zuH4UliI8a'),
+    ('30000000-0000-4000-8000-000000000002'::uuid, 'ADMIN'::"UserRole", 'ACTIVE'::"AccessUserStatus", false, 'Admin Loja Piloto', 'loja.admin@burgoos.local', '$2a$10$SvsgcvCTvdXaPh.6jm/wAeKt.lHjyHmYidoERHb4bM6zuH4UliI8a'),
+    ('30000000-0000-4000-8000-000000000003'::uuid, 'OPERATOR'::"UserRole", 'ACTIVE'::"AccessUserStatus", false, 'Operador Piloto', 'operador@burgoos.local', '$2a$10$SvsgcvCTvdXaPh.6jm/wAeKt.lHjyHmYidoERHb4bM6zuH4UliI8a')
+) AS user_seed(id, role, status, is_master, name, email, password_hash)
+WHERE tenant.slug = 'piloto'
 ON CONFLICT (email) DO UPDATE
 SET
   tenant_id = EXCLUDED.tenant_id,
   role = EXCLUDED.role,
-  status = 'ACTIVE',
+  status = 'ACTIVE'::"AccessUserStatus",
   is_master = EXCLUDED.is_master,
   name = EXCLUDED.name,
   updated_at = now();
@@ -255,7 +285,7 @@ SELECT
   tenant.id,
   profile.id,
   true,
-  'ACTIVE',
+  'ACTIVE'::"AccessProfileStatus",
   now(),
   now()
 FROM users user_account
@@ -266,7 +296,7 @@ ON CONFLICT (user_id, tenant_id) DO UPDATE
 SET
   profile_id = EXCLUDED.profile_id,
   can_manage_store_access = true,
-  status = 'ACTIVE',
+  status = 'ACTIVE'::"AccessProfileStatus",
   updated_at = now();
 
 INSERT INTO user_store_assignments (
@@ -285,7 +315,7 @@ SELECT
   tenant.id,
   profile.id,
   true,
-  'ACTIVE',
+  'ACTIVE'::"AccessProfileStatus",
   now(),
   now()
 FROM users user_account
@@ -296,7 +326,7 @@ ON CONFLICT (user_id, tenant_id) DO UPDATE
 SET
   profile_id = EXCLUDED.profile_id,
   can_manage_store_access = true,
-  status = 'ACTIVE',
+  status = 'ACTIVE'::"AccessProfileStatus",
   updated_at = now();
 
 INSERT INTO user_store_assignments (
@@ -315,7 +345,7 @@ SELECT
   tenant.id,
   profile.id,
   false,
-  'ACTIVE',
+  'ACTIVE'::"AccessProfileStatus",
   now(),
   now()
 FROM users user_account
@@ -326,7 +356,7 @@ ON CONFLICT (user_id, tenant_id) DO UPDATE
 SET
   profile_id = EXCLUDED.profile_id,
   can_manage_store_access = false,
-  status = 'ACTIVE',
+  status = 'ACTIVE'::"AccessProfileStatus",
   updated_at = now();
 
 COMMIT;
