@@ -683,18 +683,7 @@ export async function importHistoricalOrders(
 
 export async function getAdminDailySummary(): Promise<DailySummary> {
   const token = await getAdminToken();
-  const response = await fetch(`${apiUrl}/api/admin/reports/daily-summary`, {
-    headers: {
-      Authorization: `Bearer ${token}`,
-    },
-    cache: "no-store",
-  });
-
-  if (!response.ok) {
-    throw new Error("Failed to load daily summary");
-  }
-
-  return response.json() as Promise<DailySummary>;
+  return fetchAdmin<DailySummary>(token, "/api/admin/reports/daily-summary");
 }
 
 export async function getAdminTenantSummary(): Promise<AdminTenant> {

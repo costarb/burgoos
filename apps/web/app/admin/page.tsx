@@ -1,16 +1,34 @@
-import { AlertTriangle, ArrowRight, ClipboardList, DollarSign, PackageSearch, TrendingUp } from "lucide-react";
+import {
+  AlertTriangle,
+  ArrowRight,
+  ClipboardList,
+  DollarSign,
+  PackageSearch,
+  TrendingUp,
+} from "lucide-react";
 import Link from "next/link";
+import type { FinancialDashboardIndicators } from "@burgoos/types";
 import { getAdminDailySummary, getAdminTenantSummary, getFinancialDashboard } from "../../lib/api";
 
 export const dynamic = "force-dynamic";
 
 export default async function AdminPage() {
-  const [summary, financialDashboard, tenant] = await Promise.all([
+  const tenant = await getAdminTenantSummary();
+  const [summaryResult, financialDashboardResult] = await Promise.allSettled([
     getAdminDailySummary(),
     getFinancialDashboard(),
-    getAdminTenantSummary(),
   ]);
+  const summary =
+    summaryResult.status === "fulfilled"
+      ? summaryResult.value
+      : { date: new Date().toISOString().slice(0, 10), orderCount: 0, grossRevenue: "0.00" };
+  const financialDashboard =
+    financialDashboardResult.status === "fulfilled"
+      ? financialDashboardResult.value
+      : emptyFinancialDashboard();
   const alertCount = financialDashboard.priceReviewCount + financialDashboard.stockAlertCount;
+  const hasDashboardWarning =
+    summaryResult.status === "rejected" || financialDashboardResult.status === "rejected";
 
   return (
     <main className="px-4 py-6 text-slate-900 sm:px-6 sm:py-8">
@@ -19,7 +37,9 @@ export default async function AdminPage() {
           <div>
             <p className="text-sm font-semibold text-tomato">{tenant.name}</p>
             <h1 className="mt-1 text-2xl font-semibold sm:text-3xl">Visao operacional</h1>
-            <p className="mt-1 text-sm text-slate-600">Acompanhe o movimento e acesse as rotinas mais frequentes.</p>
+            <p className="mt-1 text-sm text-slate-600">
+              Acompanhe o movimento e acesse as rotinas mais frequentes.
+            </p>
           </div>
           <Link
             className="inline-flex min-h-10 items-center gap-2 rounded-md bg-ink px-4 py-2 text-sm font-semibold text-white"
@@ -36,10 +56,29 @@ export default async function AdminPage() {
             label="Pedidos entregues hoje"
             value={String(summary.orderCount)}
           />
-          <Metric icon={DollarSign} label="Receita bruta hoje" value={`R$ ${summary.grossRevenue}`} />
-          <Metric icon={TrendingUp} label="Margem liquida" value={`${(financialDashboard.netMarginRate * 100).toFixed(1)}%`} />
-          <Metric icon={AlertTriangle} label="Alertas operacionais" value={String(alertCount)} warning={alertCount > 0} />
+          <Metric
+            icon={DollarSign}
+            label="Receita bruta hoje"
+            value={`R$ ${summary.grossRevenue}`}
+          />
+          <Metric
+            icon={TrendingUp}
+            label="Margem liquida"
+            value={`${(financialDashboard.netMarginRate * 100).toFixed(1)}%`}
+          />
+          <Metric
+            icon={AlertTriangle}
+            label="Alertas operacionais"
+            value={String(alertCount)}
+            warning={alertCount > 0}
+          />
         </section>
+
+        {hasDashboardWarning ? (
+          <div className="mt-4 rounded-md border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+            Alguns indicadores nao puderam ser carregados para este perfil ou ambiente.
+          </div>
+        ) : null}
 
         <section className="mt-8 grid gap-6 lg:grid-cols-[1.35fr_1fr]">
           <div>
@@ -73,15 +112,41 @@ export default async function AdminPage() {
             <dl className="mt-3 divide-y divide-slate-200 rounded-md border border-slate-200 bg-white px-4">
               <SummaryRow label="CMV" value={`R$ ${financialDashboard.cmv}`} />
               <SummaryRow label="Lucro bruto" value={`R$ ${financialDashboard.grossProfit}`} />
-              <SummaryRow label="Lucro liquido estimado" value={`R$ ${financialDashboard.estimatedNetProfit}`} />
-              <SummaryRow label="Itens para revisar preco" value={String(financialDashboard.priceReviewCount)} />
-              <SummaryRow label="Alertas de estoque" value={String(financialDashboard.stockAlertCount)} />
+              <SummaryRow
+                label="Lucro liquido estimado"
+                value={`R$ ${financialDashboard.estimatedNetProfit}`}
+              />
+              <SummaryRow
+                label="Itens para revisar preco"
+                value={String(financialDashboard.priceReviewCount)}
+              />
+              <SummaryRow
+                label="Alertas de estoque"
+                value={String(financialDashboard.stockAlertCount)}
+              />
             </dl>
           </div>
         </section>
       </section>
     </main>
   );
+}
+
+function emptyFinancialDashboard(): FinancialDashboardIndicators {
+  const today = new Date().toISOString().slice(0, 10);
+
+  return {
+    periodStart: today,
+    periodEnd: today,
+    grossRevenue: "0.00",
+    cmv: "0.00",
+    grossProfit: "0.00",
+    estimatedNetProfit: "0.00",
+    netMarginRate: 0,
+    deliveredOrderCount: 0,
+    priceReviewCount: 0,
+    stockAlertCount: 0,
+  };
 }
 
 function Metric({
@@ -106,7 +171,15 @@ function Metric({
   );
 }
 
-function QuickLink({ href, label, description }: { href: string; label: string; description: string }) {
+function QuickLink({
+  href,
+  label,
+  description,
+}: {
+  href: string;
+  label: string;
+  description: string;
+}) {
   return (
     <Link
       className="group rounded-md border border-slate-200 bg-white p-4 shadow-sm transition hover:border-slate-400"
