@@ -2,7 +2,6 @@
 -- Execute depois de aplicar as migrations Prisma.
 --
 -- Usuarios criados/atualizados:
---   platform@burgoos.local / admin123
 --   admin@burgoos.local / admin123
 --   loja.admin@burgoos.local / admin123
 --   operador@burgoos.local / admin123
@@ -11,95 +10,12 @@
 
 BEGIN;
 
-INSERT INTO layout_presets (
-  key,
-  name,
-  description,
-  target_surface,
-  active,
-  created_at,
-  updated_at
-)
-VALUES (
-  'classic',
-  'Classico',
-  'Menu familiar com categorias em destaque.',
-  'PUBLIC_MENU',
-  true,
-  now(),
-  now()
-)
-ON CONFLICT (key) DO UPDATE
-SET
-  name = EXCLUDED.name,
-  description = EXCLUDED.description,
-  target_surface = EXCLUDED.target_surface,
-  active = true,
-  updated_at = now();
-
-INSERT INTO tenants (
-  id,
-  name,
-  slug,
-  phone,
-  active,
-  is_open,
-  setup_completed_at,
-  default_layout_preset_key,
-  config,
-  created_at,
-  updated_at
-)
-VALUES (
-  '00000000-0000-4000-8000-000000000001',
-  'Loja Piloto',
-  'piloto',
-  '5500000000000',
-  true,
-  true,
-  now(),
-  'classic',
-  '{"pixInstructions":"Chave PIX da loja piloto","openingHours":"18:00-23:00"}'::jsonb,
-  now(),
-  now()
-)
-ON CONFLICT (slug) DO UPDATE
-SET
-  name = EXCLUDED.name,
-  phone = EXCLUDED.phone,
-  active = true,
-  is_open = EXCLUDED.is_open,
-  setup_completed_at = COALESCE(tenants.setup_completed_at, EXCLUDED.setup_completed_at),
-  default_layout_preset_key = EXCLUDED.default_layout_preset_key,
-  config = EXCLUDED.config,
-  updated_at = now();
-
-INSERT INTO platform_users (
-  id,
-  role,
-  name,
-  email,
-  password_hash,
-  active,
-  created_at,
-  updated_at
-)
-VALUES (
-  '00000000-0000-4000-8000-000000000010',
-  'SUPER_ADMIN',
-  'Admin Plataforma',
-  'platform@burgoos.local',
-  '$2a$10$SvsgcvCTvdXaPh.6jm/wAeKt.lHjyHmYidoERHb4bM6zuH4UliI8a',
-  true,
-  now(),
-  now()
-)
-ON CONFLICT (email) DO UPDATE
-SET
-  role = 'SUPER_ADMIN',
-  name = EXCLUDED.name,
-  active = true,
-  updated_at = now();
+DO $$
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM tenants WHERE slug = 'piloto') THEN
+    RAISE EXCEPTION 'Loja piloto nao encontrada. Execute este script somente depois da estrutura base existir em producao.';
+  END IF;
+END $$;
 
 INSERT INTO permissions (
   id,
