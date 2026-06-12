@@ -20,7 +20,7 @@ export class JwtAuthGuard implements CanActivate {
       throw new UnauthorizedException("Missing bearer token");
     }
 
-    const payload = await this.authService.verifyAccessToken(token);
+    const payload = await this.verifyToken(token);
     const user: AuthUser = {
       id: payload.sub,
       tenantId: payload.tenantId,
@@ -51,5 +51,20 @@ export class JwtAuthGuard implements CanActivate {
     }
 
     return token;
+  }
+
+  private async verifyToken(token: string) {
+    try {
+      return await this.authService.verifyAccessToken(token);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Invalid token";
+      const name = error instanceof Error ? error.name : "";
+
+      if (name === "TokenExpiredError" || message.includes("jwt expired")) {
+        throw new UnauthorizedException("Sessao expirada");
+      }
+
+      throw new UnauthorizedException("Sessao invalida");
+    }
   }
 }

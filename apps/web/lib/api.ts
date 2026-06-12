@@ -61,7 +61,7 @@ import type {
   UpdateStoreInput,
   VisualConfiguration,
 } from "@burgoos/types";
-import { readAuthSession } from "./auth-client";
+import { clearAuthSession, readAuthSession } from "./auth-client";
 
 const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? "http://127.0.0.1:3001";
 const AUTH_ACCESS_COOKIE = "burgoos.admin.access_token";
@@ -169,6 +169,11 @@ async function fetchAdmin<T>(token: string, path: string, init?: RequestInit): P
       status: response.status,
       message,
     });
+
+    if (response.status === 401) {
+      await clearStoredAuthSession();
+      await redirectToLogin();
+    }
 
     throw new Error(`[${response.status}] ${path}: ${message}`);
   }
@@ -295,6 +300,24 @@ async function redirectToLogin(): Promise<void> {
 
   const { redirect } = await import("next/navigation");
   redirect("/login");
+}
+
+async function clearStoredAuthSession(): Promise<void> {
+  if (typeof window !== "undefined") {
+    clearAuthSession();
+    return;
+  }
+
+  try {
+    const { cookies } = await import("next/headers");
+    cookies().set(AUTH_ACCESS_COOKIE, "", {
+      path: "/",
+      maxAge: 0,
+      sameSite: "lax",
+    });
+  } catch {
+    // Server components may be rendered in contexts where cookies cannot be mutated.
+  }
 }
 
 export async function getAccessUsers(): Promise<{

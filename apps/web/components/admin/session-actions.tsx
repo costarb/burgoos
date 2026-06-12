@@ -40,13 +40,14 @@ export function SessionActions({ session }: { session: AuthSession | null }) {
       </div>
       <button
         aria-label="Sair"
-        className="inline-flex h-9 w-9 items-center justify-center rounded-md border border-slate-200 text-slate-600 hover:bg-slate-50 hover:text-slate-950 disabled:opacity-60"
+        className="inline-flex min-h-9 items-center justify-center gap-2 rounded-md border border-slate-200 px-3 text-sm font-semibold text-slate-600 hover:bg-slate-50 hover:text-slate-950 disabled:opacity-60"
         disabled={pending}
         onClick={() => void logout()}
         title={pending ? "Saindo..." : "Sair"}
         type="button"
       >
         <LogOut aria-hidden className="h-4 w-4" />
+        <span>Sair</span>
       </button>
     </div>
   );
