@@ -156,8 +156,21 @@ async function fetchAdmin<T>(token: string, path: string, init?: RequestInit): P
   });
 
   if (!response.ok) {
-    const error = (await response.json().catch(() => null)) as { message?: string } | null;
-    throw new Error(error?.message ?? "Falha na requisicao administrativa");
+    const error = (await response.json().catch(() => null)) as {
+      message?: string | string[];
+      error?: string;
+    } | null;
+    const message = Array.isArray(error?.message)
+      ? error.message.join("; ")
+      : (error?.message ?? error?.error ?? "Falha na requisicao administrativa");
+
+    console.error("Admin API request failed", {
+      path,
+      status: response.status,
+      message,
+    });
+
+    throw new Error(`[${response.status}] ${path}: ${message}`);
   }
 
   return response.json() as Promise<T>;

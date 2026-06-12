@@ -8,16 +8,18 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import type { FinancialDashboardIndicators } from "@burgoos/types";
+import type { AdminTenant } from "../../lib/api";
 import { getAdminDailySummary, getAdminTenantSummary, getFinancialDashboard } from "../../lib/api";
 
 export const dynamic = "force-dynamic";
 
 export default async function AdminPage() {
-  const tenant = await getAdminTenantSummary();
-  const [summaryResult, financialDashboardResult] = await Promise.allSettled([
+  const [tenantResult, summaryResult, financialDashboardResult] = await Promise.allSettled([
+    getAdminTenantSummary(),
     getAdminDailySummary(),
     getFinancialDashboard(),
   ]);
+  const tenant = tenantResult.status === "fulfilled" ? tenantResult.value : fallbackTenant();
   const summary =
     summaryResult.status === "fulfilled"
       ? summaryResult.value
@@ -28,7 +30,9 @@ export default async function AdminPage() {
       : emptyFinancialDashboard();
   const alertCount = financialDashboard.priceReviewCount + financialDashboard.stockAlertCount;
   const hasDashboardWarning =
-    summaryResult.status === "rejected" || financialDashboardResult.status === "rejected";
+    tenantResult.status === "rejected" ||
+    summaryResult.status === "rejected" ||
+    financialDashboardResult.status === "rejected";
 
   return (
     <main className="px-4 py-6 text-slate-900 sm:px-6 sm:py-8">
@@ -146,6 +150,15 @@ function emptyFinancialDashboard(): FinancialDashboardIndicators {
     deliveredOrderCount: 0,
     priceReviewCount: 0,
     stockAlertCount: 0,
+  };
+}
+
+function fallbackTenant(): AdminTenant {
+  return {
+    id: "",
+    name: "Admin",
+    slug: "",
+    isOpen: false,
   };
 }
 
