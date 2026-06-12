@@ -243,16 +243,11 @@ export async function loginPlatformAdmin(email: string, password: string): Promi
 }
 
 export async function getAdminToken(): Promise<string> {
-  const sessionToken = await readSessionAccessToken();
+  return requireSessionAccessToken();
+}
 
-  if (sessionToken) {
-    return sessionToken;
-  }
-
-  return loginAdmin(
-    process.env.DEMO_ADMIN_EMAIL ?? "admin@burgoos.local",
-    process.env.DEMO_ADMIN_PASSWORD ?? "admin123"
-  );
+export async function getPlatformAdminToken(): Promise<string> {
+  return requireSessionAccessToken();
 }
 
 async function readSessionAccessToken(): Promise<string | null> {
@@ -268,11 +263,25 @@ async function readSessionAccessToken(): Promise<string | null> {
   }
 }
 
-export async function getPlatformAdminToken(): Promise<string> {
-  return loginPlatformAdmin(
-    process.env.DEMO_PLATFORM_ADMIN_EMAIL ?? "platform@burgoos.local",
-    process.env.DEMO_PLATFORM_ADMIN_PASSWORD ?? "admin123"
-  );
+async function requireSessionAccessToken(): Promise<string> {
+  const sessionToken = await readSessionAccessToken();
+
+  if (sessionToken) {
+    return sessionToken;
+  }
+
+  await redirectToLogin();
+  throw new Error("Sessao administrativa ausente");
+}
+
+async function redirectToLogin(): Promise<void> {
+  if (typeof window !== "undefined") {
+    window.location.assign("/login");
+    return;
+  }
+
+  const { redirect } = await import("next/navigation");
+  redirect("/login");
 }
 
 export async function getAccessUsers(): Promise<{
