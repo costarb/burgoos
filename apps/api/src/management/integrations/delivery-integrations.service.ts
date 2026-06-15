@@ -357,6 +357,22 @@ export class DeliveryIntegrationsService {
     });
   }
 
+  async getActiveCredentialSecret(tenantId: string, integrationId: string) {
+    const integration = await this.getForTenant(tenantId, integrationId);
+    const credential = integration.credentials[0];
+
+    if (!credential) {
+      throw new ConflictException("Credenciais ativas ausentes");
+    }
+
+    return JSON.parse(this.decryptSecret(credential.secretCiphertext)) as {
+      clientId: string;
+      clientSecret: string;
+      accessToken: string;
+      refreshToken: string | null;
+    };
+  }
+
   private async ensureOrderPlatformBelongsToTenant(tenantId: string, orderPlatformId: string) {
     const platform = await this.prisma.orderPlatform.findFirst({
       where: { id: orderPlatformId, tenantId },

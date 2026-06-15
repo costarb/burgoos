@@ -93,24 +93,24 @@
 
 ### Tests for User Story 2
 
-- [ ] T036 [P] [US2] Add event idempotency tests in apps/api/src/management/integrations/ifood/ifood-event-poller.service.spec.ts
-- [ ] T037 [P] [US2] Add iFood order mapping tests in apps/api/src/management/integrations/ifood/ifood-order-mapper.spec.ts
-- [ ] T038 [P] [US2] Add external order ingestion tests in apps/api/src/ordering/external-order-ingestion.service.spec.ts
-- [ ] T039 [P] [US2] Add cross-tenant ingestion E2E test in apps/api/test/ifood-tenant-isolation.e2e-spec.ts
+- [x] T036 [P] [US2] Add event idempotency tests in apps/api/src/management/integrations/ifood/ifood-event-poller.service.spec.ts
+- [x] T037 [P] [US2] Add iFood order mapping tests in apps/api/src/management/integrations/ifood/ifood-order-mapper.spec.ts
+- [x] T038 [P] [US2] Add external order ingestion tests in apps/api/src/ordering/external-order-ingestion.service.spec.ts
+- [x] T039 [P] [US2] Add cross-tenant ingestion E2E test in apps/api/test/ifood-tenant-isolation.e2e.spec.ts
 
 ### Implementation for User Story 2
 
-- [ ] T040 [US2] Implement iFood polling client and event fetch/ack methods in apps/api/src/management/integrations/ifood/ifood-client.ts
-- [ ] T041 [US2] Implement iFood event poller with 30-second interval guard in apps/api/src/management/integrations/ifood/ifood-event-poller.service.ts
-- [ ] T042 [US2] Implement durable event persistence and status transitions in apps/api/src/management/integrations/ifood/ifood-event-poller.service.ts
-- [ ] T043 [US2] Implement bounded retry for temporarily unavailable order details in apps/api/src/management/integrations/ifood/ifood-event-poller.service.ts
-- [ ] T044 [US2] Implement iFood order payload normalization in apps/api/src/management/integrations/ifood/ifood-order-mapper.ts
-- [ ] T045 [US2] Implement external order creation/linking using existing Order and OrderItem models in apps/api/src/ordering/external-order-ingestion.service.ts
-- [ ] T046 [US2] Wire external order ingestion into OrderingModule providers in apps/api/src/ordering/ordering.module.ts
-- [ ] T047 [US2] Emit order-created socket event for imported iFood orders in apps/api/src/ordering/external-order-ingestion.service.ts
-- [ ] T048 [US2] Add source/deadline/platform metadata to admin order response in apps/api/src/ordering/ordering.service.ts
-- [ ] T049 [US2] Display iFood source, external id and confirmation deadline in apps/web/app/admin/orders/orders-client.tsx
-- [ ] T050 [US2] Implement ACK job after processed/ignored events in apps/api/src/management/integrations/ifood/ifood-event-poller.service.ts
+- [x] T040 [US2] Implement iFood polling client and event fetch/ack methods in apps/api/src/management/integrations/ifood/ifood-client.ts
+- [x] T041 [US2] Implement iFood event poller with 30-second interval guard in apps/api/src/management/integrations/ifood/ifood-event-poller.service.ts
+- [x] T042 [US2] Implement durable event persistence and status transitions in apps/api/src/management/integrations/ifood/ifood-event-poller.service.ts
+- [x] T043 [US2] Implement bounded retry for temporarily unavailable order details in apps/api/src/management/integrations/ifood/ifood-event-poller.service.ts
+- [x] T044 [US2] Implement iFood order payload normalization in apps/api/src/management/integrations/ifood/ifood-order-mapper.ts
+- [x] T045 [US2] Implement external order creation/linking using existing Order and OrderItem models in apps/api/src/ordering/external-order-ingestion.service.ts
+- [x] T046 [US2] Wire external order ingestion into OrderingModule providers in apps/api/src/ordering/ordering.module.ts
+- [x] T047 [US2] Emit order-created socket event for imported iFood orders in apps/api/src/ordering/external-order-ingestion.service.ts
+- [x] T048 [US2] Add source/deadline/platform metadata to admin order response in apps/api/src/ordering/ordering.service.ts
+- [x] T049 [US2] Display iFood source, external id and confirmation deadline in apps/web/app/admin/orders/orders-client.tsx
+- [x] T050 [US2] Implement ACK job after processed/ignored events in apps/api/src/management/integrations/ifood/ifood-event-poller.service.ts
 
 **Checkpoint**: US2 is fully functional and testable independently.
 

@@ -319,6 +319,11 @@ export interface AdminOrder {
   paymentReleaseExpectedAt?: string | null;
   paymentReleaseSource?: PaymentReleaseSource | null;
   orderPlatformId?: string | null;
+  platformProvider?: "IFOOD" | "CUSTOM" | null;
+  externalOrderId?: string | null;
+  externalMerchantId?: string | null;
+  platformExternalStatus?: string | null;
+  platformConfirmationDeadlineAt?: string | null;
   notes: string | null;
   createdAt?: string;
   updatedAt?: string;

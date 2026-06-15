@@ -83,7 +83,9 @@ export function OrdersClient({
 
     try {
       const updatedOrder = await updateAdminOrderStatus(token, order.id, status);
-      setOperationMessage(`Pedido de ${order.customerName} atualizado para ${statusLabels[status]}.`);
+      setOperationMessage(
+        `Pedido de ${order.customerName} atualizado para ${statusLabels[status]}.`
+      );
 
       if (status === "DELIVERED" || status === "CANCELLED") {
         setActiveOrders((current) => current.filter((item) => item.id !== order.id));
@@ -146,7 +148,13 @@ export function OrdersClient({
       <OperationFeedback
         className="mt-4"
         state={{
-          status: error ? "error" : changingOrderId ? "pending" : operationMessage ? "success" : "idle",
+          status: error
+            ? "error"
+            : changingOrderId
+              ? "pending"
+              : operationMessage
+                ? "success"
+                : "idle",
           message:
             error ??
             operationMessage ??
@@ -174,6 +182,15 @@ export function OrdersClient({
                         <p className="font-semibold">{order.customerName}</p>
                         <p className="text-sm text-slate-600">{order.customerPhone}</p>
                         <p className="mt-1 text-xs text-slate-500">{paymentSummary(order)}</p>
+                        {order.platformProvider ? (
+                          <p className="mt-1 text-xs font-semibold text-tomato">
+                            {order.platformProvider}
+                            {order.externalOrderId ? ` · ${order.externalOrderId}` : ""}
+                            {order.platformConfirmationDeadlineAt
+                              ? ` · confirmar ate ${formatTime(order.platformConfirmationDeadlineAt)}`
+                              : ""}
+                          </p>
+                        ) : null}
                       </div>
                       <p className="font-bold text-tomato">R$ {order.total}</p>
                     </div>
@@ -233,7 +250,10 @@ export function OrdersClient({
             <p className="p-4 text-sm text-slate-500">Sem pedidos finalizados.</p>
           ) : (
             historyOrders.map((order) => (
-              <div className="grid gap-2 p-4 text-sm sm:grid-cols-[1fr_auto_auto_auto]" key={order.id}>
+              <div
+                className="grid gap-2 p-4 text-sm sm:grid-cols-[1fr_auto_auto_auto]"
+                key={order.id}
+              >
                 <span>
                   <span className="block font-medium">{order.customerName}</span>
                   <span className="block text-xs text-slate-500">{paymentSummary(order)}</span>
@@ -294,6 +314,13 @@ function paymentMethodLabel(value: PaymentMethod): string {
   };
 
   return labels[value];
+}
+
+function formatTime(value: string): string {
+  return new Intl.DateTimeFormat("pt-BR", {
+    hour: "2-digit",
+    minute: "2-digit",
+  }).format(new Date(value));
 }
 
 function playOrderAlert(): void {

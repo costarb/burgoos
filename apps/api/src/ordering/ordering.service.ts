@@ -120,6 +120,7 @@ export class OrderingService {
       },
       include: {
         items: true,
+        platformOrderLink: true,
       },
     });
 
@@ -153,11 +154,11 @@ export class OrderingService {
       whatsappUrl: buildWhatsAppOrderLink({
         tenantPhone: tenant.phone,
         customerName: order.customerName,
-      customerPhone: order.customerPhone,
-      fulfillmentMethod: order.fulfillmentMethod,
-      paymentMethod: order.paymentMethod,
-      paymentInstitution: order.paymentInstitution,
-      order: calculated,
+        customerPhone: order.customerPhone,
+        fulfillmentMethod: order.fulfillmentMethod,
+        paymentMethod: order.paymentMethod,
+        paymentInstitution: order.paymentInstitution,
+        order: calculated,
         notes: order.notes ?? undefined,
       }),
     };
@@ -187,6 +188,7 @@ export class OrderingService {
       },
       include: {
         items: true,
+        platformOrderLink: true,
       },
     });
 
@@ -209,6 +211,7 @@ export class OrderingService {
       },
       include: {
         items: true,
+        platformOrderLink: true,
       },
     });
 
@@ -273,6 +276,13 @@ export class OrderingService {
       paymentReleaseExpectedAt?: Date | null;
       paymentReleaseSource?: string | null;
       orderPlatformId?: string | null;
+      platformOrderLink?: {
+        provider: string;
+        externalOrderId: string;
+        externalMerchantId: string;
+        externalStatus: string;
+        confirmationDeadlineAt: Date | null;
+      } | null;
       notes: string | null;
       createdAt?: Date;
       updatedAt?: Date;
@@ -306,6 +316,12 @@ export class OrderingService {
       paymentReleaseExpectedAt: order.paymentReleaseExpectedAt?.toISOString() ?? null,
       paymentReleaseSource: order.paymentReleaseSource ?? null,
       orderPlatformId: order.orderPlatformId ?? null,
+      platformProvider: order.platformOrderLink?.provider ?? null,
+      externalOrderId: order.platformOrderLink?.externalOrderId ?? null,
+      externalMerchantId: order.platformOrderLink?.externalMerchantId ?? null,
+      platformExternalStatus: order.platformOrderLink?.externalStatus ?? null,
+      platformConfirmationDeadlineAt:
+        order.platformOrderLink?.confirmationDeadlineAt?.toISOString() ?? null,
       notes: order.notes,
       createdAt: order.createdAt?.toISOString(),
       updatedAt: order.updatedAt?.toISOString(),

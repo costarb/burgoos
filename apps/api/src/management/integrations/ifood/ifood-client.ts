@@ -80,7 +80,124 @@ export class IfoodClient implements DeliveryProviderAdapter {
     };
   }
 
+  async pollEvents(input: { accessToken: string; merchantId: string }): Promise<
+    Array<{
+      id: string;
+      code: string;
+      fullCode?: string | null;
+      orderId?: string | null;
+      createdAt?: string | null;
+      metadata?: unknown;
+      raw: unknown;
+    }>
+  > {
+    if (this.isMockMode()) {
+      return [];
+    }
+
+    const apiBaseUrl = this.requireApiBaseUrl();
+    const response = await fetch(`${apiBaseUrl}/order/v1.0/events:polling`, {
+      headers: {
+        Authorization: `Bearer ${input.accessToken}`,
+        "x-polling-merchants": input.merchantId,
+      },
+    });
+
+    if (!response.ok) {
+      throw new Error(`iFood event polling failed with status ${response.status}`);
+    }
+
+    const payload = (await response.json()) as unknown;
+    const events = Array.isArray(payload) ? payload : [];
+
+    return events.map((event) => {
+      const record = asRecord(event);
+      return {
+        id: stringFrom(record.id, "missing-event-id"),
+        code: stringFrom(record.code, "UNKNOWN"),
+        fullCode: nullableString(record.fullCode),
+        orderId: nullableString(record.orderId),
+        createdAt: nullableString(record.createdAt),
+        metadata: record.metadata,
+        raw: event,
+      };
+    });
+  }
+
+  async getOrderDetails(input: { accessToken: string; orderId: string }): Promise<unknown> {
+    if (this.isMockMode()) {
+      return {
+        id: input.orderId,
+        merchant: { id: "mock-merchant" },
+        customer: { name: "Cliente iFood", phone: null },
+        total: { orderAmount: 0 },
+        items: [],
+        payments: { methods: [] },
+        createdAt: new Date().toISOString(),
+      };
+    }
+
+    const apiBaseUrl = this.requireApiBaseUrl();
+    const response = await fetch(`${apiBaseUrl}/order/v1.0/orders/${input.orderId}`, {
+      headers: {
+        Authorization: `Bearer ${input.accessToken}`,
+      },
+    });
+
+    if (response.status === 404) {
+      return null;
+    }
+
+    if (!response.ok) {
+      throw new Error(`iFood order detail failed with status ${response.status}`);
+    }
+
+    return response.json();
+  }
+
+  async acknowledgeEvents(input: { accessToken: string; eventIds: string[] }): Promise<void> {
+    if (input.eventIds.length === 0 || this.isMockMode()) {
+      return;
+    }
+
+    const apiBaseUrl = this.requireApiBaseUrl();
+    const response = await fetch(`${apiBaseUrl}/order/v1.0/events/acknowledgment`, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${input.accessToken}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(input.eventIds.map((id) => ({ id }))),
+    });
+
+    if (!response.ok) {
+      throw new Error(`iFood event acknowledgment failed with status ${response.status}`);
+    }
+  }
+
   private isMockMode() {
     return this.config.get<string>("IFOOD_MOCK_MODE") === "true";
   }
+
+  private requireApiBaseUrl() {
+    const apiBaseUrl = this.config.get<string>("IFOOD_API_BASE_URL");
+    if (!apiBaseUrl) {
+      throw new Error("IFOOD_API_BASE_URL is not configured");
+    }
+    return apiBaseUrl;
+  }
+}
+
+type JsonRecord = Record<string, unknown>;
+
+function asRecord(value: unknown): JsonRecord {
+  return value && typeof value === "object" && !Array.isArray(value) ? (value as JsonRecord) : {};
+}
+
+function stringFrom(value: unknown, fallback: string): string {
+  return typeof value === "string" && value.trim() ? value : fallback;
+}
+
+function nullableString(value: unknown): string | null {
+  return typeof value === "string" && value.trim() ? value : null;
 }
