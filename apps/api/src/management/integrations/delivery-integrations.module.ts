@@ -1,5 +1,6 @@
 import { forwardRef, Module } from "@nestjs/common";
 import { OrderingModule } from "../../ordering/ordering.module";
+import { AuthModule } from "../../platform/auth/auth.module";
 import { DatabaseModule } from "../../platform/database/database.module";
 import { DeliveryIntegrationAuditService } from "./delivery-integration-audit.service";
 import { DeliveryIntegrationHealthService } from "./delivery-integration-health.service";
@@ -12,7 +13,7 @@ import { IfoodEventPollerService } from "./ifood/ifood-event-poller.service";
 import { IfoodStatusSyncService } from "./ifood/ifood-status-sync.service";
 
 @Module({
-  imports: [DatabaseModule, forwardRef(() => OrderingModule)],
+  imports: [AuthModule, DatabaseModule, forwardRef(() => OrderingModule)],
   controllers: [DeliveryIntegrationsController],
   providers: [
     DeliveryIntegrationsService,
