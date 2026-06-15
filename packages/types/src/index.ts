@@ -324,6 +324,27 @@ export interface AdminOrder {
   externalMerchantId?: string | null;
   platformExternalStatus?: string | null;
   platformConfirmationDeadlineAt?: string | null;
+  platformConfirmationState?: "OK" | "DUE_SOON" | "EXPIRED" | null;
+  platformSyncStatus?:
+    | "PENDING"
+    | "SENT"
+    | "CONFIRMED"
+    | "FAILED"
+    | "RETRYABLE"
+    | "CANCELLED"
+    | null;
+  platformSyncAction?:
+    | "CONFIRM"
+    | "REFUSE"
+    | "START_PREPARATION"
+    | "READY_TO_PICKUP"
+    | "DISPATCH"
+    | "DELIVER"
+    | "REQUEST_CANCELLATION"
+    | "RESPOND_DISPUTE"
+    | null;
+  platformSyncError?: string | null;
+  platformSyncNextRetryAt?: string | null;
   notes: string | null;
   createdAt?: string;
   updatedAt?: string;

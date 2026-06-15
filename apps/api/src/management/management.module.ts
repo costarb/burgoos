@@ -93,6 +93,6 @@ import { DeliveryIntegrationsModule } from "./integrations/delivery-integrations
     AccessProfilesService,
     PermissionsService,
   ],
-  exports: [OrderProfitabilityService],
+  exports: [OrderProfitabilityService, DeliveryIntegrationsModule],
 })
 export class ManagementModule {}

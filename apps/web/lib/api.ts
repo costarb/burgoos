@@ -672,6 +672,33 @@ export async function updateAdminOrderStatus(
   return response.json() as Promise<AdminOrder>;
 }
 
+export async function confirmPlatformOrder(token: string, orderId: string): Promise<AdminOrder> {
+  return fetchAdmin<AdminOrder>(token, `/api/admin/orders/${orderId}/platform-actions/confirm`, {
+    method: "POST",
+  });
+}
+
+export async function refusePlatformOrder(
+  token: string,
+  orderId: string,
+  payload: { providerReasonId: string; reason?: string }
+): Promise<AdminOrder> {
+  return fetchAdmin<AdminOrder>(token, `/api/admin/orders/${orderId}/platform-actions/refuse`, {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function getPlatformCancellationReasons(
+  token: string,
+  orderId: string
+): Promise<Array<{ id: string; description: string }>> {
+  return fetchAdmin<Array<{ id: string; description: string }>>(
+    token,
+    `/api/admin/orders/${orderId}/platform-actions/cancellation-reasons`
+  );
+}
+
 export async function editAdminOrder(
   token: string,
   orderId: string,

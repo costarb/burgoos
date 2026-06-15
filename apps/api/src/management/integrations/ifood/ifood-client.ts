@@ -175,6 +175,92 @@ export class IfoodClient implements DeliveryProviderAdapter {
     }
   }
 
+  async listCancellationReasons(input: {
+    accessToken: string;
+    orderId: string;
+  }): Promise<Array<{ id: string; description: string }>> {
+    if (this.isMockMode()) {
+      return [
+        { id: "501", description: "Loja sem produto para atender o pedido" },
+        { id: "502", description: "Loja fechada ou sem operacao no momento" },
+      ];
+    }
+
+    const apiBaseUrl = this.requireApiBaseUrl();
+    const response = await fetch(
+      `${apiBaseUrl}/order/v1.0/orders/${input.orderId}/cancellationReasons`,
+      {
+        headers: {
+          Authorization: `Bearer ${input.accessToken}`,
+        },
+      }
+    );
+
+    if (!response.ok) {
+      throw new Error(`iFood cancellation reasons failed with status ${response.status}`);
+    }
+
+    const payload = (await response.json()) as unknown;
+    const reasons = Array.isArray(payload) ? payload : asArray(asRecord(payload).reasons);
+
+    return reasons.map((reason) => {
+      const record = asRecord(reason);
+      return {
+        id: stringFrom(record.id ?? record.code, "UNKNOWN"),
+        description: stringFrom(record.description ?? record.message, "Motivo iFood"),
+      };
+    });
+  }
+
+  async confirmOrder(input: { accessToken: string; orderId: string }): Promise<void> {
+    if (this.isMockMode()) {
+      return;
+    }
+
+    const apiBaseUrl = this.requireApiBaseUrl();
+    const response = await fetch(`${apiBaseUrl}/order/v1.0/orders/${input.orderId}/confirm`, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${input.accessToken}`,
+      },
+    });
+
+    if (!response.ok) {
+      throw new Error(`iFood confirm order failed with status ${response.status}`);
+    }
+  }
+
+  async requestCancellation(input: {
+    accessToken: string;
+    orderId: string;
+    reasonCode: string;
+    reason: string;
+  }): Promise<void> {
+    if (this.isMockMode()) {
+      return;
+    }
+
+    const apiBaseUrl = this.requireApiBaseUrl();
+    const response = await fetch(
+      `${apiBaseUrl}/order/v1.0/orders/${input.orderId}/requestCancellation`,
+      {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${input.accessToken}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          cancellationCode: input.reasonCode,
+          reason: input.reason,
+        }),
+      }
+    );
+
+    if (!response.ok) {
+      throw new Error(`iFood cancellation request failed with status ${response.status}`);
+    }
+  }
+
   private isMockMode() {
     return this.config.get<string>("IFOOD_MOCK_MODE") === "true";
   }
@@ -200,4 +286,8 @@ function stringFrom(value: unknown, fallback: string): string {
 
 function nullableString(value: unknown): string | null {
   return typeof value === "string" && value.trim() ? value : null;
+}
+
+function asArray(value: unknown): unknown[] {
+  return Array.isArray(value) ? value : [];
 }

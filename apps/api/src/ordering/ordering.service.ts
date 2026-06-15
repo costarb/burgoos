@@ -120,7 +120,14 @@ export class OrderingService {
       },
       include: {
         items: true,
-        platformOrderLink: true,
+        platformOrderLink: {
+          include: {
+            syncAttempts: {
+              orderBy: { createdAt: "desc" },
+              take: 1,
+            },
+          },
+        },
       },
     });
 
@@ -188,7 +195,14 @@ export class OrderingService {
       },
       include: {
         items: true,
-        platformOrderLink: true,
+        platformOrderLink: {
+          include: {
+            syncAttempts: {
+              orderBy: { createdAt: "desc" },
+              take: 1,
+            },
+          },
+        },
       },
     });
 
@@ -211,7 +225,14 @@ export class OrderingService {
       },
       include: {
         items: true,
-        platformOrderLink: true,
+        platformOrderLink: {
+          include: {
+            syncAttempts: {
+              orderBy: { createdAt: "desc" },
+              take: 1,
+            },
+          },
+        },
       },
     });
 
@@ -282,6 +303,13 @@ export class OrderingService {
         externalMerchantId: string;
         externalStatus: string;
         confirmationDeadlineAt: Date | null;
+        syncAttempts?: Array<{
+          status: string;
+          action: string;
+          errorMessage: string | null;
+          createdAt: Date;
+          nextRetryAt: Date | null;
+        }>;
       } | null;
       notes: string | null;
       createdAt?: Date;
@@ -322,6 +350,12 @@ export class OrderingService {
       platformExternalStatus: order.platformOrderLink?.externalStatus ?? null,
       platformConfirmationDeadlineAt:
         order.platformOrderLink?.confirmationDeadlineAt?.toISOString() ?? null,
+      platformConfirmationState: this.getPlatformConfirmationState(order),
+      platformSyncStatus: order.platformOrderLink?.syncAttempts?.[0]?.status ?? null,
+      platformSyncAction: order.platformOrderLink?.syncAttempts?.[0]?.action ?? null,
+      platformSyncError: order.platformOrderLink?.syncAttempts?.[0]?.errorMessage ?? null,
+      platformSyncNextRetryAt:
+        order.platformOrderLink?.syncAttempts?.[0]?.nextRetryAt?.toISOString() ?? null,
       notes: order.notes,
       createdAt: order.createdAt?.toISOString(),
       updatedAt: order.updatedAt?.toISOString(),
@@ -337,5 +371,24 @@ export class OrderingService {
       })),
       stockWarnings,
     };
+  }
+
+  private getPlatformConfirmationState(order: {
+    status: OrderStatus;
+    platformOrderLink?: { confirmationDeadlineAt: Date | null } | null;
+  }) {
+    const deadline = order.platformOrderLink?.confirmationDeadlineAt;
+
+    if (!deadline || order.status !== OrderStatus.PENDING) {
+      return null;
+    }
+
+    const remainingMs = deadline.getTime() - Date.now();
+
+    if (remainingMs < 0) {
+      return "EXPIRED";
+    }
+
+    return remainingMs <= 2 * 60_000 ? "DUE_SOON" : "OK";
   }
 }

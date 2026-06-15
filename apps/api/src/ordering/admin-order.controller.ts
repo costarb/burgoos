@@ -10,14 +10,17 @@ import {
   Query,
   UseGuards,
 } from "@nestjs/common";
+import { OrderStatus } from "@prisma/client";
 import { PermissionGuard } from "../auth/guards/permission.guard";
 import { RequirePermission } from "../auth/guards/require-permission.decorator";
 import { CurrentUser } from "../platform/auth/current-user.decorator";
 import { JwtAuthGuard } from "../platform/auth/jwt-auth.guard";
 import { OrderMaintenanceRolesGuard } from "../platform/auth/roles.guard";
 import { AuthUser } from "../platform/auth/auth.types";
+import { IfoodStatusSyncService } from "../management/integrations/ifood/ifood-status-sync.service";
 import { ImportOrdersDto } from "./dto/import-orders.dto";
 import { HistoricalOrderImportService } from "./historical-order-import.service";
+import { RefusePlatformOrderDto } from "./dto/platform-order-action.dto";
 import { UpdateOrderStatusDto } from "./dto/update-order-status.dto";
 import { OrderingService } from "./ordering.service";
 import { DeleteOrderDto } from "./dto/delete-order.dto";
@@ -33,7 +36,9 @@ export class AdminOrderController {
     @Inject(HistoricalOrderImportService)
     private readonly historicalOrderImportService: HistoricalOrderImportService,
     @Inject(OrderMaintenanceService)
-    private readonly orderMaintenanceService: OrderMaintenanceService
+    private readonly orderMaintenanceService: OrderMaintenanceService,
+    @Inject(IfoodStatusSyncService)
+    private readonly ifoodStatusSyncService: IfoodStatusSyncService
   ) {}
 
   @Get()
@@ -50,6 +55,36 @@ export class AdminOrderController {
     @Body() dto: UpdateOrderStatusDto
   ) {
     return this.orderingService.updateOrderStatus(user.tenantId, orderId, dto.status);
+  }
+
+  @Get(":id/platform-actions/cancellation-reasons")
+  @RequirePermission("orders.manage")
+  listPlatformCancellationReasons(@CurrentUser() user: AuthUser, @Param("id") orderId: string) {
+    return this.ifoodStatusSyncService.syncCancellationReasons(user.tenantId, orderId);
+  }
+
+  @Post(":id/platform-actions/confirm")
+  @RequirePermission("orders.manage")
+  async confirmPlatformOrder(@CurrentUser() user: AuthUser, @Param("id") orderId: string) {
+    await this.ifoodStatusSyncService.confirmOrder(user.tenantId, user.id, orderId);
+    return this.orderingService.updateOrderStatus(user.tenantId, orderId, OrderStatus.PREPARING);
+  }
+
+  @Post(":id/platform-actions/refuse")
+  @RequirePermission("orders.manage")
+  async refusePlatformOrder(
+    @CurrentUser() user: AuthUser,
+    @Param("id") orderId: string,
+    @Body() dto: RefusePlatformOrderDto
+  ) {
+    await this.ifoodStatusSyncService.refuseOrder({
+      tenantId: user.tenantId,
+      actorUserId: user.id,
+      orderId,
+      providerReasonId: dto.providerReasonId,
+      reason: dto.reason,
+    });
+    return this.orderingService.updateOrderStatus(user.tenantId, orderId, OrderStatus.CANCELLED);
   }
 
   @Post("import")

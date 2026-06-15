@@ -124,19 +124,19 @@
 
 ### Tests for User Story 3
 
-- [ ] T051 [P] [US3] Add platform confirm/refuse API tests in apps/api/src/ordering/admin-order.controller.spec.ts
-- [ ] T052 [P] [US3] Add iFood status sync tests for confirm/refuse failures in apps/api/src/management/integrations/ifood/ifood-status-sync.service.spec.ts
-- [ ] T053 [P] [US3] Add web tests for confirm/refuse controls in apps/web/app/admin/orders/orders-client.spec.tsx
+- [x] T051 [P] [US3] Add platform confirm/refuse API tests in apps/api/src/ordering/admin-order.controller.spec.ts
+- [x] T052 [P] [US3] Add iFood status sync tests for confirm/refuse failures in apps/api/src/management/integrations/ifood/ifood-status-sync.service.spec.ts
+- [x] T053 [P] [US3] Add web tests for confirm/refuse controls in apps/web/app/admin/orders/orders-client.spec.tsx
 
 ### Implementation for User Story 3
 
-- [ ] T054 [US3] Implement provider cancellation reason sync/cache in apps/api/src/management/integrations/ifood/ifood-status-sync.service.ts
-- [ ] T055 [US3] Implement confirm/refuse action service with deadline validation in apps/api/src/management/integrations/ifood/ifood-status-sync.service.ts
-- [ ] T056 [US3] Add platform confirm/refuse endpoints to apps/api/src/ordering/admin-order.controller.ts
-- [ ] T057 [US3] Persist PlatformSyncAttempt records for confirm/refuse actions in apps/api/src/management/integrations/ifood/ifood-status-sync.service.ts
-- [ ] T058 [US3] Add deadline warning state to admin order listing in apps/api/src/ordering/ordering.service.ts
-- [ ] T059 [US3] Add accept/refuse controls, reason selection and sync feedback in apps/web/app/admin/orders/orders-client.tsx
-- [ ] T060 [US3] Add visible retry state and operator warning for failed confirm/refuse sync in apps/web/app/admin/orders/orders-client.tsx
+- [x] T054 [US3] Implement provider cancellation reason sync/cache in apps/api/src/management/integrations/ifood/ifood-status-sync.service.ts
+- [x] T055 [US3] Implement confirm/refuse action service with deadline validation in apps/api/src/management/integrations/ifood/ifood-status-sync.service.ts
+- [x] T056 [US3] Add platform confirm/refuse endpoints to apps/api/src/ordering/admin-order.controller.ts
+- [x] T057 [US3] Persist PlatformSyncAttempt records for confirm/refuse actions in apps/api/src/management/integrations/ifood/ifood-status-sync.service.ts
+- [x] T058 [US3] Add deadline warning state to admin order listing in apps/api/src/ordering/ordering.service.ts
+- [x] T059 [US3] Add accept/refuse controls, reason selection and sync feedback in apps/web/app/admin/orders/orders-client.tsx
+- [x] T060 [US3] Add visible retry state and operator warning for failed confirm/refuse sync in apps/web/app/admin/orders/orders-client.tsx
 
 **Checkpoint**: US3 is fully functional and testable independently.
 

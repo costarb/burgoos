@@ -8,6 +8,7 @@ import { DeliveryIntegrationsService } from "./delivery-integrations.service";
 import { IfoodAuthService } from "./ifood/ifood-auth.service";
 import { IfoodClient } from "./ifood/ifood-client";
 import { IfoodEventPollerService } from "./ifood/ifood-event-poller.service";
+import { IfoodStatusSyncService } from "./ifood/ifood-status-sync.service";
 
 @Module({
   imports: [DatabaseModule, forwardRef(() => OrderingModule)],
@@ -19,7 +20,8 @@ import { IfoodEventPollerService } from "./ifood/ifood-event-poller.service";
     IfoodAuthService,
     IfoodClient,
     IfoodEventPollerService,
+    IfoodStatusSyncService,
   ],
-  exports: [DeliveryIntegrationsService, DeliveryIntegrationAuditService],
+  exports: [DeliveryIntegrationsService, DeliveryIntegrationAuditService, IfoodStatusSyncService],
 })
 export class DeliveryIntegrationsModule {}
