@@ -192,6 +192,22 @@ async function main(): Promise<void> {
       description: "Consultar historico de autenticacao e mudancas de acesso",
       sensitive: true,
     },
+    {
+      key: "integrations.delivery.view",
+      area: "Integracoes",
+      screen: "Delivery",
+      action: AccessPermissionAction.VIEW,
+      description: "Visualizar configuracoes e saude das integracoes de delivery",
+      sensitive: true,
+    },
+    {
+      key: "integrations.delivery.manage",
+      area: "Integracoes",
+      screen: "Delivery",
+      action: AccessPermissionAction.MANAGE,
+      description: "Configurar, validar, ativar e pausar integracoes de delivery",
+      sensitive: true,
+    },
   ];
 
   for (const permission of accessPermissions) {
@@ -274,6 +290,8 @@ async function main(): Promise<void> {
       "finance.view",
       "access.users.manage",
       "access.audit.view",
+      "integrations.delivery.view",
+      "integrations.delivery.manage",
     ],
   });
 

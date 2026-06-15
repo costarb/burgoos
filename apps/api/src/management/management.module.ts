@@ -43,9 +43,10 @@ import { PermissionsController } from "./access/permissions/permissions.controll
 import { PermissionsService } from "./access/permissions/permissions.service";
 import { UsersController } from "./access/users/users.controller";
 import { UsersService } from "./access/users/users.service";
+import { DeliveryIntegrationsModule } from "./integrations/delivery-integrations.module";
 
 @Module({
-  imports: [AuthModule, DatabaseModule],
+  imports: [AuthModule, DatabaseModule, DeliveryIntegrationsModule],
   controllers: [
     DailySummaryController,
     FinancialConfigurationController,

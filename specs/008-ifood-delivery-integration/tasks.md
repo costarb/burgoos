@@ -20,12 +20,12 @@
 
 **Purpose**: Prepare module structure, shared contracts, and environment knobs used by every story.
 
-- [ ] T001 Create delivery integrations API module structure in apps/api/src/management/integrations/
-- [ ] T002 Create iFood adapter folder structure in apps/api/src/management/integrations/ifood/
-- [ ] T003 Create external order ingestion folder/files in apps/api/src/ordering/external-order-ingestion.service.ts
-- [ ] T004 Create admin delivery integrations route folder in apps/web/app/admin/integrations/delivery/
-- [ ] T005 [P] Add delivery integration env variable documentation to apps/api/.env.example
-- [ ] T006 [P] Add iFood/deployment env variable documentation to README.md
+- [x] T001 Create delivery integrations API module structure in apps/api/src/management/integrations/
+- [x] T002 Create iFood adapter folder structure in apps/api/src/management/integrations/ifood/
+- [x] T003 Create external order ingestion folder/files in apps/api/src/ordering/external-order-ingestion.service.ts
+- [x] T004 Create admin delivery integrations route folder in apps/web/app/admin/integrations/delivery/
+- [x] T005 [P] Add delivery integration env variable documentation to apps/api/.env.example
+- [x] T006 [P] Add iFood/deployment env variable documentation to README.md
 
 ---
 
@@ -35,22 +35,22 @@
 
 **CRITICAL**: No user story work can begin until this phase is complete.
 
-- [ ] T007 Add Prisma enums for delivery integration status, credential status, event status, sync status, provider, order action, order mode, order timing and integration audit action in packages/database/prisma/schema.prisma
-- [ ] T008 Add Prisma models DeliveryIntegration, DeliveryIntegrationCredential, DeliveryPlatformEvent, PlatformOrderLink, PlatformSyncAttempt, PlatformCancellationReason, PlatformDispute and DeliveryIntegrationAudit in packages/database/prisma/schema.prisma
-- [ ] T009 Add Tenant, User, Order, OrderPlatform and related model relations for delivery integration models in packages/database/prisma/schema.prisma
-- [ ] T010 Generate migration for delivery integration schema in packages/database/prisma/migrations/
-- [ ] T011 [P] Add delivery integration permission seed entries in packages/database/prisma/seed.ts
-- [ ] T012 [P] Add shared provider-neutral TypeScript types in packages/types/src/delivery-integrations.ts
-- [ ] T013 Export delivery integration types from packages/types/src/index.ts
-- [ ] T014 Add DeliveryIntegrationsModule and register it in apps/api/src/management/management.module.ts
-- [ ] T015 Create provider adapter interfaces in apps/api/src/management/integrations/delivery-provider.adapter.ts
-- [ ] T016 Create integration secret redaction utilities in apps/api/src/management/integrations/integration-secret.util.ts
-- [ ] T017 Create integration audit service in apps/api/src/management/integrations/delivery-integration-audit.service.ts
-- [ ] T018 Create integration repository/service base in apps/api/src/management/integrations/delivery-integrations.service.ts
-- [ ] T019 Create controller shell with permission guards in apps/api/src/management/integrations/delivery-integrations.controller.ts
-- [ ] T020 Create health service shell in apps/api/src/management/integrations/delivery-integration-health.service.ts
-- [ ] T021 [P] Add foundational unit tests for secret redaction in apps/api/src/management/integrations/integration-secret.util.spec.ts
-- [ ] T022 [P] Add foundational tenant isolation tests for integration repository in apps/api/src/management/integrations/delivery-integrations.service.spec.ts
+- [x] T007 Add Prisma enums for delivery integration status, credential status, event status, sync status, provider, order action, order mode, order timing and integration audit action in packages/database/prisma/schema.prisma
+- [x] T008 Add Prisma models DeliveryIntegration, DeliveryIntegrationCredential, DeliveryPlatformEvent, PlatformOrderLink, PlatformSyncAttempt, PlatformCancellationReason, PlatformDispute and DeliveryIntegrationAudit in packages/database/prisma/schema.prisma
+- [x] T009 Add Tenant, User, Order, OrderPlatform and related model relations for delivery integration models in packages/database/prisma/schema.prisma
+- [x] T010 Generate migration for delivery integration schema in packages/database/prisma/migrations/
+- [x] T011 [P] Add delivery integration permission seed entries in packages/database/prisma/seed.ts
+- [x] T012 [P] Add shared provider-neutral TypeScript types in packages/types/src/delivery-integrations.ts
+- [x] T013 Export delivery integration types from packages/types/src/index.ts
+- [x] T014 Add DeliveryIntegrationsModule and register it in apps/api/src/management/management.module.ts
+- [x] T015 Create provider adapter interfaces in apps/api/src/management/integrations/delivery-provider.adapter.ts
+- [x] T016 Create integration secret redaction utilities in apps/api/src/management/integrations/integration-secret.util.ts
+- [x] T017 Create integration audit service in apps/api/src/management/integrations/delivery-integration-audit.service.ts
+- [x] T018 Create integration repository/service base in apps/api/src/management/integrations/delivery-integrations.service.ts
+- [x] T019 Create controller shell with permission guards in apps/api/src/management/integrations/delivery-integrations.controller.ts
+- [x] T020 Create health service shell in apps/api/src/management/integrations/delivery-integration-health.service.ts
+- [x] T021 [P] Add foundational unit tests for secret redaction in apps/api/src/management/integrations/integration-secret.util.spec.ts
+- [x] T022 [P] Add foundational tenant isolation tests for integration repository in apps/api/src/management/integrations/delivery-integrations.service.spec.ts
 
 **Checkpoint**: Foundation ready - user story implementation can now begin.
 
@@ -64,22 +64,22 @@
 
 ### Tests for User Story 1
 
-- [ ] T023 [P] [US1] Add API tests for create/update/validate/activate/pause credential flows in apps/api/src/management/integrations/delivery-integrations.controller.spec.ts
-- [ ] T024 [P] [US1] Add iFood auth token lifecycle tests in apps/api/src/management/integrations/ifood/ifood-auth.service.spec.ts
-- [ ] T025 [P] [US1] Add web tests for delivery integration settings page in apps/web/app/admin/integrations/delivery/delivery-integrations-page.spec.tsx
+- [x] T023 [P] [US1] Add API tests for create/update/validate/activate/pause credential flows in apps/api/src/management/integrations/delivery-integrations.controller.spec.ts
+- [x] T024 [P] [US1] Add iFood auth token lifecycle tests in apps/api/src/management/integrations/ifood/ifood-auth.service.spec.ts
+- [x] T025 [P] [US1] Add web tests for delivery integration settings page in apps/web/app/admin/integrations/delivery/delivery-integrations-page.spec.tsx
 
 ### Implementation for User Story 1
 
-- [ ] T026 [US1] Implement create/list/get/update integration methods in apps/api/src/management/integrations/delivery-integrations.service.ts
-- [ ] T027 [US1] Implement credential save/rotation with secret redaction in apps/api/src/management/integrations/delivery-integrations.service.ts
-- [ ] T028 [US1] Implement iFood OAuth/token lifecycle in apps/api/src/management/integrations/ifood/ifood-auth.service.ts
-- [ ] T029 [US1] Implement iFood merchant validation client methods in apps/api/src/management/integrations/ifood/ifood-client.ts
-- [ ] T030 [US1] Implement validate/activate/pause endpoints in apps/api/src/management/integrations/delivery-integrations.controller.ts
-- [ ] T031 [US1] Implement integration health summary for credential, merchant and propagation states in apps/api/src/management/integrations/delivery-integration-health.service.ts
-- [ ] T032 [US1] Add admin delivery integration page server component in apps/web/app/admin/integrations/delivery/page.tsx
-- [ ] T033 [US1] Add delivery integration client UI for list, form, validation, activation, pause and credential rotation in apps/web/app/admin/integrations/delivery/delivery-integrations-client.tsx
-- [ ] T034 [US1] Add integration health badge component in apps/web/components/admin/integration-health-badge.tsx
-- [ ] T035 [US1] Add delivery integrations navigation entry gated by permission in apps/web/components/admin/admin-shell.tsx
+- [x] T026 [US1] Implement create/list/get/update integration methods in apps/api/src/management/integrations/delivery-integrations.service.ts
+- [x] T027 [US1] Implement credential save/rotation with secret redaction in apps/api/src/management/integrations/delivery-integrations.service.ts
+- [x] T028 [US1] Implement iFood OAuth/token lifecycle in apps/api/src/management/integrations/ifood/ifood-auth.service.ts
+- [x] T029 [US1] Implement iFood merchant validation client methods in apps/api/src/management/integrations/ifood/ifood-client.ts
+- [x] T030 [US1] Implement validate/activate/pause endpoints in apps/api/src/management/integrations/delivery-integrations.controller.ts
+- [x] T031 [US1] Implement integration health summary for credential, merchant and propagation states in apps/api/src/management/integrations/delivery-integration-health.service.ts
+- [x] T032 [US1] Add admin delivery integration page server component in apps/web/app/admin/integrations/delivery/page.tsx
+- [x] T033 [US1] Add delivery integration client UI for list, form, validation, activation, pause and credential rotation in apps/web/app/admin/integrations/delivery/delivery-integrations-client.tsx
+- [x] T034 [US1] Add integration health badge component in apps/web/components/admin/integration-health-badge.tsx
+- [x] T035 [US1] Add delivery integrations navigation entry gated by permission in apps/web/components/admin/admin-shell.tsx
 
 **Checkpoint**: US1 is fully functional and testable independently.
 

@@ -7,6 +7,9 @@ import type {
   AccessPermissionGroup,
   AccessAuditEvent,
   DeleteOrderInput,
+  DeliveryIntegrationDetail,
+  DeliveryIntegrationHealth,
+  DeliveryIntegrationStatus,
   EditOrderInput,
   BrandingDraftInput,
   BrandingPreview,
@@ -142,6 +145,22 @@ export interface AccessProfilePayload {
   scope: "GLOBAL" | "STORE";
   storeId?: string | null;
   permissionKeys: string[];
+}
+
+export interface DeliveryIntegrationPayload {
+  provider: "IFOOD";
+  displayName: string;
+  externalMerchantId?: string | null;
+  orderPlatformId: string;
+  pollingEnabled?: boolean;
+  webhookEnabled?: boolean;
+}
+
+export interface DeliveryCredentialPayload {
+  clientId: string;
+  clientSecret: string;
+  authorizationCode?: string | null;
+  refreshToken?: string | null;
 }
 
 async function fetchAdmin<T>(token: string, path: string, init?: RequestInit): Promise<T> {
@@ -1163,6 +1182,97 @@ export async function updateOrderPlatform(
     method: "PATCH",
     body: JSON.stringify(payload),
   });
+}
+
+export async function getDeliveryIntegrations(): Promise<{
+  token: string;
+  integrations: DeliveryIntegrationDetail[];
+  orderPlatforms: OrderPlatform[];
+}> {
+  const token = await getAdminToken();
+  const [integrations, orderPlatforms] = await Promise.all([
+    fetchAdmin<DeliveryIntegrationDetail[]>(token, "/api/admin/integrations/delivery"),
+    fetchAdmin<OrderPlatform[]>(token, "/api/admin/order-platforms"),
+  ]);
+
+  return { token, integrations, orderPlatforms };
+}
+
+export async function createDeliveryIntegration(
+  token: string,
+  payload: DeliveryIntegrationPayload
+): Promise<DeliveryIntegrationDetail> {
+  return fetchAdmin<DeliveryIntegrationDetail>(token, "/api/admin/integrations/delivery", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function updateDeliveryIntegration(
+  token: string,
+  id: string,
+  payload: Partial<DeliveryIntegrationPayload>
+): Promise<DeliveryIntegrationDetail> {
+  return fetchAdmin<DeliveryIntegrationDetail>(token, `/api/admin/integrations/delivery/${id}`, {
+    method: "PATCH",
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function saveDeliveryIntegrationCredentials(
+  token: string,
+  id: string,
+  payload: DeliveryCredentialPayload
+): Promise<void> {
+  await fetchAdmin<unknown>(token, `/api/admin/integrations/delivery/${id}/credentials`, {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function validateDeliveryIntegration(
+  token: string,
+  id: string
+): Promise<{ valid: boolean; status: DeliveryIntegrationStatus; checks: unknown[] }> {
+  return fetchAdmin(token, `/api/admin/integrations/delivery/${id}/validate`, {
+    method: "POST",
+  });
+}
+
+export async function activateDeliveryIntegration(
+  token: string,
+  id: string
+): Promise<DeliveryIntegrationDetail> {
+  return fetchAdmin<DeliveryIntegrationDetail>(
+    token,
+    `/api/admin/integrations/delivery/${id}/activate`,
+    {
+      method: "POST",
+    }
+  );
+}
+
+export async function pauseDeliveryIntegration(
+  token: string,
+  id: string
+): Promise<DeliveryIntegrationDetail> {
+  return fetchAdmin<DeliveryIntegrationDetail>(
+    token,
+    `/api/admin/integrations/delivery/${id}/pause`,
+    {
+      method: "POST",
+    }
+  );
+}
+
+export async function getDeliveryIntegrationHealth(
+  token: string,
+  id: string
+): Promise<DeliveryIntegrationHealth> {
+  return fetchAdmin<DeliveryIntegrationHealth>(
+    token,
+    `/api/admin/integrations/delivery/${id}/health`
+  );
 }
 
 export async function getIngredients(): Promise<{

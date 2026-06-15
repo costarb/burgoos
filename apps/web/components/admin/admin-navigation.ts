@@ -176,6 +176,13 @@ export const adminNavigation: AdminNavigationGroup[] = [
         permissions: ["finance.manage"],
       },
       {
+        href: "/admin/integrations/delivery",
+        label: "Delivery",
+        icon: Truck,
+        description: "Integracoes de pedidos",
+        permissions: ["integrations.delivery.view", "integrations.delivery.manage"],
+      },
+      {
         href: "/admin/branding",
         label: "Identidade visual",
         icon: Palette,

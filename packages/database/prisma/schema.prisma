@@ -186,22 +186,105 @@ enum FinancialAuditAction {
   ADJUST
 }
 
+enum DeliveryProvider {
+  IFOOD
+  CUSTOM
+}
+
+enum DeliveryIntegrationStatus {
+  DRAFT
+  VALIDATING
+  ACTIVE
+  PAUSED
+  REQUIRES_ATTENTION
+  DISABLED
+}
+
+enum DeliveryCredentialStatus {
+  ACTIVE
+  EXPIRED
+  REVOKED
+  ROTATED
+  REQUIRES_REAUTHORIZATION
+}
+
+enum DeliveryPlatformEventStatus {
+  RECEIVED
+  PROCESSING
+  PROCESSED
+  IGNORED
+  FAILED
+  ACK_PENDING
+  ACKED
+}
+
+enum DeliverySyncAttemptStatus {
+  PENDING
+  SENT
+  CONFIRMED
+  FAILED
+  RETRYABLE
+  CANCELLED
+}
+
+enum DeliveryPlatformOrderAction {
+  CONFIRM
+  REFUSE
+  START_PREPARATION
+  READY_TO_PICKUP
+  DISPATCH
+  DELIVER
+  REQUEST_CANCELLATION
+  RESPOND_DISPUTE
+}
+
+enum DeliveryPlatformOrderMode {
+  DELIVERY
+  MERCHANT_DELIVERY
+  TAKEOUT
+  DINE_IN
+}
+
+enum DeliveryPlatformOrderTiming {
+  IMMEDIATE
+  SCHEDULED
+}
+
+enum DeliveryIntegrationAuditAction {
+  CONFIG_CREATED
+  CONFIG_UPDATED
+  CONFIG_ACTIVATED
+  CONFIG_PAUSED
+  CONFIG_DISABLED
+  CREDENTIAL_ROTATED
+  VALIDATION_RUN
+  EVENT_RECEIVED
+  EVENT_PROCESSED
+  EVENT_ACKED
+  ORDER_CREATED
+  ORDER_UPDATED
+  SYNC_ATTEMPTED
+  SYNC_FAILED
+  DEADLINE_ALERTED
+  DISPUTE_RECEIVED
+}
+
 model Tenant {
-  id                          String                       @id @default(uuid()) @db.Uuid
+  id                          String                          @id @default(uuid()) @db.Uuid
   name                        String
-  slug                        String                       @unique
+  slug                        String                          @unique
   phone                       String
-  active                      Boolean                      @default(true)
-  isOpen                      Boolean                      @default(false) @map("is_open")
-  setupCompletedAt            DateTime?                    @map("setup_completed_at")
-  deactivatedAt               DateTime?                    @map("deactivated_at")
-  createdByPlatformUserId     String?                      @map("created_by_platform_user_id") @db.Uuid
-  defaultLayoutPresetKey      String                       @default("classic") @map("default_layout_preset_key")
-  config                      Json                         @default("{}")
-  createdAt                   DateTime                     @default(now()) @map("created_at")
-  updatedAt                   DateTime                     @updatedAt @map("updated_at")
-  createdByPlatformUser       PlatformUser?                @relation(fields: [createdByPlatformUserId], references: [id], onDelete: SetNull)
-  defaultLayoutPreset         LayoutPreset                 @relation(fields: [defaultLayoutPresetKey], references: [key], onDelete: Restrict)
+  active                      Boolean                         @default(true)
+  isOpen                      Boolean                         @default(false) @map("is_open")
+  setupCompletedAt            DateTime?                       @map("setup_completed_at")
+  deactivatedAt               DateTime?                       @map("deactivated_at")
+  createdByPlatformUserId     String?                         @map("created_by_platform_user_id") @db.Uuid
+  defaultLayoutPresetKey      String                          @default("classic") @map("default_layout_preset_key")
+  config                      Json                            @default("{}")
+  createdAt                   DateTime                        @default(now()) @map("created_at")
+  updatedAt                   DateTime                        @updatedAt @map("updated_at")
+  createdByPlatformUser       PlatformUser?                   @relation(fields: [createdByPlatformUserId], references: [id], onDelete: SetNull)
+  defaultLayoutPreset         LayoutPreset                    @relation(fields: [defaultLayoutPresetKey], references: [key], onDelete: Restrict)
   users                       User[]
   visualConfigurations        StoreVisualConfiguration[]
   categories                  Category[]
@@ -229,6 +312,14 @@ model Tenant {
   accessProfiles              AccessProfile[]
   sessionTokens               SessionToken[]
   accessAuditEvents           AccessAuditEvent[]
+  deliveryIntegrations        DeliveryIntegration[]
+  deliveryCredentials         DeliveryIntegrationCredential[]
+  deliveryPlatformEvents      DeliveryPlatformEvent[]
+  platformOrderLinks          PlatformOrderLink[]
+  platformSyncAttempts        PlatformSyncAttempt[]
+  platformCancellationReasons PlatformCancellationReason[]
+  platformDisputes            PlatformDispute[]
+  deliveryIntegrationAudits   DeliveryIntegrationAudit[]
 
   @@index([createdByPlatformUserId])
   @@index([defaultLayoutPresetKey])
@@ -264,36 +355,41 @@ model LayoutPreset {
 }
 
 model User {
-  id                            String                     @id @default(uuid()) @db.Uuid
-  tenantId                      String                     @map("tenant_id") @db.Uuid
-  role                          UserRole                   @default(OPERATOR)
-  status                        AccessUserStatus           @default(ACTIVE)
-  isMaster                      Boolean                    @default(false) @map("is_master")
+  id                            String                          @id @default(uuid()) @db.Uuid
+  tenantId                      String                          @map("tenant_id") @db.Uuid
+  role                          UserRole                        @default(OPERATOR)
+  status                        AccessUserStatus                @default(ACTIVE)
+  isMaster                      Boolean                         @default(false) @map("is_master")
   name                          String
-  email                         String                     @unique
+  email                         String                          @unique
   phone                         String?
-  passwordHash                  String                     @map("password_hash")
-  lastLoginAt                   DateTime?                  @map("last_login_at")
-  createdAt                     DateTime                   @default(now()) @map("created_at")
-  updatedAt                     DateTime                   @updatedAt @map("updated_at")
-  tenant                        Tenant                     @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  visualConfigurationsCreated   StoreVisualConfiguration[] @relation("VisualConfigurationCreatedBy")
-  visualConfigurationsPublished StoreVisualConfiguration[] @relation("VisualConfigurationPublishedBy")
-  deletedOrders                 Order[]                    @relation("OrderDeletedBy")
+  passwordHash                  String                          @map("password_hash")
+  lastLoginAt                   DateTime?                       @map("last_login_at")
+  createdAt                     DateTime                        @default(now()) @map("created_at")
+  updatedAt                     DateTime                        @updatedAt @map("updated_at")
+  tenant                        Tenant                          @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  visualConfigurationsCreated   StoreVisualConfiguration[]      @relation("VisualConfigurationCreatedBy")
+  visualConfigurationsPublished StoreVisualConfiguration[]      @relation("VisualConfigurationPublishedBy")
+  deletedOrders                 Order[]                         @relation("OrderDeletedBy")
   orderMaintenances             OrderMaintenance[]
-  payablesCreated               Payable[]                  @relation("PayableCreatedBy")
-  payablePaymentsCreated        PayablePayment[]           @relation("PayablePaymentCreatedBy")
-  payablePaymentsReversed       PayablePayment[]           @relation("PayablePaymentReversedBy")
-  cashMovementsCreated          CashMovement[]             @relation("CashMovementCreatedBy")
-  cashMovementsReversed         CashMovement[]             @relation("CashMovementReversedBy")
-  financialAudits               FinancialAudit[]           @relation("FinancialAuditActor")
+  payablesCreated               Payable[]                       @relation("PayableCreatedBy")
+  payablePaymentsCreated        PayablePayment[]                @relation("PayablePaymentCreatedBy")
+  payablePaymentsReversed       PayablePayment[]                @relation("PayablePaymentReversedBy")
+  cashMovementsCreated          CashMovement[]                  @relation("CashMovementCreatedBy")
+  cashMovementsReversed         CashMovement[]                  @relation("CashMovementReversedBy")
+  financialAudits               FinancialAudit[]                @relation("FinancialAuditActor")
   storeAssignments              UserStoreAssignment[]
   sessionTokens                 SessionToken[]
   passwordResetTokens           PasswordResetToken[]
-  accessAuditEventsAsActor      AccessAuditEvent[]         @relation("AccessAuditActor")
-  accessAuditEventsAsTarget     AccessAuditEvent[]         @relation("AccessAuditTarget")
-  accessProfilesCreated         AccessProfile[]            @relation("AccessProfileCreatedBy")
-  accessProfilesUpdated         AccessProfile[]            @relation("AccessProfileUpdatedBy")
+  accessAuditEventsAsActor      AccessAuditEvent[]              @relation("AccessAuditActor")
+  accessAuditEventsAsTarget     AccessAuditEvent[]              @relation("AccessAuditTarget")
+  accessProfilesCreated         AccessProfile[]                 @relation("AccessProfileCreatedBy")
+  accessProfilesUpdated         AccessProfile[]                 @relation("AccessProfileUpdatedBy")
+  deliveryIntegrationsCreated   DeliveryIntegration[]           @relation("DeliveryIntegrationCreatedBy")
+  deliveryIntegrationsUpdated   DeliveryIntegration[]           @relation("DeliveryIntegrationUpdatedBy")
+  deliveryCredentialsCreated    DeliveryIntegrationCredential[] @relation("DeliveryCredentialCreatedBy")
+  platformSyncAttemptsCreated   PlatformSyncAttempt[]           @relation("PlatformSyncAttemptCreatedBy")
+  deliveryIntegrationAudits     DeliveryIntegrationAudit[]      @relation("DeliveryIntegrationAuditActor")
 
   @@index([tenantId])
   @@index([status])
@@ -518,6 +614,7 @@ model Order {
   stockMovements           StockMovement[]
   profitabilitySnapshots   OrderProfitabilitySnapshot[]
   maintenances             OrderMaintenance[]
+  platformOrderLink        PlatformOrderLink?
 
   @@index([tenantId, status])
   @@index([tenantId, createdAt])
@@ -801,10 +898,230 @@ model OrderPlatform {
   orders                      Order[]
   productCostSnapshots        ProductCostSnapshot[]
   orderProfitabilitySnapshots OrderProfitabilitySnapshot[]
+  deliveryIntegrations        DeliveryIntegration[]
+  platformOrderLinks          PlatformOrderLink[]
 
   @@unique([tenantId, name])
   @@index([tenantId])
   @@map("order_platforms")
+}
+
+model DeliveryIntegration {
+  id                      String                          @id @default(uuid()) @db.Uuid
+  tenantId                String                          @map("tenant_id") @db.Uuid
+  provider                DeliveryProvider
+  orderPlatformId         String                          @map("order_platform_id") @db.Uuid
+  status                  DeliveryIntegrationStatus       @default(DRAFT)
+  displayName             String                          @map("display_name")
+  externalMerchantId      String?                         @map("external_merchant_id")
+  pollingEnabled          Boolean                         @default(true) @map("polling_enabled")
+  webhookEnabled          Boolean                         @default(false) @map("webhook_enabled")
+  lastValidationAt        DateTime?                       @map("last_validation_at")
+  lastSuccessfulPollingAt DateTime?                       @map("last_successful_polling_at")
+  lastErrorAt             DateTime?                       @map("last_error_at")
+  lastErrorCode           String?                         @map("last_error_code")
+  lastErrorMessage        String?                         @map("last_error_message")
+  homologationStatus      String                          @default("PENDING") @map("homologation_status")
+  createdByUserId         String?                         @map("created_by_user_id") @db.Uuid
+  updatedByUserId         String?                         @map("updated_by_user_id") @db.Uuid
+  createdAt               DateTime                        @default(now()) @map("created_at")
+  updatedAt               DateTime                        @updatedAt @map("updated_at")
+  tenant                  Tenant                          @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  orderPlatform           OrderPlatform                   @relation(fields: [orderPlatformId], references: [id], onDelete: Restrict)
+  createdByUser           User?                           @relation("DeliveryIntegrationCreatedBy", fields: [createdByUserId], references: [id], onDelete: SetNull)
+  updatedByUser           User?                           @relation("DeliveryIntegrationUpdatedBy", fields: [updatedByUserId], references: [id], onDelete: SetNull)
+  credentials             DeliveryIntegrationCredential[]
+  events                  DeliveryPlatformEvent[]
+  orderLinks              PlatformOrderLink[]
+  syncAttempts            PlatformSyncAttempt[]
+  cancellationReasons     PlatformCancellationReason[]
+  disputes                PlatformDispute[]
+  audits                  DeliveryIntegrationAudit[]
+
+  @@unique([tenantId, provider])
+  @@index([tenantId, status])
+  @@index([tenantId, orderPlatformId])
+  @@index([createdByUserId])
+  @@index([updatedByUserId])
+  @@map("delivery_integrations")
+}
+
+model DeliveryIntegrationCredential {
+  id               String                   @id @default(uuid()) @db.Uuid
+  tenantId         String                   @map("tenant_id") @db.Uuid
+  integrationId    String                   @map("integration_id") @db.Uuid
+  status           DeliveryCredentialStatus @default(ACTIVE)
+  credentialType   String                   @map("credential_type")
+  secretCiphertext String                   @map("secret_ciphertext")
+  tokenExpiresAt   DateTime?                @map("token_expires_at")
+  refreshExpiresAt DateTime?                @map("refresh_expires_at")
+  scopes           Json?
+  metadata         Json?
+  createdByUserId  String?                  @map("created_by_user_id") @db.Uuid
+  rotatedAt        DateTime?                @map("rotated_at")
+  createdAt        DateTime                 @default(now()) @map("created_at")
+  tenant           Tenant                   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  integration      DeliveryIntegration      @relation(fields: [integrationId], references: [id], onDelete: Cascade)
+  createdByUser    User?                    @relation("DeliveryCredentialCreatedBy", fields: [createdByUserId], references: [id], onDelete: SetNull)
+
+  @@index([tenantId, integrationId, status])
+  @@index([createdByUserId])
+  @@map("delivery_integration_credentials")
+}
+
+model DeliveryPlatformEvent {
+  id                  String                      @id @default(uuid()) @db.Uuid
+  tenantId            String                      @map("tenant_id") @db.Uuid
+  integrationId       String                      @map("integration_id") @db.Uuid
+  provider            DeliveryProvider
+  externalEventId     String                      @map("external_event_id")
+  externalOrderId     String?                     @map("external_order_id")
+  eventCode           String                      @map("event_code")
+  fullEventCode       String?                     @map("full_event_code")
+  status              DeliveryPlatformEventStatus @default(RECEIVED)
+  receivedAt          DateTime                    @default(now()) @map("received_at")
+  providerCreatedAt   DateTime?                   @map("provider_created_at")
+  processingStartedAt DateTime?                   @map("processing_started_at")
+  processedAt         DateTime?                   @map("processed_at")
+  acknowledgedAt      DateTime?                   @map("acknowledged_at")
+  retryCount          Int                         @default(0) @map("retry_count")
+  nextRetryAt         DateTime?                   @map("next_retry_at")
+  payload             Json
+  normalizedSummary   Json?                       @map("normalized_summary")
+  errorMessage        String?                     @map("error_message")
+  tenant              Tenant                      @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  integration         DeliveryIntegration         @relation(fields: [integrationId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, externalEventId])
+  @@index([tenantId, integrationId, status])
+  @@index([tenantId, externalOrderId])
+  @@index([nextRetryAt])
+  @@map("delivery_platform_events")
+}
+
+model PlatformOrderLink {
+  id                        String                      @id @default(uuid()) @db.Uuid
+  tenantId                  String                      @map("tenant_id") @db.Uuid
+  integrationId             String                      @map("integration_id") @db.Uuid
+  orderId                   String                      @unique @map("order_id") @db.Uuid
+  orderPlatformId           String                      @map("order_platform_id") @db.Uuid
+  provider                  DeliveryProvider
+  externalMerchantId        String                      @map("external_merchant_id")
+  externalOrderId           String                      @map("external_order_id")
+  mode                      DeliveryPlatformOrderMode
+  timing                    DeliveryPlatformOrderTiming
+  externalStatus            String                      @map("external_status")
+  internalStatusAtLastSync  String?                     @map("internal_status_at_last_sync")
+  confirmationDeadlineAt    DateTime?                   @map("confirmation_deadline_at")
+  preparationStartAt        DateTime?                   @map("preparation_start_at")
+  deliveryTrackingAvailable Boolean                     @default(false) @map("delivery_tracking_available")
+  rawOrderSnapshot          Json                        @map("raw_order_snapshot")
+  lastProviderUpdateAt      DateTime?                   @map("last_provider_update_at")
+  createdAt                 DateTime                    @default(now()) @map("created_at")
+  updatedAt                 DateTime                    @updatedAt @map("updated_at")
+  tenant                    Tenant                      @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  integration               DeliveryIntegration         @relation(fields: [integrationId], references: [id], onDelete: Cascade)
+  order                     Order                       @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  orderPlatform             OrderPlatform               @relation(fields: [orderPlatformId], references: [id], onDelete: Restrict)
+  syncAttempts              PlatformSyncAttempt[]
+  disputes                  PlatformDispute[]
+
+  @@unique([provider, externalMerchantId, externalOrderId])
+  @@index([tenantId, integrationId])
+  @@index([tenantId, orderPlatformId])
+  @@index([tenantId, confirmationDeadlineAt])
+  @@map("platform_order_links")
+}
+
+model PlatformSyncAttempt {
+  id                  String                      @id @default(uuid()) @db.Uuid
+  tenantId            String                      @map("tenant_id") @db.Uuid
+  integrationId       String                      @map("integration_id") @db.Uuid
+  platformOrderLinkId String?                     @map("platform_order_link_id") @db.Uuid
+  action              DeliveryPlatformOrderAction
+  status              DeliverySyncAttemptStatus   @default(PENDING)
+  requestPayload      Json?                       @map("request_payload")
+  responsePayload     Json?                       @map("response_payload")
+  providerStatusCode  Int?                        @map("provider_status_code")
+  errorCode           String?                     @map("error_code")
+  errorMessage        String?                     @map("error_message")
+  attemptNumber       Int                         @default(1) @map("attempt_number")
+  nextRetryAt         DateTime?                   @map("next_retry_at")
+  createdByUserId     String?                     @map("created_by_user_id") @db.Uuid
+  sentAt              DateTime?                   @map("sent_at")
+  confirmedAt         DateTime?                   @map("confirmed_at")
+  createdAt           DateTime                    @default(now()) @map("created_at")
+  tenant              Tenant                      @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  integration         DeliveryIntegration         @relation(fields: [integrationId], references: [id], onDelete: Cascade)
+  platformOrderLink   PlatformOrderLink?          @relation(fields: [platformOrderLinkId], references: [id], onDelete: SetNull)
+  createdByUser       User?                       @relation("PlatformSyncAttemptCreatedBy", fields: [createdByUserId], references: [id], onDelete: SetNull)
+
+  @@index([tenantId, integrationId, status])
+  @@index([tenantId, platformOrderLinkId])
+  @@index([nextRetryAt])
+  @@index([createdByUserId])
+  @@map("platform_sync_attempts")
+}
+
+model PlatformCancellationReason {
+  id                String              @id @default(uuid()) @db.Uuid
+  tenantId          String              @map("tenant_id") @db.Uuid
+  integrationId     String              @map("integration_id") @db.Uuid
+  providerReasonId  String              @map("provider_reason_id")
+  description       String
+  applicableActions Json                @map("applicable_actions")
+  active            Boolean             @default(true)
+  lastSyncedAt      DateTime            @default(now()) @map("last_synced_at")
+  tenant            Tenant              @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  integration       DeliveryIntegration @relation(fields: [integrationId], references: [id], onDelete: Cascade)
+
+  @@unique([integrationId, providerReasonId])
+  @@index([tenantId, integrationId, active])
+  @@map("platform_cancellation_reasons")
+}
+
+model PlatformDispute {
+  id                  String              @id @default(uuid()) @db.Uuid
+  tenantId            String              @map("tenant_id") @db.Uuid
+  integrationId       String              @map("integration_id") @db.Uuid
+  platformOrderLinkId String              @map("platform_order_link_id") @db.Uuid
+  externalDisputeId   String              @map("external_dispute_id")
+  status              String
+  proposal            Json
+  response            Json?
+  expiresAt           DateTime            @map("expires_at")
+  respondedAt         DateTime?           @map("responded_at")
+  createdAt           DateTime            @default(now()) @map("created_at")
+  updatedAt           DateTime            @updatedAt @map("updated_at")
+  tenant              Tenant              @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  integration         DeliveryIntegration @relation(fields: [integrationId], references: [id], onDelete: Cascade)
+  platformOrderLink   PlatformOrderLink   @relation(fields: [platformOrderLinkId], references: [id], onDelete: Cascade)
+
+  @@unique([integrationId, externalDisputeId])
+  @@index([tenantId, status, expiresAt])
+  @@index([platformOrderLinkId])
+  @@map("platform_disputes")
+}
+
+model DeliveryIntegrationAudit {
+  id            String                         @id @default(uuid()) @db.Uuid
+  tenantId      String                         @map("tenant_id") @db.Uuid
+  integrationId String?                        @map("integration_id") @db.Uuid
+  actorUserId   String?                        @map("actor_user_id") @db.Uuid
+  action        DeliveryIntegrationAuditAction
+  entityType    String                         @map("entity_type")
+  entityId      String?                        @map("entity_id")
+  result        String
+  metadata      Json?
+  createdAt     DateTime                       @default(now()) @map("created_at")
+  tenant        Tenant                         @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  integration   DeliveryIntegration?           @relation(fields: [integrationId], references: [id], onDelete: SetNull)
+  actorUser     User?                          @relation("DeliveryIntegrationAuditActor", fields: [actorUserId], references: [id], onDelete: SetNull)
+
+  @@index([tenantId, integrationId, createdAt])
+  @@index([tenantId, action, createdAt])
+  @@index([actorUserId])
+  @@map("delivery_integration_audits")
 }
 
 model Ingredient {
