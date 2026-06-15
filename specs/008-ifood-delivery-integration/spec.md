@@ -87,6 +87,22 @@ O administrador consegue adicionar novas plataformas de delivery no futuro sem r
 1. **Given** a integracao iFood existente, **When** uma nova plataforma for habilitada no futuro, **Then** ela deve conseguir usar o mesmo fluxo interno de configuracao, captura, aceite/recusa, status e auditoria.
 2. **Given** duas plataformas ativas para a mesma loja, **When** pedidos chegam de ambas, **Then** cada pedido preserva origem, identificador externo e historico de sincronizacao separados.
 
+---
+
+### User Story 6 - Tratar excecoes do fluxo iFood (Priority: P3)
+
+Um operador ou administrador acompanha alteracoes, cancelamentos, disputas, falhas de sincronizacao e saude da integracao iFood sem perder o controle do pedido interno.
+
+**Why this priority**: O fluxo principal atende a operacao diaria, mas excecoes de plataforma precisam ficar visiveis para evitar pedidos divergentes, multas operacionais ou perda de prazo.
+
+**Independent Test**: Pode ser testado simulando eventos de cancelamento, alteracao de pedido, falha de sincronizacao e disputa, verificando se o sistema registra o evento, alerta a loja e mantem o pedido rastreavel.
+
+**Acceptance Scenarios**:
+
+1. **Given** um pedido iFood ja importado, **When** a plataforma envia alteracao de itens ou valores, **Then** o sistema atualiza o pedido interno conforme regra definida, preserva o historico anterior e alerta o operador quando houver impacto operacional.
+2. **Given** um pedido iFood com pedido de cancelamento ou recusa, **When** a plataforma confirma ou rejeita a acao, **Then** o sistema mostra o resultado final e registra a justificativa.
+3. **Given** uma disputa ou negociacao pos-entrega com prazo de resposta, **When** ela chega da plataforma, **Then** o sistema mostra a acao pendente, prazo limite e resultado apos resposta ou expiracao.
+
 ### Edge Cases
 
 - Credenciais invalidas, expiradas, revogadas ou sem permissao para a loja.
@@ -95,6 +111,14 @@ O administrador consegue adicionar novas plataformas de delivery no futuro sem r
 - Pedido cancelado pelo cliente ou pela plataforma antes do aceite.
 - Pedido alterado pela plataforma apos captura inicial.
 - Tentativa de aceitar, recusar ou evoluir status fora do prazo permitido pela plataforma.
+- Pedido iFood pendente de confirmacao ultrapassando o prazo operacional de 8 minutos exigido pela plataforma.
+- Pedido iFood retornando detalhes temporariamente indisponiveis logo apos o evento inicial.
+- Pedido iFood consultado fora da janela em que a plataforma mantem detalhes completos.
+- Evento iFood nao confirmado internamente sendo reenviado pela plataforma e exigindo reprocessamento idempotente.
+- Webhook iFood com assinatura invalida ou payload incompleto, quando esse modo estiver habilitado.
+- Telefone, documento ou dados sensiveis do cliente ausentes por regra de privacidade da plataforma.
+- Alteracao de pedido ou disputa pos-entrega chegando depois que o pedido interno ja evoluiu.
+- Acesso de novo merchant iFood ainda em periodo de propagacao apos autorizacao.
 - Pedido criado em uma loja sem integracao ativa ou com configuracao incompleta.
 - Divergencia entre status interno e status externo apos falha de comunicacao.
 - Troca ou rotacao de credenciais sem interromper pedidos ja em andamento.
@@ -129,16 +153,35 @@ O administrador consegue adicionar novas plataformas de delivery no futuro sem r
 - **FR-023**: System MUST handle credentials that expire or require renewal by marking the integration as requiring attention and preventing silent data loss.
 - **FR-024**: System MUST define how imported platform payments, fees, discounts, delivery charges, customer data, and order items are represented in the internal order record.
 - **FR-025**: System MUST make platform order ingestion idempotent and traceable from the internal order back to the original external payload or normalized event record.
+- **FR-026**: System MUST manage iFood authentication tokens using the provider expiration metadata and recover from expired access tokens without requiring manual reconfiguration when refresh or reauthentication is available.
+- **FR-027**: System MUST validate that the configured iFood credentials have access to the intended merchant/store and surface permission propagation delays as a temporary validation state.
+- **FR-028**: System MUST support iFood order event ingestion through provider-compliant polling at the required interval for the initial release, while keeping the design open for webhooks with signature validation.
+- **FR-029**: System MUST acknowledge iFood events only after the related event processing is durably recorded, so repeated events remain safe to process.
+- **FR-030**: System MUST track the iFood order confirmation deadline and alert operators before the platform's automatic cancellation window is reached.
+- **FR-031**: System MUST retry temporarily unavailable iFood order details with bounded backoff before marking the event as failed.
+- **FR-032**: System MUST distinguish iFood order modalities such as delivery, merchant delivery, pickup/takeout, immediate order, and scheduled order when mapping actions to the internal workflow.
+- **FR-033**: System MUST use valid provider cancellation reasons when requesting cancellation or refusal and record the asynchronous platform result.
+- **FR-034**: System MUST handle iFood delivery tracking as optional and rate-limited information, without blocking the internal order workflow when tracking is unavailable.
+- **FR-035**: System MUST process iFood order modification events by updating the internal order record or creating a visible operator exception when automatic update is unsafe.
+- **FR-036**: System MUST process iFood post-delivery dispute or negotiation events as time-bound operator/admin actions with an audit trail.
+- **FR-037**: System MUST apply privacy rules for imported customer data, avoiding exposure of sensitive fields in views, prints, or integrations where the platform does not allow them.
+- **FR-038**: System MUST expose iFood homologation readiness per store, including credential validity, merchant access, event processing, acknowledgment behavior, status updates, and required operational tests.
+- **FR-039**: System MUST monitor iFood merchant operational status and show whether the store is able to receive orders from the platform.
 
 ### Key Entities
 
 - **Delivery Platform**: Represents an external channel such as iFood. Includes provider identity, supported workflows, activation availability, and operational capabilities.
 - **Store Integration Configuration**: Store-scoped configuration for a delivery platform, including credential state, external merchant/store identifiers, active flag, validation status, and operational settings.
 - **Integration Credential**: Secret or token material used to authenticate with a platform. Must be protected, rotatable, and never displayed after saving.
+- **Provider Authorization Grant**: Store-scoped authorization state for a platform, including granted merchants, token expiration metadata, renewal state, and validation result.
 - **Platform Order Link**: Relationship between an internal order and its external platform order, including provider, external order id, external merchant id, and source metadata.
 - **Platform Event**: Inbound notification or retrieved event from the platform, with event id, event type, received time, processing state, and normalized payload summary.
+- **Event Acknowledgment**: Confirmation that an inbound platform event was processed safely and can be removed from the provider delivery queue.
 - **Platform Status Mapping**: Mapping between platform-specific order states and internal order states.
 - **Synchronization Attempt**: Outbound communication attempt from the system to a platform, with action type, target order, result, retry state, timestamps, and error details.
+- **Order Action Deadline**: Provider-specific deadline that requires operator action, such as iFood order confirmation before automatic cancellation.
+- **Cancellation Reason**: Provider-approved reason used when refusing or cancelling a platform order.
+- **Platform Dispute**: Post-order negotiation or dispute initiated by the platform/customer, with proposal, deadline, response, and final outcome.
 - **Integration Audit Record**: Immutable record of configuration changes, inbound processing, operator actions, and outbound synchronization results.
 
 ## Success Criteria *(mandatory)*
@@ -153,14 +196,18 @@ O administrador consegue adicionar novas plataformas de delivery no futuro sem r
 - **SC-006**: All platform-origin orders can be traced from internal order to external platform id and integration audit history.
 - **SC-007**: A failed platform communication produces a visible operator/admin warning and a retryable record within 10 seconds.
 - **SC-008**: Store isolation tests prove that users from one store cannot view, configure, or process another store's platform integration.
+- **SC-009**: 100% of successfully processed iFood events are acknowledged only after the corresponding internal event or order record is persisted.
+- **SC-010**: Operators receive a visible warning before an iFood order confirmation deadline is missed in 100% of deadline test cases.
+- **SC-011**: Expired iFood access tokens are renewed or marked for reauthorization before order ingestion is silently interrupted.
+- **SC-012**: The iFood homologation checklist can be executed end to end for the pilot store without using manual database changes.
 
 ## Assumptions
 
 - The initial production rollout targets iFood for the existing pilot store, but the model must support additional platforms later.
 - The existing administrative authentication and store permission model will be reused for integration configuration and order operations.
 - The existing internal order workflow remains the operational source of truth for preparation and delivery actions after a platform order is accepted.
-- iFood credentials, merchant identifiers, event retrieval requirements, and order action endpoints must be validated against the official iFood developer portal during planning or implementation. Automated access to the official portal was blocked by Cloudflare during this specification pass.
-- The integration will support either platform event polling, webhooks, or both, depending on the final iFood certification requirements and available account permissions.
+- Official iFood Developer documentation supplied as PDF was analyzed on 2026-06-15 and is summarized in `research.md`; direct portal access may still require browser authentication or Cloudflare validation.
+- The initial iFood release will use event polling because it is the documented baseline and is simpler to homologate; webhook support remains a planned extension for higher volume or certification needs.
 - Secrets are expected to be stored securely and rotated without deleting historical integration records.
 - Customer and order data imported from platforms must follow the same privacy and audit expectations as manually entered orders.
 - If the platform has a certification or homologation flow, production activation depends on completing that external approval.

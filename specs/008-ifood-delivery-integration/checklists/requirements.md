@@ -31,4 +31,5 @@
 
 ## Notes
 
-- The official iFood developer portal was not machine-readable during this pass because it returned a Cloudflare challenge. The spec records this as a planning/implementation dependency rather than blocking feature definition.
+- The local official iFood Developer PDF supplied by the user was analyzed on 2026-06-15 and summarized in `../research.md`.
+- Direct browser access to the iFood portal may still require authentication or Cloudflare validation, but the current specification no longer depends on unresolved documentation access.
