@@ -150,16 +150,16 @@
 
 ### Tests for User Story 4
 
-- [ ] T061 [P] [US4] Add platform status transition tests in apps/api/src/management/integrations/ifood/ifood-status-sync.service.spec.ts
-- [ ] T062 [P] [US4] Add order status integration tests for platform-origin orders in apps/api/src/ordering/ordering.service.spec.ts
+- [x] T061 [P] [US4] Add platform status transition tests in apps/api/src/management/integrations/ifood/ifood-status-sync.service.spec.ts
+- [x] T062 [P] [US4] Add order status integration tests for platform-origin orders in apps/api/src/ordering/ordering.service.spec.ts
 
 ### Implementation for User Story 4
 
-- [ ] T063 [US4] Implement internal-to-iFood status mapping by modality in apps/api/src/management/integrations/ifood/ifood-status-sync.service.ts
-- [ ] T064 [US4] Hook platform status sync into order status updates in apps/api/src/ordering/ordering.service.ts
-- [ ] T065 [US4] Persist retryable PlatformSyncAttempt state for rejected status transitions in apps/api/src/management/integrations/ifood/ifood-status-sync.service.ts
-- [ ] T066 [US4] Add platform sync detail endpoint to apps/api/src/ordering/admin-order.controller.ts
-- [ ] T067 [US4] Show platform sync detail and retryable errors in apps/web/app/admin/orders/order-maintenance-dialog.tsx
+- [x] T063 [US4] Implement internal-to-iFood status mapping by modality in apps/api/src/management/integrations/ifood/ifood-status-sync.service.ts
+- [x] T064 [US4] Hook platform status sync into order status updates in apps/api/src/ordering/ordering.service.ts
+- [x] T065 [US4] Persist retryable PlatformSyncAttempt state for rejected status transitions in apps/api/src/management/integrations/ifood/ifood-status-sync.service.ts
+- [x] T066 [US4] Add platform sync detail endpoint to apps/api/src/ordering/admin-order.controller.ts
+- [x] T067 [US4] Show platform sync detail and retryable errors in apps/web/app/admin/orders/order-maintenance-dialog.tsx
 
 **Checkpoint**: US4 is fully functional and testable independently.
 

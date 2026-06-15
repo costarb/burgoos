@@ -171,6 +171,103 @@ export class IfoodStatusSyncService {
     }
   }
 
+  async syncInternalStatus(input: {
+    tenantId: string;
+    actorUserId?: string | null;
+    link: {
+      id: string;
+      integrationId: string;
+      externalOrderId: string;
+      mode: string;
+      internalStatusAtLastSync: string | null;
+    };
+    status: OrderStatus;
+  }) {
+    if (input.link.internalStatusAtLastSync === input.status) {
+      return;
+    }
+
+    const action = this.mapInternalStatusToAction(input.status, input.link.mode);
+
+    if (!action) {
+      return;
+    }
+
+    const attempt = await this.createAttempt({
+      tenantId: input.tenantId,
+      actorUserId: input.actorUserId ?? null,
+      linkId: input.link.id,
+      integrationId: input.link.integrationId,
+      action,
+      payload: {
+        externalOrderId: input.link.externalOrderId,
+        internalStatus: input.status,
+        mode: input.link.mode,
+      },
+    });
+
+    try {
+      const secret = await this.integrationsService.getActiveCredentialSecret(
+        input.tenantId,
+        input.link.integrationId
+      );
+      await this.callStatusAction(action, secret.accessToken, input.link.externalOrderId);
+      await this.markAttemptConfirmed(attempt.id, {
+        internalStatus: input.status,
+        action,
+      });
+      await this.prisma.platformOrderLink.update({
+        where: { id: input.link.id },
+        data: {
+          externalStatus: action,
+          internalStatusAtLastSync: input.status,
+          lastProviderUpdateAt: new Date(),
+        },
+      });
+      await this.recordSyncAudit(
+        input.tenantId,
+        input.link.integrationId,
+        input.actorUserId ?? null,
+        input.link.id,
+        "SUCCESS"
+      );
+    } catch (error) {
+      await this.markAttemptRetryable(attempt.id, error);
+      await this.recordSyncAudit(
+        input.tenantId,
+        input.link.integrationId,
+        input.actorUserId ?? null,
+        input.link.id,
+        "FAILED"
+      );
+    }
+  }
+
+  listSyncAttempts(tenantId: string, orderId: string) {
+    return this.prisma.platformSyncAttempt.findMany({
+      where: {
+        tenantId,
+        platformOrderLink: {
+          orderId,
+          tenantId,
+        },
+      },
+      orderBy: { createdAt: "desc" },
+      take: 20,
+      select: {
+        id: true,
+        action: true,
+        status: true,
+        errorCode: true,
+        errorMessage: true,
+        nextRetryAt: true,
+        sentAt: true,
+        confirmedAt: true,
+        createdAt: true,
+      },
+    });
+  }
+
   private async getPendingIfoodLink(tenantId: string, orderId: string, requireDeadline: boolean) {
     const order = await this.prisma.order.findFirst({
       where: { id: orderId, tenantId, deletedAt: null },
@@ -227,7 +324,7 @@ export class IfoodStatusSyncService {
     tenantId: string;
     integrationId: string;
     linkId: string;
-    actorUserId: string;
+    actorUserId: string | null;
     action: DeliveryPlatformOrderAction;
     payload: Prisma.InputJsonValue;
   }) {
@@ -271,7 +368,7 @@ export class IfoodStatusSyncService {
   private recordSyncAudit(
     tenantId: string,
     integrationId: string,
-    actorUserId: string,
+    actorUserId: string | null,
     linkId: string,
     result: string
   ) {
@@ -287,5 +384,54 @@ export class IfoodStatusSyncService {
       entityId: linkId,
       result,
     });
+  }
+
+  private mapInternalStatusToAction(
+    status: OrderStatus,
+    mode: string
+  ): DeliveryPlatformOrderAction | null {
+    if (status === OrderStatus.SHIPPED) {
+      return mode === "TAKEOUT" ? "READY_TO_PICKUP" : "DISPATCH";
+    }
+
+    if (status === OrderStatus.DELIVERED) {
+      return "DELIVER";
+    }
+
+    if (status === OrderStatus.CANCELLED) {
+      return "REQUEST_CANCELLATION";
+    }
+
+    return null;
+  }
+
+  private async callStatusAction(
+    action: DeliveryPlatformOrderAction,
+    accessToken: string,
+    orderId: string
+  ) {
+    if (action === "DISPATCH") {
+      await this.ifoodClient.dispatchOrder({ accessToken, orderId });
+      return;
+    }
+
+    if (action === "READY_TO_PICKUP") {
+      await this.ifoodClient.markReadyToPickup({ accessToken, orderId });
+      return;
+    }
+
+    if (action === "DELIVER") {
+      await this.ifoodClient.markDelivered({ accessToken, orderId });
+      return;
+    }
+
+    if (action === "REQUEST_CANCELLATION") {
+      await this.ifoodClient.requestCancellation({
+        accessToken,
+        orderId,
+        reasonCode: "501",
+        reason: "Pedido cancelado no fluxo operacional",
+      });
+    }
   }
 }

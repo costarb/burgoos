@@ -1,9 +1,19 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import type { AdminOrder, EditOrderInput, OrderMaintenanceRecord } from "@burgoos/types";
+import type {
+  AdminOrder,
+  EditOrderInput,
+  OrderMaintenanceRecord,
+  PlatformSyncAttemptSummary,
+} from "@burgoos/types";
 import { OperationFeedback } from "../../../components/admin/operation-feedback";
-import { deleteAdminOrder, editAdminOrder, getOrderMaintenanceHistory } from "../../../lib/api";
+import {
+  deleteAdminOrder,
+  editAdminOrder,
+  getOrderMaintenanceHistory,
+  getPlatformSyncAttempts,
+} from "../../../lib/api";
 
 interface OrderMaintenanceDialogProps {
   order: AdminOrder;
@@ -24,7 +34,9 @@ export function OrderMaintenanceDialog({
   const [customerPhone, setCustomerPhone] = useState(order.customerPhone);
   const [notes, setNotes] = useState(order.notes ?? "");
   const [createdAt, setCreatedAt] = useState(toLocalDateTime(order.createdAt));
-  const [paymentGrossAmount, setPaymentGrossAmount] = useState(order.paymentGrossAmount ?? order.total);
+  const [paymentGrossAmount, setPaymentGrossAmount] = useState(
+    order.paymentGrossAmount ?? order.total
+  );
   const [paymentFeeAmount, setPaymentFeeAmount] = useState(order.paymentFeeAmount ?? "0.00");
   const [paymentNetAmount, setPaymentNetAmount] = useState(order.paymentNetAmount ?? order.total);
   const [paymentReleaseExpectedAt, setPaymentReleaseExpectedAt] = useState(
@@ -36,12 +48,24 @@ export function OrderMaintenanceDialog({
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   const [history, setHistory] = useState<OrderMaintenanceRecord[]>([]);
+  const [syncAttempts, setSyncAttempts] = useState<PlatformSyncAttemptSummary[]>([]);
 
   useEffect(() => {
     void getOrderMaintenanceHistory(token, order.id)
       .then(setHistory)
       .catch(() => setHistory([]));
   }, [order.id, token]);
+
+  useEffect(() => {
+    if (!order.platformProvider) {
+      setSyncAttempts([]);
+      return;
+    }
+
+    void getPlatformSyncAttempts(token, order.id)
+      .then(setSyncAttempts)
+      .catch(() => setSyncAttempts([]));
+  }, [order.id, order.platformProvider, token]);
 
   async function save(): Promise<void> {
     setBusy("save");
@@ -132,18 +156,31 @@ export function OrderMaintenanceDialog({
         <div className="mt-4 grid gap-3 sm:grid-cols-2">
           <label className="text-sm">
             Cliente
-            <input className="mt-1 w-full rounded-md border p-2" onChange={(event) => setCustomerName(event.target.value)} value={customerName} />
+            <input
+              className="mt-1 w-full rounded-md border p-2"
+              onChange={(event) => setCustomerName(event.target.value)}
+              value={customerName}
+            />
           </label>
           <label className="text-sm">
             Telefone
-            <input className="mt-1 w-full rounded-md border p-2" onChange={(event) => setCustomerPhone(event.target.value)} value={customerPhone} />
+            <input
+              className="mt-1 w-full rounded-md border p-2"
+              onChange={(event) => setCustomerPhone(event.target.value)}
+              value={customerPhone}
+            />
           </label>
         </div>
 
         <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
           <label className="text-sm">
             Data da venda
-            <input className="mt-1 w-full rounded-md border p-2" onChange={(event) => setCreatedAt(event.target.value)} type="datetime-local" value={createdAt} />
+            <input
+              className="mt-1 w-full rounded-md border p-2"
+              onChange={(event) => setCreatedAt(event.target.value)}
+              type="datetime-local"
+              value={createdAt}
+            />
           </label>
           <label className="text-sm">
             Data de liberacao
@@ -156,15 +193,36 @@ export function OrderMaintenanceDialog({
           </label>
           <label className="text-sm">
             Valor bruto
-            <input className="mt-1 w-full rounded-md border p-2" min={0} onChange={(event) => setPaymentGrossAmount(event.target.value)} step="0.01" type="number" value={paymentGrossAmount} />
+            <input
+              className="mt-1 w-full rounded-md border p-2"
+              min={0}
+              onChange={(event) => setPaymentGrossAmount(event.target.value)}
+              step="0.01"
+              type="number"
+              value={paymentGrossAmount}
+            />
           </label>
           <label className="text-sm">
             Taxa
-            <input className="mt-1 w-full rounded-md border p-2" min={0} onChange={(event) => setPaymentFeeAmount(event.target.value)} step="0.01" type="number" value={paymentFeeAmount} />
+            <input
+              className="mt-1 w-full rounded-md border p-2"
+              min={0}
+              onChange={(event) => setPaymentFeeAmount(event.target.value)}
+              step="0.01"
+              type="number"
+              value={paymentFeeAmount}
+            />
           </label>
           <label className="text-sm">
             Valor liquido
-            <input className="mt-1 w-full rounded-md border p-2" min={0} onChange={(event) => setPaymentNetAmount(event.target.value)} step="0.01" type="number" value={paymentNetAmount} />
+            <input
+              className="mt-1 w-full rounded-md border p-2"
+              min={0}
+              onChange={(event) => setPaymentNetAmount(event.target.value)}
+              step="0.01"
+              type="number"
+              value={paymentNetAmount}
+            />
           </label>
         </div>
 
@@ -212,11 +270,19 @@ export function OrderMaintenanceDialog({
 
         <label className="mt-4 block text-sm">
           Observacoes
-          <textarea className="mt-1 w-full rounded-md border p-2" onChange={(event) => setNotes(event.target.value)} value={notes} />
+          <textarea
+            className="mt-1 w-full rounded-md border p-2"
+            onChange={(event) => setNotes(event.target.value)}
+            value={notes}
+          />
         </label>
         <label className="mt-4 block text-sm">
           Motivo da manutencao
-          <textarea className="mt-1 w-full rounded-md border p-2" onChange={(event) => setReason(event.target.value)} value={reason} />
+          <textarea
+            className="mt-1 w-full rounded-md border p-2"
+            onChange={(event) => setReason(event.target.value)}
+            value={reason}
+          />
         </label>
 
         <OperationFeedback
@@ -235,18 +301,63 @@ export function OrderMaintenanceDialog({
         />
 
         <div className="mt-5 flex flex-wrap justify-between gap-3">
-          <button className="rounded-md border border-red-300 px-4 py-2 text-sm font-semibold text-red-700" disabled={busy !== null} onClick={() => void remove()} type="button">
+          <button
+            className="rounded-md border border-red-300 px-4 py-2 text-sm font-semibold text-red-700"
+            disabled={busy !== null}
+            onClick={() => void remove()}
+            type="button"
+          >
             {busy === "delete" ? "Excluindo..." : "Excluir pedido"}
           </button>
           <div className="flex gap-2">
-            <button className="rounded-md border px-4 py-2 text-sm" disabled={busy !== null} onClick={onClose} type="button">Cancelar</button>
-            <button className="rounded-md bg-ink px-4 py-2 text-sm font-semibold text-white" disabled={busy !== null} onClick={() => void save()} type="button">
+            <button
+              className="rounded-md border px-4 py-2 text-sm"
+              disabled={busy !== null}
+              onClick={onClose}
+              type="button"
+            >
+              Cancelar
+            </button>
+            <button
+              className="rounded-md bg-ink px-4 py-2 text-sm font-semibold text-white"
+              disabled={busy !== null}
+              onClick={() => void save()}
+              type="button"
+            >
               {busy === "save" ? "Salvando..." : "Salvar alteracoes"}
             </button>
           </div>
         </div>
 
         <div className="mt-6 border-t pt-4">
+          {order.platformProvider ? (
+            <div className="mb-5">
+              <h3 className="text-sm font-semibold">Sincronizacao da plataforma</h3>
+              {syncAttempts.length === 0 ? (
+                <p className="mt-2 text-sm text-slate-500">Nenhuma tentativa registrada.</p>
+              ) : (
+                <ul className="mt-2 space-y-2">
+                  {syncAttempts.map((attempt) => (
+                    <li className="rounded-md border border-slate-200 p-3 text-sm" key={attempt.id}>
+                      <div className="flex justify-between gap-3">
+                        <strong>
+                          {platformActionLabel(attempt.action)} -{" "}
+                          {platformSyncStatusLabel(attempt.status)}
+                        </strong>
+                        <span className="text-xs text-slate-500">
+                          {new Date(attempt.createdAt).toLocaleString("pt-BR")}
+                        </span>
+                      </div>
+                      {attempt.errorMessage ? (
+                        <p className="mt-1 text-xs text-red-700">{attempt.errorMessage}</p>
+                      ) : null}
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          ) : null}
+
           <h3 className="text-sm font-semibold">Historico de manutencoes</h3>
           {history.length === 0 ? (
             <p className="mt-2 text-sm text-slate-500">Nenhuma manutencao registrada.</p>
@@ -276,4 +387,32 @@ function toLocalDateTime(value?: string): string {
   const date = value ? new Date(value) : new Date();
   const offset = date.getTimezoneOffset() * 60_000;
   return new Date(date.getTime() - offset).toISOString().slice(0, 16);
+}
+
+function platformActionLabel(action: PlatformSyncAttemptSummary["action"]): string {
+  const labels: Record<PlatformSyncAttemptSummary["action"], string> = {
+    CONFIRM: "Aceite",
+    REFUSE: "Recusa",
+    START_PREPARATION: "Inicio do preparo",
+    READY_TO_PICKUP: "Pronto para retirada",
+    DISPATCH: "Saiu para entrega",
+    DELIVER: "Entregue",
+    REQUEST_CANCELLATION: "Cancelamento",
+    RESPOND_DISPUTE: "Resposta de disputa",
+  };
+
+  return labels[action];
+}
+
+function platformSyncStatusLabel(status: PlatformSyncAttemptSummary["status"]): string {
+  const labels: Record<PlatformSyncAttemptSummary["status"], string> = {
+    PENDING: "pendente",
+    SENT: "enviado",
+    CONFIRMED: "confirmado",
+    FAILED: "falhou",
+    RETRYABLE: "tentara novamente",
+    CANCELLED: "cancelado",
+  };
+
+  return labels[status];
 }

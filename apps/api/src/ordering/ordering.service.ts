@@ -1,5 +1,13 @@
-import { ConflictException, Inject, Injectable, Logger, NotFoundException } from "@nestjs/common";
+import {
+  ConflictException,
+  forwardRef,
+  Inject,
+  Injectable,
+  Logger,
+  NotFoundException,
+} from "@nestjs/common";
 import { FulfillmentMethod, OrderStatus, Prisma } from "@prisma/client";
+import { IfoodStatusSyncService } from "../management/integrations/ifood/ifood-status-sync.service";
 import { OrderProfitabilityService } from "../management/reports/order-profitability.service";
 import { InventoryService, OrderStockWarning } from "../operations/inventory/inventory.service";
 import { PrismaService } from "../platform/database/prisma.service";
@@ -18,7 +26,9 @@ export class OrderingService {
     @Inject(OrdersGateway) private readonly ordersGateway: OrdersGateway,
     @Inject(InventoryService) private readonly inventoryService: InventoryService,
     @Inject(OrderProfitabilityService)
-    private readonly orderProfitabilityService: OrderProfitabilityService
+    private readonly orderProfitabilityService: OrderProfitabilityService,
+    @Inject(forwardRef(() => IfoodStatusSyncService))
+    private readonly ifoodStatusSyncService: IfoodStatusSyncService
   ) {}
 
   async createPublicOrder(slug: string, dto: CreateOrderDto) {
@@ -216,7 +226,12 @@ export class OrderingService {
     );
   }
 
-  async updateOrderStatus(tenantId: string, orderId: string, status: OrderStatus) {
+  async updateOrderStatus(
+    tenantId: string,
+    orderId: string,
+    status: OrderStatus,
+    actorUserId?: string
+  ) {
     const order = await this.prisma.order.findFirst({
       where: {
         id: orderId,
@@ -256,8 +271,25 @@ export class OrderingService {
       },
       include: {
         items: true,
+        platformOrderLink: {
+          include: {
+            syncAttempts: {
+              orderBy: { createdAt: "desc" },
+              take: 1,
+            },
+          },
+        },
       },
     });
+
+    if (order.platformOrderLink?.provider === "IFOOD") {
+      await this.ifoodStatusSyncService.syncInternalStatus({
+        tenantId,
+        actorUserId,
+        link: order.platformOrderLink,
+        status,
+      });
+    }
 
     if (status === OrderStatus.CANCELLED) {
       await this.inventoryService.releaseOrderReservation(tenantId, orderId, "Pedido cancelado");
@@ -268,14 +300,29 @@ export class OrderingService {
       await this.orderProfitabilityService.createDeliveredOrderSnapshots(tenantId, orderId);
     }
 
+    const responseOrder = await this.prisma.order.findUnique({
+      where: { id: orderId },
+      include: {
+        items: true,
+        platformOrderLink: {
+          include: {
+            syncAttempts: {
+              orderBy: { createdAt: "desc" },
+              take: 1,
+            },
+          },
+        },
+      },
+    });
+
     this.logger.log(
       `Order status changed tenantId=${tenantId} orderId=${orderId} status=${status}`
     );
     return this.toOrderResponse(
-      updatedOrder,
+      responseOrder ?? updatedOrder,
       status === OrderStatus.CANCELLED || status === OrderStatus.DELIVERED
         ? []
-        : await this.inventoryService.getOrderStockWarnings(updatedOrder)
+        : await this.inventoryService.getOrderStockWarnings(responseOrder ?? updatedOrder)
     );
   }
 

@@ -21,7 +21,8 @@ describe("AdminOrderController platform actions", () => {
     expect(orderingService.updateOrderStatus).toHaveBeenCalledWith(
       "tenant-1",
       "order-1",
-      OrderStatus.PREPARING
+      OrderStatus.PREPARING,
+      "user-1"
     );
   });
 
@@ -50,7 +51,8 @@ describe("AdminOrderController platform actions", () => {
     expect(orderingService.updateOrderStatus).toHaveBeenCalledWith(
       "tenant-1",
       "order-1",
-      OrderStatus.CANCELLED
+      OrderStatus.CANCELLED,
+      "user-1"
     );
   });
 });

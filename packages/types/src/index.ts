@@ -302,6 +302,18 @@ export interface AdminOrderStockWarning {
   status: "BUY" | "INSUFFICIENT";
 }
 
+export interface PlatformSyncAttemptSummary {
+  id: string;
+  action: NonNullable<AdminOrder["platformSyncAction"]>;
+  status: NonNullable<AdminOrder["platformSyncStatus"]>;
+  errorCode: string | null;
+  errorMessage: string | null;
+  nextRetryAt: string | null;
+  sentAt: string | null;
+  confirmedAt: string | null;
+  createdAt: string;
+}
+
 export interface AdminOrder {
   id: string;
   status: OrderStatus;

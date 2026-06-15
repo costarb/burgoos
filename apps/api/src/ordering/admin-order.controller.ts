@@ -54,7 +54,7 @@ export class AdminOrderController {
     @Param("id") orderId: string,
     @Body() dto: UpdateOrderStatusDto
   ) {
-    return this.orderingService.updateOrderStatus(user.tenantId, orderId, dto.status);
+    return this.orderingService.updateOrderStatus(user.tenantId, orderId, dto.status, user.id);
   }
 
   @Get(":id/platform-actions/cancellation-reasons")
@@ -63,11 +63,22 @@ export class AdminOrderController {
     return this.ifoodStatusSyncService.syncCancellationReasons(user.tenantId, orderId);
   }
 
+  @Get(":id/platform-sync")
+  @RequirePermission("orders.view", "orders.manage")
+  listPlatformSyncAttempts(@CurrentUser() user: AuthUser, @Param("id") orderId: string) {
+    return this.ifoodStatusSyncService.listSyncAttempts(user.tenantId, orderId);
+  }
+
   @Post(":id/platform-actions/confirm")
   @RequirePermission("orders.manage")
   async confirmPlatformOrder(@CurrentUser() user: AuthUser, @Param("id") orderId: string) {
     await this.ifoodStatusSyncService.confirmOrder(user.tenantId, user.id, orderId);
-    return this.orderingService.updateOrderStatus(user.tenantId, orderId, OrderStatus.PREPARING);
+    return this.orderingService.updateOrderStatus(
+      user.tenantId,
+      orderId,
+      OrderStatus.PREPARING,
+      user.id
+    );
   }
 
   @Post(":id/platform-actions/refuse")
@@ -84,7 +95,12 @@ export class AdminOrderController {
       providerReasonId: dto.providerReasonId,
       reason: dto.reason,
     });
-    return this.orderingService.updateOrderStatus(user.tenantId, orderId, OrderStatus.CANCELLED);
+    return this.orderingService.updateOrderStatus(
+      user.tenantId,
+      orderId,
+      OrderStatus.CANCELLED,
+      user.id
+    );
   }
 
   @Post("import")

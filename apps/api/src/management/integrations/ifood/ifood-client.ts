@@ -261,6 +261,18 @@ export class IfoodClient implements DeliveryProviderAdapter {
     }
   }
 
+  async dispatchOrder(input: { accessToken: string; orderId: string }): Promise<void> {
+    await this.postOrderAction(input, "dispatch", "iFood dispatch order failed");
+  }
+
+  async markReadyToPickup(input: { accessToken: string; orderId: string }): Promise<void> {
+    await this.postOrderAction(input, "readyToPickup", "iFood ready to pickup failed");
+  }
+
+  async markDelivered(input: { accessToken: string; orderId: string }): Promise<void> {
+    await this.postOrderAction(input, "delivered", "iFood delivered order failed");
+  }
+
   private isMockMode() {
     return this.config.get<string>("IFOOD_MOCK_MODE") === "true";
   }
@@ -271,6 +283,28 @@ export class IfoodClient implements DeliveryProviderAdapter {
       throw new Error("IFOOD_API_BASE_URL is not configured");
     }
     return apiBaseUrl;
+  }
+
+  private async postOrderAction(
+    input: { accessToken: string; orderId: string },
+    actionPath: string,
+    errorMessage: string
+  ): Promise<void> {
+    if (this.isMockMode()) {
+      return;
+    }
+
+    const apiBaseUrl = this.requireApiBaseUrl();
+    const response = await fetch(`${apiBaseUrl}/order/v1.0/orders/${input.orderId}/${actionPath}`, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${input.accessToken}`,
+      },
+    });
+
+    if (!response.ok) {
+      throw new Error(`${errorMessage} with status ${response.status}`);
+    }
   }
 }
 

@@ -46,6 +46,7 @@ import type {
   OrderPlatformInput,
   OrderMaintenanceRecord,
   OrderStatus,
+  PlatformSyncAttemptSummary,
   ProductPricing,
   PurchaseUnit,
   PurchaseUnitInput,
@@ -696,6 +697,16 @@ export async function getPlatformCancellationReasons(
   return fetchAdmin<Array<{ id: string; description: string }>>(
     token,
     `/api/admin/orders/${orderId}/platform-actions/cancellation-reasons`
+  );
+}
+
+export async function getPlatformSyncAttempts(
+  token: string,
+  orderId: string
+): Promise<PlatformSyncAttemptSummary[]> {
+  return fetchAdmin<PlatformSyncAttemptSummary[]>(
+    token,
+    `/api/admin/orders/${orderId}/platform-sync`
   );
 }
 

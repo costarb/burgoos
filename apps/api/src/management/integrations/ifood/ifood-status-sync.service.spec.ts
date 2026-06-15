@@ -1,4 +1,5 @@
 import { BadGatewayException, ConflictException } from "@nestjs/common";
+import { OrderStatus } from "@prisma/client";
 import { describe, expect, it, vi } from "vitest";
 import { IfoodStatusSyncService } from "./ifood-status-sync.service";
 
@@ -106,6 +107,46 @@ describe("IfoodStatusSyncService", () => {
           status: "RETRYABLE",
           errorCode: "IFOOD_SYNC_FAILED",
         }),
+      })
+    );
+  });
+
+  it("maps shipped takeout orders to ready-to-pickup provider action", async () => {
+    const platformSyncAttempt = {
+      create: vi.fn(async () => ({ id: "attempt-1" })),
+      update: vi.fn(),
+    };
+    const client = { markReadyToPickup: vi.fn() };
+    const service = new IfoodStatusSyncService(
+      {
+        platformSyncAttempt,
+        platformOrderLink: { update: vi.fn() },
+      } as never,
+      { getActiveCredentialSecret: vi.fn(async () => ({ accessToken: "token" })) } as never,
+      client as never,
+      { record: vi.fn() } as never
+    );
+
+    await service.syncInternalStatus({
+      tenantId: "tenant-1",
+      actorUserId: "user-1",
+      link: {
+        id: "link-1",
+        integrationId: "integration-1",
+        externalOrderId: "ifood-order-1",
+        mode: "TAKEOUT",
+        internalStatusAtLastSync: "PREPARING",
+      },
+      status: OrderStatus.SHIPPED,
+    });
+
+    expect(client.markReadyToPickup).toHaveBeenCalledWith({
+      accessToken: "token",
+      orderId: "ifood-order-1",
+    });
+    expect(platformSyncAttempt.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({ action: "READY_TO_PICKUP" }),
       })
     );
   });
