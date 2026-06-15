@@ -5,6 +5,7 @@ import { DeliveryIntegrationAuditService } from "./delivery-integration-audit.se
 import { DeliveryIntegrationHealthService } from "./delivery-integration-health.service";
 import { DeliveryIntegrationsController } from "./delivery-integrations.controller";
 import { DeliveryIntegrationsService } from "./delivery-integrations.service";
+import { DeliveryProviderRegistryService } from "./delivery-provider-registry.service";
 import { IfoodAuthService } from "./ifood/ifood-auth.service";
 import { IfoodClient } from "./ifood/ifood-client";
 import { IfoodEventPollerService } from "./ifood/ifood-event-poller.service";
@@ -15,6 +16,7 @@ import { IfoodStatusSyncService } from "./ifood/ifood-status-sync.service";
   controllers: [DeliveryIntegrationsController],
   providers: [
     DeliveryIntegrationsService,
+    DeliveryProviderRegistryService,
     DeliveryIntegrationHealthService,
     DeliveryIntegrationAuditService,
     IfoodAuthService,
@@ -22,6 +24,11 @@ import { IfoodStatusSyncService } from "./ifood/ifood-status-sync.service";
     IfoodEventPollerService,
     IfoodStatusSyncService,
   ],
-  exports: [DeliveryIntegrationsService, DeliveryIntegrationAuditService, IfoodStatusSyncService],
+  exports: [
+    DeliveryIntegrationsService,
+    DeliveryProviderRegistryService,
+    DeliveryIntegrationAuditService,
+    IfoodStatusSyncService,
+  ],
 })
 export class DeliveryIntegrationsModule {}

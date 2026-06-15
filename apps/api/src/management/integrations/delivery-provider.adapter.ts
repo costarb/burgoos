@@ -12,8 +12,18 @@ export interface ProviderValidationResult {
 
 export interface DeliveryProviderAdapter {
   readonly provider: DeliveryProvider;
+  readonly capabilities: DeliveryProviderCapabilities;
   validateMerchant(input: {
     externalMerchantId: string;
     credentialSecret: string;
   }): Promise<ProviderValidationResult>;
+}
+
+export interface DeliveryProviderCapabilities {
+  supportsPolling: boolean;
+  supportsWebhook: boolean;
+  supportsMerchantValidation: boolean;
+  supportsOrderConfirmation: boolean;
+  supportsOrderRefusal: boolean;
+  supportedStatusActions: string[];
 }

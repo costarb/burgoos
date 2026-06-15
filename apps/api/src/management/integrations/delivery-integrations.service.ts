@@ -20,8 +20,8 @@ import {
   DeliveryIntegrationUpdateDto,
 } from "./dto/delivery-integration.dto";
 import { IfoodAuthService } from "./ifood/ifood-auth.service";
-import { IfoodClient } from "./ifood/ifood-client";
 import { DeliveryIntegrationAuditService } from "./delivery-integration-audit.service";
+import { DeliveryProviderRegistryService } from "./delivery-provider-registry.service";
 
 @Injectable()
 export class DeliveryIntegrationsService {
@@ -29,7 +29,8 @@ export class DeliveryIntegrationsService {
     @Inject(PrismaService) private readonly prisma: PrismaService,
     private readonly config: ConfigService,
     @Inject(IfoodAuthService) private readonly ifoodAuth: IfoodAuthService,
-    @Inject(IfoodClient) private readonly ifoodClient: IfoodClient,
+    @Inject(DeliveryProviderRegistryService)
+    private readonly providerRegistry: DeliveryProviderRegistryService,
     @Inject(DeliveryIntegrationAuditService)
     private readonly audit: DeliveryIntegrationAuditService
   ) {}
@@ -398,7 +399,10 @@ export class DeliveryIntegrationsService {
     credentialSecret: string
   ) {
     if (provider === DeliveryProvider.IFOOD) {
-      return this.ifoodClient.validateMerchant({ externalMerchantId, credentialSecret });
+      return this.providerRegistry.get(provider).validateMerchant({
+        externalMerchantId,
+        credentialSecret,
+      });
     }
 
     throw new ConflictException(`Provider ${provider} does not support validation`);
@@ -438,6 +442,7 @@ export class DeliveryIntegrationsService {
       lastValidationAt: integration.lastValidationAt?.toISOString() ?? null,
       createdAt: integration.createdAt.toISOString(),
       updatedAt: integration.updatedAt.toISOString(),
+      capabilities: this.providerRegistry.get(integration.provider).capabilities,
     };
   }
 

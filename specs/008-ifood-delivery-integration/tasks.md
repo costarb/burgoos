@@ -173,16 +173,16 @@
 
 ### Tests for User Story 5
 
-- [ ] T068 [P] [US5] Add provider adapter contract tests in apps/api/src/management/integrations/delivery-provider.adapter.spec.ts
-- [ ] T069 [P] [US5] Add simulated provider registration tests in apps/api/src/management/integrations/delivery-integrations.service.spec.ts
+- [x] T068 [P] [US5] Add provider adapter contract tests in apps/api/src/management/integrations/delivery-provider.adapter.spec.ts
+- [x] T069 [P] [US5] Add simulated provider registration tests in apps/api/src/management/integrations/delivery-integrations.service.spec.ts
 
 ### Implementation for User Story 5
 
-- [ ] T070 [US5] Refactor iFood adapter behind DeliveryProviderAdapter interface in apps/api/src/management/integrations/delivery-provider.adapter.ts
-- [ ] T071 [US5] Add provider registry service in apps/api/src/management/integrations/delivery-provider-registry.service.ts
-- [ ] T072 [US5] Register iFood adapter through provider registry in apps/api/src/management/integrations/delivery-integrations.module.ts
-- [ ] T073 [US5] Add simulated provider fixture for tests in apps/api/src/management/integrations/testing/simulated-delivery-provider.adapter.ts
-- [ ] T074 [US5] Ensure UI reads provider capabilities from API rather than hardcoding all actions in apps/web/app/admin/integrations/delivery/delivery-integrations-client.tsx
+- [x] T070 [US5] Refactor iFood adapter behind DeliveryProviderAdapter interface in apps/api/src/management/integrations/delivery-provider.adapter.ts
+- [x] T071 [US5] Add provider registry service in apps/api/src/management/integrations/delivery-provider-registry.service.ts
+- [x] T072 [US5] Register iFood adapter through provider registry in apps/api/src/management/integrations/delivery-integrations.module.ts
+- [x] T073 [US5] Add simulated provider fixture for tests in apps/api/src/management/integrations/testing/simulated-delivery-provider.adapter.ts
+- [x] T074 [US5] Ensure UI reads provider capabilities from API rather than hardcoding all actions in apps/web/app/admin/integrations/delivery/delivery-integrations-client.tsx
 
 **Checkpoint**: US5 is fully functional and testable independently.
 

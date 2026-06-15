@@ -24,6 +24,14 @@ vi.mock("../../../../lib/api", () => ({
         lastValidationAt: null,
         createdAt: "2026-06-15T00:00:00.000Z",
         updatedAt: "2026-06-15T00:00:00.000Z",
+        capabilities: {
+          supportsPolling: true,
+          supportsWebhook: false,
+          supportsMerchantValidation: true,
+          supportsOrderConfirmation: true,
+          supportsOrderRefusal: true,
+          supportedStatusActions: ["DISPATCH", "DELIVER"],
+        },
       },
     ],
     orderPlatforms: [

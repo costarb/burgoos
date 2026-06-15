@@ -97,6 +97,16 @@ export function DeliveryIntegrationsClient({
                     Merchant: {integration.externalMerchantId ?? "pendente"} · Credencial:{" "}
                     {integration.credentialStatus ?? "pendente"}
                   </p>
+                  <div className="mt-2 flex flex-wrap gap-2">
+                    {providerCapabilityLabels(integration.capabilities).map((capability) => (
+                      <span
+                        className="rounded-md border border-slate-200 px-2 py-1 text-xs text-slate-600"
+                        key={capability}
+                      >
+                        {capability}
+                      </span>
+                    ))}
+                  </div>
                 </div>
                 <div className="flex flex-wrap gap-2">
                   <TinyAction action={validateAction} id={integration.id} label="Validar" />
@@ -190,6 +200,39 @@ export function DeliveryIntegrationsClient({
       </section>
     </main>
   );
+}
+
+function providerCapabilityLabels(
+  capabilities: DeliveryIntegrationDetail["capabilities"]
+): string[] {
+  return [
+    capabilities.supportsPolling ? "Polling" : null,
+    capabilities.supportsWebhook ? "Webhook" : null,
+    capabilities.supportsMerchantValidation ? "Validacao de merchant" : null,
+    capabilities.supportsOrderConfirmation ? "Aceite" : null,
+    capabilities.supportsOrderRefusal ? "Recusa" : null,
+    ...capabilities.supportedStatusActions.map((action) => statusActionLabel(action)),
+  ].filter((label): label is string => Boolean(label));
+}
+
+function statusActionLabel(
+  action: DeliveryIntegrationDetail["capabilities"]["supportedStatusActions"][number]
+) {
+  const labels: Record<
+    DeliveryIntegrationDetail["capabilities"]["supportedStatusActions"][number],
+    string
+  > = {
+    CONFIRM: "Confirmacao",
+    REFUSE: "Recusa",
+    START_PREPARATION: "Inicio de preparo",
+    READY_TO_PICKUP: "Pronto para retirada",
+    DISPATCH: "Despacho",
+    DELIVER: "Entrega",
+    REQUEST_CANCELLATION: "Cancelamento",
+    RESPOND_DISPUTE: "Disputa",
+  };
+
+  return labels[action];
 }
 
 function TinyAction({

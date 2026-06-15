@@ -45,6 +45,15 @@ export type DeliveryPlatformOrderAction =
 export type DeliveryPlatformOrderMode = "DELIVERY" | "MERCHANT_DELIVERY" | "TAKEOUT" | "DINE_IN";
 export type DeliveryPlatformOrderTiming = "IMMEDIATE" | "SCHEDULED";
 
+export interface DeliveryProviderCapabilities {
+  supportsPolling: boolean;
+  supportsWebhook: boolean;
+  supportsMerchantValidation: boolean;
+  supportsOrderConfirmation: boolean;
+  supportsOrderRefusal: boolean;
+  supportedStatusActions: DeliveryPlatformOrderAction[];
+}
+
 export interface DeliveryIntegrationSummary {
   id: string;
   provider: DeliveryProvider;
@@ -63,6 +72,7 @@ export interface DeliveryIntegrationDetail extends DeliveryIntegrationSummary {
   lastValidationAt: string | null;
   createdAt: string;
   updatedAt: string;
+  capabilities: DeliveryProviderCapabilities;
 }
 
 export interface DeliveryIntegrationHealth {

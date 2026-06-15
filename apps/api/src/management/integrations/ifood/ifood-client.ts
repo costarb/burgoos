@@ -1,11 +1,23 @@
 import { DeliveryProvider } from "@prisma/client";
 import { Injectable } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
-import { DeliveryProviderAdapter, ProviderValidationResult } from "../delivery-provider.adapter";
+import {
+  DeliveryProviderAdapter,
+  DeliveryProviderCapabilities,
+  ProviderValidationResult,
+} from "../delivery-provider.adapter";
 
 @Injectable()
 export class IfoodClient implements DeliveryProviderAdapter {
   readonly provider = DeliveryProvider.IFOOD;
+  readonly capabilities: DeliveryProviderCapabilities = {
+    supportsPolling: true,
+    supportsWebhook: false,
+    supportsMerchantValidation: true,
+    supportsOrderConfirmation: true,
+    supportsOrderRefusal: true,
+    supportedStatusActions: ["DISPATCH", "READY_TO_PICKUP", "DELIVER", "REQUEST_CANCELLATION"],
+  };
 
   constructor(private readonly config: ConfigService) {}
 
