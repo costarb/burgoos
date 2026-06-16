@@ -419,6 +419,31 @@ function IntegrationHealthPanel({ health }: { health: DeliveryIntegrationHealth 
     <div className="mt-5 grid gap-4 border-t border-slate-100 pt-4 lg:grid-cols-[1fr_1fr]">
       <div>
         <h3 className="text-sm font-semibold text-slate-800">Saude operacional</h3>
+        <div
+          className={
+            health.polling.ready
+              ? "mt-3 rounded-md border border-emerald-200 bg-emerald-50 px-3 py-2"
+              : "mt-3 rounded-md border border-amber-200 bg-amber-50 px-3 py-2"
+          }
+        >
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <p className="text-sm font-semibold text-slate-800">Polling iFood</p>
+            <span
+              className={
+                health.polling.ready
+                  ? "rounded-md bg-emerald-100 px-2 py-1 text-xs font-semibold text-emerald-700"
+                  : "rounded-md bg-amber-100 px-2 py-1 text-xs font-semibold text-amber-700"
+              }
+            >
+              {pollingStatusLabel(health.polling.status)}
+            </span>
+          </div>
+          <div className="mt-2 grid gap-1 text-xs text-slate-600 sm:grid-cols-3">
+            <p>Intervalo: {health.polling.intervalSeconds}s</p>
+            <p>Ultimo sucesso: {formatDateTime(health.polling.lastSuccessfulPollingAt)}</p>
+            <p>Proxima janela: {formatDateTime(health.polling.nextExpectedPollingAt)}</p>
+          </div>
+        </div>
         <div className="mt-3 grid gap-2 sm:grid-cols-2">
           {counters.map(([label, value]) => (
             <div className="rounded-md border border-slate-200 px-3 py-2" key={label}>
@@ -490,6 +515,32 @@ function IntegrationHealthPanel({ health }: { health: DeliveryIntegrationHealth 
       </div>
     </div>
   );
+}
+
+function pollingStatusLabel(status: DeliveryIntegrationHealth["polling"]["status"]) {
+  const labels: Record<DeliveryIntegrationHealth["polling"]["status"], string> = {
+    READY: "Ativo",
+    SCHEDULER_DISABLED: "Scheduler desligado",
+    INTEGRATION_NOT_ACTIVE: "Integracao inativa",
+    POLLING_DISABLED: "Polling desligado",
+    MISSING_CREDENTIALS: "Credenciais pendentes",
+    MISSING_MERCHANT: "Merchant pendente",
+  };
+
+  return labels[status];
+}
+
+function formatDateTime(value: string | null) {
+  if (!value) {
+    return "pendente";
+  }
+
+  return new Intl.DateTimeFormat("pt-BR", {
+    day: "2-digit",
+    month: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+  }).format(new Date(value));
 }
 
 function providerCapabilityLabels(

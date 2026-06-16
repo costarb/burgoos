@@ -12,6 +12,15 @@ vi.mock("../../../../lib/api", () => ({
     status: "DRAFT",
     merchantStatus: "UNKNOWN",
     lastSuccessfulPollingAt: null,
+    polling: {
+      schedulerEnabled: true,
+      enabled: true,
+      ready: false,
+      status: "INTEGRATION_NOT_ACTIVE",
+      intervalSeconds: 30,
+      lastSuccessfulPollingAt: null,
+      nextExpectedPollingAt: null,
+    },
     pendingEvents: 1,
     failedEvents: 2,
     retryableSyncs: 3,
@@ -92,6 +101,8 @@ describe("delivery integrations page", () => {
     expect(html).toContain("Ativar");
     expect(html).toContain("Pausar");
     expect(html).toContain("Disputas pendentes");
+    expect(html).toContain("Polling iFood");
+    expect(html).toContain("Integracao inativa");
     expect(html).toContain("Auditoria recente");
     expect(html).toContain("DISPUTE_RECEIVED");
   });

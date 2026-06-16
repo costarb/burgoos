@@ -80,6 +80,21 @@ export interface DeliveryIntegrationHealth {
   status: DeliveryIntegrationStatus;
   merchantStatus: string;
   lastSuccessfulPollingAt: string | null;
+  polling: {
+    schedulerEnabled: boolean;
+    enabled: boolean;
+    ready: boolean;
+    status:
+      | "READY"
+      | "SCHEDULER_DISABLED"
+      | "INTEGRATION_NOT_ACTIVE"
+      | "POLLING_DISABLED"
+      | "MISSING_CREDENTIALS"
+      | "MISSING_MERCHANT";
+    intervalSeconds: number;
+    lastSuccessfulPollingAt: string | null;
+    nextExpectedPollingAt: string | null;
+  };
   pendingEvents: number;
   failedEvents: number;
   retryableSyncs: number;
