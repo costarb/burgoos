@@ -196,20 +196,20 @@
 
 ### Tests for User Story 6
 
-- [ ] T075 [P] [US6] Add order patched event tests in apps/api/src/management/integrations/ifood/ifood-event-poller.service.spec.ts
-- [ ] T076 [P] [US6] Add dispute workflow tests in apps/api/src/management/integrations/ifood/ifood-dispute.service.spec.ts
-- [ ] T077 [P] [US6] Add integration health page tests in apps/web/app/admin/integrations/delivery/delivery-integrations-page.spec.tsx
+- [x] T075 [P] [US6] Add order patched event tests in apps/api/src/management/integrations/ifood/ifood-event-poller.service.spec.ts
+- [x] T076 [P] [US6] Add dispute workflow tests in apps/api/src/management/integrations/ifood/ifood-dispute.service.spec.ts
+- [x] T077 [P] [US6] Add integration health page tests in apps/web/app/admin/integrations/delivery/delivery-integrations-page.spec.tsx
 
 ### Implementation for User Story 6
 
-- [ ] T078 [US6] Implement order modification handling and operator exception creation in apps/api/src/management/integrations/ifood/ifood-event-poller.service.ts
-- [ ] T079 [US6] Implement cancellation result event handling in apps/api/src/management/integrations/ifood/ifood-event-poller.service.ts
-- [ ] T080 [US6] Implement dispute persistence and response service in apps/api/src/management/integrations/ifood/ifood-dispute.service.ts
-- [ ] T081 [US6] Add dispute response endpoint to apps/api/src/management/integrations/delivery-integrations.controller.ts
-- [ ] T082 [US6] Implement optional/rate-limited delivery tracking refresh in apps/api/src/management/integrations/ifood/ifood-delivery-tracking.service.ts
-- [ ] T083 [US6] Add health counters for failed events, pending disputes, token expiry and merchant status in apps/api/src/management/integrations/delivery-integration-health.service.ts
-- [ ] T084 [US6] Show pending exceptions, disputes and homologation readiness in apps/web/app/admin/integrations/delivery/delivery-integrations-client.tsx
-- [ ] T085 [US6] Add integration audit page/table section in apps/web/app/admin/integrations/delivery/delivery-integrations-client.tsx
+- [x] T078 [US6] Implement order modification handling and operator exception creation in apps/api/src/management/integrations/ifood/ifood-event-poller.service.ts
+- [x] T079 [US6] Implement cancellation result event handling in apps/api/src/management/integrations/ifood/ifood-event-poller.service.ts
+- [x] T080 [US6] Implement dispute persistence and response service in apps/api/src/management/integrations/ifood/ifood-dispute.service.ts
+- [x] T081 [US6] Add dispute response endpoint to apps/api/src/management/integrations/delivery-integrations.controller.ts
+- [x] T082 [US6] Implement optional/rate-limited delivery tracking refresh in apps/api/src/management/integrations/ifood/ifood-delivery-tracking.service.ts
+- [x] T083 [US6] Add health counters for failed events, pending disputes, token expiry and merchant status in apps/api/src/management/integrations/delivery-integration-health.service.ts
+- [x] T084 [US6] Show pending exceptions, disputes and homologation readiness in apps/web/app/admin/integrations/delivery/delivery-integrations-client.tsx
+- [x] T085 [US6] Add integration audit page/table section in apps/web/app/admin/integrations/delivery/delivery-integrations-client.tsx
 
 **Checkpoint**: US6 is fully functional and testable independently.
 

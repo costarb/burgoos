@@ -285,6 +285,61 @@ export class IfoodClient implements DeliveryProviderAdapter {
     await this.postOrderAction(input, "delivered", "iFood delivered order failed");
   }
 
+  async respondDispute(input: {
+    accessToken: string;
+    disputeId: string;
+    accepted: boolean;
+    reason?: string | null;
+  }): Promise<void> {
+    if (this.isMockMode()) {
+      return;
+    }
+
+    const apiBaseUrl = this.requireApiBaseUrl();
+    const response = await fetch(`${apiBaseUrl}/order/v1.0/disputes/${input.disputeId}/response`, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${input.accessToken}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        accepted: input.accepted,
+        reason: input.reason ?? undefined,
+      }),
+    });
+
+    if (!response.ok) {
+      throw new Error(`iFood dispute response failed with status ${response.status}`);
+    }
+  }
+
+  async getDeliveryTracking(input: { accessToken: string; orderId: string }): Promise<unknown> {
+    if (this.isMockMode()) {
+      return {
+        orderId: input.orderId,
+        trackingAvailable: false,
+        refreshedAt: new Date().toISOString(),
+      };
+    }
+
+    const apiBaseUrl = this.requireApiBaseUrl();
+    const response = await fetch(`${apiBaseUrl}/order/v1.0/orders/${input.orderId}/tracking`, {
+      headers: {
+        Authorization: `Bearer ${input.accessToken}`,
+      },
+    });
+
+    if (response.status === 404) {
+      return null;
+    }
+
+    if (!response.ok) {
+      throw new Error(`iFood delivery tracking failed with status ${response.status}`);
+    }
+
+    return response.json();
+  }
+
   private isMockMode() {
     return this.config.get<string>("IFOOD_MOCK_MODE") === "true";
   }

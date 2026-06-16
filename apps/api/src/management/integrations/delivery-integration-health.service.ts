@@ -12,7 +12,15 @@ export class DeliveryIntegrationHealthService {
 
   async getHealth(tenantId: string, integrationId: string) {
     const integration = await this.integrationsService.getForTenant(tenantId, integrationId);
-    const [pendingEvents, failedEvents, retryableSyncs] = await Promise.all([
+    const credential = integration.credentials[0];
+    const [
+      pendingEvents,
+      failedEvents,
+      retryableSyncs,
+      pendingDisputes,
+      pendingExceptions,
+      recentAudits,
+    ] = await Promise.all([
       this.prisma.deliveryPlatformEvent.count({
         where: {
           tenantId,
@@ -26,7 +34,41 @@ export class DeliveryIntegrationHealthService {
       this.prisma.platformSyncAttempt.count({
         where: { tenantId, integrationId, status: "RETRYABLE" },
       }),
+      this.prisma.platformDispute.count({
+        where: {
+          tenantId,
+          integrationId,
+          respondedAt: null,
+          expiresAt: { gt: new Date() },
+        },
+      }),
+      this.prisma.deliveryPlatformEvent.count({
+        where: {
+          tenantId,
+          integrationId,
+          normalizedSummary: {
+            path: ["requiresOperatorReview"],
+            equals: true,
+          },
+        },
+      }),
+      this.prisma.deliveryIntegrationAudit.findMany({
+        where: { tenantId, integrationId },
+        orderBy: { createdAt: "desc" },
+        take: 8,
+        select: {
+          id: true,
+          action: true,
+          entityType: true,
+          result: true,
+          createdAt: true,
+        },
+      }),
     ]);
+    const tokenExpiresAt = credential?.tokenExpiresAt ?? null;
+    const tokenExpiresInMinutes = tokenExpiresAt
+      ? Math.max(0, Math.round((tokenExpiresAt.getTime() - Date.now()) / 60_000))
+      : null;
 
     return {
       integrationId,
@@ -36,6 +78,15 @@ export class DeliveryIntegrationHealthService {
       pendingEvents,
       failedEvents,
       retryableSyncs,
+      pendingDisputes,
+      pendingExceptions,
+      tokenExpiresAt: tokenExpiresAt?.toISOString() ?? null,
+      tokenExpiresInMinutes,
+      tokenRequiresAttention: tokenExpiresInMinutes !== null && tokenExpiresInMinutes <= 60,
+      recentAudits: recentAudits.map((audit) => ({
+        ...audit,
+        createdAt: audit.createdAt.toISOString(),
+      })),
       homologationChecks: [
         {
           key: "credentials",

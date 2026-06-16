@@ -9,6 +9,8 @@ import { DeliveryIntegrationsService } from "./delivery-integrations.service";
 import { DeliveryProviderRegistryService } from "./delivery-provider-registry.service";
 import { IfoodAuthService } from "./ifood/ifood-auth.service";
 import { IfoodClient } from "./ifood/ifood-client";
+import { IfoodDeliveryTrackingService } from "./ifood/ifood-delivery-tracking.service";
+import { IfoodDisputeService } from "./ifood/ifood-dispute.service";
 import { IfoodEventPollerService } from "./ifood/ifood-event-poller.service";
 import { IfoodStatusSyncService } from "./ifood/ifood-status-sync.service";
 
@@ -22,6 +24,8 @@ import { IfoodStatusSyncService } from "./ifood/ifood-status-sync.service";
     DeliveryIntegrationAuditService,
     IfoodAuthService,
     IfoodClient,
+    IfoodDeliveryTrackingService,
+    IfoodDisputeService,
     IfoodEventPollerService,
     IfoodStatusSyncService,
   ],
@@ -29,6 +33,8 @@ import { IfoodStatusSyncService } from "./ifood/ifood-status-sync.service";
     DeliveryIntegrationsService,
     DeliveryProviderRegistryService,
     DeliveryIntegrationAuditService,
+    IfoodDeliveryTrackingService,
+    IfoodDisputeService,
     IfoodStatusSyncService,
   ],
 })

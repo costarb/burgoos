@@ -83,6 +83,18 @@ export interface DeliveryIntegrationHealth {
   pendingEvents: number;
   failedEvents: number;
   retryableSyncs: number;
+  pendingDisputes: number;
+  pendingExceptions: number;
+  tokenExpiresAt: string | null;
+  tokenExpiresInMinutes: number | null;
+  tokenRequiresAttention: boolean;
+  recentAudits: Array<{
+    id: string;
+    action: string;
+    entityType: string;
+    result: string;
+    createdAt: string;
+  }>;
   homologationChecks: Array<{
     key: string;
     passed: boolean;

@@ -1,4 +1,14 @@
-import { Body, Controller, Get, Inject, Param, Patch, Post, UseGuards } from "@nestjs/common";
+import {
+  Body,
+  Controller,
+  Get,
+  Inject,
+  Param,
+  Patch,
+  Post,
+  UseGuards,
+  Optional,
+} from "@nestjs/common";
 import { PermissionGuard } from "../../auth/guards/permission.guard";
 import { RequirePermission } from "../../auth/guards/require-permission.decorator";
 import { CurrentUser } from "../../platform/auth/current-user.decorator";
@@ -11,6 +21,7 @@ import {
   DeliveryIntegrationDto,
   DeliveryIntegrationUpdateDto,
 } from "./dto/delivery-integration.dto";
+import { IfoodDisputeService } from "./ifood/ifood-dispute.service";
 
 @UseGuards(JwtAuthGuard, PermissionGuard)
 @Controller("admin/integrations/delivery")
@@ -19,7 +30,10 @@ export class DeliveryIntegrationsController {
     @Inject(DeliveryIntegrationsService)
     private readonly integrationsService: DeliveryIntegrationsService,
     @Inject(DeliveryIntegrationHealthService)
-    private readonly healthService: DeliveryIntegrationHealthService
+    private readonly healthService: DeliveryIntegrationHealthService,
+    @Optional()
+    @Inject(IfoodDisputeService)
+    private readonly disputeService?: IfoodDisputeService
   ) {}
 
   @Get()
@@ -82,5 +96,23 @@ export class DeliveryIntegrationsController {
   @RequirePermission("integrations.delivery.view", "integrations.delivery.manage")
   health(@CurrentUser() user: AuthUser, @Param("id") id: string) {
     return this.healthService.getHealth(user.tenantId, id);
+  }
+
+  @Post(":id/disputes/:disputeId/respond")
+  @RequirePermission("integrations.delivery.manage")
+  respondDispute(
+    @CurrentUser() user: AuthUser,
+    @Param("id") id: string,
+    @Param("disputeId") disputeId: string,
+    @Body() dto: { accepted?: boolean; reason?: string | null }
+  ) {
+    return this.disputeService?.respond({
+      tenantId: user.tenantId,
+      actorUserId: user.id,
+      integrationId: id,
+      disputeId,
+      accepted: Boolean(dto.accepted),
+      reason: dto.reason ?? null,
+    });
   }
 }

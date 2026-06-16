@@ -100,4 +100,147 @@ describe("IfoodEventPollerService", () => {
       })
     );
   });
+
+  it("records order patch events as operator exceptions without recreating the order", async () => {
+    const event = {
+      id: "event-db-2",
+      tenantId: "tenant-1",
+      integrationId: "integration-1",
+      provider: "IFOOD",
+      externalEventId: "event-2",
+      externalOrderId: "order-2",
+      eventCode: "ORDER_PATCHED",
+      fullEventCode: null,
+      status: "RECEIVED",
+      receivedAt: new Date(),
+      providerCreatedAt: new Date(),
+      processingStartedAt: null,
+      processedAt: null,
+      acknowledgedAt: null,
+      retryCount: 0,
+      nextRetryAt: null,
+      payload: {},
+      normalizedSummary: null,
+      errorMessage: null,
+    };
+    const updateEvent = vi.fn(async () => event);
+    const updateLink = vi.fn();
+    const ingest = vi.fn();
+    const service = new IfoodEventPollerService(
+      {
+        deliveryPlatformEvent: {
+          upsert: vi.fn(async () => event),
+          update: updateEvent,
+        },
+        deliveryIntegration: { update: vi.fn() },
+        platformOrderLink: {
+          findFirst: vi.fn(async () => ({ id: "link-1" })),
+          update: updateLink,
+        },
+      } as never,
+      { getActiveCredentialSecret: vi.fn(async () => ({ accessToken: "token" })) } as never,
+      {
+        pollEvents: vi.fn(async () => [
+          { id: "event-2", code: "ORDER_PATCHED", orderId: "order-2", raw: {} },
+        ]),
+        getOrderDetails: vi.fn(async () => ({ id: "order-2", total: { orderAmount: 20 } })),
+        acknowledgeEvents: vi.fn(),
+      } as never,
+      { ingest } as never,
+      { record: vi.fn() } as never
+    );
+
+    await service.pollIntegration({
+      id: "integration-1",
+      tenantId: "tenant-1",
+      provider: "IFOOD",
+      orderPlatformId: "platform-1",
+      externalMerchantId: "merchant-1",
+    } as never);
+
+    expect(ingest).not.toHaveBeenCalled();
+    expect(updateLink).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { id: "link-1" },
+        data: expect.objectContaining({
+          externalStatus: "ORDER_PATCHED",
+          rawOrderSnapshot: expect.objectContaining({ id: "order-2" }),
+        }),
+      })
+    );
+    expect(updateEvent).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          normalizedSummary: expect.objectContaining({
+            exceptionType: "ORDER_MODIFIED",
+            requiresOperatorReview: true,
+          }),
+        }),
+      })
+    );
+  });
+
+  it("updates platform order link for cancellation result events", async () => {
+    const event = {
+      id: "event-db-3",
+      tenantId: "tenant-1",
+      integrationId: "integration-1",
+      provider: "IFOOD",
+      externalEventId: "event-3",
+      externalOrderId: "order-3",
+      eventCode: "CANCELLATION_ACCEPTED",
+      fullEventCode: null,
+      status: "RECEIVED",
+      receivedAt: new Date(),
+      providerCreatedAt: new Date(),
+      processingStartedAt: null,
+      processedAt: null,
+      acknowledgedAt: null,
+      retryCount: 0,
+      nextRetryAt: null,
+      payload: {},
+      normalizedSummary: null,
+      errorMessage: null,
+    };
+    const updateLink = vi.fn();
+    const service = new IfoodEventPollerService(
+      {
+        deliveryPlatformEvent: {
+          upsert: vi.fn(async () => event),
+          update: vi.fn(async () => event),
+        },
+        deliveryIntegration: { update: vi.fn() },
+        platformOrderLink: {
+          findFirst: vi.fn(async () => ({ id: "link-3" })),
+          update: updateLink,
+        },
+      } as never,
+      { getActiveCredentialSecret: vi.fn(async () => ({ accessToken: "token" })) } as never,
+      {
+        pollEvents: vi.fn(async () => [
+          { id: "event-3", code: "CANCELLATION_ACCEPTED", orderId: "order-3", raw: {} },
+        ]),
+        acknowledgeEvents: vi.fn(),
+      } as never,
+      { ingest: vi.fn() } as never,
+      { record: vi.fn() } as never
+    );
+
+    await service.pollIntegration({
+      id: "integration-1",
+      tenantId: "tenant-1",
+      provider: "IFOOD",
+      orderPlatformId: "platform-1",
+      externalMerchantId: "merchant-1",
+    } as never);
+
+    expect(updateLink).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { id: "link-3" },
+        data: expect.objectContaining({
+          externalStatus: "CANCELLATION_ACCEPTED",
+        }),
+      })
+    );
+  });
 });

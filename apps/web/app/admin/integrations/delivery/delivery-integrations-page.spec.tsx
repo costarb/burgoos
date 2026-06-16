@@ -7,6 +7,30 @@ vi.mock("../../../../lib/api", () => ({
   activateDeliveryIntegration: vi.fn(),
   createDeliveryIntegration: vi.fn(),
   getAdminToken: vi.fn(async () => "access-token"),
+  getDeliveryIntegrationHealth: vi.fn(async () => ({
+    integrationId: "integration-1",
+    status: "DRAFT",
+    merchantStatus: "UNKNOWN",
+    lastSuccessfulPollingAt: null,
+    pendingEvents: 1,
+    failedEvents: 2,
+    retryableSyncs: 3,
+    pendingDisputes: 4,
+    pendingExceptions: 5,
+    tokenExpiresAt: null,
+    tokenExpiresInMinutes: null,
+    tokenRequiresAttention: false,
+    recentAudits: [
+      {
+        id: "audit-1",
+        action: "DISPUTE_RECEIVED",
+        entityType: "PlatformDispute",
+        result: "SUCCESS",
+        createdAt: "2026-06-15T00:00:00.000Z",
+      },
+    ],
+    homologationChecks: [{ key: "credentials", passed: true, message: null }],
+  })),
   getDeliveryIntegrations: vi.fn(async () => ({
     integrations: [
       {
@@ -67,5 +91,8 @@ describe("delivery integrations page", () => {
     expect(html).toContain("Validar");
     expect(html).toContain("Ativar");
     expect(html).toContain("Pausar");
+    expect(html).toContain("Disputas pendentes");
+    expect(html).toContain("Auditoria recente");
+    expect(html).toContain("DISPUTE_RECEIVED");
   });
 });

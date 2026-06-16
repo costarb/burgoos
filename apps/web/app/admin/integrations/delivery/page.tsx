@@ -4,6 +4,7 @@ import {
   activateDeliveryIntegration,
   createDeliveryIntegration,
   getAdminToken,
+  getDeliveryIntegrationHealth,
   getDeliveryIntegrations,
   pauseDeliveryIntegration,
   saveDeliveryIntegrationCredentials,
@@ -25,6 +26,14 @@ function stringOrNull(formData: FormData, key: string): string | null {
 
 export default async function DeliveryIntegrationsPage() {
   const { integrations, orderPlatforms } = await getDeliveryIntegrations();
+  const token = await getAdminToken();
+  const healthEntries = await Promise.all(
+    integrations.map(async (integration) => [
+      integration.id,
+      await getDeliveryIntegrationHealth(token, integration.id),
+    ])
+  );
+  const healthByIntegrationId = Object.fromEntries(healthEntries);
 
   async function create(_state: OperationState, formData: FormData): Promise<OperationState> {
     "use server";
@@ -149,6 +158,7 @@ export default async function DeliveryIntegrationsPage() {
       createAction={create}
       credentialAction={credentials}
       integrations={integrations}
+      healthByIntegrationId={healthByIntegrationId}
       orderPlatforms={orderPlatforms}
       pauseAction={pause}
       updateAction={update}

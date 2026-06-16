@@ -1,4 +1,4 @@
-import { Inject, Injectable, Logger } from "@nestjs/common";
+import { Inject, Injectable, Logger, Optional } from "@nestjs/common";
 import {
   DeliveryIntegrationAuditAction,
   DeliveryIntegration,
@@ -9,7 +9,9 @@ import { ExternalOrderIngestionService } from "../../../ordering/external-order-
 import { PrismaService } from "../../../platform/database/prisma.service";
 import { DeliveryIntegrationAuditService } from "../delivery-integration-audit.service";
 import { DeliveryIntegrationsService } from "../delivery-integrations.service";
+import { IfoodDeliveryTrackingService } from "./ifood-delivery-tracking.service";
 import { IfoodClient } from "./ifood-client";
+import { IfoodDisputeService } from "./ifood-dispute.service";
 import { mapIfoodOrderToExternalDraft } from "./ifood-order-mapper";
 
 const POLLING_INTERVAL_MS = 30_000;
@@ -27,7 +29,13 @@ export class IfoodEventPollerService {
     @Inject(ExternalOrderIngestionService)
     private readonly externalOrderIngestion: ExternalOrderIngestionService,
     @Inject(DeliveryIntegrationAuditService)
-    private readonly audit: DeliveryIntegrationAuditService
+    private readonly audit: DeliveryIntegrationAuditService,
+    @Optional()
+    @Inject(IfoodDisputeService)
+    private readonly disputes?: IfoodDisputeService,
+    @Optional()
+    @Inject(IfoodDeliveryTrackingService)
+    private readonly tracking?: IfoodDeliveryTrackingService
   ) {}
 
   async pollDueIntegrations(now = new Date()) {
@@ -141,6 +149,28 @@ export class IfoodEventPollerService {
       return;
     }
 
+    if (this.isDisputeEvent(event)) {
+      await this.handleDisputeEvent(integration, event);
+      await this.markProcessedAndAck(event, accessToken, "PROCESSED");
+      return;
+    }
+
+    if (this.isCancellationResultEvent(event)) {
+      await this.handleCancellationResultEvent(integration, event);
+      await this.markProcessedAndAck(event, accessToken, "PROCESSED");
+      return;
+    }
+
+    if (this.isTrackingEvent(event)) {
+      await this.tracking?.refreshIfDue({
+        tenantId: integration.tenantId,
+        integrationId: integration.id,
+        externalOrderId: event.externalOrderId,
+      });
+      await this.markProcessedAndAck(event, accessToken, "PROCESSED");
+      return;
+    }
+
     const details = await this.ifoodClient.getOrderDetails({
       accessToken,
       orderId: event.externalOrderId,
@@ -148,6 +178,12 @@ export class IfoodEventPollerService {
 
     if (!details) {
       await this.deferEventRetry(event, "Detalhes do pedido ainda indisponiveis");
+      return;
+    }
+
+    if (this.isOrderModificationEvent(event)) {
+      await this.handleOrderModificationEvent(integration, event, details);
+      await this.markProcessedAndAck(event, accessToken, "PROCESSED");
       return;
     }
 
@@ -177,6 +213,136 @@ export class IfoodEventPollerService {
     });
 
     await this.markProcessedAndAck(event, accessToken, "PROCESSED");
+  }
+
+  private async handleOrderModificationEvent(
+    integration: DeliveryIntegration,
+    event: DeliveryPlatformEvent,
+    details: unknown
+  ) {
+    const link = await this.prisma.platformOrderLink.findFirst({
+      where: {
+        tenantId: integration.tenantId,
+        integrationId: integration.id,
+        externalOrderId: event.externalOrderId ?? "",
+      },
+      select: { id: true },
+    });
+
+    await this.prisma.deliveryPlatformEvent.update({
+      where: { id: event.id },
+      data: {
+        normalizedSummary: {
+          exceptionType: "ORDER_MODIFIED",
+          externalOrderId: event.externalOrderId,
+          requiresOperatorReview: true,
+        } as Prisma.InputJsonObject,
+      },
+    });
+
+    if (link) {
+      await this.prisma.platformOrderLink.update({
+        where: { id: link.id },
+        data: {
+          rawOrderSnapshot: details as Prisma.InputJsonValue,
+          externalStatus: event.fullEventCode ?? event.eventCode,
+          lastProviderUpdateAt: new Date(),
+        },
+      });
+    }
+
+    await this.audit.record({
+      tenantId: integration.tenantId,
+      integrationId: integration.id,
+      action: DeliveryIntegrationAuditAction.ORDER_UPDATED,
+      entityType: "PlatformOrderLink",
+      entityId: link?.id ?? event.externalOrderId,
+      result: link ? "REQUIRES_OPERATOR_REVIEW" : "FAILED",
+      metadata: {
+        externalOrderId: event.externalOrderId,
+        eventCode: event.eventCode,
+      },
+    });
+  }
+
+  private async handleCancellationResultEvent(
+    integration: DeliveryIntegration,
+    event: DeliveryPlatformEvent
+  ) {
+    const link = await this.prisma.platformOrderLink.findFirst({
+      where: {
+        tenantId: integration.tenantId,
+        integrationId: integration.id,
+        externalOrderId: event.externalOrderId ?? "",
+      },
+      select: { id: true },
+    });
+
+    await this.prisma.deliveryPlatformEvent.update({
+      where: { id: event.id },
+      data: {
+        normalizedSummary: {
+          exceptionType: "CANCELLATION_RESULT",
+          externalOrderId: event.externalOrderId,
+          providerStatus: event.fullEventCode ?? event.eventCode,
+        } as Prisma.InputJsonObject,
+      },
+    });
+
+    if (link) {
+      await this.prisma.platformOrderLink.update({
+        where: { id: link.id },
+        data: {
+          externalStatus: event.fullEventCode ?? event.eventCode,
+          lastProviderUpdateAt: new Date(),
+        },
+      });
+    }
+
+    await this.audit.record({
+      tenantId: integration.tenantId,
+      integrationId: integration.id,
+      action: DeliveryIntegrationAuditAction.ORDER_UPDATED,
+      entityType: "PlatformOrderLink",
+      entityId: link?.id ?? event.externalOrderId,
+      result: link ? "SUCCESS" : "FAILED",
+      metadata: {
+        externalOrderId: event.externalOrderId,
+        eventCode: event.eventCode,
+      },
+    });
+  }
+
+  private async handleDisputeEvent(integration: DeliveryIntegration, event: DeliveryPlatformEvent) {
+    const payload = asRecord(event.payload);
+    const metadata = asRecord(asRecord(event.normalizedSummary).metadata);
+    const disputeId =
+      stringFrom(payload.disputeId) ??
+      stringFrom(metadata.disputeId) ??
+      `${event.externalOrderId}-${event.externalEventId}`;
+
+    await this.disputes?.persistFromEvent({
+      tenantId: integration.tenantId,
+      integrationId: integration.id,
+      externalOrderId: event.externalOrderId ?? "",
+      externalDisputeId: disputeId,
+      status: stringFrom(payload.status) ?? stringFrom(metadata.status) ?? "PENDING",
+      proposal: (payload.proposal ?? metadata.proposal ?? payload) as Prisma.InputJsonValue,
+      expiresAt:
+        dateFrom(payload.expiresAt ?? metadata.expiresAt) ?? new Date(Date.now() + 86_400_000),
+    });
+
+    await this.prisma.deliveryPlatformEvent.update({
+      where: { id: event.id },
+      data: {
+        normalizedSummary: {
+          exceptionType: "DISPUTE",
+          externalOrderId: event.externalOrderId,
+          externalDisputeId: disputeId,
+          requiresOperatorReview: true,
+        } as Prisma.InputJsonObject,
+      },
+    });
   }
 
   private async deferEventRetry(event: DeliveryPlatformEvent, message: string) {
@@ -239,4 +405,45 @@ export class IfoodEventPollerService {
       },
     });
   }
+
+  private isOrderModificationEvent(event: DeliveryPlatformEvent) {
+    return this.eventName(event).includes("PATCH") || this.eventName(event).includes("MODIF");
+  }
+
+  private isCancellationResultEvent(event: DeliveryPlatformEvent) {
+    const name = this.eventName(event);
+    return name.includes("CANCEL") && (name.includes("RESULT") || name.includes("ACCEPT"));
+  }
+
+  private isDisputeEvent(event: DeliveryPlatformEvent) {
+    return this.eventName(event).includes("DISPUTE");
+  }
+
+  private isTrackingEvent(event: DeliveryPlatformEvent) {
+    const name = this.eventName(event);
+    return name.includes("TRACK") || name.includes("DELIVERY_UPDATE");
+  }
+
+  private eventName(event: DeliveryPlatformEvent) {
+    return `${event.eventCode} ${event.fullEventCode ?? ""}`.toUpperCase();
+  }
+}
+
+function asRecord(value: unknown): Record<string, unknown> {
+  return value && typeof value === "object" && !Array.isArray(value)
+    ? (value as Record<string, unknown>)
+    : {};
+}
+
+function stringFrom(value: unknown): string | null {
+  return typeof value === "string" && value.trim() ? value : null;
+}
+
+function dateFrom(value: unknown): Date | null {
+  if (typeof value !== "string" || !value.trim()) {
+    return null;
+  }
+
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? null : date;
 }
