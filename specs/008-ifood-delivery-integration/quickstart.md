@@ -44,7 +44,7 @@ npm run dev --workspace @burgoos/web
 5. Save credentials. Confirm that no secret value is shown after saving.
    - Paste the authorization code returned after approval.
    - The system sends the saved `authorizationCodeVerifier` with the authorization code when requesting the token.
-   - If the iFood credential explicitly supports server-to-server test access, leaving authorization code and refresh token empty still requests a token using client credentials.
+   - Do not save credentials before completing this authorization step; the current iFood distributed client rejects `client_credentials`.
 6. Run validation.
    - Expected: credentials valid, merchant accessible, merchant status visible, integration ready or pending propagation.
 7. Activate the integration.

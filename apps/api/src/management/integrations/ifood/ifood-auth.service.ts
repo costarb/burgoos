@@ -1,4 +1,9 @@
-import { BadGatewayException, Injectable, ServiceUnavailableException } from "@nestjs/common";
+import {
+  BadGatewayException,
+  BadRequestException,
+  Injectable,
+  ServiceUnavailableException,
+} from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 
 export interface IfoodTokenResponse {
@@ -47,13 +52,18 @@ export class IfoodAuthService {
       body.set("grantType", "refresh_token");
       body.set("refreshToken", input.refreshToken);
     } else if (input.authorizationCode) {
+      if (!input.authorizationCodeVerifier) {
+        throw new BadRequestException(
+          "authorizationCodeVerifier e obrigatorio para salvar credenciais iFood com authorization code"
+        );
+      }
       body.set("grantType", "authorization_code");
       body.set("authorizationCode", input.authorizationCode);
-      if (input.authorizationCodeVerifier) {
-        body.set("authorizationCodeVerifier", input.authorizationCodeVerifier);
-      }
+      body.set("authorizationCodeVerifier", input.authorizationCodeVerifier);
     } else {
-      body.set("grantType", "client_credentials");
+      throw new BadRequestException(
+        "Gere o codigo iFood, autorize no portal e informe o authorization code antes de salvar credenciais"
+      );
     }
 
     let response: Response;

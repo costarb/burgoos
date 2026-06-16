@@ -55,7 +55,7 @@ describe("IfoodAuthService", () => {
     vi.unstubAllGlobals();
   });
 
-  it("uses authorization code grant when authorizationCode is present", async () => {
+  it("requires authorization code verifier when authorizationCode is present", async () => {
     const fetchMock = vi.fn(async () => ({
       ok: true,
       json: async () => ({
@@ -73,17 +73,13 @@ describe("IfoodAuthService", () => {
       }),
     } as unknown as ConfigService);
 
-    await service.exchangeAuthorizationCode({
-      clientId: "client",
-      clientSecret: "secret",
-      authorizationCode: "code",
-    });
-
-    const [, requestInit] = fetchMock.mock.calls[0] as unknown as [string, RequestInit];
-    const body = requestInit.body as URLSearchParams;
-    expect(body.get("grantType")).toBe("authorization_code");
-    expect(body.get("authorizationCode")).toBe("code");
-    expect(body.get("authorizationCodeVerifier")).toBe(null);
+    await expect(
+      service.exchangeAuthorizationCode({
+        clientId: "client",
+        clientSecret: "secret",
+        authorizationCode: "code",
+      })
+    ).rejects.toThrow("authorizationCodeVerifier");
 
     vi.unstubAllGlobals();
   });
@@ -121,16 +117,7 @@ describe("IfoodAuthService", () => {
     vi.unstubAllGlobals();
   });
 
-  it("uses client credentials grant when no code or refresh token is present", async () => {
-    const fetchMock = vi.fn(async () => ({
-      ok: true,
-      json: async () => ({
-        access_token: "access",
-        expires_in: 10,
-      }),
-    }));
-    vi.stubGlobal("fetch", fetchMock);
-
+  it("requires user authorization before saving credentials without refresh token", async () => {
     const service = new IfoodAuthService({
       get: vi.fn((key: string) => {
         if (key === "IFOOD_MOCK_MODE") return "false";
@@ -139,17 +126,12 @@ describe("IfoodAuthService", () => {
       }),
     } as unknown as ConfigService);
 
-    await service.exchangeAuthorizationCode({
-      clientId: "client",
-      clientSecret: "secret",
-    });
-
-    const [, requestInit] = fetchMock.mock.calls[0] as unknown as [string, RequestInit];
-    const body = requestInit.body as URLSearchParams;
-    expect(body.get("grantType")).toBe("client_credentials");
-    expect(body.has("authorizationCode")).toBe(false);
-
-    vi.unstubAllGlobals();
+    await expect(
+      service.exchangeAuthorizationCode({
+        clientId: "client",
+        clientSecret: "secret",
+      })
+    ).rejects.toThrow("Gere o codigo iFood");
   });
 
   it("accepts a full oauth token URL as auth base URL", async () => {
@@ -175,6 +157,7 @@ describe("IfoodAuthService", () => {
     await service.exchangeAuthorizationCode({
       clientId: "client",
       clientSecret: "secret",
+      refreshToken: "refresh",
     });
 
     const [url] = fetchMock.mock.calls[0] as unknown as [string, RequestInit];
@@ -203,6 +186,7 @@ describe("IfoodAuthService", () => {
       service.exchangeAuthorizationCode({
         clientId: "client",
         clientSecret: "secret",
+        refreshToken: "refresh",
       })
     ).rejects.toThrow("iFood OAuth recusou as credenciais com status 401");
 

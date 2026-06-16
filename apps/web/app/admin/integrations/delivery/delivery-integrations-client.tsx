@@ -244,12 +244,17 @@ function IfoodCredentialsPanel({
 }) {
   const [clientId, setClientId] = useState("");
   const [clientSecret, setClientSecret] = useState("");
+  const [authorizationCode, setAuthorizationCode] = useState("");
+  const [refreshToken, setRefreshToken] = useState("");
   const [authorizationState, setAuthorizationState] = useState<AuthorizationCodeState>({
     status: "idle",
     message: "",
   });
   const [pendingAuthorization, setPendingAuthorization] = useState(false);
   const verifier = authorizationState.data?.authorizationCodeVerifier ?? "";
+  const canSaveCredentials =
+    Boolean(clientId && clientSecret && refreshToken) ||
+    Boolean(clientId && clientSecret && authorizationCode && verifier);
 
   async function submitAuthorization(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -275,6 +280,12 @@ function IfoodCredentialsPanel({
 
   return (
     <div className="grid gap-4">
+      <div>
+        <h3 className="text-sm font-semibold text-slate-800">Credenciais iFood</h3>
+        <p className="mt-1 text-xs text-slate-500">
+          Primeiro gere o codigo, autorize no portal iFood e depois salve o authorization code.
+        </p>
+      </div>
       <form className="grid gap-3" onSubmit={submitAuthorization}>
         <input name="id" type="hidden" value={integrationId} />
         <input
@@ -295,7 +306,7 @@ function IfoodCredentialsPanel({
           value={clientSecret}
         />
         <button
-          className="inline-flex min-h-10 items-center justify-center rounded-md border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700 disabled:opacity-60"
+          className="inline-flex min-h-10 items-center justify-center rounded-md bg-ink px-4 py-2 text-sm font-semibold text-white disabled:opacity-60"
           disabled={pendingAuthorization}
           type="submit"
         >
@@ -341,18 +352,23 @@ function IfoodCredentialsPanel({
         <input
           className="rounded-md border border-slate-200 px-3 py-2 text-sm"
           name="authorizationCode"
+          onChange={(event) => setAuthorizationCode(event.target.value)}
           placeholder="Authorization code"
+          value={authorizationCode}
         />
         <input
           className="rounded-md border border-slate-200 px-3 py-2 text-sm"
           name="refreshToken"
+          onChange={(event) => setRefreshToken(event.target.value)}
           placeholder="Refresh token opcional"
+          value={refreshToken}
         />
         <p className="text-xs text-slate-500">
           Para apps distribuidos, gere o codigo iFood, autorize no portal e salve com o
-          authorization code retornado.
+          authorization code retornado. O sistema envia automaticamente o verifier gerado junto com
+          o codigo.
         </p>
-        <SubmitButton disabled={!clientId || !clientSecret} pendingLabel="Salvando credenciais...">
+        <SubmitButton disabled={!canSaveCredentials} pendingLabel="Salvando credenciais...">
           Salvar credenciais
         </SubmitButton>
       </OperationForm>
