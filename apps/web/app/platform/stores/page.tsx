@@ -1,5 +1,6 @@
 import React from "react";
 import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
 import { createPlatformStore, getPlatformAdminToken, listPlatformStores } from "../../../lib/api";
 
 export const dynamic = "force-dynamic";
@@ -25,7 +26,17 @@ async function createStoreAction(formData: FormData) {
 
 export default async function StoresPage() {
   const token = await getPlatformAdminToken();
-  const stores = await listPlatformStores(token);
+  let stores;
+
+  try {
+    stores = await listPlatformStores(token);
+  } catch (error) {
+    if (isPlatformForbidden(error)) {
+      redirect("/admin");
+    }
+
+    throw error;
+  }
 
   return (
     <main className="min-h-screen bg-slate-50 px-6 py-8 text-slate-900">
@@ -137,4 +148,8 @@ export default async function StoresPage() {
       </section>
     </main>
   );
+}
+
+function isPlatformForbidden(error: unknown): boolean {
+  return error instanceof Error && error.message.includes("[403] /api/platform/stores");
 }

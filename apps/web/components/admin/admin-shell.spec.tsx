@@ -22,6 +22,11 @@ const masterSession = {
   permissions: [],
 };
 
+const platformSession = {
+  user: { isPlatformAdmin: true },
+  permissions: [],
+};
+
 describe("admin navigation permissions", () => {
   it("filters menu entries by the logged user permissions", () => {
     const groups = filterNavigationBySession(adminNavigation, operatorSession);
@@ -44,12 +49,13 @@ describe("admin navigation permissions", () => {
     expect(labels).not.toContain("Usuarios");
   });
 
-  it("keeps master-only links restricted to master users", () => {
+  it("keeps platform links restricted to platform admins", () => {
     const stores = secondaryNavigation.find((item) => item.href === "/platform/stores");
 
     expect(stores).toBeDefined();
     expect(canAccessNavigationItem(stores!, operatorSession)).toBe(false);
-    expect(canAccessNavigationItem(stores!, masterSession)).toBe(true);
+    expect(canAccessNavigationItem(stores!, masterSession)).toBe(false);
+    expect(canAccessNavigationItem(stores!, platformSession)).toBe(true);
   });
 
   it("resolves direct route access using the same permission metadata", () => {

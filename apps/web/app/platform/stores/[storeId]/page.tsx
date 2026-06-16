@@ -1,4 +1,5 @@
 import React from "react";
+import { redirect } from "next/navigation";
 import { getPlatformAdminToken, getPlatformStore } from "../../../../lib/api";
 
 export const dynamic = "force-dynamic";
@@ -11,7 +12,17 @@ interface StoreDetailPageProps {
 
 export default async function StoreDetailPage({ params }: StoreDetailPageProps) {
   const token = await getPlatformAdminToken();
-  const store = await getPlatformStore(token, params.storeId);
+  let store;
+
+  try {
+    store = await getPlatformStore(token, params.storeId);
+  } catch (error) {
+    if (isPlatformForbidden(error)) {
+      redirect("/admin");
+    }
+
+    throw error;
+  }
 
   return (
     <main className="min-h-screen bg-slate-50 px-6 py-8 text-slate-900">
@@ -55,4 +66,8 @@ export default async function StoreDetailPage({ params }: StoreDetailPageProps) 
       </section>
     </main>
   );
+}
+
+function isPlatformForbidden(error: unknown): boolean {
+  return error instanceof Error && error.message.includes("[403] /api/platform/stores");
 }

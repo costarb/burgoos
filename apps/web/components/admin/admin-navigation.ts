@@ -32,6 +32,7 @@ export interface AdminNavigationItem {
   description: string;
   permissions?: string[];
   masterOnly?: boolean;
+  platformAdminOnly?: boolean;
 }
 
 export interface AdminNavigationGroup {
@@ -232,7 +233,7 @@ export const secondaryNavigation: AdminNavigationItem[] = [
     label: "Lojas",
     icon: Building2,
     description: "Gestao da plataforma",
-    masterOnly: true,
+    platformAdminOnly: true,
   },
   {
     href: "/piloto",
@@ -252,10 +253,17 @@ export function findNavigationItem(pathname: string): AdminNavigationItem | unde
 
 export function canAccessNavigationItem(
   item: AdminNavigationItem,
-  session: { user: { isMaster?: boolean }; permissions?: string[] } | null
+  session: {
+    user: { isMaster?: boolean; isPlatformAdmin?: boolean };
+    permissions?: string[];
+  } | null
 ): boolean {
   if (!session) {
     return false;
+  }
+
+  if (item.platformAdminOnly) {
+    return Boolean(session.user.isPlatformAdmin);
   }
 
   if (session.user.isMaster) {
