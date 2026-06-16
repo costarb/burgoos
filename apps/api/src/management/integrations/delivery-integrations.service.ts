@@ -15,6 +15,7 @@ import {
 } from "@prisma/client";
 import { PrismaService } from "../../platform/database/prisma.service";
 import {
+  DeliveryAuthorizationCodeDto,
   DeliveryCredentialDto,
   DeliveryIntegrationDto,
   DeliveryIntegrationUpdateDto,
@@ -221,6 +222,44 @@ export class DeliveryIntegrationsService {
       result: "SUCCESS",
       metadata: { provider: integration.provider, tokenExpiresAt: token.expiresAt },
     });
+  }
+
+  async requestAuthorizationCode(
+    tenantId: string,
+    actorUserId: string,
+    integrationId: string,
+    dto: DeliveryAuthorizationCodeDto
+  ) {
+    const integration = await this.getForTenant(tenantId, integrationId);
+
+    if (integration.provider !== DeliveryProvider.IFOOD) {
+      throw new ConflictException(`Provider ${integration.provider} does not support user code`);
+    }
+
+    const userCode = await this.ifoodAuth.requestUserCode(dto);
+
+    await this.audit.record({
+      tenantId,
+      integrationId,
+      actorUserId,
+      action: DeliveryIntegrationAuditAction.VALIDATION_RUN,
+      entityType: "DeliveryIntegration",
+      entityId: integrationId,
+      result: "USER_CODE_CREATED",
+      metadata: {
+        provider: integration.provider,
+        userCode: userCode.userCode,
+        expiresIn: userCode.expiresIn,
+      },
+    });
+
+    return {
+      userCode: userCode.userCode,
+      authorizationCodeVerifier: userCode.authorizationCodeVerifier,
+      verificationUrl: userCode.verificationUrl,
+      verificationUrlComplete: userCode.verificationUrlComplete,
+      expiresIn: userCode.expiresIn,
+    };
   }
 
   async validate(tenantId: string, actorUserId: string, id: string) {

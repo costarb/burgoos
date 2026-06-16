@@ -10,6 +10,15 @@ export interface IfoodTokenResponse {
   raw: Record<string, unknown>;
 }
 
+export interface IfoodUserCodeResponse {
+  userCode: string;
+  authorizationCodeVerifier: string;
+  verificationUrl: string | null;
+  verificationUrlComplete: string | null;
+  expiresIn: number | null;
+  raw: Record<string, unknown>;
+}
+
 @Injectable()
 export class IfoodAuthService {
   constructor(private readonly config: ConfigService) {}
@@ -18,6 +27,7 @@ export class IfoodAuthService {
     clientId: string;
     clientSecret: string;
     authorizationCode?: string | null;
+    authorizationCodeVerifier?: string | null;
     refreshToken?: string | null;
   }): Promise<IfoodTokenResponse> {
     if (this.isMockMode()) {
@@ -39,6 +49,9 @@ export class IfoodAuthService {
     } else if (input.authorizationCode) {
       body.set("grantType", "authorization_code");
       body.set("authorizationCode", input.authorizationCode);
+      if (input.authorizationCodeVerifier) {
+        body.set("authorizationCodeVerifier", input.authorizationCodeVerifier);
+      }
     } else {
       body.set("grantType", "client_credentials");
     }
@@ -69,6 +82,58 @@ export class IfoodAuthService {
 
     const payload = (await response.json()) as Record<string, unknown>;
     return this.toTokenResponse(payload);
+  }
+
+  async requestUserCode(input: {
+    clientId: string;
+    clientSecret: string;
+  }): Promise<IfoodUserCodeResponse> {
+    if (this.isMockMode()) {
+      return {
+        userCode: "MOCK-CODE",
+        authorizationCodeVerifier: "mock-authorization-code-verifier",
+        verificationUrl: "https://portal.ifood.com.br/apps/code",
+        verificationUrlComplete: "https://portal.ifood.com.br/apps/code?c=MOCK-CODE",
+        expiresIn: 600,
+        raw: { mock: true },
+      };
+    }
+
+    const authBaseUrl = this.config.get<string>("IFOOD_AUTH_BASE_URL");
+    if (!authBaseUrl) {
+      throw new ServiceUnavailableException("IFOOD_AUTH_BASE_URL nao configurado");
+    }
+
+    const body = new URLSearchParams();
+    body.set("clientId", input.clientId);
+    body.set("clientSecret", input.clientSecret);
+
+    let response: Response;
+    try {
+      response = await fetch(this.userCodeUrl(authBaseUrl), {
+        method: "POST",
+        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+        body,
+      });
+    } catch (error) {
+      throw new BadGatewayException(
+        `Nao foi possivel conectar ao iFood OAuth: ${
+          error instanceof Error ? error.message : "falha desconhecida"
+        }`
+      );
+    }
+
+    if (!response.ok) {
+      const bodyText = await response.text().catch(() => "");
+      throw new BadGatewayException(
+        `iFood OAuth nao gerou codigo de usuario com status ${response.status}${
+          bodyText ? `: ${this.safeErrorBody(bodyText)}` : ""
+        }`
+      );
+    }
+
+    const payload = (await response.json()) as Record<string, unknown>;
+    return this.toUserCodeResponse(payload);
   }
 
   private mockToken(refreshToken?: string | null): IfoodTokenResponse {
@@ -115,6 +180,28 @@ export class IfoodAuthService {
   private tokenUrl(authBaseUrl: string) {
     const normalized = authBaseUrl.replace(/\/+$/, "");
     return normalized.endsWith("/oauth/token") ? normalized : `${normalized}/oauth/token`;
+  }
+
+  private userCodeUrl(authBaseUrl: string) {
+    const normalized = authBaseUrl.replace(/\/+$/, "");
+    if (normalized.endsWith("/oauth/token")) {
+      return `${normalized.slice(0, -"/oauth/token".length)}/oauth/userCode`;
+    }
+    return normalized.endsWith("/oauth/userCode") ? normalized : `${normalized}/oauth/userCode`;
+  }
+
+  private toUserCodeResponse(payload: Record<string, unknown>): IfoodUserCodeResponse {
+    return {
+      userCode: String(payload.userCode ?? ""),
+      authorizationCodeVerifier: String(payload.authorizationCodeVerifier ?? ""),
+      verificationUrl: typeof payload.verificationUrl === "string" ? payload.verificationUrl : null,
+      verificationUrlComplete:
+        typeof payload.verificationUrlComplete === "string"
+          ? payload.verificationUrlComplete
+          : null,
+      expiresIn: Number.isFinite(Number(payload.expiresIn)) ? Number(payload.expiresIn) : null,
+      raw: payload,
+    };
   }
 
   private safeErrorBody(bodyText: string) {

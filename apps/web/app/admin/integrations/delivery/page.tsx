@@ -7,6 +7,7 @@ import {
   getDeliveryIntegrationHealth,
   getDeliveryIntegrations,
   pauseDeliveryIntegration,
+  requestDeliveryIntegrationAuthorizationCode,
   saveDeliveryIntegrationCredentials,
   updateDeliveryIntegration,
   validateDeliveryIntegration,
@@ -88,6 +89,7 @@ export default async function DeliveryIntegrationsPage() {
           clientId: String(formData.get("clientId") ?? ""),
           clientSecret: String(formData.get("clientSecret") ?? ""),
           authorizationCode: stringOrNull(formData, "authorizationCode"),
+          authorizationCodeVerifier: stringOrNull(formData, "authorizationCodeVerifier"),
           refreshToken: stringOrNull(formData, "refreshToken"),
         }
       );
@@ -97,6 +99,44 @@ export default async function DeliveryIntegrationsPage() {
       return {
         status: "error",
         message: error instanceof Error ? error.message : "Nao foi possivel salvar credenciais.",
+      };
+    }
+  }
+
+  async function authorizationCode(
+    _state: OperationState,
+    formData: FormData
+  ): Promise<
+    OperationState & {
+      data?: {
+        userCode: string;
+        authorizationCodeVerifier: string;
+        verificationUrl: string | null;
+        verificationUrlComplete: string | null;
+        expiresIn: number | null;
+      };
+    }
+  > {
+    "use server";
+
+    try {
+      const data = await requestDeliveryIntegrationAuthorizationCode(
+        await getAdminToken(),
+        String(formData.get("id") ?? ""),
+        {
+          clientId: String(formData.get("clientId") ?? ""),
+          clientSecret: String(formData.get("clientSecret") ?? ""),
+        }
+      );
+      return {
+        status: "success",
+        message: "Codigo iFood gerado. Autorize no portal e depois informe o authorization code.",
+        data,
+      };
+    } catch (error) {
+      return {
+        status: "error",
+        message: error instanceof Error ? error.message : "Nao foi possivel gerar o codigo iFood.",
       };
     }
   }
@@ -156,6 +196,7 @@ export default async function DeliveryIntegrationsPage() {
     <DeliveryIntegrationsClient
       activateAction={activate}
       createAction={create}
+      authorizationCodeAction={authorizationCode}
       credentialAction={credentials}
       integrations={integrations}
       healthByIntegrationId={healthByIntegrationId}

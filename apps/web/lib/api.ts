@@ -161,7 +161,21 @@ export interface DeliveryCredentialPayload {
   clientId: string;
   clientSecret: string;
   authorizationCode?: string | null;
+  authorizationCodeVerifier?: string | null;
   refreshToken?: string | null;
+}
+
+export interface DeliveryAuthorizationCodePayload {
+  clientId: string;
+  clientSecret: string;
+}
+
+export interface DeliveryAuthorizationCodeResponse {
+  userCode: string;
+  authorizationCodeVerifier: string;
+  verificationUrl: string | null;
+  verificationUrlComplete: string | null;
+  expiresIn: number | null;
 }
 
 async function fetchAdmin<T>(token: string, path: string, init?: RequestInit): Promise<T> {
@@ -1266,6 +1280,21 @@ export async function saveDeliveryIntegrationCredentials(
     method: "POST",
     body: JSON.stringify(payload),
   });
+}
+
+export async function requestDeliveryIntegrationAuthorizationCode(
+  token: string,
+  id: string,
+  payload: DeliveryAuthorizationCodePayload
+): Promise<DeliveryAuthorizationCodeResponse> {
+  return fetchAdmin<DeliveryAuthorizationCodeResponse>(
+    token,
+    `/api/admin/integrations/delivery/${id}/authorization-code`,
+    {
+      method: "POST",
+      body: JSON.stringify(payload),
+    }
+  );
 }
 
 export async function validateDeliveryIntegration(

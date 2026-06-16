@@ -1,5 +1,7 @@
 "use client";
 
+import type { FormEvent } from "react";
+import { useState } from "react";
 import type {
   DeliveryIntegrationDetail,
   DeliveryIntegrationHealth,
@@ -15,6 +17,10 @@ interface DeliveryIntegrationsClientProps {
   healthByIntegrationId: Record<string, DeliveryIntegrationHealth>;
   orderPlatforms: OrderPlatform[];
   createAction: (previousState: OperationState, formData: FormData) => Promise<OperationState>;
+  authorizationCodeAction: (
+    previousState: OperationState,
+    formData: FormData
+  ) => Promise<AuthorizationCodeState>;
   updateAction: (previousState: OperationState, formData: FormData) => Promise<OperationState>;
   credentialAction: (previousState: OperationState, formData: FormData) => Promise<OperationState>;
   validateAction: (previousState: OperationState, formData: FormData) => Promise<OperationState>;
@@ -27,6 +33,7 @@ export function DeliveryIntegrationsClient({
   healthByIntegrationId,
   orderPlatforms,
   createAction,
+  authorizationCodeAction,
   updateAction,
   credentialAction,
   validateAction,
@@ -92,6 +99,7 @@ export function DeliveryIntegrationsClient({
           {integrations.map((integration) => (
             <DeliveryIntegrationCard
               activateAction={activateAction}
+              authorizationCodeAction={authorizationCodeAction}
               credentialAction={credentialAction}
               health={healthByIntegrationId[integration.id]}
               integration={integration}
@@ -116,6 +124,7 @@ function DeliveryIntegrationCard({
   integration,
   health,
   updateAction,
+  authorizationCodeAction,
   credentialAction,
   validateAction,
   activateAction,
@@ -124,6 +133,10 @@ function DeliveryIntegrationCard({
   integration: DeliveryIntegrationDetail;
   health?: DeliveryIntegrationHealth;
   updateAction: (previousState: OperationState, formData: FormData) => Promise<OperationState>;
+  authorizationCodeAction: (
+    previousState: OperationState,
+    formData: FormData
+  ) => Promise<AuthorizationCodeState>;
   credentialAction: (previousState: OperationState, formData: FormData) => Promise<OperationState>;
   validateAction: (previousState: OperationState, formData: FormData) => Promise<OperationState>;
   activateAction: (previousState: OperationState, formData: FormData) => Promise<OperationState>;
@@ -195,41 +208,185 @@ function DeliveryIntegrationCard({
           <SubmitButton pendingLabel="Salvando...">Salvar ajustes</SubmitButton>
         </OperationForm>
 
-        <OperationForm action={credentialAction} className="grid gap-3" feedbackClassName="mt-3">
-          <input name="id" type="hidden" value={integration.id} />
-          <input
-            className="rounded-md border border-slate-200 px-3 py-2 text-sm"
-            name="clientId"
-            placeholder="Client ID"
-            required
-          />
-          <input
-            className="rounded-md border border-slate-200 px-3 py-2 text-sm"
-            name="clientSecret"
-            placeholder="Client secret"
-            required
-            type="password"
-          />
-          <input
-            className="rounded-md border border-slate-200 px-3 py-2 text-sm"
-            name="authorizationCode"
-            placeholder="Authorization code opcional"
-          />
-          <input
-            className="rounded-md border border-slate-200 px-3 py-2 text-sm"
-            name="refreshToken"
-            placeholder="Refresh token opcional"
-          />
-          <p className="text-xs text-slate-500">
-            Se a loja de teste nao fornecer authorization code, salve apenas client ID e client
-            secret.
-          </p>
-          <SubmitButton pendingLabel="Salvando credenciais...">Salvar credenciais</SubmitButton>
-        </OperationForm>
+        <IfoodCredentialsPanel
+          authorizationCodeAction={authorizationCodeAction}
+          credentialAction={credentialAction}
+          integrationId={integration.id}
+        />
       </div>
 
       {health ? <IntegrationHealthPanel health={health} /> : null}
     </section>
+  );
+}
+
+interface AuthorizationCodeState extends OperationState {
+  data?: {
+    userCode: string;
+    authorizationCodeVerifier: string;
+    verificationUrl: string | null;
+    verificationUrlComplete: string | null;
+    expiresIn: number | null;
+  };
+}
+
+function IfoodCredentialsPanel({
+  integrationId,
+  authorizationCodeAction,
+  credentialAction,
+}: {
+  integrationId: string;
+  authorizationCodeAction: (
+    previousState: OperationState,
+    formData: FormData
+  ) => Promise<AuthorizationCodeState>;
+  credentialAction: (previousState: OperationState, formData: FormData) => Promise<OperationState>;
+}) {
+  const [clientId, setClientId] = useState("");
+  const [clientSecret, setClientSecret] = useState("");
+  const [authorizationState, setAuthorizationState] = useState<AuthorizationCodeState>({
+    status: "idle",
+    message: "",
+  });
+  const [pendingAuthorization, setPendingAuthorization] = useState(false);
+  const verifier = authorizationState.data?.authorizationCodeVerifier ?? "";
+
+  async function submitAuthorization(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (pendingAuthorization) {
+      return;
+    }
+
+    setPendingAuthorization(true);
+    setAuthorizationState({ status: "pending", message: "Gerando codigo iFood." });
+    try {
+      setAuthorizationState(
+        await authorizationCodeAction(authorizationState, new FormData(event.currentTarget))
+      );
+    } catch (error) {
+      setAuthorizationState({
+        status: "error",
+        message: error instanceof Error ? error.message : "Nao foi possivel gerar o codigo iFood.",
+      });
+    } finally {
+      setPendingAuthorization(false);
+    }
+  }
+
+  return (
+    <div className="grid gap-4">
+      <form className="grid gap-3" onSubmit={submitAuthorization}>
+        <input name="id" type="hidden" value={integrationId} />
+        <input
+          className="rounded-md border border-slate-200 px-3 py-2 text-sm"
+          name="clientId"
+          onChange={(event) => setClientId(event.target.value)}
+          placeholder="Client ID"
+          required
+          value={clientId}
+        />
+        <input
+          className="rounded-md border border-slate-200 px-3 py-2 text-sm"
+          name="clientSecret"
+          onChange={(event) => setClientSecret(event.target.value)}
+          placeholder="Client secret"
+          required
+          type="password"
+          value={clientSecret}
+        />
+        <button
+          className="inline-flex min-h-10 items-center justify-center rounded-md border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700 disabled:opacity-60"
+          disabled={pendingAuthorization}
+          type="submit"
+        >
+          {pendingAuthorization ? "Gerando..." : "Gerar codigo iFood"}
+        </button>
+      </form>
+
+      {authorizationState.message ? (
+        <p
+          className={
+            authorizationState.status === "error"
+              ? "rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700"
+              : "rounded-md border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-700"
+          }
+        >
+          {authorizationState.message}
+        </p>
+      ) : null}
+
+      {authorizationState.data ? (
+        <div className="grid gap-3 rounded-md border border-slate-200 bg-slate-50 p-3">
+          <CopyField label="User code" value={authorizationState.data.userCode} />
+          <CopyField
+            label="URL de autorizacao"
+            value={
+              authorizationState.data.verificationUrlComplete ??
+              authorizationState.data.verificationUrl ??
+              ""
+            }
+          />
+          <p className="text-xs text-slate-500">
+            Expira em {authorizationState.data.expiresIn ?? 600} segundos. Depois de aprovar no
+            iFood, informe o authorization code abaixo.
+          </p>
+        </div>
+      ) : null}
+
+      <OperationForm action={credentialAction} className="grid gap-3" feedbackClassName="mt-3">
+        <input name="id" type="hidden" value={integrationId} />
+        <input name="clientId" type="hidden" value={clientId} />
+        <input name="clientSecret" type="hidden" value={clientSecret} />
+        <input name="authorizationCodeVerifier" type="hidden" value={verifier} />
+        <input
+          className="rounded-md border border-slate-200 px-3 py-2 text-sm"
+          name="authorizationCode"
+          placeholder="Authorization code"
+        />
+        <input
+          className="rounded-md border border-slate-200 px-3 py-2 text-sm"
+          name="refreshToken"
+          placeholder="Refresh token opcional"
+        />
+        <p className="text-xs text-slate-500">
+          Para apps distribuidos, gere o codigo iFood, autorize no portal e salve com o
+          authorization code retornado.
+        </p>
+        <SubmitButton disabled={!clientId || !clientSecret} pendingLabel="Salvando credenciais...">
+          Salvar credenciais
+        </SubmitButton>
+      </OperationForm>
+    </div>
+  );
+}
+
+function CopyField({ label, value }: { label: string; value: string }) {
+  const [copied, setCopied] = useState(false);
+
+  async function copy() {
+    await navigator.clipboard.writeText(value);
+    setCopied(true);
+    window.setTimeout(() => setCopied(false), 1500);
+  }
+
+  return (
+    <div className="grid gap-1">
+      <span className="text-xs font-medium text-slate-500">{label}</span>
+      <div className="flex gap-2">
+        <input
+          className="min-w-0 flex-1 rounded-md border border-slate-200 bg-white px-3 py-2 text-sm"
+          readOnly
+          value={value}
+        />
+        <button
+          className="rounded-md border border-slate-300 px-3 py-2 text-xs font-semibold text-slate-700"
+          onClick={copy}
+          type="button"
+        >
+          {copied ? "Copiado" : "Copiar"}
+        </button>
+      </div>
+    </div>
   );
 }
 

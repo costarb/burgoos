@@ -17,6 +17,7 @@ import { JwtAuthGuard } from "../../platform/auth/jwt-auth.guard";
 import { DeliveryIntegrationHealthService } from "./delivery-integration-health.service";
 import { DeliveryIntegrationsService } from "./delivery-integrations.service";
 import {
+  DeliveryAuthorizationCodeDto,
   DeliveryCredentialDto,
   DeliveryIntegrationDto,
   DeliveryIntegrationUpdateDto,
@@ -72,6 +73,16 @@ export class DeliveryIntegrationsController {
     @Body() dto: DeliveryCredentialDto
   ) {
     await this.integrationsService.saveCredentials(user.tenantId, user.id, id, dto);
+  }
+
+  @Post(":id/authorization-code")
+  @RequirePermission("integrations.delivery.manage")
+  requestAuthorizationCode(
+    @CurrentUser() user: AuthUser,
+    @Param("id") id: string,
+    @Body() dto: DeliveryAuthorizationCodeDto
+  ) {
+    return this.integrationsService.requestAuthorizationCode(user.tenantId, user.id, id, dto);
   }
 
   @Post(":id/validate")

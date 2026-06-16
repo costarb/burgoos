@@ -83,6 +83,40 @@ describe("IfoodAuthService", () => {
     const body = requestInit.body as URLSearchParams;
     expect(body.get("grantType")).toBe("authorization_code");
     expect(body.get("authorizationCode")).toBe("code");
+    expect(body.get("authorizationCodeVerifier")).toBe(null);
+
+    vi.unstubAllGlobals();
+  });
+
+  it("sends authorization code verifier with authorization code grant when present", async () => {
+    const fetchMock = vi.fn(async () => ({
+      ok: true,
+      json: async () => ({
+        access_token: "access",
+        expires_in: 10,
+      }),
+    }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    const service = new IfoodAuthService({
+      get: vi.fn((key: string) => {
+        if (key === "IFOOD_MOCK_MODE") return "false";
+        if (key === "IFOOD_AUTH_BASE_URL") return "https://ifood.test/authentication/v1.0";
+        return undefined;
+      }),
+    } as unknown as ConfigService);
+
+    await service.exchangeAuthorizationCode({
+      clientId: "client",
+      clientSecret: "secret",
+      authorizationCode: "code",
+      authorizationCodeVerifier: "verifier",
+    });
+
+    const [, requestInit] = fetchMock.mock.calls[0] as unknown as [string, RequestInit];
+    const body = requestInit.body as URLSearchParams;
+    expect(body.get("grantType")).toBe("authorization_code");
+    expect(body.get("authorizationCodeVerifier")).toBe("verifier");
 
     vi.unstubAllGlobals();
   });
@@ -171,6 +205,50 @@ describe("IfoodAuthService", () => {
         clientSecret: "secret",
       })
     ).rejects.toThrow("iFood OAuth recusou as credenciais com status 401");
+
+    vi.unstubAllGlobals();
+  });
+
+  it("requests user code with verification URL data", async () => {
+    const fetchMock = vi.fn(async () => ({
+      ok: true,
+      json: async () => ({
+        userCode: "NWHF-WMTW",
+        authorizationCodeVerifier: "verifier",
+        verificationUrl: "https://portal.ifood.com.br/apps/code",
+        verificationUrlComplete: "https://portal.ifood.com.br/apps/code?c=NWHF-WMTW",
+        expiresIn: 600,
+      }),
+    }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    const service = new IfoodAuthService({
+      get: vi.fn((key: string) => {
+        if (key === "IFOOD_MOCK_MODE") return "false";
+        if (key === "IFOOD_AUTH_BASE_URL") return "https://ifood.test/authentication/v1.0";
+        return undefined;
+      }),
+    } as unknown as ConfigService);
+
+    await expect(
+      service.requestUserCode({
+        clientId: "client",
+        clientSecret: "secret",
+      })
+    ).resolves.toEqual(
+      expect.objectContaining({
+        userCode: "NWHF-WMTW",
+        authorizationCodeVerifier: "verifier",
+        verificationUrlComplete: "https://portal.ifood.com.br/apps/code?c=NWHF-WMTW",
+        expiresIn: 600,
+      })
+    );
+
+    const [url, requestInit] = fetchMock.mock.calls[0] as unknown as [string, RequestInit];
+    const body = requestInit.body as URLSearchParams;
+    expect(url).toBe("https://ifood.test/authentication/v1.0/oauth/userCode");
+    expect(body.get("clientId")).toBe("client");
+    expect(body.get("clientSecret")).toBe("secret");
 
     vi.unstubAllGlobals();
   });

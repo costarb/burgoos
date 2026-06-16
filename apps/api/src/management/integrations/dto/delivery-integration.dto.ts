@@ -59,5 +59,17 @@ export class DeliveryCredentialDto {
 
   @IsOptional()
   @IsString()
+  authorizationCodeVerifier?: string | null;
+
+  @IsOptional()
+  @IsString()
   refreshToken?: string | null;
+}
+
+export class DeliveryAuthorizationCodeDto {
+  @IsString()
+  clientId!: string;
+
+  @IsString()
+  clientSecret!: string;
 }

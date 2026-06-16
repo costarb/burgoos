@@ -36,28 +36,35 @@ npm run dev --workspace @burgoos/web
    - display name: `iFood`
    - external merchant id: sandbox or homologation merchant
    - order platform: existing or newly created iFood `OrderPlatform`
-4. Save credentials. Confirm that no secret value is shown after saving.
-   - For iFood test stores that do not provide an authorization code, leave authorization code and refresh token empty. The API will request a token using client credentials.
-5. Run validation.
+4. Generate the iFood authorization code:
+   - Fill client ID and client secret.
+   - Click `Gerar codigo iFood`.
+   - Copy the `userCode` or `verificationUrlComplete`.
+   - Open the URL, approve the application in the iFood portal and keep the generated authorization code.
+5. Save credentials. Confirm that no secret value is shown after saving.
+   - Paste the authorization code returned after approval.
+   - The system sends the saved `authorizationCodeVerifier` with the authorization code when requesting the token.
+   - If the iFood credential explicitly supports server-to-server test access, leaving authorization code and refresh token empty still requests a token using client credentials.
+6. Run validation.
    - Expected: credentials valid, merchant accessible, merchant status visible, integration ready or pending propagation.
-6. Activate the integration.
-7. Trigger mocked or sandbox polling for a new iFood order event.
-8. Confirm that:
+7. Activate the integration.
+8. Trigger mocked or sandbox polling for a new iFood order event.
+9. Confirm that:
    - inbound event is persisted once
    - order details are fetched or retried when temporarily unavailable
    - one internal `Order` is created for the active store
    - `PlatformOrderLink` contains provider, merchant id, external order id, modality and deadline
    - duplicate polling of the same event does not duplicate the order
-9. Open `Admin > Pedidos`.
-10. Confirm the iFood order before its deadline.
-11. Move the order through preparation and the correct ready/dispatch action based on modality.
-12. Inspect `Admin > Integracoes > Delivery > Saude`.
+10. Open `Admin > Pedidos`.
+11. Confirm the iFood order before its deadline.
+12. Move the order through preparation and the correct ready/dispatch action based on modality.
+13. Inspect `Admin > Integracoes > Delivery > Saude`.
     - Expected: last polling success, pending events, failed events, retryable syncs and homologation checks are visible.
-13. Simulate exception events if available in sandbox:
+14. Simulate exception events if available in sandbox:
     - order patched event updates the platform snapshot and appears as an operator exception
     - cancellation result event updates the platform status
     - dispute event creates a pending dispute and appears in health counters
-14. Review the audit table in `Admin > Integracoes > Delivery`.
+15. Review the audit table in `Admin > Integracoes > Delivery`.
     - Expected: configuration, event ACK, order update, dispute and sync actions appear without credential or customer-sensitive payloads.
 
 ## Test Commands
