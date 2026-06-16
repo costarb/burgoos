@@ -46,7 +46,9 @@ describe("IfoodAuthService", () => {
     });
 
     const [, requestInit] = fetchMock.mock.calls[0] as unknown as [string, RequestInit];
+    const [url] = fetchMock.mock.calls[0] as unknown as [string, RequestInit];
     const body = requestInit.body as URLSearchParams;
+    expect(url).toBe("https://ifood.test/authentication/oauth/token");
     expect(body.get("grantType")).toBe("refresh_token");
     expect(body.get("refreshToken")).toBe("refresh");
 
@@ -112,6 +114,63 @@ describe("IfoodAuthService", () => {
     const body = requestInit.body as URLSearchParams;
     expect(body.get("grantType")).toBe("client_credentials");
     expect(body.has("authorizationCode")).toBe(false);
+
+    vi.unstubAllGlobals();
+  });
+
+  it("accepts a full oauth token URL as auth base URL", async () => {
+    const fetchMock = vi.fn(async () => ({
+      ok: true,
+      json: async () => ({
+        access_token: "access",
+        expires_in: 10,
+      }),
+    }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    const service = new IfoodAuthService({
+      get: vi.fn((key: string) => {
+        if (key === "IFOOD_MOCK_MODE") return "false";
+        if (key === "IFOOD_AUTH_BASE_URL") {
+          return "https://ifood.test/authentication/v1.0/oauth/token";
+        }
+        return undefined;
+      }),
+    } as unknown as ConfigService);
+
+    await service.exchangeAuthorizationCode({
+      clientId: "client",
+      clientSecret: "secret",
+    });
+
+    const [url] = fetchMock.mock.calls[0] as unknown as [string, RequestInit];
+    expect(url).toBe("https://ifood.test/authentication/v1.0/oauth/token");
+
+    vi.unstubAllGlobals();
+  });
+
+  it("surfaces oauth rejection as a gateway error with sanitized response", async () => {
+    const fetchMock = vi.fn(async () => ({
+      ok: false,
+      status: 401,
+      text: async () => '{"error":"invalid_client","access_token":"secret"}',
+    }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    const service = new IfoodAuthService({
+      get: vi.fn((key: string) => {
+        if (key === "IFOOD_MOCK_MODE") return "false";
+        if (key === "IFOOD_AUTH_BASE_URL") return "https://ifood.test/authentication/v1.0";
+        return undefined;
+      }),
+    } as unknown as ConfigService);
+
+    await expect(
+      service.exchangeAuthorizationCode({
+        clientId: "client",
+        clientSecret: "secret",
+      })
+    ).rejects.toThrow("iFood OAuth recusou as credenciais com status 401");
 
     vi.unstubAllGlobals();
   });

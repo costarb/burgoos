@@ -1,4 +1,4 @@
-import { Injectable } from "@nestjs/common";
+import { BadGatewayException, Injectable, ServiceUnavailableException } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 
 export interface IfoodTokenResponse {
@@ -26,7 +26,7 @@ export class IfoodAuthService {
 
     const authBaseUrl = this.config.get<string>("IFOOD_AUTH_BASE_URL");
     if (!authBaseUrl) {
-      throw new Error("IFOOD_AUTH_BASE_URL is not configured");
+      throw new ServiceUnavailableException("IFOOD_AUTH_BASE_URL nao configurado");
     }
 
     const body = new URLSearchParams();
@@ -43,14 +43,28 @@ export class IfoodAuthService {
       body.set("grantType", "client_credentials");
     }
 
-    const response = await fetch(`${authBaseUrl}/oauth/token`, {
-      method: "POST",
-      headers: { "Content-Type": "application/x-www-form-urlencoded" },
-      body,
-    });
+    let response: Response;
+    try {
+      response = await fetch(this.tokenUrl(authBaseUrl), {
+        method: "POST",
+        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+        body,
+      });
+    } catch (error) {
+      throw new BadGatewayException(
+        `Nao foi possivel conectar ao iFood OAuth: ${
+          error instanceof Error ? error.message : "falha desconhecida"
+        }`
+      );
+    }
 
     if (!response.ok) {
-      throw new Error(`iFood authentication failed with status ${response.status}`);
+      const bodyText = await response.text().catch(() => "");
+      throw new BadGatewayException(
+        `iFood OAuth recusou as credenciais com status ${response.status}${
+          bodyText ? `: ${this.safeErrorBody(bodyText)}` : ""
+        }`
+      );
     }
 
     const payload = (await response.json()) as Record<string, unknown>;
@@ -96,5 +110,19 @@ export class IfoodAuthService {
 
   private isMockMode() {
     return this.config.get<string>("IFOOD_MOCK_MODE") === "true";
+  }
+
+  private tokenUrl(authBaseUrl: string) {
+    const normalized = authBaseUrl.replace(/\/+$/, "");
+    return normalized.endsWith("/oauth/token") ? normalized : `${normalized}/oauth/token`;
+  }
+
+  private safeErrorBody(bodyText: string) {
+    return bodyText
+      .replace(/"accessToken"\s*:\s*"[^"]+"/gi, '"accessToken":"[redacted]"')
+      .replace(/"access_token"\s*:\s*"[^"]+"/gi, '"access_token":"[redacted]"')
+      .replace(/"refreshToken"\s*:\s*"[^"]+"/gi, '"refreshToken":"[redacted]"')
+      .replace(/"refresh_token"\s*:\s*"[^"]+"/gi, '"refresh_token":"[redacted]"')
+      .slice(0, 500);
   }
 }
