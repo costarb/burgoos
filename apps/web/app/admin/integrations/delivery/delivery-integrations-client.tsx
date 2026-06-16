@@ -407,6 +407,15 @@ function CopyField({ label, value }: { label: string; value: string }) {
 }
 
 function IntegrationHealthPanel({ health }: { health: DeliveryIntegrationHealth }) {
+  const polling = health.polling ?? {
+    schedulerEnabled: false,
+    enabled: false,
+    ready: false,
+    status: "MISSING_CREDENTIALS" as const,
+    intervalSeconds: 30,
+    lastSuccessfulPollingAt: null,
+    nextExpectedPollingAt: null,
+  };
   const counters = [
     ["Eventos pendentes", health.pendingEvents],
     ["Eventos com falha", health.failedEvents],
@@ -421,7 +430,7 @@ function IntegrationHealthPanel({ health }: { health: DeliveryIntegrationHealth 
         <h3 className="text-sm font-semibold text-slate-800">Saude operacional</h3>
         <div
           className={
-            health.polling.ready
+            polling.ready
               ? "mt-3 rounded-md border border-emerald-200 bg-emerald-50 px-3 py-2"
               : "mt-3 rounded-md border border-amber-200 bg-amber-50 px-3 py-2"
           }
@@ -430,18 +439,18 @@ function IntegrationHealthPanel({ health }: { health: DeliveryIntegrationHealth 
             <p className="text-sm font-semibold text-slate-800">Polling iFood</p>
             <span
               className={
-                health.polling.ready
+                polling.ready
                   ? "rounded-md bg-emerald-100 px-2 py-1 text-xs font-semibold text-emerald-700"
                   : "rounded-md bg-amber-100 px-2 py-1 text-xs font-semibold text-amber-700"
               }
             >
-              {pollingStatusLabel(health.polling.status)}
+              {pollingStatusLabel(polling.status)}
             </span>
           </div>
           <div className="mt-2 grid gap-1 text-xs text-slate-600 sm:grid-cols-3">
-            <p>Intervalo: {health.polling.intervalSeconds}s</p>
-            <p>Ultimo sucesso: {formatDateTime(health.polling.lastSuccessfulPollingAt)}</p>
-            <p>Proxima janela: {formatDateTime(health.polling.nextExpectedPollingAt)}</p>
+            <p>Intervalo: {polling.intervalSeconds}s</p>
+            <p>Ultimo sucesso: {formatDateTime(polling.lastSuccessfulPollingAt)}</p>
+            <p>Proxima janela: {formatDateTime(polling.nextExpectedPollingAt)}</p>
           </div>
         </div>
         <div className="mt-3 grid gap-2 sm:grid-cols-2">
@@ -517,8 +526,10 @@ function IntegrationHealthPanel({ health }: { health: DeliveryIntegrationHealth 
   );
 }
 
-function pollingStatusLabel(status: DeliveryIntegrationHealth["polling"]["status"]) {
-  const labels: Record<DeliveryIntegrationHealth["polling"]["status"], string> = {
+type DeliveryPollingHealth = NonNullable<DeliveryIntegrationHealth["polling"]>;
+
+function pollingStatusLabel(status: DeliveryPollingHealth["status"]) {
+  const labels: Record<DeliveryPollingHealth["status"], string> = {
     READY: "Ativo",
     SCHEDULER_DISABLED: "Scheduler desligado",
     INTEGRATION_NOT_ACTIVE: "Integracao inativa",

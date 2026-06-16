@@ -80,7 +80,7 @@ export interface DeliveryIntegrationHealth {
   status: DeliveryIntegrationStatus;
   merchantStatus: string;
   lastSuccessfulPollingAt: string | null;
-  polling: {
+  polling?: {
     schedulerEnabled: boolean;
     enabled: boolean;
     ready: boolean;
