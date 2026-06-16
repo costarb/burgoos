@@ -113,15 +113,63 @@ describe("login page", () => {
     expect(refresh).toHaveBeenCalledOnce();
   });
 
-  async function fillAndSubmit() {
+  it("falls back to platform login and redirects platform admins to stores", async () => {
+    const session = {
+      accessToken: "platform-access-token",
+      refreshToken: "platform-refresh-token",
+      activeStoreId: null,
+      allowedStores: [],
+      permissions: [],
+      accessTokenExpiresAt: "2026-06-10T22:15:00.000Z",
+      user: {
+        id: "platform-user-1",
+        login: "platform@burgoos.local",
+        name: "Admin Plataforma",
+        email: "platform@burgoos.local",
+        status: "ACTIVE",
+        isMaster: true,
+        isPlatformAdmin: true,
+      },
+    };
+    vi.stubGlobal(
+      "fetch",
+      vi
+        .fn()
+        .mockResolvedValueOnce({ ok: false })
+        .mockResolvedValueOnce({
+          ok: true,
+          json: async () => session,
+        })
+    );
+
+    await act(async () => {
+      root.render(<LoginPage />);
+    });
+    await fillAndSubmit("platform@burgoos.local", "admin123");
+
+    expect(fetch).toHaveBeenNthCalledWith(
+      1,
+      "http://127.0.0.1:3001/api/auth/login",
+      expect.objectContaining({ method: "POST" })
+    );
+    expect(fetch).toHaveBeenNthCalledWith(
+      2,
+      "http://127.0.0.1:3001/api/auth/platform/login",
+      expect.objectContaining({ method: "POST" })
+    );
+    expect(writeAuthSession).toHaveBeenCalledWith(session);
+    expect(push).toHaveBeenCalledWith("/platform/stores");
+  });
+
+  async function fillAndSubmit(emailValue = "admin@example.com", passwordValue = "admin123") {
     const email = container.querySelector<HTMLInputElement>('input[name="email"]');
     const password = container.querySelector<HTMLInputElement>('input[name="password"]');
     const form = container.querySelector<HTMLFormElement>("form");
 
     await act(async () => {
-      email!.value = "admin@example.com";
+      email!.value = emailValue;
       email!.dispatchEvent(new Event("input", { bubbles: true }));
-      password!.value = "admin123";
+      password!.value = passwordValue;
       password!.dispatchEvent(new Event("input", { bubbles: true }));
       form!.dispatchEvent(new Event("submit", { bubbles: true, cancelable: true }));
     });

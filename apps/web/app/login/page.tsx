@@ -22,19 +22,9 @@ export default function LoginPage() {
     setError(null);
 
     try {
-      const response = await fetch(`${apiUrl}/api/auth/login`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, password }),
-      });
-
-      if (!response.ok) {
-        throw new Error("Credenciais invalidas ou usuario sem acesso ativo.");
-      }
-
-      const session = (await response.json()) as AuthSession;
+      const session = await authenticate(email, password);
       writeAuthSession(session);
-      router.push("/admin");
+      router.push(isPlatformAdminSession(session) ? "/platform/stores" : "/admin");
       router.refresh();
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : "Nao foi possivel entrar.");
@@ -107,4 +97,32 @@ export default function LoginPage() {
       </section>
     </main>
   );
+}
+
+async function authenticate(email: string, password: string): Promise<AuthSession> {
+  const adminResponse = await postLogin("/api/auth/login", email, password);
+
+  if (adminResponse.ok) {
+    return adminResponse.json() as Promise<AuthSession>;
+  }
+
+  const platformResponse = await postLogin("/api/auth/platform/login", email, password);
+
+  if (platformResponse.ok) {
+    return platformResponse.json() as Promise<AuthSession>;
+  }
+
+  throw new Error("Credenciais invalidas ou usuario sem acesso ativo.");
+}
+
+function postLogin(path: string, email: string, password: string): Promise<Response> {
+  return fetch(`${apiUrl}${path}`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ email, password }),
+  });
+}
+
+function isPlatformAdminSession(session: AuthSession): boolean {
+  return Boolean((session.user as { isPlatformAdmin?: boolean }).isPlatformAdmin);
 }
