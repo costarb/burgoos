@@ -61,6 +61,10 @@ export class IfoodEventPollerService {
       return;
     }
 
+    this.logger.log(
+      `ifood.poll.start tenantId=${integration.tenantId} integrationId=${integration.id} merchantId=${integration.externalMerchantId}`
+    );
+
     const secret = await this.integrationsService.getActiveCredentialSecret(
       integration.tenantId,
       integration.id
@@ -74,6 +78,10 @@ export class IfoodEventPollerService {
     for (const event of events) {
       await this.persistAndProcessEvent(integration, secret.accessToken, event);
     }
+
+    this.logger.log(
+      `ifood.poll.complete tenantId=${integration.tenantId} integrationId=${integration.id} events=${events.length}`
+    );
 
     await this.prisma.deliveryIntegration.update({
       where: { id: integration.id },
@@ -127,6 +135,10 @@ export class IfoodEventPollerService {
     if (persisted.status === "ACKED") {
       return;
     }
+
+    this.logger.log(
+      `ifood.event.received tenantId=${integration.tenantId} integrationId=${integration.id} eventId=${event.id} code=${event.code} orderId=${event.orderId ?? "none"}`
+    );
 
     await this.processEvent(integration, accessToken, persisted);
   }
@@ -384,6 +396,10 @@ export class IfoodEventPollerService {
       accessToken,
       eventIds: [event.externalEventId],
     });
+
+    this.logger.log(
+      `ifood.event.ack tenantId=${event.tenantId} integrationId=${event.integrationId} eventId=${event.externalEventId} result=${status}`
+    );
 
     await this.prisma.deliveryPlatformEvent.update({
       where: { id: event.id },

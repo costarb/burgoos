@@ -3,6 +3,7 @@ import {
   ConflictException,
   Inject,
   Injectable,
+  Logger,
   NotFoundException,
 } from "@nestjs/common";
 import {
@@ -18,6 +19,8 @@ import { IfoodClient } from "./ifood-client";
 
 @Injectable()
 export class IfoodStatusSyncService {
+  private readonly logger = new Logger(IfoodStatusSyncService.name);
+
   constructor(
     @Inject(PrismaService) private readonly prisma: PrismaService,
     @Inject(DeliveryIntegrationsService)
@@ -97,9 +100,15 @@ export class IfoodStatusSyncService {
         },
       });
       await this.recordSyncAudit(tenantId, link.integrationId, actorUserId, link.id, "SUCCESS");
+      this.logger.log(
+        `ifood.sync.confirm tenantId=${tenantId} integrationId=${link.integrationId} orderId=${orderId} status=CONFIRMED`
+      );
     } catch (error) {
       await this.markAttemptRetryable(attempt.id, error);
       await this.recordSyncAudit(tenantId, link.integrationId, actorUserId, link.id, "FAILED");
+      this.logger.warn(
+        `ifood.sync.confirm tenantId=${tenantId} integrationId=${link.integrationId} orderId=${orderId} status=RETRYABLE`
+      );
       throw new BadGatewayException("Nao foi possivel confirmar o pedido no iFood");
     }
   }
@@ -158,6 +167,9 @@ export class IfoodStatusSyncService {
         link.id,
         "SUCCESS"
       );
+      this.logger.log(
+        `ifood.sync.refuse tenantId=${input.tenantId} integrationId=${link.integrationId} orderId=${input.orderId} status=CONFIRMED`
+      );
     } catch (error) {
       await this.markAttemptRetryable(attempt.id, error);
       await this.recordSyncAudit(
@@ -166,6 +178,9 @@ export class IfoodStatusSyncService {
         input.actorUserId,
         link.id,
         "FAILED"
+      );
+      this.logger.warn(
+        `ifood.sync.refuse tenantId=${input.tenantId} integrationId=${link.integrationId} orderId=${input.orderId} status=RETRYABLE`
       );
       throw new BadGatewayException("Nao foi possivel recusar o pedido no iFood");
     }
@@ -231,6 +246,9 @@ export class IfoodStatusSyncService {
         input.link.id,
         "SUCCESS"
       );
+      this.logger.log(
+        `ifood.sync.status tenantId=${input.tenantId} integrationId=${input.link.integrationId} linkId=${input.link.id} action=${action} status=CONFIRMED`
+      );
     } catch (error) {
       await this.markAttemptRetryable(attempt.id, error);
       await this.recordSyncAudit(
@@ -239,6 +257,9 @@ export class IfoodStatusSyncService {
         input.actorUserId ?? null,
         input.link.id,
         "FAILED"
+      );
+      this.logger.warn(
+        `ifood.sync.status tenantId=${input.tenantId} integrationId=${input.link.integrationId} linkId=${input.link.id} action=${action} status=RETRYABLE`
       );
     }
   }

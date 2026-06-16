@@ -1,4 +1,4 @@
-import { BadGatewayException, Inject, Injectable, NotFoundException } from "@nestjs/common";
+import { BadGatewayException, Inject, Injectable, Logger, NotFoundException } from "@nestjs/common";
 import { DeliveryIntegrationAuditAction, Prisma } from "@prisma/client";
 import { PrismaService } from "../../../platform/database/prisma.service";
 import { DeliveryIntegrationAuditService } from "../delivery-integration-audit.service";
@@ -7,6 +7,8 @@ import { IfoodClient } from "./ifood-client";
 
 @Injectable()
 export class IfoodDisputeService {
+  private readonly logger = new Logger(IfoodDisputeService.name);
+
   constructor(
     @Inject(PrismaService) private readonly prisma: PrismaService,
     @Inject(DeliveryIntegrationsService)
@@ -86,6 +88,9 @@ export class IfoodDisputeService {
         status: input.status,
       },
     });
+    this.logger.log(
+      `ifood.dispute.received tenantId=${input.tenantId} integrationId=${input.integrationId} disputeId=${dispute.id} status=${input.status}`
+    );
 
     return dispute;
   }
@@ -171,6 +176,9 @@ export class IfoodDisputeService {
         result: "SUCCESS",
         metadata: { externalDisputeId: dispute.externalDisputeId },
       });
+      this.logger.log(
+        `ifood.dispute.respond tenantId=${input.tenantId} integrationId=${input.integrationId} disputeId=${dispute.id} status=CONFIRMED`
+      );
     } catch (error) {
       await this.prisma.platformSyncAttempt.update({
         where: { id: attempt.id },
@@ -191,6 +199,9 @@ export class IfoodDisputeService {
         result: "FAILED",
         metadata: { externalDisputeId: dispute.externalDisputeId },
       });
+      this.logger.warn(
+        `ifood.dispute.respond tenantId=${input.tenantId} integrationId=${input.integrationId} disputeId=${dispute.id} status=RETRYABLE`
+      );
       throw new BadGatewayException("Nao foi possivel responder a disputa no iFood");
     }
   }

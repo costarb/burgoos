@@ -52,6 +52,12 @@ npm run dev --workspace @burgoos/web
 11. Move the order through preparation and the correct ready/dispatch action based on modality.
 12. Inspect `Admin > Integracoes > Delivery > Saude`.
     - Expected: last polling success, pending events, failed events, retryable syncs and homologation checks are visible.
+13. Simulate exception events if available in sandbox:
+    - order patched event updates the platform snapshot and appears as an operator exception
+    - cancellation result event updates the platform status
+    - dispute event creates a pending dispute and appears in health counters
+14. Review the audit table in `Admin > Integracoes > Delivery`.
+    - Expected: configuration, event ACK, order update, dispute and sync actions appear without credential or customer-sensitive payloads.
 
 ## Test Commands
 
@@ -60,13 +66,22 @@ Focused backend tests:
 ```powershell
 npm run test --workspace @burgoos/api -- delivery-integration
 npm run test --workspace @burgoos/api -- ifood
+npm run test --workspace @burgoos/api -- ifood-event-poller ifood-dispute
 ```
 
 Focused web tests:
 
 ```powershell
 npm run test --workspace @burgoos/web -- delivery-integrations
+npm run test --workspace @burgoos/web -- delivery-integrations-page
 npm run test --workspace @burgoos/web -- orders
+```
+
+Prisma validation:
+
+```powershell
+npm run db:generate
+npx prisma validate --schema packages/database/prisma/schema.prisma
 ```
 
 Full validation before opening PR:
@@ -85,6 +100,7 @@ npm run build
 - Successfully processed events are acknowledged only after durable event/order persistence.
 - iFood orders appear in the existing order queue with source, deadline and platform sync state.
 - Accept/refuse/status actions create provider sync attempts and visible retry state on failure.
+- iFood exception events create visible health/audit signals instead of silently changing orders.
 - Cross-store access is denied for integration configuration, events, and platform-origin orders.
 
 ## Production/Homologation Notes
@@ -94,3 +110,9 @@ npm run build
 - Token expiration must be driven by provider metadata.
 - Merchant permission propagation can temporarily show validation as pending.
 - Customer data imported from iFood must respect provider privacy limitations in views and printouts.
+- Render API build command:
+  `npm ci && npm run db:generate && npx prisma migrate deploy --schema packages/database/prisma/schema.prisma && npm run build --workspace @burgoos/api`
+- Render API start command: `npm run start --workspace @burgoos/api`
+- Render web build command:
+  `npm ci && npm run db:generate && npm run build --workspace @burgoos/web`
+- Do not rotate `DELIVERY_INTEGRATION_SECRET_KEY` after saving credentials unless all store credentials are re-saved.

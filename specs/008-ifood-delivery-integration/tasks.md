@@ -219,13 +219,13 @@
 
 **Purpose**: Security hardening, performance, documentation, and full validation.
 
-- [ ] T086 [P] Update specs/008-ifood-delivery-integration/quickstart.md with any implementation-specific commands discovered during build
-- [ ] T087 [P] Add production/homologation notes for Render env vars in README.md
-- [ ] T088 Harden logs to prevent credential or customer-sensitive payload leakage in apps/api/src/management/integrations/
-- [ ] T089 Add structured logs for polling, ACK, order ingestion and sync attempts in apps/api/src/management/integrations/
+- [x] T086 [P] Update specs/008-ifood-delivery-integration/quickstart.md with any implementation-specific commands discovered during build
+- [x] T087 [P] Add production/homologation notes for Render env vars in README.md
+- [x] T088 Harden logs to prevent credential or customer-sensitive payload leakage in apps/api/src/management/integrations/
+- [x] T089 Add structured logs for polling, ACK, order ingestion and sync attempts in apps/api/src/management/integrations/
 - [ ] T090 Run Prisma validate/generate/migration validation for packages/database/prisma/schema.prisma
-- [ ] T091 Run API lint, typecheck and focused tests for apps/api/
-- [ ] T092 Run web lint, typecheck and focused tests for apps/web/
+- [x] T091 Run API lint, typecheck and focused tests for apps/api/
+- [x] T092 Run web lint, typecheck and focused tests for apps/web/
 - [ ] T093 Execute quickstart validation from specs/008-ifood-delivery-integration/quickstart.md
 
 ---
