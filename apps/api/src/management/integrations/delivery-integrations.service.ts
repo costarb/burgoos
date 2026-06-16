@@ -35,8 +35,8 @@ export class DeliveryIntegrationsService {
     private readonly audit: DeliveryIntegrationAuditService
   ) {}
 
-  list(tenantId: string) {
-    return this.prisma.deliveryIntegration.findMany({
+  async list(tenantId: string) {
+    const integrations = await this.prisma.deliveryIntegration.findMany({
       where: { tenantId },
       orderBy: { createdAt: "desc" },
       include: {
@@ -47,6 +47,8 @@ export class DeliveryIntegrationsService {
         },
       },
     });
+
+    return integrations.map((integration) => this.toResponse(integration));
   }
 
   async create(tenantId: string, actorUserId: string, dto: DeliveryIntegrationDto) {

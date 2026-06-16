@@ -316,8 +316,12 @@ function IntegrationHealthPanel({ health }: { health: DeliveryIntegrationHealth 
 }
 
 function providerCapabilityLabels(
-  capabilities: DeliveryIntegrationDetail["capabilities"]
+  capabilities: DeliveryIntegrationDetail["capabilities"] | undefined
 ): string[] {
+  if (!capabilities) {
+    return ["Capacidades pendentes"];
+  }
+
   return [
     capabilities.supportsPolling ? "Polling" : null,
     capabilities.supportsWebhook ? "Webhook" : null,

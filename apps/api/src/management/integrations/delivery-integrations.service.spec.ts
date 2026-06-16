@@ -16,25 +16,51 @@ describe("DeliveryIntegrationsService", () => {
     audit: { record: vi.fn() },
   };
 
-  it("lists integrations scoped to the active tenant", async () => {
-    const findMany = vi.fn(async () => []);
+  it("lists integrations scoped to the active tenant with provider capabilities", async () => {
+    const capabilities = {
+      supportsPolling: true,
+      supportsWebhook: false,
+      supportsMerchantValidation: true,
+      supportsOrderConfirmation: true,
+      supportsOrderRefusal: true,
+      supportedStatusActions: ["DISPATCH", "DELIVER"],
+    };
+    const findMany = vi.fn(async () => [
+      {
+        id: "integration-1",
+        provider: "IFOOD",
+        displayName: "iFood",
+        status: "ACTIVE",
+        externalMerchantId: "merchant-1",
+        pollingEnabled: true,
+        webhookEnabled: false,
+        lastSuccessfulPollingAt: null,
+        lastErrorMessage: null,
+        lastValidationAt: null,
+        homologationStatus: "PENDING",
+        createdAt: new Date("2026-06-15T12:00:00.000Z"),
+        updatedAt: new Date("2026-06-15T12:00:00.000Z"),
+        credentials: [],
+      },
+    ]);
     const service = new DeliveryIntegrationsService(
       {
         deliveryIntegration: { findMany },
       } as never,
       dependencies.config,
       dependencies.ifoodAuth as never,
-      dependencies.providerRegistry as never,
+      { get: vi.fn(() => ({ capabilities })) } as never,
       dependencies.audit as never
     );
 
-    await service.list("tenant-1");
+    const result = await service.list("tenant-1");
 
     expect(findMany).toHaveBeenCalledWith(
       expect.objectContaining({
         where: { tenantId: "tenant-1" },
       })
     );
+    expect(result).toEqual([expect.objectContaining({ capabilities })]);
   });
 
   it("gets integration only inside the active tenant", async () => {
