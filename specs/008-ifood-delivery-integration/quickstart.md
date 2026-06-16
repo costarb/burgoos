@@ -37,6 +37,7 @@ npm run dev --workspace @burgoos/web
    - external merchant id: sandbox or homologation merchant
    - order platform: existing or newly created iFood `OrderPlatform`
 4. Save credentials. Confirm that no secret value is shown after saving.
+   - For iFood test stores that do not provide an authorization code, leave authorization code and refresh token empty. The API will request a token using client credentials.
 5. Run validation.
    - Expected: credentials valid, merchant accessible, merchant status visible, integration ready or pending propagation.
 6. Activate the integration.

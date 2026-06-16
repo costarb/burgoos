@@ -36,9 +36,11 @@ export class IfoodAuthService {
     if (input.refreshToken) {
       body.set("grantType", "refresh_token");
       body.set("refreshToken", input.refreshToken);
-    } else {
+    } else if (input.authorizationCode) {
       body.set("grantType", "authorization_code");
-      body.set("authorizationCode", input.authorizationCode ?? "");
+      body.set("authorizationCode", input.authorizationCode);
+    } else {
+      body.set("grantType", "client_credentials");
     }
 
     const response = await fetch(`${authBaseUrl}/oauth/token`, {

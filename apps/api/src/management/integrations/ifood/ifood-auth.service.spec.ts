@@ -52,4 +52,67 @@ describe("IfoodAuthService", () => {
 
     vi.unstubAllGlobals();
   });
+
+  it("uses authorization code grant when authorizationCode is present", async () => {
+    const fetchMock = vi.fn(async () => ({
+      ok: true,
+      json: async () => ({
+        access_token: "access",
+        expires_in: 10,
+      }),
+    }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    const service = new IfoodAuthService({
+      get: vi.fn((key: string) => {
+        if (key === "IFOOD_MOCK_MODE") return "false";
+        if (key === "IFOOD_AUTH_BASE_URL") return "https://ifood.test/authentication";
+        return undefined;
+      }),
+    } as unknown as ConfigService);
+
+    await service.exchangeAuthorizationCode({
+      clientId: "client",
+      clientSecret: "secret",
+      authorizationCode: "code",
+    });
+
+    const [, requestInit] = fetchMock.mock.calls[0] as unknown as [string, RequestInit];
+    const body = requestInit.body as URLSearchParams;
+    expect(body.get("grantType")).toBe("authorization_code");
+    expect(body.get("authorizationCode")).toBe("code");
+
+    vi.unstubAllGlobals();
+  });
+
+  it("uses client credentials grant when no code or refresh token is present", async () => {
+    const fetchMock = vi.fn(async () => ({
+      ok: true,
+      json: async () => ({
+        access_token: "access",
+        expires_in: 10,
+      }),
+    }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    const service = new IfoodAuthService({
+      get: vi.fn((key: string) => {
+        if (key === "IFOOD_MOCK_MODE") return "false";
+        if (key === "IFOOD_AUTH_BASE_URL") return "https://ifood.test/authentication";
+        return undefined;
+      }),
+    } as unknown as ConfigService);
+
+    await service.exchangeAuthorizationCode({
+      clientId: "client",
+      clientSecret: "secret",
+    });
+
+    const [, requestInit] = fetchMock.mock.calls[0] as unknown as [string, RequestInit];
+    const body = requestInit.body as URLSearchParams;
+    expect(body.get("grantType")).toBe("client_credentials");
+    expect(body.has("authorizationCode")).toBe(false);
+
+    vi.unstubAllGlobals();
+  });
 });

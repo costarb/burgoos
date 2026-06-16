@@ -213,13 +213,17 @@ function DeliveryIntegrationCard({
           <input
             className="rounded-md border border-slate-200 px-3 py-2 text-sm"
             name="authorizationCode"
-            placeholder="Authorization code"
+            placeholder="Authorization code opcional"
           />
           <input
             className="rounded-md border border-slate-200 px-3 py-2 text-sm"
             name="refreshToken"
-            placeholder="Refresh token"
+            placeholder="Refresh token opcional"
           />
+          <p className="text-xs text-slate-500">
+            Se a loja de teste nao fornecer authorization code, salve apenas client ID e client
+            secret.
+          </p>
           <SubmitButton pendingLabel="Salvando credenciais...">Salvar credenciais</SubmitButton>
         </OperationForm>
       </div>
