@@ -1,7 +1,11 @@
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { IfoodEventPollerService } from "./ifood-event-poller.service";
 
 describe("IfoodEventPollerService", () => {
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
   it("polls due integrations with a 30 second guard", async () => {
     const findMany = vi.fn(async () => []);
     const service = new IfoodEventPollerService(
@@ -242,5 +246,26 @@ describe("IfoodEventPollerService", () => {
         }),
       })
     );
+  });
+
+  it("starts scheduled polling with a minimum 30 second interval", () => {
+    vi.useFakeTimers();
+    const findMany = vi.fn(async () => []);
+    const setIntervalSpy = vi.spyOn(global, "setInterval");
+    const service = new IfoodEventPollerService(
+      { deliveryIntegration: { findMany } } as never,
+      {} as never,
+      {} as never,
+      {} as never,
+      {} as never,
+      undefined,
+      undefined,
+      { get: vi.fn(() => "5") } as never
+    );
+
+    service.onModuleInit();
+
+    expect(setIntervalSpy).toHaveBeenCalledWith(expect.any(Function), 30_000);
+    service.onModuleDestroy();
   });
 });

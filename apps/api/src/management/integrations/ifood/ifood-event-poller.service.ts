@@ -1,4 +1,12 @@
-import { Inject, Injectable, Logger, Optional } from "@nestjs/common";
+import {
+  Inject,
+  Injectable,
+  Logger,
+  OnModuleDestroy,
+  OnModuleInit,
+  Optional,
+} from "@nestjs/common";
+import { ConfigService } from "@nestjs/config";
 import {
   DeliveryIntegrationAuditAction,
   DeliveryIntegration,
@@ -18,8 +26,10 @@ const POLLING_INTERVAL_MS = 30_000;
 const DETAIL_RETRY_WINDOW_MS = 10 * 60_000;
 
 @Injectable()
-export class IfoodEventPollerService {
+export class IfoodEventPollerService implements OnModuleInit, OnModuleDestroy {
   private readonly logger = new Logger(IfoodEventPollerService.name);
+  private pollingTimer?: NodeJS.Timeout;
+  private pollingRunning = false;
 
   constructor(
     @Inject(PrismaService) private readonly prisma: PrismaService,
@@ -35,8 +45,55 @@ export class IfoodEventPollerService {
     private readonly disputes?: IfoodDisputeService,
     @Optional()
     @Inject(IfoodDeliveryTrackingService)
-    private readonly tracking?: IfoodDeliveryTrackingService
+    private readonly tracking?: IfoodDeliveryTrackingService,
+    @Optional()
+    private readonly config?: ConfigService
   ) {}
+
+  onModuleInit() {
+    if (this.config?.get<string>("DELIVERY_INTEGRATIONS_ENABLED") === "false") {
+      this.logger.log("ifood.poll.scheduler status=disabled");
+      return;
+    }
+
+    const intervalMs = this.pollingIntervalMs();
+    this.logger.log(`ifood.poll.scheduler status=started intervalMs=${intervalMs}`);
+
+    this.pollingTimer = setInterval(() => {
+      void this.runScheduledPolling();
+    }, intervalMs);
+    this.pollingTimer.unref?.();
+
+    setTimeout(() => {
+      void this.runScheduledPolling();
+    }, 1_000).unref?.();
+  }
+
+  onModuleDestroy() {
+    if (this.pollingTimer) {
+      clearInterval(this.pollingTimer);
+    }
+  }
+
+  private async runScheduledPolling() {
+    if (this.pollingRunning) {
+      this.logger.warn("ifood.poll.scheduler status=skipped reason=already_running");
+      return;
+    }
+
+    this.pollingRunning = true;
+    try {
+      await this.pollDueIntegrations();
+    } catch (error) {
+      this.logger.error(
+        `ifood.poll.scheduler status=failed error=${
+          error instanceof Error ? error.message : "unknown"
+        }`
+      );
+    } finally {
+      this.pollingRunning = false;
+    }
+  }
 
   async pollDueIntegrations(now = new Date()) {
     const integrations = await this.prisma.deliveryIntegration.findMany({
@@ -442,6 +499,12 @@ export class IfoodEventPollerService {
 
   private eventName(event: DeliveryPlatformEvent) {
     return `${event.eventCode} ${event.fullEventCode ?? ""}`.toUpperCase();
+  }
+
+  private pollingIntervalMs() {
+    const configuredSeconds = Number(this.config?.get<string>("DELIVERY_POLLING_INTERVAL_SECONDS"));
+    const intervalSeconds = Number.isFinite(configuredSeconds) ? configuredSeconds : 30;
+    return Math.max(intervalSeconds, 30) * 1_000;
   }
 }
 
