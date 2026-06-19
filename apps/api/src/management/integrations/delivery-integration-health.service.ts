@@ -175,7 +175,7 @@ export class DeliveryIntegrationHealthService {
         input.tenantId,
         input.integrationId
       );
-      const [statuses, openingHours] = await Promise.all([
+      const [statusesResult, openingHoursResult] = await Promise.allSettled([
         this.ifoodClient.getMerchantStatus({
           accessToken: secret.accessToken,
           merchantId: input.externalMerchantId,
@@ -186,15 +186,28 @@ export class DeliveryIntegrationHealthService {
         }),
       ]);
       const now = new Date();
-      const insideOpeningHours = isInsideOpeningHours(now, openingHours.shifts);
+      const statuses = statusesResult.status === "fulfilled" ? statusesResult.value : [];
+      const openingHours =
+        openingHoursResult.status === "fulfilled" ? openingHoursResult.value : null;
+      const insideOpeningHours = openingHours
+        ? isInsideOpeningHours(now, openingHours.shifts)
+        : null;
       const deliveryStatus =
         statuses.find((status) => status.operation === "delivery") ?? statuses[0] ?? null;
+
+      if (!deliveryStatus && statusesResult.status === "rejected") {
+        throw statusesResult.reason;
+      }
 
       return {
         available: Boolean(deliveryStatus?.available),
         state: deliveryStatus?.state ?? "UNKNOWN",
         title: deliveryStatus?.title ?? null,
-        subtitle: deliveryStatus?.subtitle ?? null,
+        subtitle:
+          deliveryStatus?.subtitle ??
+          (openingHoursResult.status === "rejected"
+            ? `Horarios indisponiveis: ${errorMessage(openingHoursResult.reason)}`
+            : null),
         insideOpeningHours,
         checkedAt: now.toISOString(),
         validations:
@@ -205,14 +218,15 @@ export class DeliveryIntegrationHealthService {
             title: validation.title,
             subtitle: validation.subtitle,
           })) ?? [],
-        openingHours: openingHours.shifts.map((shift) => ({
-          id: shift.id,
-          dayOfWeek: shift.dayOfWeek,
-          start: shift.start,
-          duration: shift.duration,
-          end: endTime(shift.start, shift.duration),
-          activeNow: isShiftActive(now, shift),
-        })),
+        openingHours:
+          openingHours?.shifts.map((shift) => ({
+            id: shift.id,
+            dayOfWeek: shift.dayOfWeek,
+            start: shift.start,
+            duration: shift.duration,
+            end: endTime(shift.start, shift.duration),
+            activeNow: isShiftActive(now, shift),
+          })) ?? [],
       };
     } catch (error) {
       return {
@@ -227,6 +241,10 @@ export class DeliveryIntegrationHealthService {
       };
     }
   }
+}
+
+function errorMessage(error: unknown) {
+  return error instanceof Error ? error.message : "Nao foi possivel consultar o iFood.";
 }
 
 function isInsideOpeningHours(

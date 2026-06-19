@@ -359,18 +359,12 @@ export class IfoodClient implements DeliveryProviderAdapter {
       ];
     }
 
-    const apiBaseUrl = this.requireApiBaseUrl();
-    const response = await fetch(`${apiBaseUrl}/merchants/${input.merchantId}/status`, {
-      headers: {
-        Authorization: `Bearer ${input.accessToken}`,
-      },
+    const payload = await this.fetchMerchantJson({
+      accessToken: input.accessToken,
+      merchantId: input.merchantId,
+      suffix: "status",
+      errorMessage: "iFood merchant status failed",
     });
-
-    if (!response.ok) {
-      throw new Error(`iFood merchant status failed with status ${response.status}`);
-    }
-
-    const payload = (await response.json()) as unknown;
     const statuses = Array.isArray(payload) ? payload : [payload];
 
     return statuses.map((status) => {
@@ -419,18 +413,12 @@ export class IfoodClient implements DeliveryProviderAdapter {
       };
     }
 
-    const apiBaseUrl = this.requireApiBaseUrl();
-    const response = await fetch(`${apiBaseUrl}/merchants/${input.merchantId}/opening-hours`, {
-      headers: {
-        Authorization: `Bearer ${input.accessToken}`,
-      },
+    const payload = await this.fetchMerchantJson({
+      accessToken: input.accessToken,
+      merchantId: input.merchantId,
+      suffix: "opening-hours",
+      errorMessage: "iFood opening hours failed",
     });
-
-    if (!response.ok) {
-      throw new Error(`iFood opening hours failed with status ${response.status}`);
-    }
-
-    const payload = (await response.json()) as unknown;
     const record = asRecord(payload);
 
     return {
@@ -458,6 +446,40 @@ export class IfoodClient implements DeliveryProviderAdapter {
       throw new Error("IFOOD_API_BASE_URL is not configured");
     }
     return apiBaseUrl;
+  }
+
+  private async fetchMerchantJson(input: {
+    accessToken: string;
+    merchantId: string;
+    suffix: string;
+    errorMessage: string;
+  }): Promise<unknown> {
+    const apiBaseUrl = this.requireApiBaseUrl();
+    const normalized = apiBaseUrl.replace(/\/+$/, "");
+    const paths = [
+      `${normalized}/merchants/${input.merchantId}/${input.suffix}`,
+      `${normalized}/merchant/v1.0/merchants/${input.merchantId}/${input.suffix}`,
+    ];
+    let lastStatus = 0;
+
+    for (const url of paths) {
+      const response = await fetch(url, {
+        headers: {
+          Authorization: `Bearer ${input.accessToken}`,
+        },
+      });
+      lastStatus = response.status;
+
+      if (response.ok) {
+        return response.json();
+      }
+
+      if (response.status !== 404) {
+        throw new Error(`${input.errorMessage} with status ${response.status}`);
+      }
+    }
+
+    throw new Error(`${input.errorMessage} with status ${lastStatus}`);
   }
 
   private async postOrderAction(
