@@ -215,10 +215,13 @@ export class IfoodClient implements DeliveryProviderAdapter {
     const payload = (await response.json()) as unknown;
     const reasons = Array.isArray(payload) ? payload : asArray(asRecord(payload).reasons);
 
-    return reasons.map((reason) => {
+    return reasons.map((reason, index) => {
       const record = asRecord(reason);
       return {
-        id: stringFrom(record.id ?? record.code, "UNKNOWN"),
+        id: stringFrom(
+          record.id ?? record.code ?? record.cancellationCode ?? record.reasonCode ?? record.value,
+          `UNKNOWN_${index}`
+        ),
         description: stringFrom(record.description ?? record.message, "Motivo iFood"),
       };
     });

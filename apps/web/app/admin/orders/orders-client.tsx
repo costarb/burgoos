@@ -325,6 +325,12 @@ export function OrdersClient({
                               [order.id]: {
                                 ...(current[order.id] ?? { reason: "" }),
                                 providerReasonId: event.target.value,
+                                reason:
+                                  cancellationReasons[order.id]?.find(
+                                    (reason) => reason.id === event.target.value
+                                  )?.description ??
+                                  current[order.id]?.reason ??
+                                  "",
                               },
                             }))
                           }
