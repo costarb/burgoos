@@ -8,14 +8,14 @@ async function bootstrap(): Promise<void> {
 
   app.setGlobalPrefix("api");
   app.enableCors({
-    origin: process.env.WEB_ORIGIN ?? "http://localhost:3000",
-    credentials: true
+    origin: allowedOrigins(),
+    credentials: true,
   });
   app.useGlobalPipes(
     new ValidationPipe({
       whitelist: true,
       forbidNonWhitelisted: true,
-      transform: true
+      transform: true,
     })
   );
 
@@ -33,3 +33,15 @@ async function bootstrap(): Promise<void> {
 }
 
 void bootstrap();
+
+function allowedOrigins(): string[] {
+  const configured = process.env.WEB_ORIGIN;
+  if (configured) {
+    return configured
+      .split(",")
+      .map((origin) => origin.trim())
+      .filter(Boolean);
+  }
+
+  return ["http://localhost:3000", "http://127.0.0.1:3000"];
+}
