@@ -213,7 +213,12 @@ async function fetchAdmin<T>(token: string, path: string, init?: RequestInit): P
     throw new Error(`[${response.status}] ${path}: ${message}`);
   }
 
-  return response.json() as Promise<T>;
+  const body = await response.text();
+  if (!body) {
+    return undefined as T;
+  }
+
+  return JSON.parse(body) as T;
 }
 
 async function fetchPlatform<T>(token: string, path: string, init?: RequestInit): Promise<T> {
