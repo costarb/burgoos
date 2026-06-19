@@ -2,6 +2,7 @@ import { Inject, Injectable } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 import { PrismaService } from "../../platform/database/prisma.service";
 import { DeliveryIntegrationsService } from "./delivery-integrations.service";
+import { IfoodClient } from "./ifood/ifood-client";
 
 @Injectable()
 export class DeliveryIntegrationHealthService {
@@ -9,6 +10,7 @@ export class DeliveryIntegrationHealthService {
     @Inject(PrismaService) private readonly prisma: PrismaService,
     @Inject(DeliveryIntegrationsService)
     private readonly integrationsService: DeliveryIntegrationsService,
+    @Inject(IfoodClient) private readonly ifoodClient: IfoodClient,
     private readonly config: ConfigService
   ) {}
 
@@ -77,6 +79,12 @@ export class DeliveryIntegrationHealthService {
       ? new Date(lastPollingAt.getTime() + pollingIntervalSeconds * 1_000)
       : null;
     const schedulerEnabled = this.config.get<string>("DELIVERY_INTEGRATIONS_ENABLED") !== "false";
+    const merchantOperations = await this.getMerchantOperations({
+      tenantId,
+      integrationId,
+      externalMerchantId: integration.externalMerchantId,
+      hasCredential: Boolean(credential),
+    });
     const pollingReady =
       schedulerEnabled &&
       integration.status === "ACTIVE" &&
@@ -112,6 +120,7 @@ export class DeliveryIntegrationHealthService {
       tokenExpiresAt: tokenExpiresAt?.toISOString() ?? null,
       tokenExpiresInMinutes,
       tokenRequiresAttention: tokenExpiresInMinutes !== null && tokenExpiresInMinutes <= 60,
+      merchantOperations,
       recentAudits: recentAudits.map((audit) => ({
         ...audit,
         createdAt: audit.createdAt.toISOString(),
@@ -150,4 +159,113 @@ export class DeliveryIntegrationHealthService {
     if (!input.hasMerchant) return "MISSING_MERCHANT";
     return "READY";
   }
+
+  private async getMerchantOperations(input: {
+    tenantId: string;
+    integrationId: string;
+    externalMerchantId: string | null;
+    hasCredential: boolean;
+  }) {
+    if (!input.externalMerchantId || !input.hasCredential) {
+      return null;
+    }
+
+    try {
+      const secret = await this.integrationsService.getActiveCredentialSecret(
+        input.tenantId,
+        input.integrationId
+      );
+      const [statuses, openingHours] = await Promise.all([
+        this.ifoodClient.getMerchantStatus({
+          accessToken: secret.accessToken,
+          merchantId: input.externalMerchantId,
+        }),
+        this.ifoodClient.getOpeningHours({
+          accessToken: secret.accessToken,
+          merchantId: input.externalMerchantId,
+        }),
+      ]);
+      const now = new Date();
+      const insideOpeningHours = isInsideOpeningHours(now, openingHours.shifts);
+      const deliveryStatus =
+        statuses.find((status) => status.operation === "delivery") ?? statuses[0] ?? null;
+
+      return {
+        available: Boolean(deliveryStatus?.available),
+        state: deliveryStatus?.state ?? "UNKNOWN",
+        title: deliveryStatus?.title ?? null,
+        subtitle: deliveryStatus?.subtitle ?? null,
+        insideOpeningHours,
+        checkedAt: now.toISOString(),
+        validations:
+          deliveryStatus?.validations.map((validation) => ({
+            id: validation.id,
+            state: validation.state,
+            code: validation.code,
+            title: validation.title,
+            subtitle: validation.subtitle,
+          })) ?? [],
+        openingHours: openingHours.shifts.map((shift) => ({
+          id: shift.id,
+          dayOfWeek: shift.dayOfWeek,
+          start: shift.start,
+          duration: shift.duration,
+          end: endTime(shift.start, shift.duration),
+          activeNow: isShiftActive(now, shift),
+        })),
+      };
+    } catch (error) {
+      return {
+        available: false,
+        state: "UNKNOWN",
+        title: "Status iFood indisponivel",
+        subtitle: error instanceof Error ? error.message : "Nao foi possivel consultar o iFood.",
+        insideOpeningHours: null,
+        checkedAt: new Date().toISOString(),
+        validations: [],
+        openingHours: [],
+      };
+    }
+  }
+}
+
+function isInsideOpeningHours(
+  now: Date,
+  shifts: Array<{ dayOfWeek: string; start: string; duration: number }>
+) {
+  return shifts.some((shift) => isShiftActive(now, shift));
+}
+
+function isShiftActive(now: Date, shift: { dayOfWeek: string; start: string; duration: number }) {
+  if (dayOfWeek(now) !== shift.dayOfWeek) {
+    return false;
+  }
+
+  const nowMinutes = now.getHours() * 60 + now.getMinutes();
+  const startMinutes = parseTimeToMinutes(shift.start);
+  const endMinutes = startMinutes + shift.duration;
+
+  if (endMinutes >= 24 * 60) {
+    return nowMinutes >= startMinutes || nowMinutes <= endMinutes % (24 * 60);
+  }
+
+  return nowMinutes >= startMinutes && nowMinutes <= endMinutes;
+}
+
+function dayOfWeek(date: Date) {
+  return ["SUNDAY", "MONDAY", "TUESDAY", "WEDNESDAY", "THURSDAY", "FRIDAY", "SATURDAY"][
+    date.getDay()
+  ];
+}
+
+function parseTimeToMinutes(value: string) {
+  const [hours = "0", minutes = "0"] = value.split(":");
+  return Number(hours) * 60 + Number(minutes);
+}
+
+function endTime(start: string, duration: number) {
+  const minutes = (parseTimeToMinutes(start) + duration) % (24 * 60);
+  const hours = Math.floor(minutes / 60);
+  const mins = minutes % 60;
+  return `${String(hours).padStart(2, "0")}:${String(mins).padStart(2, "0")}:00`;
 }

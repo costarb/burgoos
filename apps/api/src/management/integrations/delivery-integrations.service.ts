@@ -175,6 +175,7 @@ export class DeliveryIntegrationsService {
   ) {
     const integration = await this.getForTenant(tenantId, integrationId);
     const token = await this.exchangeToken(integration.provider, dto);
+    const authMode = dto.authMode === "CENTRALIZED" ? "CENTRALIZED" : "DISTRIBUTED";
 
     await this.prisma.$transaction([
       this.prisma.deliveryIntegrationCredential.updateMany({
@@ -193,7 +194,8 @@ export class DeliveryIntegrationsService {
           tenantId,
           integrationId,
           status: "ACTIVE",
-          credentialType: "DISTRIBUTED_OAUTH",
+          credentialType:
+            authMode === "CENTRALIZED" ? "CENTRALIZED_CLIENT_CREDENTIALS" : "DISTRIBUTED_OAUTH",
           secretCiphertext: this.encryptSecret(
             JSON.stringify({
               clientId: dto.clientId,
@@ -206,6 +208,7 @@ export class DeliveryIntegrationsService {
           refreshExpiresAt: token.refreshExpiresAt ?? null,
           scopes: token.scopes ?? undefined,
           metadata: {
+            authMode,
             raw: token.raw,
           } as Prisma.InputJsonObject,
           createdByUserId: actorUserId,
@@ -220,7 +223,7 @@ export class DeliveryIntegrationsService {
       action: DeliveryIntegrationAuditAction.CREDENTIAL_ROTATED,
       entityType: "DeliveryIntegrationCredential",
       result: "SUCCESS",
-      metadata: { provider: integration.provider, tokenExpiresAt: token.expiresAt },
+      metadata: { provider: integration.provider, authMode, tokenExpiresAt: token.expiresAt },
     });
   }
 
@@ -463,7 +466,12 @@ export class DeliveryIntegrationsService {
     homologationStatus: string;
     createdAt: Date;
     updatedAt: Date;
-    credentials: Array<{ status: string; tokenExpiresAt: Date | null }>;
+    credentials: Array<{
+      status: string;
+      credentialType: string;
+      tokenExpiresAt: Date | null;
+      metadata: Prisma.JsonValue | null;
+    }>;
   }) {
     const credential = integration.credentials[0];
 
@@ -478,6 +486,8 @@ export class DeliveryIntegrationsService {
       lastSuccessfulPollingAt: integration.lastSuccessfulPollingAt?.toISOString() ?? null,
       lastErrorMessage: integration.lastErrorMessage,
       credentialStatus: credential?.status ?? null,
+      credentialType: credential?.credentialType ?? null,
+      authMode: this.authModeFromCredential(credential),
       credentialExpiresAt: credential?.tokenExpiresAt?.toISOString() ?? null,
       homologationStatus: integration.homologationStatus,
       lastValidationAt: integration.lastValidationAt?.toISOString() ?? null,
@@ -485,6 +495,34 @@ export class DeliveryIntegrationsService {
       updatedAt: integration.updatedAt.toISOString(),
       capabilities: this.providerRegistry.get(integration.provider).capabilities,
     };
+  }
+
+  private authModeFromCredential(
+    credential:
+      | {
+          credentialType: string;
+          metadata: Prisma.JsonValue | null;
+        }
+      | undefined
+  ) {
+    if (!credential) {
+      return null;
+    }
+
+    const metadata =
+      credential.metadata &&
+      typeof credential.metadata === "object" &&
+      !Array.isArray(credential.metadata)
+        ? (credential.metadata as Record<string, unknown>)
+        : {};
+    const metadataMode = metadata.authMode;
+    if (metadataMode === "CENTRALIZED" || metadataMode === "DISTRIBUTED") {
+      return metadataMode;
+    }
+
+    return credential.credentialType === "CENTRALIZED_CLIENT_CREDENTIALS"
+      ? "CENTRALIZED"
+      : "DISTRIBUTED";
   }
 
   private encryptSecret(plainText: string): string {

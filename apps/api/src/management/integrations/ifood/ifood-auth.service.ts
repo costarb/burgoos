@@ -29,6 +29,7 @@ export class IfoodAuthService {
   constructor(private readonly config: ConfigService) {}
 
   async exchangeAuthorizationCode(input: {
+    authMode?: "CENTRALIZED" | "DISTRIBUTED";
     clientId: string;
     clientSecret: string;
     authorizationCode?: string | null;
@@ -48,7 +49,9 @@ export class IfoodAuthService {
     body.set("clientId", input.clientId);
     body.set("clientSecret", input.clientSecret);
 
-    if (input.refreshToken) {
+    if (input.authMode === "CENTRALIZED") {
+      body.set("grantType", "client_credentials");
+    } else if (input.refreshToken) {
       body.set("grantType", "refresh_token");
       body.set("refreshToken", input.refreshToken);
     } else if (input.authorizationCode) {

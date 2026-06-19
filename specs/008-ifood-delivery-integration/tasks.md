@@ -219,6 +219,10 @@
 
 **Purpose**: Security hardening, performance, documentation, and full validation.
 
+- [x] T094 [US1] Add iFood centralized authentication mode using client_credentials in apps/api/src/management/integrations/ifood/ifood-auth.service.ts
+- [x] T095 [US1] Add authentication mode selection to delivery credential UI in apps/web/app/admin/integrations/delivery/delivery-integrations-client.tsx
+- [x] T096 [US6] Add iFood merchant status and opening-hours health checks in apps/api/src/management/integrations/ifood/ifood-client.ts
+- [x] T097 [US6] Show iFood store availability and configured opening hours in apps/web/app/admin/integrations/delivery/delivery-integrations-client.tsx
 - [x] T086 [P] Update specs/008-ifood-delivery-integration/quickstart.md with any implementation-specific commands discovered during build
 - [x] T087 [P] Add production/homologation notes for Render env vars in README.md
 - [x] T088 Harden logs to prevent credential or customer-sensitive payload leakage in apps/api/src/management/integrations/

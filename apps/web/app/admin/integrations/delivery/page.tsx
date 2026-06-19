@@ -86,6 +86,7 @@ export default async function DeliveryIntegrationsPage() {
         await getAdminToken(),
         String(formData.get("id") ?? ""),
         {
+          authMode: formData.get("authMode") === "CENTRALIZED" ? "CENTRALIZED" : "DISTRIBUTED",
           clientId: String(formData.get("clientId") ?? ""),
           clientSecret: String(formData.get("clientSecret") ?? ""),
           authorizationCode: stringOrNull(formData, "authorizationCode"),

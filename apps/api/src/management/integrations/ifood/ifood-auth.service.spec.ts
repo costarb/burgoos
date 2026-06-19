@@ -55,6 +55,39 @@ describe("IfoodAuthService", () => {
     vi.unstubAllGlobals();
   });
 
+  it("uses client credentials grant for centralized authentication", async () => {
+    const fetchMock = vi.fn(async () => ({
+      ok: true,
+      json: async () => ({
+        access_token: "centralized-access",
+        expires_in: 21600,
+      }),
+    }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    const service = new IfoodAuthService({
+      get: vi.fn((key: string) => {
+        if (key === "IFOOD_MOCK_MODE") return "false";
+        if (key === "IFOOD_AUTH_BASE_URL") return "https://ifood.test/authentication/v1.0";
+        return undefined;
+      }),
+    } as unknown as ConfigService);
+
+    await service.exchangeAuthorizationCode({
+      authMode: "CENTRALIZED",
+      clientId: "centralized-client",
+      clientSecret: "centralized-secret",
+    });
+
+    const [, requestInit] = fetchMock.mock.calls[0] as unknown as [string, RequestInit];
+    const body = requestInit.body as URLSearchParams;
+    expect(body.get("grantType")).toBe("client_credentials");
+    expect(body.get("clientId")).toBe("centralized-client");
+    expect(body.get("clientSecret")).toBe("centralized-secret");
+
+    vi.unstubAllGlobals();
+  });
+
   it("requires authorization code verifier when authorizationCode is present", async () => {
     const fetchMock = vi.fn(async () => ({
       ok: true,

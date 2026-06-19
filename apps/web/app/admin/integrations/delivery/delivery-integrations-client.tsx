@@ -152,7 +152,8 @@ function DeliveryIntegrationCard({
           </div>
           <p className="mt-1 text-sm text-slate-500">
             Merchant: {integration.externalMerchantId ?? "pendente"} | Credencial:{" "}
-            {integration.credentialStatus ?? "pendente"}
+            {integration.credentialStatus ?? "pendente"} | Auth:{" "}
+            {integration.authMode ? authModeLabel(integration.authMode) : "pendente"}
           </p>
           <div className="mt-2 flex flex-wrap gap-2">
             {providerCapabilityLabels(integration.capabilities).map((capability) => (
@@ -211,6 +212,7 @@ function DeliveryIntegrationCard({
         <IfoodCredentialsPanel
           authorizationCodeAction={authorizationCodeAction}
           credentialAction={credentialAction}
+          currentAuthMode={integration.authMode}
           integrationId={integration.id}
         />
       </div>
@@ -234,6 +236,7 @@ function IfoodCredentialsPanel({
   integrationId,
   authorizationCodeAction,
   credentialAction,
+  currentAuthMode,
 }: {
   integrationId: string;
   authorizationCodeAction: (
@@ -241,7 +244,11 @@ function IfoodCredentialsPanel({
     formData: FormData
   ) => Promise<AuthorizationCodeState>;
   credentialAction: (previousState: OperationState, formData: FormData) => Promise<OperationState>;
+  currentAuthMode?: "CENTRALIZED" | "DISTRIBUTED" | null;
 }) {
+  const [authMode, setAuthMode] = useState<"CENTRALIZED" | "DISTRIBUTED">(
+    currentAuthMode ?? "CENTRALIZED"
+  );
   const [clientId, setClientId] = useState("");
   const [clientSecret, setClientSecret] = useState("");
   const [authorizationCode, setAuthorizationCode] = useState("");
@@ -253,8 +260,10 @@ function IfoodCredentialsPanel({
   const [pendingAuthorization, setPendingAuthorization] = useState(false);
   const verifier = authorizationState.data?.authorizationCodeVerifier ?? "";
   const canSaveCredentials =
-    Boolean(clientId && clientSecret && refreshToken) ||
-    Boolean(clientId && clientSecret && authorizationCode && verifier);
+    authMode === "CENTRALIZED"
+      ? Boolean(clientId && clientSecret)
+      : Boolean(clientId && clientSecret && refreshToken) ||
+        Boolean(clientId && clientSecret && authorizationCode && verifier);
 
   async function submitAuthorization(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -283,8 +292,29 @@ function IfoodCredentialsPanel({
       <div>
         <h3 className="text-sm font-semibold text-slate-800">Credenciais iFood</h3>
         <p className="mt-1 text-xs text-slate-500">
-          Primeiro gere o codigo, autorize no portal iFood e depois salve o authorization code.
+          Use autenticacao centralizada para homologacao com client credentials, ou distribuida
+          quando a loja autorizar o app no portal iFood.
         </p>
+      </div>
+      <div className="grid gap-2 sm:grid-cols-2">
+        <label className="flex min-h-12 items-center gap-2 rounded-md border border-slate-200 px-3 py-2 text-sm">
+          <input
+            checked={authMode === "CENTRALIZED"}
+            name="authModeChoice"
+            onChange={() => setAuthMode("CENTRALIZED")}
+            type="radio"
+          />
+          Centralizada
+        </label>
+        <label className="flex min-h-12 items-center gap-2 rounded-md border border-slate-200 px-3 py-2 text-sm">
+          <input
+            checked={authMode === "DISTRIBUTED"}
+            name="authModeChoice"
+            onChange={() => setAuthMode("DISTRIBUTED")}
+            type="radio"
+          />
+          Distribuida
+        </label>
       </div>
       <form className="grid gap-3" onSubmit={submitAuthorization}>
         <input name="id" type="hidden" value={integrationId} />
@@ -305,13 +335,20 @@ function IfoodCredentialsPanel({
           type="password"
           value={clientSecret}
         />
-        <button
-          className="inline-flex min-h-10 items-center justify-center rounded-md bg-ink px-4 py-2 text-sm font-semibold text-white disabled:opacity-60"
-          disabled={pendingAuthorization}
-          type="submit"
-        >
-          {pendingAuthorization ? "Gerando..." : "Gerar codigo iFood"}
-        </button>
+        {authMode === "DISTRIBUTED" ? (
+          <button
+            className="inline-flex min-h-10 items-center justify-center rounded-md bg-ink px-4 py-2 text-sm font-semibold text-white disabled:opacity-60"
+            disabled={pendingAuthorization}
+            type="submit"
+          >
+            {pendingAuthorization ? "Gerando..." : "Gerar codigo iFood"}
+          </button>
+        ) : (
+          <p className="rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-600">
+            No modo centralizado, o sistema salva chamando /oauth/token com grantType
+            client_credentials.
+          </p>
+        )}
       </form>
 
       {authorizationState.message ? (
@@ -346,28 +383,38 @@ function IfoodCredentialsPanel({
 
       <OperationForm action={credentialAction} className="grid gap-3" feedbackClassName="mt-3">
         <input name="id" type="hidden" value={integrationId} />
+        <input name="authMode" type="hidden" value={authMode} />
         <input name="clientId" type="hidden" value={clientId} />
         <input name="clientSecret" type="hidden" value={clientSecret} />
         <input name="authorizationCodeVerifier" type="hidden" value={verifier} />
-        <input
-          className="rounded-md border border-slate-200 px-3 py-2 text-sm"
-          name="authorizationCode"
-          onChange={(event) => setAuthorizationCode(event.target.value)}
-          placeholder="Authorization code"
-          value={authorizationCode}
-        />
-        <input
-          className="rounded-md border border-slate-200 px-3 py-2 text-sm"
-          name="refreshToken"
-          onChange={(event) => setRefreshToken(event.target.value)}
-          placeholder="Refresh token opcional"
-          value={refreshToken}
-        />
-        <p className="text-xs text-slate-500">
-          Para apps distribuidos, gere o codigo iFood, autorize no portal e salve com o
-          authorization code retornado. O sistema envia automaticamente o verifier gerado junto com
-          o codigo.
-        </p>
+        {authMode === "DISTRIBUTED" ? (
+          <>
+            <input
+              className="rounded-md border border-slate-200 px-3 py-2 text-sm"
+              name="authorizationCode"
+              onChange={(event) => setAuthorizationCode(event.target.value)}
+              placeholder="Authorization code"
+              value={authorizationCode}
+            />
+            <input
+              className="rounded-md border border-slate-200 px-3 py-2 text-sm"
+              name="refreshToken"
+              onChange={(event) => setRefreshToken(event.target.value)}
+              placeholder="Refresh token opcional"
+              value={refreshToken}
+            />
+            <p className="text-xs text-slate-500">
+              Para apps distribuidos, gere o codigo iFood, autorize no portal e salve com o
+              authorization code retornado. O sistema envia automaticamente o verifier gerado junto
+              com o codigo.
+            </p>
+          </>
+        ) : (
+          <p className="text-xs text-slate-500">
+            Para loja de teste com app centralizado, informe client id e client secret e salve as
+            credenciais diretamente.
+          </p>
+        )}
         <SubmitButton disabled={!canSaveCredentials} pendingLabel="Salvando credenciais...">
           Salvar credenciais
         </SubmitButton>
@@ -453,6 +500,60 @@ function IntegrationHealthPanel({ health }: { health: DeliveryIntegrationHealth 
             <p>Proxima janela: {formatDateTime(polling.nextExpectedPollingAt)}</p>
           </div>
         </div>
+        {health.merchantOperations ? (
+          <div
+            className={
+              health.merchantOperations.available
+                ? "mt-3 rounded-md border border-emerald-200 bg-emerald-50 px-3 py-2"
+                : "mt-3 rounded-md border border-red-200 bg-red-50 px-3 py-2"
+            }
+          >
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <p className="text-sm font-semibold text-slate-800">Loja no iFood</p>
+              <span
+                className={
+                  health.merchantOperations.available
+                    ? "rounded-md bg-emerald-100 px-2 py-1 text-xs font-semibold text-emerald-700"
+                    : "rounded-md bg-red-100 px-2 py-1 text-xs font-semibold text-red-700"
+                }
+              >
+                {health.merchantOperations.available ? "Aberta" : "Fechada"}
+              </span>
+            </div>
+            <p className="mt-2 text-xs text-slate-700">
+              {health.merchantOperations.title ?? health.merchantOperations.state}
+              {health.merchantOperations.subtitle ? ` - ${health.merchantOperations.subtitle}` : ""}
+            </p>
+            <p className="mt-1 text-xs text-slate-600">
+              Horario configurado agora:{" "}
+              {health.merchantOperations.insideOpeningHours === null
+                ? "indisponivel"
+                : health.merchantOperations.insideOpeningHours
+                  ? "dentro do horario"
+                  : "fora do horario"}
+            </p>
+            {health.merchantOperations.validations.length > 0 ? (
+              <div className="mt-2 grid gap-1">
+                {health.merchantOperations.validations.map((validation) => (
+                  <p className="text-xs text-slate-600" key={`${validation.id}-${validation.code}`}>
+                    {validation.state}: {validation.title ?? validation.code ?? validation.id}
+                    {validation.subtitle ? ` - ${validation.subtitle}` : ""}
+                  </p>
+                ))}
+              </div>
+            ) : null}
+            {health.merchantOperations.openingHours.length > 0 ? (
+              <div className="mt-3 grid gap-1 text-xs text-slate-600 sm:grid-cols-2">
+                {health.merchantOperations.openingHours.map((shift) => (
+                  <p key={shift.id ?? `${shift.dayOfWeek}-${shift.start}`}>
+                    {dayLabel(shift.dayOfWeek)}: {shift.start.slice(0, 5)} - {shift.end.slice(0, 5)}
+                    {shift.activeNow ? " (agora)" : ""}
+                  </p>
+                ))}
+              </div>
+            ) : null}
+          </div>
+        ) : null}
         <div className="mt-3 grid gap-2 sm:grid-cols-2">
           {counters.map(([label, value]) => (
             <div className="rounded-md border border-slate-200 px-3 py-2" key={label}>
@@ -524,6 +625,24 @@ function IntegrationHealthPanel({ health }: { health: DeliveryIntegrationHealth 
       </div>
     </div>
   );
+}
+
+function authModeLabel(mode: "CENTRALIZED" | "DISTRIBUTED") {
+  return mode === "CENTRALIZED" ? "Centralizada" : "Distribuida";
+}
+
+function dayLabel(day: string) {
+  const labels: Record<string, string> = {
+    SUNDAY: "Domingo",
+    MONDAY: "Segunda",
+    TUESDAY: "Terca",
+    WEDNESDAY: "Quarta",
+    THURSDAY: "Quinta",
+    FRIDAY: "Sexta",
+    SATURDAY: "Sabado",
+  };
+
+  return labels[day] ?? day;
 }
 
 type DeliveryPollingHealth = NonNullable<DeliveryIntegrationHealth["polling"]>;

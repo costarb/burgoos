@@ -158,6 +158,7 @@ export interface DeliveryIntegrationPayload {
 }
 
 export interface DeliveryCredentialPayload {
+  authMode?: "CENTRALIZED" | "DISTRIBUTED";
   clientId: string;
   clientSecret: string;
   authorizationCode?: string | null;

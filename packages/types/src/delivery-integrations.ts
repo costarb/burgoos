@@ -68,6 +68,8 @@ export interface DeliveryIntegrationSummary {
 
 export interface DeliveryIntegrationDetail extends DeliveryIntegrationSummary {
   credentialStatus: DeliveryCredentialStatus | null;
+  credentialType: string | null;
+  authMode: "CENTRALIZED" | "DISTRIBUTED" | null;
   homologationStatus: string;
   lastValidationAt: string | null;
   createdAt: string;
@@ -103,6 +105,29 @@ export interface DeliveryIntegrationHealth {
   tokenExpiresAt: string | null;
   tokenExpiresInMinutes: number | null;
   tokenRequiresAttention: boolean;
+  merchantOperations: {
+    available: boolean;
+    state: string;
+    title: string | null;
+    subtitle: string | null;
+    insideOpeningHours: boolean | null;
+    checkedAt: string;
+    validations: Array<{
+      id: string | null;
+      state: string;
+      code: string | null;
+      title: string | null;
+      subtitle: string | null;
+    }>;
+    openingHours: Array<{
+      id: string | null;
+      dayOfWeek: string;
+      start: string;
+      end: string;
+      duration: number;
+      activeNow: boolean;
+    }>;
+  } | null;
   recentAudits: Array<{
     id: string;
     action: string;

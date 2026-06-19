@@ -8,7 +8,7 @@
 
 **Input**: User description: "Integrar plataformas de delivery, iniciando com o iFood, com configuracao por loja, tokens por tenant, captura de pedidos externos no fluxo interno de pedidos, aceite/recusa, evolucao de status ate entrega, comunicacao de workflow com cada plataforma e desenho desacoplado para futuras integracoes."
 
-## User Scenarios & Testing *(mandatory)*
+## User Scenarios & Testing _(mandatory)_
 
 ### User Story 1 - Configurar integracao iFood por loja (Priority: P1)
 
@@ -23,6 +23,8 @@ Um usuario autorizado da loja configura a integracao com o iFood informando as c
 1. **Given** uma loja sem integracao configurada, **When** um usuario autorizado salva credenciais validas do iFood, **Then** o sistema registra a configuracao como ativa para aquela loja e mostra a ultima validacao bem-sucedida.
 2. **Given** uma loja com integracao ativa, **When** um usuario autorizado desativa a integracao, **Then** o sistema para de capturar novos pedidos da plataforma para aquela loja e preserva o historico de configuracao.
 3. **Given** um usuario de outra loja, **When** ele tenta acessar a configuracao iFood da loja piloto, **Then** o acesso e negado.
+4. **Given** uma loja de teste iFood usando aplicacao centralizada, **When** o usuario seleciona autenticacao centralizada e informa client id/client secret, **Then** o sistema solicita `/oauth/token` com `grantType=client_credentials` e salva o access token retornado.
+5. **Given** uma loja usando aplicacao distribuida, **When** o usuario seleciona autenticacao distribuida, **Then** o sistema mantem o fluxo de user code, authorization code e refresh token.
 
 ---
 
@@ -124,7 +126,7 @@ Um operador ou administrador acompanha alteracoes, cancelamentos, disputas, falh
 - Troca ou rotacao de credenciais sem interromper pedidos ja em andamento.
 - Necessidade de reprocessar eventos historicos sem duplicar pedidos.
 
-## Requirements *(mandatory)*
+## Requirements _(mandatory)_
 
 ### Functional Requirements
 
@@ -167,6 +169,11 @@ Um operador ou administrador acompanha alteracoes, cancelamentos, disputas, falh
 - **FR-037**: System MUST apply privacy rules for imported customer data, avoiding exposure of sensitive fields in views, prints, or integrations where the platform does not allow them.
 - **FR-038**: System MUST expose iFood homologation readiness per store, including credential validity, merchant access, event processing, acknowledgment behavior, status updates, and required operational tests.
 - **FR-039**: System MUST monitor iFood merchant operational status and show whether the store is able to receive orders from the platform.
+- **FR-040**: System MUST allow choosing iFood authentication mode per credential setup: centralized client credentials or distributed authorization code.
+- **FR-041**: System MUST request iFood centralized tokens with `grantType=client_credentials`, `clientId`, and `clientSecret`.
+- **FR-042**: System MUST show iFood merchant availability from `/merchants/:merchantId/status`, including closed/error states such as disconnected app/PDV.
+- **FR-043**: System MUST show iFood opening hours from `/merchants/:merchantId/opening-hours` and indicate whether the current time is inside a configured shift.
+- **FR-044**: System MUST explain that iFood store availability depends on valid credentials, active polling/connectivity, and platform opening hours.
 
 ### Key Entities
 
@@ -184,7 +191,7 @@ Um operador ou administrador acompanha alteracoes, cancelamentos, disputas, falh
 - **Platform Dispute**: Post-order negotiation or dispute initiated by the platform/customer, with proposal, deadline, response, and final outcome.
 - **Integration Audit Record**: Immutable record of configuration changes, inbound processing, operator actions, and outbound synchronization results.
 
-## Success Criteria *(mandatory)*
+## Success Criteria _(mandatory)_
 
 ### Measurable Outcomes
 
@@ -208,6 +215,7 @@ Um operador ou administrador acompanha alteracoes, cancelamentos, disputas, falh
 - The existing internal order workflow remains the operational source of truth for preparation and delivery actions after a platform order is accepted.
 - Official iFood Developer documentation supplied as PDF was analyzed on 2026-06-15 and is summarized in `research.md`; direct portal access may still require browser authentication or Cloudflare validation.
 - The initial iFood release will use event polling because it is the documented baseline and is simpler to homologate; webhook support remains a planned extension for higher volume or certification needs.
+- iFood homologation/test stores may require centralized authentication with `client_credentials` because the distributed authorization flow can be blocked until the app is homologated in the platform.
 - Secrets are expected to be stored securely and rotated without deleting historical integration records.
 - Customer and order data imported from platforms must follow the same privacy and audit expectations as manually entered orders.
 - If the platform has a certification or homologation flow, production activation depends on completing that external approval.

@@ -340,6 +340,114 @@ export class IfoodClient implements DeliveryProviderAdapter {
     return response.json();
   }
 
+  async getMerchantStatus(input: {
+    accessToken: string;
+    merchantId: string;
+  }): Promise<IfoodMerchantOperationStatus[]> {
+    if (this.isMockMode()) {
+      return [
+        {
+          salesChannel: "ifood-app",
+          operation: "delivery",
+          available: true,
+          state: "OK",
+          title: "Loja aberta",
+          subtitle: "Ambiente mock conectado",
+          validations: [],
+          raw: { mock: true },
+        },
+      ];
+    }
+
+    const apiBaseUrl = this.requireApiBaseUrl();
+    const response = await fetch(`${apiBaseUrl}/merchants/${input.merchantId}/status`, {
+      headers: {
+        Authorization: `Bearer ${input.accessToken}`,
+      },
+    });
+
+    if (!response.ok) {
+      throw new Error(`iFood merchant status failed with status ${response.status}`);
+    }
+
+    const payload = (await response.json()) as unknown;
+    const statuses = Array.isArray(payload) ? payload : [payload];
+
+    return statuses.map((status) => {
+      const record = asRecord(status);
+      const message = asRecord(record.message);
+
+      return {
+        salesChannel: nullableString(record.salesChannel),
+        operation: nullableString(record.operation),
+        available: Boolean(record.available),
+        state: stringFrom(record.state, "UNKNOWN"),
+        title: nullableString(message.title),
+        subtitle: nullableString(message.subtitle),
+        validations: asArray(record.validations).map((validation) => {
+          const validationRecord = asRecord(validation);
+          const validationMessage = asRecord(validationRecord.message);
+          return {
+            id: nullableString(validationRecord.id),
+            state: stringFrom(validationRecord.state, "UNKNOWN"),
+            code: nullableString(validationRecord.code),
+            title: nullableString(validationMessage.title),
+            subtitle: nullableString(validationMessage.subtitle),
+          };
+        }),
+        raw: status,
+      };
+    });
+  }
+
+  async getOpeningHours(input: {
+    accessToken: string;
+    merchantId: string;
+  }): Promise<IfoodOpeningHours> {
+    if (this.isMockMode()) {
+      return {
+        storeId: input.merchantId,
+        shifts: [
+          {
+            id: "mock-friday",
+            dayOfWeek: "FRIDAY",
+            start: "00:00:00",
+            duration: 1439,
+          },
+        ],
+        raw: { mock: true },
+      };
+    }
+
+    const apiBaseUrl = this.requireApiBaseUrl();
+    const response = await fetch(`${apiBaseUrl}/merchants/${input.merchantId}/opening-hours`, {
+      headers: {
+        Authorization: `Bearer ${input.accessToken}`,
+      },
+    });
+
+    if (!response.ok) {
+      throw new Error(`iFood opening hours failed with status ${response.status}`);
+    }
+
+    const payload = (await response.json()) as unknown;
+    const record = asRecord(payload);
+
+    return {
+      storeId: nullableString(record.storeId),
+      shifts: asArray(record.shifts).map((shift) => {
+        const shiftRecord = asRecord(shift);
+        return {
+          id: nullableString(shiftRecord.id),
+          dayOfWeek: stringFrom(shiftRecord.dayOfWeek, "UNKNOWN"),
+          start: stringFrom(shiftRecord.start, "00:00:00"),
+          duration: Number(shiftRecord.duration ?? 0),
+        };
+      }),
+      raw: payload,
+    };
+  }
+
   private isMockMode() {
     return this.config.get<string>("IFOOD_MOCK_MODE") === "true";
   }
@@ -391,4 +499,32 @@ function nullableString(value: unknown): string | null {
 
 function asArray(value: unknown): unknown[] {
   return Array.isArray(value) ? value : [];
+}
+
+export interface IfoodMerchantOperationStatus {
+  salesChannel: string | null;
+  operation: string | null;
+  available: boolean;
+  state: string;
+  title: string | null;
+  subtitle: string | null;
+  validations: Array<{
+    id: string | null;
+    state: string;
+    code: string | null;
+    title: string | null;
+    subtitle: string | null;
+  }>;
+  raw: unknown;
+}
+
+export interface IfoodOpeningHours {
+  storeId: string | null;
+  shifts: Array<{
+    id: string | null;
+    dayOfWeek: string;
+    start: string;
+    duration: number;
+  }>;
+  raw: unknown;
 }

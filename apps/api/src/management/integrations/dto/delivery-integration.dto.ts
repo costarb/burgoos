@@ -1,5 +1,5 @@
 import { DeliveryProvider } from "@prisma/client";
-import { IsBoolean, IsEnum, IsOptional, IsString, IsUUID, MaxLength } from "class-validator";
+import { IsBoolean, IsEnum, IsIn, IsOptional, IsString, IsUUID, MaxLength } from "class-validator";
 
 export class DeliveryIntegrationDto {
   @IsEnum(DeliveryProvider)
@@ -47,6 +47,10 @@ export class DeliveryIntegrationUpdateDto {
 }
 
 export class DeliveryCredentialDto {
+  @IsOptional()
+  @IsIn(["CENTRALIZED", "DISTRIBUTED"])
+  authMode?: "CENTRALIZED" | "DISTRIBUTED";
+
   @IsString()
   clientId!: string;
 
