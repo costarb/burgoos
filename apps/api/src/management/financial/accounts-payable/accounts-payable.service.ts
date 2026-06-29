@@ -1,4 +1,4 @@
-import { BadRequestException, Injectable, NotFoundException } from "@nestjs/common";
+import { BadRequestException, Inject, Injectable, NotFoundException } from "@nestjs/common";
 import { FinancialAuditAction, Prisma } from "@prisma/client";
 import { AuthUser } from "../../../platform/auth/auth.types";
 import { PrismaService } from "../../../platform/database/prisma.service";
@@ -28,8 +28,8 @@ type PayableWithDetails = Prisma.PayableGetPayload<{ include: typeof payableIncl
 @Injectable()
 export class AccountsPayableService {
   constructor(
-    private readonly prisma: PrismaService,
-    private readonly auditService: FinancialAuditService
+    @Inject(PrismaService) private readonly prisma: PrismaService,
+    @Inject(FinancialAuditService) private readonly auditService: FinancialAuditService
   ) {}
 
   async list(tenantId: string, query: PayablesQueryDto) {
@@ -135,7 +135,8 @@ export class AccountsPayableService {
       const records = [];
 
       for (const occurrence of occurrences) {
-        const suffix = occurrences.length > 1 ? ` (${occurrence.sequence}/${occurrences.length})` : "";
+        const suffix =
+          occurrences.length > 1 ? ` (${occurrence.sequence}/${occurrences.length})` : "";
         const payable = await tx.payable.create({
           data: {
             tenantId: user.tenantId,
@@ -276,7 +277,10 @@ export class AccountsPayableService {
       await this.ensureFinancialAccount(user.tenantId, dto.financialAccountId, tx);
 
       const amount = toDecimal(dto.amount);
-      const remainingAmount = calculateRemainingAmount(current.expectedAmount, this.calculatePaidAmount(current));
+      const remainingAmount = calculateRemainingAmount(
+        current.expectedAmount,
+        this.calculatePaidAmount(current)
+      );
 
       if (amount.greaterThan(remainingAmount)) {
         throw new BadRequestException("Pagamento excede o saldo em aberto");
@@ -361,10 +365,18 @@ export class AccountsPayableService {
   }
 
   private buildWhere(tenantId: string, query: PayablesQueryDto): Prisma.PayableWhereInput {
+    const competenceRange = query.competenceMonth ? parseMonthRange(query.competenceMonth) : null;
+
     return {
       tenantId,
       categoryId: query.categoryId,
       supplierId: query.supplierId,
+      competenceDate: competenceRange
+        ? {
+            gte: competenceRange.start,
+            lt: competenceRange.end,
+          }
+        : undefined,
       dueDate: {
         gte: query.start ? parseDate(query.start) : undefined,
         lte: query.end ? endOfDay(parseDate(query.end)) : undefined,
@@ -390,7 +402,9 @@ export class AccountsPayableService {
   }
 
   private async ensureCategory(tenantId: string, categoryId: string) {
-    const category = await this.prisma.financialCategory.findFirst({ where: { id: categoryId, tenantId, active: true } });
+    const category = await this.prisma.financialCategory.findFirst({
+      where: { id: categoryId, tenantId, active: true },
+    });
 
     if (!category) {
       throw new BadRequestException("Categoria financeira invalida");
@@ -402,7 +416,9 @@ export class AccountsPayableService {
       return;
     }
 
-    const supplier = await this.prisma.supplier.findFirst({ where: { id: supplierId, tenantId, active: true } });
+    const supplier = await this.prisma.supplier.findFirst({
+      where: { id: supplierId, tenantId, active: true },
+    });
 
     if (!supplier) {
       throw new BadRequestException("Fornecedor invalido");
@@ -488,7 +504,11 @@ export class AccountsPayableService {
           accumulator.overdueCount += 1;
         }
 
-        if (item.status === "OPEN" || item.status === "PARTIALLY_PAID" || item.status === "OVERDUE") {
+        if (
+          item.status === "OPEN" ||
+          item.status === "PARTIALLY_PAID" ||
+          item.status === "OVERDUE"
+        ) {
           accumulator.openCount += 1;
         }
 
@@ -518,6 +538,18 @@ export class AccountsPayableService {
 function parseDate(value: string): Date {
   const [year, month, day] = value.slice(0, 10).split("-").map(Number);
   return new Date(year, month - 1, day);
+}
+
+function parseMonthRange(value: string): { start: Date; end: Date } {
+  if (!/^\d{4}-(0[1-9]|1[0-2])$/.test(value)) {
+    throw new BadRequestException("Mes de referencia invalido");
+  }
+
+  const [year, month] = value.split("-").map(Number);
+  return {
+    start: new Date(year, month - 1, 1),
+    end: new Date(year, month, 1),
+  };
 }
 
 function endOfDay(value: Date): Date {

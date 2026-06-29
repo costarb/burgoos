@@ -1,4 +1,14 @@
-import { Body, Controller, Get, Param, Patch, Post, Query, UseGuards } from "@nestjs/common";
+import {
+  Body,
+  Controller,
+  Get,
+  Inject,
+  Param,
+  Patch,
+  Post,
+  Query,
+  UseGuards,
+} from "@nestjs/common";
 import { ApiBearerAuth, ApiTags } from "@nestjs/swagger";
 import { PermissionGuard } from "../../../auth/guards/permission.guard";
 import { RequirePermission } from "../../../auth/guards/require-permission.decorator";
@@ -20,7 +30,9 @@ import { AccountsPayableService } from "./accounts-payable.service";
 @Controller("admin/financial/payables")
 @UseGuards(JwtAuthGuard, FinancialManagementRolesGuard, PermissionGuard)
 export class AccountsPayableController {
-  constructor(private readonly accountsPayableService: AccountsPayableService) {}
+  constructor(
+    @Inject(AccountsPayableService) private readonly accountsPayableService: AccountsPayableService
+  ) {}
 
   @Get()
   @RequirePermission("finance.view", "finance.manage")

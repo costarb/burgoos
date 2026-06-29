@@ -7,6 +7,7 @@ import {
   IsOptional,
   IsString,
   IsUUID,
+  Matches,
   MaxLength,
   Min,
   ValidateNested,
@@ -110,6 +111,11 @@ export class PayablesQueryDto {
   @IsOptional()
   @IsUUID()
   supplierId?: string;
+
+  @IsOptional()
+  @IsString()
+  @Matches(/^\d{4}-\d{2}$/)
+  competenceMonth?: string;
 }
 
 export class PayableCancellationDto {

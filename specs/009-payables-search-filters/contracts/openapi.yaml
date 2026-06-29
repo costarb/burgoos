@@ -1,0 +1,221 @@
+openapi: 3.0.3
+info:
+  title: Accounts Payable Search Filters
+  version: 0.1.0
+paths:
+  /api/admin/financial/payables:
+    get:
+      summary: Search accounts payable with category, supplier and reference month filters
+      tags:
+        - admin accounts payable
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: start
+          in: query
+          required: false
+          schema:
+            type: string
+            format: date
+          description: Due-date lower bound.
+        - name: end
+          in: query
+          required: false
+          schema:
+            type: string
+            format: date
+          description: Due-date upper bound.
+        - name: status
+          in: query
+          required: false
+          schema:
+            $ref: "#/components/schemas/PayableStatus"
+        - name: categoryId
+          in: query
+          required: false
+          schema:
+            type: string
+            format: uuid
+          description: Financial category identifier in the authenticated tenant.
+        - name: supplierId
+          in: query
+          required: false
+          schema:
+            type: string
+            format: uuid
+          description: Supplier identifier in the authenticated tenant.
+        - name: competenceMonth
+          in: query
+          required: false
+          schema:
+            type: string
+            pattern: "^\\d{4}-\\d{2}$"
+            example: "2026-06"
+          description: Reference month for payable competence, in YYYY-MM format.
+      responses:
+        "200":
+          description: Filtered payables and summary.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PayablesResponse"
+        "400":
+          description: Invalid query parameter.
+        "401":
+          description: Missing or invalid admin authentication.
+        "403":
+          description: User lacks finance permission.
+  /api/admin/financial/payables/options:
+    get:
+      summary: Get active options for accounts payable filters and forms
+      tags:
+        - admin accounts payable
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Active categories, accounts and suppliers scoped to the authenticated tenant.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PayableOptions"
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  schemas:
+    PayableStatus:
+      type: string
+      enum:
+        - OPEN
+        - OVERDUE
+        - PARTIALLY_PAID
+        - PAID
+        - CANCELLED
+    Payable:
+      type: object
+      required:
+        - id
+        - categoryId
+        - categoryName
+        - supplierId
+        - supplierName
+        - competenceDate
+        - dueDate
+        - expectedAmount
+        - paidAmount
+        - remainingAmount
+        - status
+      properties:
+        id:
+          type: string
+          format: uuid
+        categoryId:
+          type: string
+          format: uuid
+        categoryName:
+          type: string
+        supplierId:
+          type: string
+          format: uuid
+          nullable: true
+        supplierName:
+          type: string
+          nullable: true
+        competenceDate:
+          type: string
+          format: date
+          nullable: true
+        dueDate:
+          type: string
+          format: date
+        expectedAmount:
+          type: string
+        paidAmount:
+          type: string
+        remainingAmount:
+          type: string
+        status:
+          $ref: "#/components/schemas/PayableStatus"
+    PayablesSummary:
+      type: object
+      required:
+        - totalExpected
+        - totalPaid
+        - totalRemaining
+        - overdueAmount
+        - openCount
+        - overdueCount
+      properties:
+        totalExpected:
+          type: string
+        totalPaid:
+          type: string
+        totalRemaining:
+          type: string
+        overdueAmount:
+          type: string
+        openCount:
+          type: integer
+        overdueCount:
+          type: integer
+    PayablesResponse:
+      type: object
+      required:
+        - items
+        - summary
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/Payable"
+        summary:
+          $ref: "#/components/schemas/PayablesSummary"
+    OptionSummary:
+      type: object
+      required:
+        - id
+        - name
+        - active
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        active:
+          type: boolean
+    FinancialAccountOption:
+      allOf:
+        - $ref: "#/components/schemas/OptionSummary"
+        - type: object
+          properties:
+            paymentInstitution:
+              type: string
+              nullable: true
+            openingBalance:
+              type: string
+            openingBalanceAt:
+              type: string
+              format: date
+    PayableOptions:
+      type: object
+      required:
+        - categories
+        - accounts
+        - suppliers
+      properties:
+        categories:
+          type: array
+          items:
+            $ref: "#/components/schemas/OptionSummary"
+        accounts:
+          type: array
+          items:
+            $ref: "#/components/schemas/FinancialAccountOption"
+        suppliers:
+          type: array
+          items:
+            $ref: "#/components/schemas/OptionSummary"

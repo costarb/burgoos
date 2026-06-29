@@ -897,6 +897,15 @@ export interface PayablesResponse {
   summary: PayablesSummary;
 }
 
+export interface PayablesFilters {
+  start?: string;
+  end?: string;
+  status?: PayableStatus | string;
+  categoryId?: string;
+  supplierId?: string;
+  competenceMonth?: string;
+}
+
 export interface PayableOptions {
   categories: FinancialCategory[];
   accounts: FinancialAccount[];
