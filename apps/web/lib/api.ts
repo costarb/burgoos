@@ -32,6 +32,7 @@ import type {
   CashPosition,
   CashStatement,
   Payable,
+  PayablesFilters,
   PayableInput,
   PayableOptions,
   PayablePaymentInput,
@@ -1065,13 +1066,7 @@ export async function reverseCashMovement(
 }
 
 export async function getPayables(
-  filters: {
-    start?: string;
-    end?: string;
-    status?: string;
-    categoryId?: string;
-    supplierId?: string;
-  } = {}
+  filters: PayablesFilters = {}
 ): Promise<{ token: string; payables: PayablesResponse; options: PayableOptions }> {
   const token = await getAdminToken();
   const params = new URLSearchParams();

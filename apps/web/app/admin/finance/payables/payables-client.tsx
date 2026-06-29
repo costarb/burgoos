@@ -1,10 +1,11 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import React, { useMemo, useState } from "react";
 import type {
   FinancialAuditRecord,
   OperationState,
   Payable,
+  PayablesFilters,
   PayableInput,
   PayableOptions,
   PayablePaymentInput,
@@ -38,6 +39,15 @@ const statusLabels: Record<PayableStatus, string> = {
   CANCELLED: "Cancelada",
 };
 
+const emptyFilters: PayablesFilters = {
+  start: "",
+  end: "",
+  status: "",
+  categoryId: "",
+  supplierId: "",
+  competenceMonth: "",
+};
+
 export function PayablesClient({ token, initialPayables, options }: PayablesClientProps) {
   const [payables, setPayables] = useState(initialPayables);
   const [selectedPayable, setSelectedPayable] = useState<Payable | null>(null);
@@ -45,10 +55,13 @@ export function PayablesClient({ token, initialPayables, options }: PayablesClie
   const [auditRecords, setAuditRecords] = useState<FinancialAuditRecord[]>([]);
   const [operation, setOperation] = useState<OperationState>({ status: "idle" });
   const [busy, setBusy] = useState(false);
-  const [filters, setFilters] = useState({ start: "", end: "", status: "" });
+  const [filters, setFilters] = useState<PayablesFilters>(emptyFilters);
 
   const selectedPayableSnapshot = useMemo(
-    () => (selectedPayable ? payables.items.find((item) => item.id === selectedPayable.id) ?? selectedPayable : null),
+    () =>
+      selectedPayable
+        ? (payables.items.find((item) => item.id === selectedPayable.id) ?? selectedPayable)
+        : null,
     [payables.items, selectedPayable]
   );
 
@@ -93,7 +106,7 @@ export function PayablesClient({ token, initialPayables, options }: PayablesClie
   }
 
   async function clearFilters() {
-    const nextFilters = { start: "", end: "", status: "" };
+    const nextFilters = emptyFilters;
     setFilters(nextFilters);
     await run("Limpando filtros de contas a pagar.", async () => {
       await refresh(nextFilters);
@@ -153,12 +166,19 @@ export function PayablesClient({ token, initialPayables, options }: PayablesClie
           <p className="text-sm font-semibold uppercase text-tomato">Financeiro</p>
           <h1 className="mt-1 text-3xl font-semibold">Contas a pagar</h1>
         </div>
-        <a className="rounded-md border border-slate-300 px-4 py-2 text-sm font-semibold" href="/admin/reports/dre">
+        <a
+          className="rounded-md border border-slate-300 px-4 py-2 text-sm font-semibold"
+          href="/admin/reports/dre"
+        >
           Ver DRE
         </a>
       </div>
 
-      <OperationFeedback className="mt-4" onDismiss={() => setOperation({ status: "idle" })} state={operation} />
+      <OperationFeedback
+        className="mt-4"
+        onDismiss={() => setOperation({ status: "idle" })}
+        state={operation}
+      />
 
       {options.categories.length === 0 ? (
         <section className="mt-6 rounded-md border border-amber-200 bg-amber-50 p-4 text-sm text-amber-950">
@@ -189,7 +209,11 @@ export function PayablesClient({ token, initialPayables, options }: PayablesClie
         <section className="mt-6 rounded-md border border-slate-200 bg-white p-4 shadow-sm">
           <div className="flex items-center justify-between gap-3">
             <h2 className="text-lg font-semibold">Editar conta</h2>
-            <button className="text-sm font-semibold text-slate-600" onClick={() => setEditingPayable(null)} type="button">
+            <button
+              className="text-sm font-semibold text-slate-600"
+              onClick={() => setEditingPayable(null)}
+              type="button"
+            >
               Cancelar edicao
             </button>
           </div>
@@ -206,23 +230,27 @@ export function PayablesClient({ token, initialPayables, options }: PayablesClie
       ) : null}
 
       <section className="mt-6 rounded-md border border-slate-200 bg-white p-4 shadow-sm">
-        <div className="grid gap-3 md:grid-cols-[1fr_1fr_1fr_auto_auto]">
+        <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-[1fr_1fr_1fr_1fr_1fr_1fr_auto_auto]">
           <input
             className="rounded-md border border-slate-200 px-3 py-2 text-sm"
-            onChange={(event) => setFilters((current) => ({ ...current, start: event.target.value }))}
+            onChange={(event) =>
+              setFilters((current) => ({ ...current, start: event.target.value }))
+            }
             type="date"
-            value={filters.start}
+            value={filters.start ?? ""}
           />
           <input
             className="rounded-md border border-slate-200 px-3 py-2 text-sm"
             onChange={(event) => setFilters((current) => ({ ...current, end: event.target.value }))}
             type="date"
-            value={filters.end}
+            value={filters.end ?? ""}
           />
           <select
             className="rounded-md border border-slate-200 px-3 py-2 text-sm"
-            onChange={(event) => setFilters((current) => ({ ...current, status: event.target.value }))}
-            value={filters.status}
+            onChange={(event) =>
+              setFilters((current) => ({ ...current, status: event.target.value }))
+            }
+            value={filters.status ?? ""}
           >
             <option value="">Todos os status</option>
             {Object.entries(statusLabels).map(([status, label]) => (
@@ -231,6 +259,42 @@ export function PayablesClient({ token, initialPayables, options }: PayablesClie
               </option>
             ))}
           </select>
+          <select
+            className="rounded-md border border-slate-200 px-3 py-2 text-sm"
+            onChange={(event) =>
+              setFilters((current) => ({ ...current, categoryId: event.target.value }))
+            }
+            value={filters.categoryId ?? ""}
+          >
+            <option value="">Todas as categorias</option>
+            {options.categories.map((category) => (
+              <option key={category.id} value={category.id}>
+                {category.name}
+              </option>
+            ))}
+          </select>
+          <select
+            className="rounded-md border border-slate-200 px-3 py-2 text-sm"
+            onChange={(event) =>
+              setFilters((current) => ({ ...current, supplierId: event.target.value }))
+            }
+            value={filters.supplierId ?? ""}
+          >
+            <option value="">Todos os fornecedores</option>
+            {options.suppliers.map((supplier) => (
+              <option key={supplier.id} value={supplier.id}>
+                {supplier.name}
+              </option>
+            ))}
+          </select>
+          <input
+            className="rounded-md border border-slate-200 px-3 py-2 text-sm"
+            onChange={(event) =>
+              setFilters((current) => ({ ...current, competenceMonth: event.target.value }))
+            }
+            type="month"
+            value={filters.competenceMonth ?? ""}
+          />
           <button
             className="rounded-md bg-slate-950 px-4 py-2 text-sm font-semibold text-white disabled:opacity-60"
             disabled={busy}
@@ -316,9 +380,19 @@ export function PayablesClient({ token, initialPayables, options }: PayablesClie
   );
 }
 
-function MetricCard({ label, value, tone = "neutral" }: { label: string; value: string; tone?: "neutral" | "danger" }) {
+function MetricCard({
+  label,
+  value,
+  tone = "neutral",
+}: {
+  label: string;
+  value: string;
+  tone?: "neutral" | "danger";
+}) {
   return (
-    <div className={`rounded-md border p-4 ${tone === "danger" ? "border-red-100 bg-red-50" : "border-slate-200 bg-white"}`}>
+    <div
+      className={`rounded-md border p-4 ${tone === "danger" ? "border-red-100 bg-red-50" : "border-slate-200 bg-white"}`}
+    >
       <p className="text-sm font-medium text-slate-500">{label}</p>
       <p className="mt-1 text-2xl font-semibold text-slate-950">R$ {value}</p>
     </div>
@@ -342,5 +416,7 @@ function StatusBadge({ status }: { status: PayableStatus }) {
 }
 
 function formatDate(value: string): string {
-  return new Intl.DateTimeFormat("pt-BR", { timeZone: "UTC" }).format(new Date(`${value}T00:00:00.000Z`));
+  return new Intl.DateTimeFormat("pt-BR", { timeZone: "UTC" }).format(
+    new Date(`${value}T00:00:00.000Z`)
+  );
 }
