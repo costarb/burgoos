@@ -23,7 +23,7 @@ import {
   updatePayable,
 } from "../../../../lib/api";
 import { PayableDetailDialog } from "./payable-detail-dialog";
-import { PayableForm } from "./payable-form";
+import { PayableEditorDialog } from "./payable-editor-dialog";
 
 interface PayablesClientProps {
   token: string;
@@ -50,6 +50,7 @@ const emptyFilters: PayablesFilters = {
 
 export function PayablesClient({ token, initialPayables, options }: PayablesClientProps) {
   const [payables, setPayables] = useState(initialPayables);
+  const [creatingPayable, setCreatingPayable] = useState(false);
   const [selectedPayable, setSelectedPayable] = useState<Payable | null>(null);
   const [editingPayable, setEditingPayable] = useState<Payable | null>(null);
   const [auditRecords, setAuditRecords] = useState<FinancialAuditRecord[]>([]);
@@ -117,6 +118,7 @@ export function PayablesClient({ token, initialPayables, options }: PayablesClie
     await run("Criando conta a pagar.", async () => {
       await createPayable(token, payload);
       await refresh();
+      setCreatingPayable(false);
     });
   }
 
@@ -166,12 +168,22 @@ export function PayablesClient({ token, initialPayables, options }: PayablesClie
           <p className="text-sm font-semibold uppercase text-tomato">Financeiro</p>
           <h1 className="mt-1 text-3xl font-semibold">Contas a pagar</h1>
         </div>
-        <a
-          className="rounded-md border border-slate-300 px-4 py-2 text-sm font-semibold"
-          href="/admin/reports/dre"
-        >
-          Ver DRE
-        </a>
+        <div className="flex flex-wrap gap-2">
+          <button
+            className="rounded-md bg-slate-950 px-4 py-2 text-sm font-semibold text-white disabled:opacity-60"
+            disabled={busy || options.categories.length === 0}
+            onClick={() => setCreatingPayable(true)}
+            type="button"
+          >
+            Nova conta
+          </button>
+          <a
+            className="rounded-md border border-slate-300 px-4 py-2 text-sm font-semibold"
+            href="/admin/reports/dre"
+          >
+            Ver DRE
+          </a>
+        </div>
       </div>
 
       <OperationFeedback
@@ -194,42 +206,14 @@ export function PayablesClient({ token, initialPayables, options }: PayablesClie
       </section>
 
       <section className="mt-6 rounded-md border border-slate-200 bg-white p-4 shadow-sm">
-        <h2 className="text-lg font-semibold">Nova conta</h2>
-        <div className="mt-4">
-          <PayableForm
-            busy={busy}
-            categories={options.categories}
-            onSubmit={create}
-            suppliers={options.suppliers}
-          />
+        <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <h2 className="text-lg font-semibold">Consulta</h2>
+            <p className="text-sm text-slate-500">
+              Pesquise por vencimento, status, categoria, fornecedor e competencia.
+            </p>
+          </div>
         </div>
-      </section>
-
-      {editingPayable ? (
-        <section className="mt-6 rounded-md border border-slate-200 bg-white p-4 shadow-sm">
-          <div className="flex items-center justify-between gap-3">
-            <h2 className="text-lg font-semibold">Editar conta</h2>
-            <button
-              className="text-sm font-semibold text-slate-600"
-              onClick={() => setEditingPayable(null)}
-              type="button"
-            >
-              Cancelar edicao
-            </button>
-          </div>
-          <div className="mt-4">
-            <PayableForm
-              busy={busy}
-              categories={options.categories}
-              onSubmit={update}
-              payable={editingPayable}
-              suppliers={options.suppliers}
-            />
-          </div>
-        </section>
-      ) : null}
-
-      <section className="mt-6 rounded-md border border-slate-200 bg-white p-4 shadow-sm">
         <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-[1fr_1fr_1fr_1fr_1fr_1fr_auto_auto]">
           <input
             className="rounded-md border border-slate-200 px-3 py-2 text-sm"
@@ -368,6 +352,11 @@ export function PayablesClient({ token, initialPayables, options }: PayablesClie
         auditRecords={auditRecords}
         busy={busy}
         onCancel={cancel}
+        onEdit={(payable) => {
+          setSelectedPayable(null);
+          setAuditRecords([]);
+          setEditingPayable(payable);
+        }}
         onClose={() => {
           setSelectedPayable(null);
           setAuditRecords([]);
@@ -376,6 +365,27 @@ export function PayablesClient({ token, initialPayables, options }: PayablesClie
         onReversePayment={reversePayment}
         payable={selectedPayableSnapshot}
       />
+      {creatingPayable ? (
+        <PayableEditorDialog
+          busy={busy}
+          categories={options.categories}
+          mode="create"
+          onClose={() => setCreatingPayable(false)}
+          onSubmit={create}
+          suppliers={options.suppliers}
+        />
+      ) : null}
+      {editingPayable ? (
+        <PayableEditorDialog
+          busy={busy}
+          categories={options.categories}
+          mode="edit"
+          onClose={() => setEditingPayable(null)}
+          onSubmit={update}
+          payable={editingPayable}
+          suppliers={options.suppliers}
+        />
+      ) : null}
     </main>
   );
 }

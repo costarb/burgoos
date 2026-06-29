@@ -22,7 +22,7 @@
 - [ ] T002 [P] Create notification shared contract types in packages/types/src/notifications.ts
 - [ ] T003 [P] Create payable export DTO file in apps/api/src/management/financial/dto/payable-export.dto.ts
 - [ ] T004 [P] Create notification API DTO file in apps/api/src/management/notifications/dto/notification.dto.ts
-- [ ] T005 [P] Create reusable modal shell component in apps/web/components/admin/modal-shell.tsx
+- [X] T005 [P] Create reusable modal shell component in apps/web/components/admin/modal-shell.tsx
 - [ ] T006 [P] Create notification center button placeholder in apps/web/components/admin/notification-center-button.tsx
 
 ---
@@ -57,17 +57,17 @@
 
 ### Tests for User Story 1
 
-- [ ] T018 [P] [US1] Add web interaction tests for opening and closing new payable modal in apps/web/app/admin/finance/payables/payables-client.spec.tsx
-- [ ] T019 [P] [US1] Add web interaction test for submitting a valid new payable and refreshing summary in apps/web/app/admin/finance/payables/payables-client.spec.tsx
+- [X] T018 [P] [US1] Add web interaction tests for opening and closing new payable modal in apps/web/app/admin/finance/payables/payables-client.spec.tsx
+- [X] T019 [P] [US1] Add web interaction test for submitting a valid new payable and refreshing summary in apps/web/app/admin/finance/payables/payables-client.spec.tsx
 - [ ] T020 [P] [US1] Add form validation test for required fields inside modal in apps/web/app/admin/finance/payables/payable-form.spec.tsx
 
 ### Implementation for User Story 1
 
-- [ ] T021 [US1] Refactor PayableForm to support modal submit/cancel layout in apps/web/app/admin/finance/payables/payable-form.tsx
-- [ ] T022 [US1] Add new payable modal state and trigger button in apps/web/app/admin/finance/payables/payables-client.tsx
-- [ ] T023 [US1] Move inline new payable section into modal shell in apps/web/app/admin/finance/payables/payables-client.tsx
-- [ ] T024 [US1] Refresh payables and close new payable modal after successful create in apps/web/app/admin/finance/payables/payables-client.tsx
-- [ ] T025 [US1] Preserve validation feedback and pending state inside the new payable modal in apps/web/app/admin/finance/payables/payables-client.tsx
+- [X] T021 [US1] Refactor PayableForm to support modal submit/cancel layout in apps/web/app/admin/finance/payables/payable-form.tsx
+- [X] T022 [US1] Add new payable modal state and trigger button in apps/web/app/admin/finance/payables/payables-client.tsx
+- [X] T023 [US1] Move inline new payable section into modal shell in apps/web/app/admin/finance/payables/payables-client.tsx
+- [X] T024 [US1] Refresh payables and close new payable modal after successful create in apps/web/app/admin/finance/payables/payables-client.tsx
+- [X] T025 [US1] Preserve validation feedback and pending state inside the new payable modal in apps/web/app/admin/finance/payables/payables-client.tsx
 
 **Checkpoint**: User Story 1 is complete and testable independently.
 
@@ -82,14 +82,14 @@
 ### Tests for User Story 2
 
 - [ ] T026 [P] [US2] Add API summary regression tests for expected, paid, remaining and overdue totals in apps/api/src/management/financial/accounts-payable/accounts-payable.service.spec.ts
-- [ ] T027 [P] [US2] Add web tests for visible cards before and after filtering in apps/web/app/admin/finance/payables/payables-client.spec.tsx
-- [ ] T028 [P] [US2] Add web empty-state card test for zero summary values in apps/web/app/admin/finance/payables/payables-client.spec.tsx
+- [X] T027 [P] [US2] Add web tests for visible cards before and after filtering in apps/web/app/admin/finance/payables/payables-client.spec.tsx
+- [X] T028 [P] [US2] Add web empty-state card test for zero summary values in apps/web/app/admin/finance/payables/payables-client.spec.tsx
 
 ### Implementation for User Story 2
 
-- [ ] T029 [US2] Extract payables metric cards into stable component in apps/web/app/admin/finance/payables/payables-client.tsx
-- [ ] T030 [US2] Keep metric cards above query and list sections across loading and empty states in apps/web/app/admin/finance/payables/payables-client.tsx
-- [ ] T031 [US2] Ensure filter refresh updates payables summary without stale card values in apps/web/app/admin/finance/payables/payables-client.tsx
+- [X] T029 [US2] Extract payables metric cards into stable component in apps/web/app/admin/finance/payables/payables-client.tsx
+- [X] T030 [US2] Keep metric cards above query and list sections across loading and empty states in apps/web/app/admin/finance/payables/payables-client.tsx
+- [X] T031 [US2] Ensure filter refresh updates payables summary without stale card values in apps/web/app/admin/finance/payables/payables-client.tsx
 - [ ] T032 [US2] Align open/overdue count labels with summary values in apps/web/app/admin/finance/payables/payables-client.tsx
 
 **Checkpoint**: User Story 2 is complete and testable independently.
@@ -104,18 +104,18 @@
 
 ### Tests for User Story 3
 
-- [ ] T033 [P] [US3] Add web tests for visible consultation controls in apps/web/app/admin/finance/payables/payables-client.spec.tsx
-- [ ] T034 [P] [US3] Add web tests for opening edit modal from list and detail in apps/web/app/admin/finance/payables/payables-client.spec.tsx
-- [ ] T035 [P] [US3] Add web test for saving edit and refreshing list/detail/cards in apps/web/app/admin/finance/payables/payables-client.spec.tsx
+- [X] T033 [P] [US3] Add web tests for visible consultation controls in apps/web/app/admin/finance/payables/payables-client.spec.tsx
+- [X] T034 [P] [US3] Add web tests for opening edit modal from list and detail in apps/web/app/admin/finance/payables/payables-client.spec.tsx
+- [X] T035 [P] [US3] Add web test for saving edit and refreshing list/detail/cards in apps/web/app/admin/finance/payables/payables-client.spec.tsx
 
 ### Implementation for User Story 3
 
-- [ ] T036 [US3] Create payable editor dialog wrapper in apps/web/app/admin/finance/payables/payable-editor-dialog.tsx
-- [ ] T037 [US3] Replace inline edit section with editor dialog state in apps/web/app/admin/finance/payables/payables-client.tsx
-- [ ] T038 [US3] Make consultation/filter actions visually persistent and accessible in apps/web/app/admin/finance/payables/payables-client.tsx
-- [ ] T039 [US3] Add edit action from payable details dialog in apps/web/app/admin/finance/payables/payable-detail-dialog.tsx
-- [ ] T040 [US3] Refresh selected payable snapshot after edit completion in apps/web/app/admin/finance/payables/payables-client.tsx
-- [ ] T041 [US3] Add unsaved-change protection for create/edit modal close attempts in apps/web/app/admin/finance/payables/payable-editor-dialog.tsx
+- [X] T036 [US3] Create payable editor dialog wrapper in apps/web/app/admin/finance/payables/payable-editor-dialog.tsx
+- [X] T037 [US3] Replace inline edit section with editor dialog state in apps/web/app/admin/finance/payables/payables-client.tsx
+- [X] T038 [US3] Make consultation/filter actions visually persistent and accessible in apps/web/app/admin/finance/payables/payables-client.tsx
+- [X] T039 [US3] Add edit action from payable details dialog in apps/web/app/admin/finance/payables/payable-detail-dialog.tsx
+- [X] T040 [US3] Refresh selected payable snapshot after edit completion in apps/web/app/admin/finance/payables/payables-client.tsx
+- [X] T041 [US3] Add unsaved-change protection for create/edit modal close attempts in apps/web/app/admin/finance/payables/payable-editor-dialog.tsx
 
 **Checkpoint**: User Story 3 is complete and testable independently.
 

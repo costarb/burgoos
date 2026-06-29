@@ -1,8 +1,8 @@
 import React, { act } from "react";
 import { createRoot, Root } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import type { Payable, PayableOptions, PayablesResponse } from "@burgoos/types";
-import { getPayables } from "../../../../lib/api";
+import type { Payable, PayableInput, PayableOptions, PayablesResponse } from "@burgoos/types";
+import { createPayable, getPayables, updatePayable } from "../../../../lib/api";
 import { PayablesClient } from "./payables-client";
 
 vi.mock("../../../../lib/api", () => ({
@@ -15,15 +15,67 @@ vi.mock("../../../../lib/api", () => ({
   updatePayable: vi.fn(),
 }));
 
+const expectedFormPayload: PayableInput = {
+  categoryId: "category-food",
+  supplierId: "supplier-market",
+  description: "Conta mock",
+  competenceDate: "2026-06-01",
+  dueDate: "2026-06-20",
+  expectedAmount: 120,
+  recurrence: null,
+};
+
 vi.mock("./payable-form", () => ({
-  PayableForm: () => <div data-testid="payable-form" />,
+  PayableForm: ({
+    onSubmit,
+    payable,
+  }: {
+    onSubmit: (payload: PayableInput) => Promise<void>;
+    payable?: Payable | null;
+  }) => (
+    <button
+      data-testid="payable-form-submit"
+      onClick={() => {
+        void onSubmit({
+          categoryId: "category-food",
+          supplierId: "supplier-market",
+          description: "Conta mock",
+          competenceDate: "2026-06-01",
+          dueDate: "2026-06-20",
+          expectedAmount: 120,
+          recurrence: null,
+        });
+      }}
+      type="button"
+    >
+      {payable ? "Salvar mock" : "Criar mock"}
+    </button>
+  ),
 }));
 
 vi.mock("./payable-detail-dialog", () => ({
-  PayableDetailDialog: () => <div data-testid="payable-detail-dialog" />,
+  PayableDetailDialog: ({
+    payable,
+    onEdit,
+  }: {
+    payable: Payable | null;
+    onEdit?: (payable: Payable) => void;
+  }) =>
+    payable ? (
+      <button
+        onClick={() => {
+          onEdit?.(payable);
+        }}
+        type="button"
+      >
+        Editar conta
+      </button>
+    ) : null,
 }));
 
 const getPayablesMock = vi.mocked(getPayables);
+const createPayableMock = vi.mocked(createPayable);
+const updatePayableMock = vi.mocked(updatePayable);
 
 describe("PayablesClient filters", () => {
   let container: HTMLDivElement;
@@ -37,6 +89,10 @@ describe("PayablesClient filters", () => {
     document.body.appendChild(container);
     root = createRoot(container);
     getPayablesMock.mockReset();
+    createPayableMock.mockReset();
+    updatePayableMock.mockReset();
+    createPayableMock.mockResolvedValue(response([payable()]));
+    updatePayableMock.mockResolvedValue(payable({ description: "Conta editada" }));
   });
 
   afterEach(() => {
@@ -49,7 +105,14 @@ describe("PayablesClient filters", () => {
   it("submits category filter and preserves the selected value on empty results", async () => {
     getPayablesMock.mockResolvedValue({
       token: "token",
-      payables: response([]),
+      payables: response([], {
+        totalExpected: "0.00",
+        totalPaid: "0.00",
+        totalRemaining: "0.00",
+        overdueAmount: "0.00",
+        openCount: 0,
+        overdueCount: 0,
+      }),
       options,
     });
 
@@ -63,7 +126,107 @@ describe("PayablesClient filters", () => {
       })
     );
     expect(container.textContent).toContain("Nenhuma conta a pagar encontrada.");
+    expect(container.textContent).toContain("R$ 0.00");
     expect(selectByOption("Todas as categorias").value).toBe("category-food");
+  });
+
+  it("keeps metric cards and consultation area visible", async () => {
+    await renderClient();
+
+    expect(container.textContent).toContain("Previsto");
+    expect(container.textContent).toContain("Pago");
+    expect(container.textContent).toContain("Em aberto");
+    expect(container.textContent).toContain("Vencido");
+    expect(container.textContent).toContain("Consulta");
+  });
+
+  it("shows zero metric cards when the current query has no values", async () => {
+    await act(async () => {
+      root.render(
+        <PayablesClient
+          initialPayables={response([], {
+            totalExpected: "0.00",
+            totalPaid: "0.00",
+            totalRemaining: "0.00",
+            overdueAmount: "0.00",
+            openCount: 0,
+            overdueCount: 0,
+          })}
+          options={options}
+          token="token"
+        />
+      );
+    });
+
+    expect(container.textContent).toContain("Previsto");
+    expect(container.textContent).toContain("Pago");
+    expect(container.textContent).toContain("Em aberto");
+    expect(container.textContent).toContain("Vencido");
+    expect(container.textContent).toContain("R$ 0.00");
+  });
+
+  it("opens new payable in a modal and submits without leaving the page", async () => {
+    getPayablesMock.mockResolvedValue({
+      token: "token",
+      payables: response([payable({ description: "Conta mock" })]),
+      options,
+    });
+
+    await renderClient();
+    await clickButton("Nova conta");
+
+    expect(container.querySelector('[role="dialog"]')?.textContent).toContain("Nova conta a pagar");
+
+    await clickButton("Criar mock");
+
+    expect(createPayableMock).toHaveBeenCalledWith("token", expectedFormPayload);
+    expect(getPayablesMock).toHaveBeenCalledWith({
+      start: "",
+      end: "",
+      status: "",
+      categoryId: "",
+      supplierId: "",
+      competenceMonth: "",
+    });
+    expect(container.querySelector('[role="dialog"]')).toBeNull();
+  });
+
+  it("opens edit in a modal from the list and submits the update", async () => {
+    getPayablesMock.mockResolvedValue({
+      token: "token",
+      payables: response([payable({ description: "Conta editada" })]),
+      options,
+    });
+
+    await renderClient();
+    await clickButton("Editar");
+
+    expect(container.querySelector('[role="dialog"]')?.textContent).toContain(
+      "Editar conta a pagar"
+    );
+
+    await clickButton("Salvar mock");
+
+    expect(updatePayableMock).toHaveBeenCalledWith("token", "payable-1", expectedFormPayload);
+    expect(getPayablesMock).toHaveBeenCalledWith({
+      start: "",
+      end: "",
+      status: "",
+      categoryId: "",
+      supplierId: "",
+      competenceMonth: "",
+    });
+    expect(container.querySelector('[role="dialog"]')).toBeNull();
+  });
+
+  it("opens edit in a modal from the detail dialog", async () => {
+    await renderClient();
+    await clickButton("Detalhes");
+    await clickButton("Editar conta");
+
+    expect(container.querySelector('[role="dialog"]')?.textContent).toContain(
+      "Editar conta a pagar"
+    );
   });
 
   it("submits and clears supplier filter", async () => {
@@ -245,17 +408,20 @@ const options: PayableOptions = {
   ],
 };
 
-function response(items: Payable[]): PayablesResponse {
+function response(
+  items: Payable[],
+  summary: PayablesResponse["summary"] = {
+    totalExpected: "120.00",
+    totalPaid: "0.00",
+    totalRemaining: "120.00",
+    overdueAmount: "0.00",
+    openCount: items.length,
+    overdueCount: 0,
+  }
+): PayablesResponse {
   return {
     items,
-    summary: {
-      totalExpected: "120.00",
-      totalPaid: "0.00",
-      totalRemaining: "120.00",
-      overdueAmount: "0.00",
-      openCount: items.length,
-      overdueCount: 0,
-    },
+    summary,
   };
 }
 
