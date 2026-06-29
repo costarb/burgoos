@@ -1,0 +1,399 @@
+openapi: 3.0.3
+info:
+  title: Payables Workflow Redesign Contract
+  version: 0.1.0
+  description: Admin API contract for asynchronous accounts payable exports and notification center.
+servers:
+  - url: /api
+security:
+  - bearerAuth: []
+paths:
+  /admin/financial/payables:
+    get:
+      summary: List accounts payable with summary cards data
+      tags: [Accounts Payable]
+      parameters:
+        - $ref: "#/components/parameters/PayablesStart"
+        - $ref: "#/components/parameters/PayablesEnd"
+        - $ref: "#/components/parameters/PayablesStatus"
+        - $ref: "#/components/parameters/PayablesCategoryId"
+        - $ref: "#/components/parameters/PayablesSupplierId"
+        - $ref: "#/components/parameters/PayablesCompetenceMonth"
+      responses:
+        "200":
+          description: Payables and summary for the current query
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PayablesResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+  /admin/financial/payables/exports:
+    post:
+      summary: Request an asynchronous accounts payable export
+      tags: [Accounts Payable Exports]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreatePayableExportRequest"
+      responses:
+        "202":
+          description: Export job accepted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PayableExportJob"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+  /admin/financial/payables/exports/{exportId}:
+    get:
+      summary: Get export job status
+      tags: [Accounts Payable Exports]
+      parameters:
+        - name: exportId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Export job status
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PayableExportJob"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+  /admin/financial/payables/exports/{exportId}/download:
+    get:
+      summary: Download a completed accounts payable export
+      tags: [Accounts Payable Exports]
+      parameters:
+        - name: exportId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Generated export file
+          content:
+            text/csv:
+              schema:
+                type: string
+                format: binary
+            application/pdf:
+              schema:
+                type: string
+                format: binary
+            application/vnd.openxmlformats-officedocument.spreadsheetml.sheet:
+              schema:
+                type: string
+                format: binary
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          description: Export is not ready for download
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /admin/notifications:
+    get:
+      summary: List current user's notifications
+      tags: [Notifications]
+      parameters:
+        - name: status
+          in: query
+          required: false
+          schema:
+            $ref: "#/components/schemas/OperationalNotificationStatus"
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+      responses:
+        "200":
+          description: Notification center state
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/NotificationCenterState"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+  /admin/notifications/{notificationId}/read:
+    post:
+      summary: Mark a notification as read
+      tags: [Notifications]
+      parameters:
+        - name: notificationId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Updated notification
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OperationalNotification"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  parameters:
+    PayablesStart:
+      name: start
+      in: query
+      required: false
+      schema:
+        type: string
+        format: date
+    PayablesEnd:
+      name: end
+      in: query
+      required: false
+      schema:
+        type: string
+        format: date
+    PayablesStatus:
+      name: status
+      in: query
+      required: false
+      schema:
+        $ref: "#/components/schemas/PayableStatus"
+    PayablesCategoryId:
+      name: categoryId
+      in: query
+      required: false
+      schema:
+        type: string
+        format: uuid
+    PayablesSupplierId:
+      name: supplierId
+      in: query
+      required: false
+      schema:
+        type: string
+        format: uuid
+    PayablesCompetenceMonth:
+      name: competenceMonth
+      in: query
+      required: false
+      schema:
+        type: string
+        pattern: "^\\d{4}-\\d{2}$"
+  responses:
+    BadRequest:
+      description: Invalid request
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+    Unauthorized:
+      description: Authentication required
+    Forbidden:
+      description: User does not have permission for this action
+    NotFound:
+      description: Resource not found
+  schemas:
+    PayableStatus:
+      type: string
+      enum: [OPEN, OVERDUE, PARTIALLY_PAID, PAID, CANCELLED]
+    PayableExportFormat:
+      type: string
+      enum: [CSV, PDF, XLSX]
+    PayableExportStatus:
+      type: string
+      enum: [PENDING, PROCESSING, COMPLETED, FAILED, EXPIRED]
+    OperationalNotificationStatus:
+      type: string
+      enum: [UNREAD, READ, ARCHIVED]
+    OperationalNotificationSeverity:
+      type: string
+      enum: [INFO, SUCCESS, WARNING, ERROR]
+    PayablesFilters:
+      type: object
+      properties:
+        start:
+          type: string
+          format: date
+        end:
+          type: string
+          format: date
+        status:
+          $ref: "#/components/schemas/PayableStatus"
+        categoryId:
+          type: string
+          format: uuid
+        supplierId:
+          type: string
+          format: uuid
+        competenceMonth:
+          type: string
+          pattern: "^\\d{4}-\\d{2}$"
+    CreatePayableExportRequest:
+      type: object
+      required: [format, filters]
+      properties:
+        format:
+          $ref: "#/components/schemas/PayableExportFormat"
+        filters:
+          $ref: "#/components/schemas/PayablesFilters"
+    PayableExportJob:
+      type: object
+      required: [id, format, status, filtersSnapshot, requestedAt]
+      properties:
+        id:
+          type: string
+          format: uuid
+        format:
+          $ref: "#/components/schemas/PayableExportFormat"
+        status:
+          $ref: "#/components/schemas/PayableExportStatus"
+        filtersSnapshot:
+          $ref: "#/components/schemas/PayablesFilters"
+        requestedAt:
+          type: string
+          format: date-time
+        startedAt:
+          type: string
+          format: date-time
+          nullable: true
+        completedAt:
+          type: string
+          format: date-time
+          nullable: true
+        failedAt:
+          type: string
+          format: date-time
+          nullable: true
+        errorMessage:
+          type: string
+          nullable: true
+        fileName:
+          type: string
+          nullable: true
+        fileMimeType:
+          type: string
+          nullable: true
+        fileSizeBytes:
+          type: integer
+          nullable: true
+        downloadUrl:
+          type: string
+          nullable: true
+    OperationalNotification:
+      type: object
+      required: [id, type, status, severity, title, message, createdAt]
+      properties:
+        id:
+          type: string
+          format: uuid
+        type:
+          type: string
+        status:
+          $ref: "#/components/schemas/OperationalNotificationStatus"
+        severity:
+          $ref: "#/components/schemas/OperationalNotificationSeverity"
+        title:
+          type: string
+        message:
+          type: string
+        actionLabel:
+          type: string
+          nullable: true
+        actionUrl:
+          type: string
+          nullable: true
+        relatedEntityType:
+          type: string
+          nullable: true
+        relatedEntityId:
+          type: string
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+        readAt:
+          type: string
+          format: date-time
+          nullable: true
+    NotificationCenterState:
+      type: object
+      required: [unreadCount, items]
+      properties:
+        unreadCount:
+          type: integer
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/OperationalNotification"
+    Payable:
+      type: object
+      description: Existing payable response shape.
+    PayablesSummary:
+      type: object
+      required: [totalExpected, totalPaid, totalRemaining, overdueAmount, openCount, overdueCount]
+      properties:
+        totalExpected:
+          type: string
+        totalPaid:
+          type: string
+        totalRemaining:
+          type: string
+        overdueAmount:
+          type: string
+        openCount:
+          type: integer
+        overdueCount:
+          type: integer
+    PayablesResponse:
+      type: object
+      required: [items, summary]
+      properties:
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/Payable"
+        summary:
+          $ref: "#/components/schemas/PayablesSummary"
+    ErrorResponse:
+      type: object
+      properties:
+        message:
+          type: string
