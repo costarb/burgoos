@@ -121,6 +121,7 @@ Como usuario financeiro, quero acessar um centro de notificacoes para acompanhar
 - **FR-014**: O sistema MUST notificar o usuario quando uma exportacao for concluida com sucesso.
 - **FR-015**: O sistema MUST notificar o usuario quando uma exportacao falhar.
 - **FR-016**: O sistema MUST permitir que o usuario acesse o arquivo ou resultado de uma exportacao concluida a partir da notificacao.
+- **FR-016a**: O sistema MUST estruturar controles, contratos e processamento de exportacao de forma reutilizavel por outras telas administrativas, mantendo contas a pagar como primeiro contexto consumidor.
 - **FR-017**: O sistema MUST disponibilizar um centro de notificacoes para consultar notificacoes operacionais.
 - **FR-018**: O centro de notificacoes MUST permitir diferenciar notificacoes lidas e nao lidas.
 - **FR-019**: O centro de notificacoes MUST exibir pelo menos status, mensagem, data da ocorrencia e acao disponivel quando aplicavel.
@@ -133,7 +134,7 @@ Como usuario financeiro, quero acessar um centro de notificacoes para acompanhar
 - **Conta a pagar**: Compromisso financeiro registrado, com dados de fornecedor, categoria, competencia, vencimento, valor, pagamento e situacao.
 - **Indicador financeiro**: Resumo numerico ou monetario de contas em uma situacao relevante, incluindo Previsto, Pago, Em aberto e Vencido.
 - **Consulta de contas a pagar**: Conjunto de filtros e criterios usados para listar, analisar e exportar contas.
-- **Solicitacao de exportacao**: Pedido feito pelo usuario para gerar um arquivo da consulta em um formato escolhido, com status de acompanhamento.
+- **Solicitacao de exportacao**: Pedido feito pelo usuario para gerar um arquivo da consulta em um formato escolhido, com status de acompanhamento e contexto de origem reutilizavel por outras telas.
 - **Notificacao operacional**: Mensagem direcionada ao usuario sobre eventos relevantes, como exportacao concluida ou falha.
 - **Centro de notificacoes**: Area onde o usuario acompanha notificacoes, status, leitura e acoes relacionadas.
 
@@ -155,6 +156,7 @@ Como usuario financeiro, quero acessar um centro de notificacoes para acompanhar
 - A tela de contas a pagar ja possui lista, filtros, detalhe e informacoes suficientes para inclusao e edicao de contas.
 - Os cards Previsto, Pago, Em aberto e Vencido representam agregacoes da consulta atual, nao necessariamente de toda a base historica.
 - O centro de notificacoes pode ser reutilizado futuramente por outras rotinas, mas esta feature exige pelo menos suporte as notificacoes de exportacao.
+- A base de exportacao deve nascer reutilizavel para outros contextos administrativos, ainda que esta entrega implemente apenas o contexto de contas a pagar.
 - O usuario autenticado ja possui regras de permissao que definem se pode visualizar, incluir, editar ou exportar contas a pagar.
 - Exportacoes devem considerar os filtros aplicados no momento da solicitacao, mesmo que o usuario altere a consulta depois.
 - A feature nao altera regras financeiras de pagamento, baixa, cancelamento, auditoria ou conciliacao; ela repagina o fluxo de uso da tela.

@@ -18,9 +18,10 @@
 
 **Purpose**: Prepare shared contracts and project structure needed by the feature.
 
-- [ ] T001 Update shared payable export and notification type exports in packages/types/src/index.ts
+- [ ] T001 Update shared generic export and notification type exports in packages/types/src/index.ts
+- [ ] T001a [P] Create reusable export shared contract types in packages/types/src/exports.ts
 - [ ] T002 [P] Create notification shared contract types in packages/types/src/notifications.ts
-- [ ] T003 [P] Create payable export DTO file in apps/api/src/management/financial/dto/payable-export.dto.ts
+- [ ] T003 [P] Create generic export job DTO file in apps/api/src/management/exports/dto/export-job.dto.ts
 - [ ] T004 [P] Create notification API DTO file in apps/api/src/management/notifications/dto/notification.dto.ts
 - [X] T005 [P] Create reusable modal shell component in apps/web/components/admin/modal-shell.tsx
 - [ ] T006 [P] Create notification center button placeholder in apps/web/components/admin/notification-center-button.tsx
@@ -29,17 +30,19 @@
 
 ## Phase 2: Foundational (Blocking Prerequisites)
 
-**Purpose**: Add persistent export job and notification infrastructure that later stories can use.
+**Purpose**: Add persistent reusable export job and notification infrastructure that later stories can use.
 
 **Critical**: No export or notification user story can be completed until this phase is done.
 
-- [ ] T007 Add PayableExportJob and OperationalNotification models/enums to packages/database/prisma/schema.prisma
+- [ ] T007 Add generic ExportJob and OperationalNotification models/enums to packages/database/prisma/schema.prisma
 - [ ] T008 Create Prisma migration for export jobs and operational notifications in packages/database/prisma/migrations/
 - [ ] T009 [P] Add notification service tests for tenant/user scoping and read state in apps/api/src/management/notifications/notifications.service.spec.ts
 - [ ] T010 Implement notification persistence and read operations in apps/api/src/management/notifications/notifications.service.ts
 - [ ] T011 Implement notification controller endpoints in apps/api/src/management/notifications/notifications.controller.ts
 - [ ] T012 Register notification module/providers in apps/api/src/management/management.module.ts
-- [ ] T013 [P] Add API client helpers for notifications and payable export jobs in apps/web/lib/api.ts
+- [ ] T013 [P] Add API client helpers for notifications and generic export jobs in apps/web/lib/api.ts
+- [ ] T013a [P] Add reusable async export menu tests in apps/web/components/admin/async-export-menu.spec.tsx
+- [ ] T013b [P] Implement reusable async export menu component in apps/web/components/admin/async-export-menu.tsx
 - [ ] T014 [P] Add shared notification UI tests in apps/web/components/admin/notification-center-button.spec.tsx
 - [ ] T015 Implement notification center button unread/read behavior in apps/web/components/admin/notification-center-button.tsx
 - [ ] T016 Add notification center route shell in apps/web/app/admin/notifications/page.tsx
@@ -129,22 +132,24 @@
 
 ### Tests for User Story 4
 
-- [ ] T042 [P] [US4] Add export job service tests for accepted job, filter snapshot and tenant isolation in apps/api/src/management/financial/accounts-payable/accounts-payable-export.service.spec.ts
-- [ ] T043 [P] [US4] Add export worker tests for CSV, PDF and XLSX generation outcomes in apps/api/src/management/financial/accounts-payable/accounts-payable-export.worker.spec.ts
-- [ ] T044 [P] [US4] Add export controller integration tests for request, status and download permissions in apps/api/src/test/accounts-payable-export.integration.spec.ts
-- [ ] T045 [P] [US4] Add web tests for async export request and nonblocking UI in apps/web/app/admin/finance/payables/payables-client.spec.tsx
+- [ ] T042 [P] [US4] Add generic export job service tests for accepted job, filter snapshot, context dispatch and tenant isolation in apps/api/src/management/exports/export-job.service.spec.ts
+- [ ] T043 [P] [US4] Add generic export worker tests for CSV, PDF and XLSX generation outcomes in apps/api/src/management/exports/export-job.worker.spec.ts
+- [ ] T044 [P] [US4] Add export controller integration tests for request, status and download permissions in apps/api/src/test/export-job.integration.spec.ts
+- [ ] T045 [P] [US4] Add web tests for reusable async export menu request and nonblocking UI in apps/web/app/admin/finance/payables/payables-client.spec.tsx
 
 ### Implementation for User Story 4
 
-- [ ] T046 [US4] Implement export request DTO validation in apps/api/src/management/financial/dto/payable-export.dto.ts
-- [ ] T047 [US4] Implement payable export job creation and status lookup in apps/api/src/management/financial/accounts-payable/accounts-payable-export.service.ts
-- [ ] T048 [US4] Implement CSV/PDF/XLSX file generation worker in apps/api/src/management/financial/accounts-payable/accounts-payable-export.worker.ts
-- [ ] T049 [US4] Add export endpoints to accounts payable controller in apps/api/src/management/financial/accounts-payable/accounts-payable.controller.ts
-- [ ] T050 [US4] Add local export file storage and download handling in apps/api/src/management/financial/accounts-payable/accounts-payable-export.service.ts
-- [ ] T051 [US4] Emit success and failure notifications from export processing in apps/api/src/management/financial/accounts-payable/accounts-payable-export.worker.ts
-- [ ] T052 [US4] Add export API client helpers in apps/web/lib/api.ts
-- [ ] T053 [US4] Add CSV/PDF/XLSX export controls to payables page in apps/web/app/admin/finance/payables/payables-client.tsx
-- [ ] T054 [US4] Show immediate accepted/pending feedback after export request in apps/web/app/admin/finance/payables/payables-client.tsx
+- [ ] T046 [US4] Implement generic export request DTO validation in apps/api/src/management/exports/dto/export-job.dto.ts
+- [ ] T047 [US4] Implement generic export job creation and status lookup in apps/api/src/management/exports/export-job.service.ts
+- [ ] T048 [US4] Implement reusable CSV/PDF/XLSX file generation worker in apps/api/src/management/exports/export-job.worker.ts
+- [ ] T049 [US4] Add generic export endpoints in apps/api/src/management/exports/export-job.controller.ts
+- [ ] T050 [US4] Add local export file storage and download handling in apps/api/src/management/exports/export-job.service.ts
+- [ ] T051 [US4] Emit success and failure notifications from generic export processing in apps/api/src/management/exports/export-job.worker.ts
+- [ ] T052 [US4] Implement payables export provider in apps/api/src/management/exports/providers/payables-export.provider.ts
+- [ ] T053 [US4] Register payables export provider in apps/api/src/management/exports/export-provider.registry.ts
+- [ ] T054 [US4] Add generic export API client helpers in apps/web/lib/api.ts
+- [ ] T054a [US4] Add reusable CSV/PDF/XLSX export controls to payables page in apps/web/app/admin/finance/payables/payables-client.tsx
+- [ ] T054b [US4] Show immediate accepted/pending feedback after export request in apps/web/app/admin/finance/payables/payables-client.tsx
 
 **Checkpoint**: User Story 4 is complete and testable independently.
 
@@ -179,8 +184,8 @@
 
 **Purpose**: Hardening, documentation and validation across all stories.
 
-- [ ] T064 [P] Update OpenAPI documentation for implemented export and notification endpoints in apps/api/src/management/financial/accounts-payable/accounts-payable.controller.ts
-- [ ] T065 [P] Update shared contracts for export and notification responses in packages/types/src/index.ts
+- [ ] T064 [P] Update OpenAPI documentation for implemented generic export and notification endpoints in apps/api/src/management/exports/export-job.controller.ts
+- [ ] T065 [P] Update shared contracts for reusable export and notification responses in packages/types/src/index.ts
 - [ ] T066 [P] Add permission catalog entries if export/notification permissions need explicit keys in apps/api/src/management/access/permissions/permission-catalog.ts
 - [ ] T067 Run Prisma format/generate after schema changes using packages/database/prisma/schema.prisma
 - [ ] T068 Run API tests for financial and notification flows using apps/api/src/management/financial/accounts-payable/accounts-payable.service.spec.ts
@@ -214,7 +219,7 @@
 - T002-T006 can run in parallel.
 - T009, T013 and T014 can run in parallel after T007/T008 are planned.
 - Tests within each user story marked [P] can be written in parallel.
-- API export tasks T046-T051 and web export tasks T052-T054 can split after DTO/contracts are ready.
+- Generic API export tasks T046-T051, payables provider tasks T052-T053 and web export tasks T054-T054b can split after DTO/contracts are ready.
 - Notification center frontend T059-T062 can proceed in parallel with API hardening T063 once controller/service contracts exist.
 
 ---
@@ -222,9 +227,9 @@
 ## Parallel Example: User Story 4
 
 ```text
-Task: "T042 [P] [US4] Add export job service tests for accepted job, filter snapshot and tenant isolation in apps/api/src/management/financial/accounts-payable/accounts-payable-export.service.spec.ts"
-Task: "T043 [P] [US4] Add export worker tests for CSV, PDF and XLSX generation outcomes in apps/api/src/management/financial/accounts-payable/accounts-payable-export.worker.spec.ts"
-Task: "T045 [P] [US4] Add web tests for async export request and nonblocking UI in apps/web/app/admin/finance/payables/payables-client.spec.tsx"
+Task: "T042 [P] [US4] Add generic export job service tests for accepted job, filter snapshot, context dispatch and tenant isolation in apps/api/src/management/exports/export-job.service.spec.ts"
+Task: "T043 [P] [US4] Add generic export worker tests for CSV, PDF and XLSX generation outcomes in apps/api/src/management/exports/export-job.worker.spec.ts"
+Task: "T045 [P] [US4] Add web tests for reusable async export menu request and nonblocking UI in apps/web/app/admin/finance/payables/payables-client.spec.tsx"
 ```
 
 ---
@@ -242,7 +247,7 @@ Task: "T045 [P] [US4] Add web tests for async export request and nonblocking UI 
 ### Incremental Delivery
 
 1. P1 UX flow: US1 -> US2 -> US3.
-2. Async export backend and UI: US4.
+2. Reusable async export backend/component plus payables provider: US4.
 3. Notification center management: US5.
 4. Polish, permissions, OpenAPI and quickstart validation.
 

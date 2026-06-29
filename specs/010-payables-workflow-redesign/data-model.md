@@ -55,18 +55,20 @@ Resumo financeiro derivado da consulta atual.
 
 ## New Entities
 
-### PayableExportJob
+### ExportJob
 
-Solicitacao persistida de exportacao de contas a pagar.
+Solicitacao persistida de exportacao assincrona para qualquer tela administrativa habilitada. Contas a pagar usa este modelo com contexto `PAYABLES`.
 
 **Fields**:
 
 - `id`: unique identifier.
 - `tenantId`: owner tenant.
 - `requestedByUserId`: user who requested the export.
+- `context`: export origin, e.g. `PAYABLES`.
 - `format`: one of `CSV`, `PDF`, `XLSX`.
 - `status`: one of `PENDING`, `PROCESSING`, `COMPLETED`, `FAILED`, `EXPIRED`.
 - `filtersSnapshot`: query filters captured when the job was requested.
+- `columnsSnapshot`: optional selected/exported columns captured when the job was requested.
 - `requestedAt`: creation timestamp.
 - `startedAt`: processing start timestamp, nullable.
 - `completedAt`: completion timestamp, nullable.
@@ -82,13 +84,15 @@ Solicitacao persistida de exportacao de contas a pagar.
 
 - Belongs to tenant.
 - Belongs to requesting user.
+- Is processed by a context provider registered for `context`.
 - May create one or more notifications.
 
 **Validation rules**:
 
 - `format` must be one of the supported export formats.
-- `filtersSnapshot` must only contain filters allowed for accounts payable search.
-- Job result must only include payables visible to the requesting tenant.
+- `context` must be registered and enabled for the authenticated user's permissions.
+- `filtersSnapshot` must only contain filters allowed for the selected context.
+- Job result must only include data visible to the requesting tenant and user.
 - Completed jobs must have file metadata.
 - Failed jobs must have a safe error message.
 
@@ -158,7 +162,15 @@ Read model for the web notification center.
 
 ## Contract Types
 
-### PayableExportFormat
+### ExportContext
+
+Enum values for this feature:
+
+- `PAYABLES`
+
+Future administrative screens may add new values without changing job lifecycle semantics.
+
+### ExportFormat
 
 Enum values:
 
@@ -166,7 +178,7 @@ Enum values:
 - `PDF`
 - `XLSX`
 
-### PayableExportStatus
+### ExportStatus
 
 Enum values:
 

@@ -6,7 +6,7 @@
 
 ## Summary
 
-Repaginar a tela administrativa de contas a pagar para concentrar inclusao, consulta, detalhes e edicao em uma experiencia modal consistente, mantendo os cards Previsto, Pago, Em aberto e Vencido sempre visiveis. A implementacao aproveita a API e os tipos existentes de contas a pagar, desloca os formularios inline para dialogos reutilizaveis, adiciona exportacoes assincronas por CSV/PDF/XLSX com status persistido por tenant e cria um centro de notificacoes operacional para concluir ou sinalizar falhas desses trabalhos.
+Repaginar a tela administrativa de contas a pagar para concentrar inclusao, consulta, detalhes e edicao em uma experiencia modal consistente, mantendo os cards Previsto, Pago, Em aberto e Vencido sempre visiveis. A implementacao aproveita a API e os tipos existentes de contas a pagar, desloca os formularios inline para dialogos reutilizaveis, adiciona uma base reutilizavel de exportacoes assincronas por CSV/PDF/XLSX com status persistido por tenant e cria um centro de notificacoes operacional para concluir ou sinalizar falhas desses trabalhos.
 
 ## Technical Context
 
@@ -14,7 +14,7 @@ Repaginar a tela administrativa de contas a pagar para concentrar inclusao, cons
 
 **Primary Dependencies**: NestJS, Next.js App Router, Prisma, PostgreSQL, TailwindCSS, JWT com refresh token para administracao; geracao de arquivos CSV/PDF/XLSX usando bibliotecas Node maduras e tipadas escolhidas na implementacao
 
-**Storage**: PostgreSQL via Prisma; contas a pagar ja usam `Payable`, `PayablePayment`, `FinancialCategory`, `Supplier` e `FinancialAudit`; a feature adiciona persistencia tenant-scoped para solicitacoes de exportacao, arquivos gerados/metadados e notificacoes operacionais
+**Storage**: PostgreSQL via Prisma; contas a pagar ja usam `Payable`, `PayablePayment`, `FinancialCategory`, `Supplier` e `FinancialAudit`; a feature adiciona persistencia tenant-scoped para jobs de exportacao reutilizaveis por contexto, arquivos gerados/metadados e notificacoes operacionais
 
 **Testing**: Vitest unit/integration tests para service/controller de contas a pagar, export jobs e notificacoes; testes React/Next para modais, cards, consulta, exportacao e centro de notificacoes; quickstart manual para validacao do fluxo completo
 
@@ -24,7 +24,7 @@ Repaginar a tela administrativa de contas a pagar para concentrar inclusao, cons
 
 **Performance Goals**: Tela de contas a pagar carrega e atualiza consulta em ate 2 segundos na base piloto; abrir modais de inclusao/edicao/detalhe em ate 500 ms apos dados locais disponiveis; solicitacao de exportacao retorna em ate 1 segundo; notificacao de conclusao/erro aparece em ate 30 segundos apos finalizacao do job em volume piloto
 
-**Constraints**: Preservar isolamento por tenant; respeitar permissoes `finance.view` e `finance.manage`; exportacao deve usar snapshot dos filtros no momento da solicitacao; operacao de exportar nao pode bloquear a UI; arquivos gerados nao devem vazar dados entre tenants; nao alterar regras financeiras de pagamento, baixa, cancelamento, auditoria ou conciliacao
+**Constraints**: Preservar isolamento por tenant; respeitar permissoes `finance.view` e `finance.manage`; exportacao deve usar snapshot dos filtros no momento da solicitacao; operacao de exportar nao pode bloquear a UI; arquivos gerados nao devem vazar dados entre tenants; base de exportacao deve aceitar novos contextos administrativos sem duplicar job/status/storage/notificacao; nao alterar regras financeiras de pagamento, baixa, cancelamento, auditoria ou conciliacao
 
 **Scale/Scope**: Tela administrativa de contas a pagar existente; dezenas a centenas de contas por mes no piloto; desenho permite reaproveitar notificacoes para outros processos administrativos e trocar armazenamento de arquivos local por S3-compativel quando necessario
 
@@ -63,22 +63,28 @@ apps/
 |-- api/
 |   |-- src/
 |   |   |-- management/
+|   |   |   |-- exports/
+|   |   |   |   |-- dto/
+|   |   |   |   |   `-- export-job.dto.ts
+|   |   |   |   |-- export-job.controller.ts
+|   |   |   |   |-- export-job.service.ts
+|   |   |   |   |-- export-job.worker.ts
+|   |   |   |   |-- export-provider.registry.ts
+|   |   |   |   `-- providers/
+|   |   |   |       `-- payables-export.provider.ts
 |   |   |   |-- financial/
 |   |   |   |   |-- dto/
-|   |   |   |   |   |-- payable.dto.ts
-|   |   |   |   |   `-- payable-export.dto.ts
+|   |   |   |   |   `-- payable.dto.ts
 |   |   |   |   `-- accounts-payable/
 |   |   |   |       |-- accounts-payable.controller.ts
 |   |   |   |       |-- accounts-payable.service.ts
-|   |   |   |       |-- accounts-payable-export.service.ts
-|   |   |   |       |-- accounts-payable-export.worker.ts
 |   |   |   |       `-- accounts-payable.service.spec.ts
 |   |   |   `-- notifications/
 |   |   |       |-- notifications.controller.ts
 |   |   |       |-- notifications.service.ts
 |   |   |       `-- notifications.service.spec.ts
 |   |   `-- test/
-|   |       `-- accounts-payable-export.integration.spec.ts
+|   |       `-- export-job.integration.spec.ts
 |-- web/
 |   |-- app/
 |   |   `-- admin/
@@ -95,6 +101,7 @@ apps/
 |   |           `-- notifications-client.tsx
 |   |-- components/
 |   |   `-- admin/
+|   |       |-- async-export-menu.tsx
 |   |       |-- notification-center-button.tsx
 |   |       `-- modal-shell.tsx
 |   `-- lib/
@@ -106,11 +113,12 @@ packages/
 |       `-- migrations/
 `-- types/
     `-- src/
+        |-- exports.ts
         |-- index.ts
         `-- notifications.ts
 ```
 
-**Structure Decision**: Preservar a fatia financeira existente em `management/financial/accounts-payable` e `apps/web/app/admin/finance/payables`. Notificacoes entram como modulo administrativo compartilhavel, mas a primeira integracao concreta e com exportacoes de contas a pagar. Contratos compartilhados continuam em `packages/types`, e persistencia nova fica no Prisma do monorepo.
+**Structure Decision**: Preservar a fatia financeira existente em `management/financial/accounts-payable` e `apps/web/app/admin/finance/payables`. Exportacao entra como modulo administrativo compartilhavel em `management/exports`, com provider especifico para contas a pagar como primeiro consumidor. Notificacoes tambem entram como modulo administrativo compartilhavel. Contratos compartilhados continuam em `packages/types`, e persistencia nova fica no Prisma do monorepo.
 
 ## Phase 0: Research
 
@@ -118,9 +126,10 @@ Research is captured in [research.md](./research.md). Main decisions:
 
 - Reutilizar a lista/summary existente de contas a pagar como fonte dos cards, ajustando a apresentacao para manter indicadores sempre visiveis.
 - Transformar inclusao e edicao em modais de fluxo controlado, reaproveitando `PayableForm` e o dialogo de detalhes.
-- Criar export job persistido e processado em segundo plano dentro do monolito modular, com snapshot dos filtros.
+- Criar export job persistido e processado em segundo plano dentro do monolito modular, com snapshot dos filtros e contexto reutilizavel por tela.
 - Criar notificacoes persistidas por tenant/usuario para sucesso, falha e acesso ao arquivo gerado.
 - Expor CSV, PDF e XLSX como formatos de exportacao com contrato unico de solicitacao e acompanhamento.
+- Separar componente web e servicos backend de exportacao do provider de contas a pagar, permitindo novos contextos administrativos com baixo acoplamento.
 
 ## Phase 1: Design
 

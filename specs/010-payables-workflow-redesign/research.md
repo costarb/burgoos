@@ -28,6 +28,16 @@
 - Gerar arquivo no navegador: rejeitado por duplicar regras de filtros/permissoes e expor mais dados ao cliente.
 - Adotar fila externa agora: rejeitado por complexidade operacional desnecessaria para o piloto; o modelo deve permitir evoluir para fila externa depois.
 
+## Decision: Criar infraestrutura de exportacao reutilizavel por contexto
+
+**Rationale**: Contas a pagar e o primeiro consumidor, mas a intencao do produto e reutilizar o mesmo fluxo em outras telas. A implementacao deve separar job, status, storage, formatadores e componente de acionamento do provider especifico de dados. Cada tela fornece contexto, filtros, colunas e permissao; a infraestrutura comum cuida de fila interna, arquivo, download e notificacao.
+
+**Alternatives considered**:
+
+- Implementar um job totalmente acoplado a contas a pagar: rejeitado por gerar retrabalho e contratos duplicados quando outra tela precisar exportar.
+- Criar apenas um componente visual reutilizavel e manter backend especifico por tela: rejeitado porque ainda duplicaria job/status/notificacao/download.
+- Criar uma plataforma de relatorios generica ampla agora: rejeitado por escopo excessivo; a decisao e uma base pequena por contexto, validada primeiro em contas a pagar.
+
 ## Decision: Snapshot dos filtros no momento da solicitacao
 
 **Rationale**: O usuario espera que o arquivo represente a consulta que ele exportou, mesmo que altere filtros depois. Persistir os filtros no job tambem facilita auditoria e repeticao.
