@@ -6,6 +6,8 @@ import Link from "next/link";
 import { getNotifications } from "../../lib/api";
 import { readAuthSession } from "../../lib/auth-client";
 
+const notificationPollIntervalMs = 5000;
+
 interface NotificationCenterButtonProps {
   initialUnreadCount?: number;
 }
@@ -22,18 +24,25 @@ export function NotificationCenterButton({
       return;
     }
 
+    const token = session.accessToken;
     let active = true;
 
-    getNotifications(session.accessToken, { limit: 1 })
-      .then((state) => {
-        if (active) {
-          setUnreadCount(state.unreadCount);
-        }
-      })
-      .catch(() => undefined);
+    function refreshUnreadCount() {
+      getNotifications(token, { limit: 1 })
+        .then((state) => {
+          if (active) {
+            setUnreadCount(state.unreadCount);
+          }
+        })
+        .catch(() => undefined);
+    }
+
+    refreshUnreadCount();
+    const interval = window.setInterval(refreshUnreadCount, notificationPollIntervalMs);
 
     return () => {
       active = false;
+      window.clearInterval(interval);
     };
   }, []);
 

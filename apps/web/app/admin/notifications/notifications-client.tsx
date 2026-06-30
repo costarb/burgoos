@@ -1,13 +1,15 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import type {
   NotificationCenterState,
   OperationalNotification,
   OperationalNotificationSeverity,
 } from "@burgoos/types";
 import { Bell, Check, Download, ExternalLink } from "lucide-react";
-import { markNotificationRead } from "../../../lib/api";
+import { getNotifications, markNotificationRead } from "../../../lib/api";
+
+const notificationPollIntervalMs = 5000;
 
 interface NotificationsClientProps {
   token: string;
@@ -17,6 +19,27 @@ interface NotificationsClientProps {
 export function NotificationsClient({ token, initialState }: NotificationsClientProps) {
   const [state, setState] = useState(initialState);
   const [busyId, setBusyId] = useState<string | null>(null);
+
+  useEffect(() => {
+    let active = true;
+
+    function refreshNotifications() {
+      getNotifications(token, { limit: 50 })
+        .then((nextState) => {
+          if (active) {
+            setState(nextState);
+          }
+        })
+        .catch(() => undefined);
+    }
+
+    const interval = window.setInterval(refreshNotifications, notificationPollIntervalMs);
+
+    return () => {
+      active = false;
+      window.clearInterval(interval);
+    };
+  }, [token]);
 
   async function markRead(notification: OperationalNotification) {
     if (notification.status === "READ" || busyId) {

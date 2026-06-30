@@ -63,6 +63,7 @@ describe("NotificationCenterButton", () => {
     act(() => {
       root.unmount();
     });
+    vi.useRealTimers();
     container.remove();
   });
 
@@ -86,5 +87,27 @@ describe("NotificationCenterButton", () => {
     });
 
     expect(container.textContent).toContain("9+");
+  });
+
+  it("refreshes unread count while the user stays on the page", async () => {
+    vi.useFakeTimers();
+    getNotificationsMock
+      .mockResolvedValueOnce({ unreadCount: 0, items: [] })
+      .mockResolvedValueOnce({ unreadCount: 2, items: [] });
+
+    await act(async () => {
+      root.render(<NotificationCenterButton />);
+      await Promise.resolve();
+    });
+
+    expect(container.textContent).not.toContain("2");
+
+    await act(async () => {
+      vi.advanceTimersByTime(5000);
+      await Promise.resolve();
+    });
+
+    expect(getNotificationsMock).toHaveBeenCalledTimes(2);
+    expect(container.textContent).toContain("2");
   });
 });

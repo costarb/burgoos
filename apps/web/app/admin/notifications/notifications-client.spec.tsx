@@ -2,13 +2,15 @@ import React, { act } from "react";
 import { createRoot, Root } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { NotificationCenterState } from "@burgoos/types";
-import { markNotificationRead } from "../../../lib/api";
+import { getNotifications, markNotificationRead } from "../../../lib/api";
 import { NotificationsClient } from "./notifications-client";
 
 vi.mock("../../../lib/api", () => ({
+  getNotifications: vi.fn(),
   markNotificationRead: vi.fn(),
 }));
 
+const getNotificationsMock = vi.mocked(getNotifications);
 const markNotificationReadMock = vi.mocked(markNotificationRead);
 
 describe("NotificationsClient", () => {
@@ -22,7 +24,9 @@ describe("NotificationsClient", () => {
     container = document.createElement("div");
     document.body.appendChild(container);
     root = createRoot(container);
+    getNotificationsMock.mockReset();
     markNotificationReadMock.mockReset();
+    getNotificationsMock.mockResolvedValue(state());
     markNotificationReadMock.mockResolvedValue({
       ...notification(),
       status: "READ",
@@ -34,6 +38,7 @@ describe("NotificationsClient", () => {
     act(() => {
       root.unmount();
     });
+    vi.useRealTimers();
     container.remove();
   });
 
@@ -57,6 +62,33 @@ describe("NotificationsClient", () => {
     await renderClient({ unreadCount: 0, items: [] });
 
     expect(container.textContent).toContain("Nenhuma notificacao encontrada.");
+  });
+
+  it("refreshes notification list while the page remains open", async () => {
+    vi.useFakeTimers();
+    getNotificationsMock.mockResolvedValue({
+      unreadCount: 2,
+      items: [
+        notification(),
+        notification({
+          id: "notification-2",
+          title: "Exportacao PDF concluida",
+          actionUrl: "/api/admin/exports/export-2/download",
+        }),
+      ],
+    });
+
+    await renderClient({ unreadCount: 0, items: [] });
+    expect(container.textContent).toContain("Nenhuma notificacao encontrada.");
+
+    await act(async () => {
+      vi.advanceTimersByTime(5000);
+      await Promise.resolve();
+    });
+
+    expect(getNotificationsMock).toHaveBeenCalledWith("token", { limit: 50 });
+    expect(container.textContent).toContain("2");
+    expect(container.textContent).toContain("Exportacao PDF concluida");
   });
 
   async function renderClient(initialState: NotificationCenterState) {
@@ -88,7 +120,11 @@ function state(): NotificationCenterState {
   };
 }
 
-function notification() {
+function notification(overrides: Partial<ReturnType<typeof baseNotification>> = {}) {
+  return { ...baseNotification(), ...overrides };
+}
+
+function baseNotification() {
   return {
     id: "notification-1",
     type: "PAYABLE_EXPORT_COMPLETED",
