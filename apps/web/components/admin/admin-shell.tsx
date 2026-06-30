@@ -17,6 +17,7 @@ import {
   findNavigationItem,
   secondaryNavigation,
 } from "./admin-navigation";
+import { NotificationCenterButton } from "./notification-center-button";
 import { SessionActions } from "./session-actions";
 import { StoreSwitcher } from "./store-switcher";
 
@@ -131,6 +132,7 @@ export function AdminShell({ children }: { children: ReactNode }) {
             </div>
             <div className="ml-auto flex min-w-0 items-center justify-end gap-3">
               <StoreSwitcher />
+              <NotificationCenterButton />
               <SessionActions session={session} />
             </div>
           </div>

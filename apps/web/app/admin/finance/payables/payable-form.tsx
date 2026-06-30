@@ -1,6 +1,6 @@
 "use client";
 
-import type { FormEvent } from "react";
+import React, { type FormEvent } from "react";
 import type {
   FinancialCategory,
   FinancialRecurrenceFrequency,
@@ -14,10 +14,20 @@ interface PayableFormProps {
   suppliers: Pick<Supplier, "id" | "name" | "active">[];
   payable?: Payable | null;
   busy?: boolean;
+  submitLabel?: string;
+  onCancel?: () => void;
   onSubmit: (payload: PayableInput) => Promise<void>;
 }
 
-export function PayableForm({ categories, suppliers, payable, busy = false, onSubmit }: PayableFormProps) {
+export function PayableForm({
+  categories,
+  suppliers,
+  payable,
+  busy = false,
+  submitLabel,
+  onCancel,
+  onSubmit,
+}: PayableFormProps) {
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const formData = new FormData(event.currentTarget);
@@ -34,7 +44,9 @@ export function PayableForm({ categories, suppliers, payable, busy = false, onSu
       notes: optionalText(formData, "notes"),
       recurrence: recurrenceEnabled
         ? {
-            frequency: String(formData.get("frequency") ?? "MONTHLY") as FinancialRecurrenceFrequency,
+            frequency: String(
+              formData.get("frequency") ?? "MONTHLY"
+            ) as FinancialRecurrenceFrequency,
             interval: Number(formData.get("interval") ?? 1),
             startsOn: String(formData.get("startsOn") ?? formData.get("dueDate") ?? ""),
             occurrenceCount: Number(formData.get("occurrenceCount") ?? 1),
@@ -134,7 +146,10 @@ export function PayableForm({ categories, suppliers, payable, busy = false, onSu
             Gerar recorrencia
           </label>
           <div className="mt-3 grid gap-3 md:grid-cols-4">
-            <select className="rounded-md border border-slate-200 px-3 py-2 text-sm" name="frequency">
+            <select
+              className="rounded-md border border-slate-200 px-3 py-2 text-sm"
+              name="frequency"
+            >
               <option value="MONTHLY">Mensal</option>
               <option value="WEEKLY">Semanal</option>
               <option value="YEARLY">Anual</option>
@@ -171,13 +186,27 @@ export function PayableForm({ categories, suppliers, payable, busy = false, onSu
           name="notes"
         />
       </label>
-      <button
-        className="rounded-md bg-slate-950 px-4 py-2 text-sm font-semibold text-white disabled:opacity-60 md:col-span-4"
-        disabled={busy || categories.length === 0}
-        type="submit"
-      >
-        {busy ? "Processando..." : payable ? "Salvar conta" : "Criar conta a pagar"}
-      </button>
+      <div className="flex flex-wrap justify-end gap-2 md:col-span-4">
+        {onCancel ? (
+          <button
+            className="rounded-md border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700 disabled:opacity-60"
+            disabled={busy}
+            onClick={onCancel}
+            type="button"
+          >
+            Cancelar
+          </button>
+        ) : null}
+        <button
+          className="rounded-md bg-slate-950 px-4 py-2 text-sm font-semibold text-white disabled:opacity-60"
+          disabled={busy || categories.length === 0}
+          type="submit"
+        >
+          {busy
+            ? "Processando..."
+            : (submitLabel ?? (payable ? "Salvar conta" : "Criar conta a pagar"))}
+        </button>
+      </div>
     </form>
   );
 }

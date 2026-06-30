@@ -26,6 +26,8 @@ import type {
   FinancialDashboardIndicators,
   FinancialDreSummary,
   FinancialAuditRecord,
+  ExportJob,
+  ExportJobRequest,
   CashLedgerEntry,
   CashMovement,
   CashMovementInput,
@@ -65,6 +67,8 @@ import type {
   TechnicalSheetSummary,
   UpdateStoreInput,
   VisualConfiguration,
+  NotificationCenterState,
+  OperationalNotification,
 } from "@burgoos/types";
 import { clearAuthSession, readAuthSession } from "./auth-client";
 
@@ -1147,6 +1151,51 @@ export async function getPayableAuditHistory(
   return fetchAdmin<FinancialAuditRecord[]>(
     token,
     `/api/admin/financial/payables/${payableId}/audit`
+  );
+}
+
+export async function requestExportJob(
+  token: string,
+  payload: ExportJobRequest
+): Promise<ExportJob> {
+  return fetchAdmin<ExportJob>(token, "/api/admin/exports", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function getExportJob(token: string, exportId: string): Promise<ExportJob> {
+  return fetchAdmin<ExportJob>(token, `/api/admin/exports/${exportId}`);
+}
+
+export async function getNotifications(
+  token: string,
+  params: { status?: string; limit?: number } = {}
+): Promise<NotificationCenterState> {
+  const query = new URLSearchParams();
+
+  Object.entries(params).forEach(([key, value]) => {
+    if (value) {
+      query.set(key, String(value));
+    }
+  });
+
+  return fetchAdmin<NotificationCenterState>(
+    token,
+    `/api/admin/notifications${query.toString() ? `?${query.toString()}` : ""}`
+  );
+}
+
+export async function markNotificationRead(
+  token: string,
+  notificationId: string
+): Promise<OperationalNotification> {
+  return fetchAdmin<OperationalNotification>(
+    token,
+    `/api/admin/notifications/${notificationId}/read`,
+    {
+      method: "POST",
+    }
   );
 }
 
