@@ -36,7 +36,7 @@
 
 - [x] T007 Add generic ExportJob and OperationalNotification models/enums to packages/database/prisma/schema.prisma
 - [x] T008 Create Prisma migration for export jobs and operational notifications in packages/database/prisma/migrations/
-- [ ] T009 [P] Add notification service tests for tenant/user scoping and read state in apps/api/src/management/notifications/notifications.service.spec.ts
+- [x] T009 [P] Add notification service tests for tenant/user scoping and read state in apps/api/src/management/notifications/notifications.service.spec.ts
 - [x] T010 Implement notification persistence and read operations in apps/api/src/management/notifications/notifications.service.ts
 - [x] T011 Implement notification controller endpoints in apps/api/src/management/notifications/notifications.controller.ts
 - [x] T012 Register notification module/providers in apps/api/src/management/management.module.ts
@@ -62,7 +62,7 @@
 
 - [x] T018 [P] [US1] Add web interaction tests for opening and closing new payable modal in apps/web/app/admin/finance/payables/payables-client.spec.tsx
 - [x] T019 [P] [US1] Add web interaction test for submitting a valid new payable and refreshing summary in apps/web/app/admin/finance/payables/payables-client.spec.tsx
-- [ ] T020 [P] [US1] Add form validation test for required fields inside modal in apps/web/app/admin/finance/payables/payable-form.spec.tsx
+- [x] T020 [P] [US1] Add form validation test for required fields inside modal in apps/web/app/admin/finance/payables/payable-form.spec.tsx
 
 ### Implementation for User Story 1
 
@@ -84,7 +84,7 @@
 
 ### Tests for User Story 2
 
-- [ ] T026 [P] [US2] Add API summary regression tests for expected, paid, remaining and overdue totals in apps/api/src/management/financial/accounts-payable/accounts-payable.service.spec.ts
+- [x] T026 [P] [US2] Add API summary regression tests for expected, paid, remaining and overdue totals in apps/api/src/management/financial/accounts-payable/accounts-payable.service.spec.ts
 - [x] T027 [P] [US2] Add web tests for visible cards before and after filtering in apps/web/app/admin/finance/payables/payables-client.spec.tsx
 - [x] T028 [P] [US2] Add web empty-state card test for zero summary values in apps/web/app/admin/finance/payables/payables-client.spec.tsx
 
@@ -93,7 +93,7 @@
 - [x] T029 [US2] Extract payables metric cards into stable component in apps/web/app/admin/finance/payables/payables-client.tsx
 - [x] T030 [US2] Keep metric cards above query and list sections across loading and empty states in apps/web/app/admin/finance/payables/payables-client.tsx
 - [x] T031 [US2] Ensure filter refresh updates payables summary without stale card values in apps/web/app/admin/finance/payables/payables-client.tsx
-- [ ] T032 [US2] Align open/overdue count labels with summary values in apps/web/app/admin/finance/payables/payables-client.tsx
+- [x] T032 [US2] Align open/overdue count labels with summary values in apps/web/app/admin/finance/payables/payables-client.tsx
 
 **Checkpoint**: User Story 2 is complete and testable independently.
 
@@ -134,7 +134,7 @@
 
 - [x] T042 [P] [US4] Add generic export job service tests for accepted job, filter snapshot, context dispatch and tenant isolation in apps/api/src/management/exports/export-job.service.spec.ts
 - [x] T043 [P] [US4] Add generic export worker tests for CSV, PDF and XLSX generation outcomes in apps/api/src/management/exports/export-job.worker.spec.ts
-- [ ] T044 [P] [US4] Add export controller integration tests for request, status and download permissions in apps/api/src/test/export-job.integration.spec.ts
+- [x] T044 [P] [US4] Add export controller integration tests for request, status and download permissions in apps/api/src/test/export-job.integration.spec.ts
 - [x] T045 [P] [US4] Add web tests for reusable async export menu request and nonblocking UI in apps/web/app/admin/finance/payables/payables-client.spec.tsx
 
 ### Implementation for User Story 4
@@ -163,7 +163,7 @@
 
 ### Tests for User Story 5
 
-- [ ] T055 [P] [US5] Add notification controller integration tests for list and mark-read in apps/api/src/test/notifications.integration.spec.ts
+- [x] T055 [P] [US5] Add notification controller integration tests for list and mark-read in apps/api/src/test/notifications.integration.spec.ts
 - [x] T056 [P] [US5] Add web notification center tests for unread count, read state and action links in apps/web/app/admin/notifications/notifications-client.spec.tsx
 - [x] T057 [P] [US5] Add admin shell notification button tests in apps/web/components/admin/notification-center-button.spec.tsx
 
@@ -174,7 +174,7 @@
 - [x] T060 [US5] Implement notification list, empty state and mark-read action in apps/web/app/admin/notifications/notifications-client.tsx
 - [x] T061 [US5] Add notification center button to admin shell in apps/web/components/admin/admin-shell.tsx
 - [x] T062 [US5] Display export completion and failure actions consistently in apps/web/app/admin/notifications/notifications-client.tsx
-- [ ] T063 [US5] Ensure notification action URLs only expose authenticated same-tenant resources in apps/api/src/management/notifications/notifications.service.ts
+- [x] T063 [US5] Ensure notification action URLs only expose authenticated same-tenant resources in apps/api/src/management/notifications/notifications.service.ts
 
 **Checkpoint**: User Story 5 is complete and testable independently.
 
@@ -184,14 +184,14 @@
 
 **Purpose**: Hardening, documentation and validation across all stories.
 
-- [ ] T064 [P] Update OpenAPI documentation for implemented generic export and notification endpoints in apps/api/src/management/exports/export-job.controller.ts
-- [ ] T065 [P] Update shared contracts for reusable export and notification responses in packages/types/src/index.ts
-- [ ] T066 [P] Add permission catalog entries if export/notification permissions need explicit keys in apps/api/src/management/access/permissions/permission-catalog.ts
-- [ ] T067 Run Prisma format/generate after schema changes using packages/database/prisma/schema.prisma
-- [ ] T068 Run API tests for financial and notification flows using apps/api/src/management/financial/accounts-payable/accounts-payable.service.spec.ts
-- [ ] T069 Run web tests for payables and notifications using apps/web/app/admin/finance/payables/payables-client.spec.tsx
-- [ ] T070 Run typecheck and lint across workspaces using package.json
-- [ ] T071 Execute quickstart validation and record any deviations in specs/010-payables-workflow-redesign/quickstart.md
+- [x] T064 [P] Update OpenAPI documentation for implemented generic export and notification endpoints in apps/api/src/management/exports/export-job.controller.ts
+- [x] T065 [P] Update shared contracts for reusable export and notification responses in packages/types/src/index.ts
+- [x] T066 [P] Add permission catalog entries if export/notification permissions need explicit keys in apps/api/src/management/access/permissions/permission-catalog.ts
+- [x] T067 Run Prisma format/generate after schema changes using packages/database/prisma/schema.prisma
+- [x] T068 Run API tests for financial and notification flows using apps/api/src/management/financial/accounts-payable/accounts-payable.service.spec.ts
+- [x] T069 Run web tests for payables and notifications using apps/web/app/admin/finance/payables/payables-client.spec.tsx
+- [x] T070 Run typecheck and lint across workspaces using package.json
+- [x] T071 Execute quickstart validation and record any deviations in specs/010-payables-workflow-redesign/quickstart.md
 
 ---
 

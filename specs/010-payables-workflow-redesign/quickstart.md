@@ -76,3 +76,11 @@ npm.cmd run lint --workspaces --if-present
 - Notification center shows unread/read states.
 - Completed export notification links to a downloadable file.
 - Failed export notification does not expose internal technical details.
+
+## Validation Notes
+
+- 2026-06-30: Applied Prisma format and generated Prisma Client for the export job and operational notification schema.
+- 2026-06-30: API focused tests passed for accounts payable summary, notification service scoping, export controller and notification controller.
+- 2026-06-30: Web focused tests passed for payables modal/filter/cards, payable form validation, notification center and notification button.
+- 2026-06-30: Monorepo typecheck and lint passed across available workspaces.
+- Deviation: On Windows, `prisma generate` required stopping active Node development processes because the Prisma query engine DLL was locked.

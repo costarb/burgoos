@@ -73,6 +73,39 @@ describe("AccountsPayableService", () => {
       competenceDate: "2026-06-15",
     });
   });
+
+  it("summarizes expected, paid, remaining and overdue values from the returned items", async () => {
+    const prismaMock = createPrismaMock([
+      payable({
+        id: "payable-paid",
+        dueDate: new Date(2020, 0, 10),
+        expectedAmount: new Prisma.Decimal(100),
+        payments: [
+          payment({
+            id: "payment-paid",
+            amount: new Prisma.Decimal(100),
+          }),
+        ],
+      }),
+      payable({
+        id: "payable-overdue",
+        dueDate: new Date(2020, 0, 11),
+        expectedAmount: new Prisma.Decimal(120),
+      }),
+    ]);
+    const service = new AccountsPayableService(prismaMock as never, createAuditMock());
+
+    const response = await service.list("tenant-1", {});
+
+    expect(response.summary).toEqual({
+      totalExpected: "220.00",
+      totalPaid: "100.00",
+      totalRemaining: "120.00",
+      overdueAmount: "120.00",
+      openCount: 1,
+      overdueCount: 1,
+    });
+  });
 });
 
 function createPrismaMock(payables: ReturnType<typeof payable>[]) {
@@ -133,6 +166,32 @@ function basePayable() {
       id: "supplier-1",
       name: "Fornecedor Padrao",
     },
-    payments: [],
+    payments: [] as ReturnType<typeof basePayment>[],
+  };
+}
+
+function payment(overrides: Partial<ReturnType<typeof basePayment>> = {}) {
+  return { ...basePayment(), ...overrides };
+}
+
+function basePayment() {
+  return {
+    id: "payment-1",
+    tenantId: "tenant-1",
+    payableId: "payable-1",
+    financialAccountId: "account-1",
+    amount: new Prisma.Decimal(50),
+    paidAt: new Date(2026, 5, 10),
+    notes: null,
+    reversedAt: null,
+    reversalReason: null,
+    createdByUserId: "user-1",
+    reversedByUserId: null,
+    createdAt: new Date(2026, 5, 10),
+    updatedAt: new Date(2026, 5, 10),
+    financialAccount: {
+      id: "account-1",
+      name: "Caixa",
+    },
   };
 }

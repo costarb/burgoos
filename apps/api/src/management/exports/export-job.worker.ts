@@ -1,10 +1,5 @@
 import { Inject, Injectable, Logger } from "@nestjs/common";
-import {
-  ExportFormat,
-  ExportJobStatus,
-  OperationalNotificationSeverity,
-  Prisma,
-} from "@prisma/client";
+import { ExportFormat, ExportJobStatus, OperationalNotificationSeverity } from "@prisma/client";
 import { mkdir, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { PrismaService } from "../../platform/database/prisma.service";

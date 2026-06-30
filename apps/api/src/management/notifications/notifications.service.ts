@@ -93,7 +93,7 @@ export class NotificationsService {
         title: input.title,
         message: input.message,
         actionLabel: input.actionLabel ?? null,
-        actionUrl: input.actionUrl ?? null,
+        actionUrl: normalizeActionUrl(input.actionUrl, input.exportJobId),
         relatedEntityType: input.relatedEntityType ?? null,
         relatedEntityId: input.relatedEntityId ?? null,
         exportJobId: input.exportJobId ?? null,
@@ -132,4 +132,17 @@ export class NotificationsService {
       readAt: notification.readAt?.toISOString() ?? null,
     };
   }
+}
+
+function normalizeActionUrl(value?: string | null, exportJobId?: string | null): string | null {
+  if (!value?.startsWith("/api/admin/exports/")) {
+    return null;
+  }
+
+  if (!exportJobId) {
+    return null;
+  }
+
+  const expected = `/api/admin/exports/${exportJobId}/download`;
+  return value === expected ? value : null;
 }

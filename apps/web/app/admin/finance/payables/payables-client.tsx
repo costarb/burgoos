@@ -214,8 +214,17 @@ export function PayablesClient({ token, initialPayables, options }: PayablesClie
       <section className="mt-6 grid gap-4 md:grid-cols-4">
         <MetricCard label="Previsto" value={payables.summary.totalExpected} />
         <MetricCard label="Pago" value={payables.summary.totalPaid} />
-        <MetricCard label="Em aberto" value={payables.summary.totalRemaining} />
-        <MetricCard label="Vencido" tone="danger" value={payables.summary.overdueAmount} />
+        <MetricCard
+          detail={`${payables.summary.openCount} conta(s)`}
+          label="Em aberto"
+          value={payables.summary.totalRemaining}
+        />
+        <MetricCard
+          detail={`${payables.summary.overdueCount} vencida(s)`}
+          label="Vencido"
+          tone="danger"
+          value={payables.summary.overdueAmount}
+        />
       </section>
 
       <section className="mt-6 rounded-md border border-slate-200 bg-white p-4 shadow-sm">
@@ -411,10 +420,12 @@ export function PayablesClient({ token, initialPayables, options }: PayablesClie
 function MetricCard({
   label,
   value,
+  detail,
   tone = "neutral",
 }: {
   label: string;
   value: string;
+  detail?: string;
   tone?: "neutral" | "danger";
 }) {
   return (
@@ -423,6 +434,7 @@ function MetricCard({
     >
       <p className="text-sm font-medium text-slate-500">{label}</p>
       <p className="mt-1 text-2xl font-semibold text-slate-950">R$ {value}</p>
+      {detail ? <p className="mt-1 text-xs font-medium text-slate-500">{detail}</p> : null}
     </div>
   );
 }

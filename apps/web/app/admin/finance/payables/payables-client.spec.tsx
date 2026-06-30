@@ -157,6 +157,8 @@ describe("PayablesClient filters", () => {
     expect(container.textContent).toContain("Pago");
     expect(container.textContent).toContain("Em aberto");
     expect(container.textContent).toContain("Vencido");
+    expect(container.textContent).toContain("1 conta(s)");
+    expect(container.textContent).toContain("0 vencida(s)");
     expect(container.textContent).toContain("Consulta");
   });
 

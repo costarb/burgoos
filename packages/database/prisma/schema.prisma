@@ -424,7 +424,7 @@ model User {
   platformSyncAttemptsCreated   PlatformSyncAttempt[]           @relation("PlatformSyncAttemptCreatedBy")
   deliveryIntegrationAudits     DeliveryIntegrationAudit[]      @relation("DeliveryIntegrationAuditActor")
   exportJobsRequested           ExportJob[]                     @relation("ExportJobRequestedBy")
-  operationalNotifications      OperationalNotification[]        @relation("NotificationRecipient")
+  operationalNotifications      OperationalNotification[]       @relation("NotificationRecipient")
 
   @@index([tenantId])
   @@index([status])
@@ -535,28 +535,28 @@ model PasswordResetToken {
 }
 
 model ExportJob {
-  id                String          @id @default(uuid()) @db.Uuid
-  tenantId          String          @map("tenant_id") @db.Uuid
-  requestedByUserId String          @map("requested_by_user_id") @db.Uuid
+  id                String                    @id @default(uuid()) @db.Uuid
+  tenantId          String                    @map("tenant_id") @db.Uuid
+  requestedByUserId String                    @map("requested_by_user_id") @db.Uuid
   context           ExportContext
   format            ExportFormat
-  status            ExportJobStatus @default(PENDING)
-  filtersSnapshot   Json            @map("filters_snapshot")
-  columnsSnapshot   Json?           @map("columns_snapshot")
-  requestedAt       DateTime        @default(now()) @map("requested_at")
-  startedAt         DateTime?       @map("started_at")
-  completedAt       DateTime?       @map("completed_at")
-  failedAt          DateTime?       @map("failed_at")
-  errorMessage      String?         @map("error_message")
-  fileName          String?         @map("file_name")
-  fileMimeType      String?         @map("file_mime_type")
-  fileStorageKey    String?         @map("file_storage_key")
-  fileSizeBytes     Int?            @map("file_size_bytes")
-  expiresAt         DateTime?       @map("expires_at")
-  createdAt         DateTime        @default(now()) @map("created_at")
-  updatedAt         DateTime        @updatedAt @map("updated_at")
-  tenant            Tenant          @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  requestedByUser   User            @relation("ExportJobRequestedBy", fields: [requestedByUserId], references: [id], onDelete: Restrict)
+  status            ExportJobStatus           @default(PENDING)
+  filtersSnapshot   Json                      @map("filters_snapshot")
+  columnsSnapshot   Json?                     @map("columns_snapshot")
+  requestedAt       DateTime                  @default(now()) @map("requested_at")
+  startedAt         DateTime?                 @map("started_at")
+  completedAt       DateTime?                 @map("completed_at")
+  failedAt          DateTime?                 @map("failed_at")
+  errorMessage      String?                   @map("error_message")
+  fileName          String?                   @map("file_name")
+  fileMimeType      String?                   @map("file_mime_type")
+  fileStorageKey    String?                   @map("file_storage_key")
+  fileSizeBytes     Int?                      @map("file_size_bytes")
+  expiresAt         DateTime?                 @map("expires_at")
+  createdAt         DateTime                  @default(now()) @map("created_at")
+  updatedAt         DateTime                  @updatedAt @map("updated_at")
+  tenant            Tenant                    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  requestedByUser   User                      @relation("ExportJobRequestedBy", fields: [requestedByUserId], references: [id], onDelete: Restrict)
   notifications     OperationalNotification[]
 
   @@index([tenantId, context, status])
