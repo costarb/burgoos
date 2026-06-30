@@ -1,0 +1,122 @@
+openapi: 3.0.3
+info:
+  title: BurgoOS Delivery Pilot API
+  version: 0.1.0
+paths:
+  /auth/login:
+    post:
+      summary: Authenticate admin user
+      responses:
+        "200":
+          description: Authenticated
+  /admin/tenant:
+    get:
+      summary: Get current tenant settings
+      responses:
+        "200":
+          description: Current tenant
+    patch:
+      summary: Update current tenant settings
+      responses:
+        "200":
+          description: Updated tenant
+  /admin/categories:
+    get:
+      summary: List tenant categories
+      responses:
+        "200":
+          description: Category list
+    post:
+      summary: Create category
+      responses:
+        "201":
+          description: Category created
+  /admin/categories/{id}:
+    patch:
+      summary: Update category
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Category updated
+  /admin/products:
+    get:
+      summary: List tenant products
+      responses:
+        "200":
+          description: Product list
+    post:
+      summary: Create product
+      responses:
+        "201":
+          description: Product created
+  /admin/products/{id}:
+    patch:
+      summary: Update product
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Product updated
+  /public/tenants/{slug}/menu:
+    get:
+      summary: Get public menu by tenant slug
+      parameters:
+        - name: slug
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Public menu
+        "404":
+          description: Tenant not found or inactive
+  /public/tenants/{slug}/orders:
+    post:
+      summary: Create customer order by tenant slug
+      parameters:
+        - name: slug
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "201":
+          description: Order created
+        "409":
+          description: Checkout rejected due to store state or stale cart
+  /admin/orders:
+    get:
+      summary: List tenant orders
+      responses:
+        "200":
+          description: Order list
+  /admin/orders/{id}/status:
+    patch:
+      summary: Update order status
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Status updated
+        "409":
+          description: Invalid transition
+  /admin/reports/daily-summary:
+    get:
+      summary: Get daily order count and gross revenue
+      responses:
+        "200":
+          description: Daily summary

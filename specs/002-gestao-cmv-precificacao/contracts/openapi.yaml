@@ -1,0 +1,791 @@
+openapi: 3.0.3
+info:
+  title: BurgoOS CMV, Pricing and Inventory API
+  version: 0.1.0
+  description: Admin API contract for tenant-scoped CMV, pricing, stock and DRE workflows.
+servers:
+  - url: http://localhost:3001/api
+security:
+  - bearerAuth: []
+paths:
+  /admin/financial/config:
+    get:
+      summary: Get tenant financial configuration
+      responses:
+        "200":
+          description: Current financial configuration
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FinancialConfiguration"
+    put:
+      summary: Update tenant financial configuration
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/FinancialConfigurationInput"
+      responses:
+        "200":
+          description: Updated financial configuration
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FinancialConfiguration"
+
+  /admin/purchase-units:
+    get:
+      summary: List purchase units
+      responses:
+        "200":
+          description: Purchase units
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/PurchaseUnit"
+    post:
+      summary: Create purchase unit
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PurchaseUnitInput"
+      responses:
+        "201":
+          description: Created purchase unit
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PurchaseUnit"
+
+  /admin/purchase-units/{id}:
+    patch:
+      summary: Update purchase unit
+      parameters:
+        - $ref: "#/components/parameters/Id"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PurchaseUnitInput"
+      responses:
+        "200":
+          description: Updated purchase unit
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PurchaseUnit"
+
+  /admin/suppliers:
+    get:
+      summary: List suppliers
+      responses:
+        "200":
+          description: Suppliers
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Supplier"
+    post:
+      summary: Create supplier
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SupplierInput"
+      responses:
+        "201":
+          description: Created supplier
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Supplier"
+
+  /admin/suppliers/{id}:
+    patch:
+      summary: Update supplier
+      parameters:
+        - $ref: "#/components/parameters/Id"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SupplierInput"
+      responses:
+        "200":
+          description: Updated supplier
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Supplier"
+
+  /admin/order-platforms:
+    get:
+      summary: List order platforms
+      responses:
+        "200":
+          description: Order platforms
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/OrderPlatform"
+    post:
+      summary: Create order platform
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/OrderPlatformInput"
+      responses:
+        "201":
+          description: Created order platform
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OrderPlatform"
+
+  /admin/order-platforms/{id}:
+    patch:
+      summary: Update order platform
+      parameters:
+        - $ref: "#/components/parameters/Id"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/OrderPlatformInput"
+      responses:
+        "200":
+          description: Updated order platform
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OrderPlatform"
+
+  /admin/ingredients:
+    get:
+      summary: List ingredients
+      responses:
+        "200":
+          description: Ingredients
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Ingredient"
+    post:
+      summary: Create ingredient
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/IngredientInput"
+      responses:
+        "201":
+          description: Created ingredient
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Ingredient"
+
+  /admin/ingredients/{id}:
+    patch:
+      summary: Update ingredient
+      parameters:
+        - $ref: "#/components/parameters/Id"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/IngredientInput"
+      responses:
+        "200":
+          description: Updated ingredient
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Ingredient"
+
+  /admin/products/{productId}/technical-sheet:
+    get:
+      summary: Get product technical sheet
+      parameters:
+        - name: productId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Technical sheet
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TechnicalSheet"
+    put:
+      summary: Replace product technical sheet
+      parameters:
+        - name: productId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - lines
+              properties:
+                lines:
+                  type: array
+                  items:
+                    $ref: "#/components/schemas/TechnicalSheetLineInput"
+      responses:
+        "200":
+          description: Updated technical sheet
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TechnicalSheet"
+
+  /admin/pricing/products:
+    get:
+      summary: List product pricing analysis
+      parameters:
+        - name: platformId
+          in: query
+          required: false
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Product pricing analysis
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ProductPricing"
+
+  /admin/inventory:
+    get:
+      summary: List estimated inventory balances
+      responses:
+        "200":
+          description: Estimated inventory
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/InventoryBalance"
+
+  /admin/inventory/movements:
+    post:
+      summary: Create manual stock movement
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/StockMovementInput"
+      responses:
+        "201":
+          description: Created stock movement
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StockMovement"
+
+  /admin/reports/dre:
+    get:
+      summary: Get DRE summary for a period
+      parameters:
+        - $ref: "#/components/parameters/DateFrom"
+        - $ref: "#/components/parameters/DateTo"
+      responses:
+        "200":
+          description: DRE summary
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DreSummary"
+
+  /admin/reports/menu-engineering:
+    get:
+      summary: Get menu engineering classification for a period
+      parameters:
+        - $ref: "#/components/parameters/DateFrom"
+        - $ref: "#/components/parameters/DateTo"
+      responses:
+        "200":
+          description: Menu engineering classification
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MenuEngineeringReport"
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  parameters:
+    Id:
+      name: id
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    DateFrom:
+      name: dateFrom
+      in: query
+      required: true
+      schema:
+        type: string
+        format: date
+    DateTo:
+      name: dateTo
+      in: query
+      required: true
+      schema:
+        type: string
+        format: date
+  schemas:
+    FinancialConfiguration:
+      type: object
+      required:
+        - id
+        - taxRate
+        - cardFeeRate
+        - operationalLossRate
+        - desiredMarginRate
+        - averagePackagingCost
+        - monthlyFixedCost
+        - monthlyRevenueGoal
+      properties:
+        id:
+          type: string
+          format: uuid
+        taxRate:
+          type: number
+        cardFeeRate:
+          type: number
+        operationalLossRate:
+          type: number
+        desiredMarginRate:
+          type: number
+        averagePackagingCost:
+          type: string
+          example: "2.50"
+        monthlyFixedCost:
+          type: string
+          example: "8000.00"
+        monthlyRevenueGoal:
+          type: string
+          example: "35000.00"
+        cmvWarningRate:
+          type: number
+        netMarginGoalRate:
+          type: number
+    FinancialConfigurationInput:
+      allOf:
+        - $ref: "#/components/schemas/FinancialConfiguration"
+
+    PurchaseUnit:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        abbreviation:
+          type: string
+        kind:
+          type: string
+          enum: [WEIGHT, VOLUME, COUNT, PACKAGE]
+        active:
+          type: boolean
+    PurchaseUnitInput:
+      type: object
+      required: [name, abbreviation, kind]
+      properties:
+        name:
+          type: string
+        abbreviation:
+          type: string
+        kind:
+          type: string
+          enum: [WEIGHT, VOLUME, COUNT, PACKAGE]
+        active:
+          type: boolean
+
+    Supplier:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        category:
+          type: string
+        contactName:
+          type: string
+          nullable: true
+        phone:
+          type: string
+          nullable: true
+        email:
+          type: string
+          nullable: true
+        notes:
+          type: string
+          nullable: true
+        active:
+          type: boolean
+    SupplierInput:
+      type: object
+      required: [name, category]
+      properties:
+        name:
+          type: string
+        category:
+          type: string
+        contactName:
+          type: string
+        phone:
+          type: string
+        email:
+          type: string
+        notes:
+          type: string
+        active:
+          type: boolean
+
+    OrderPlatform:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        feeRate:
+          type: number
+        paymentFeeRate:
+          type: number
+        active:
+          type: boolean
+    OrderPlatformInput:
+      type: object
+      required: [name, feeRate]
+      properties:
+        name:
+          type: string
+        feeRate:
+          type: number
+        paymentFeeRate:
+          type: number
+        active:
+          type: boolean
+
+    Ingredient:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        category:
+          type: string
+        purchaseUnitId:
+          type: string
+          format: uuid
+        supplierId:
+          type: string
+          format: uuid
+          nullable: true
+        purchaseQuantity:
+          type: number
+        purchaseCost:
+          type: string
+        unitCost:
+          type: string
+        currentStock:
+          type: number
+        minimumStock:
+          type: number
+        active:
+          type: boolean
+    IngredientInput:
+      type: object
+      required: [name, category, purchaseUnitId, purchaseQuantity, purchaseCost]
+      properties:
+        name:
+          type: string
+        category:
+          type: string
+        purchaseUnitId:
+          type: string
+          format: uuid
+        supplierId:
+          type: string
+          format: uuid
+        purchaseQuantity:
+          type: number
+        purchaseCost:
+          type: number
+        currentStock:
+          type: number
+        minimumStock:
+          type: number
+        active:
+          type: boolean
+
+    TechnicalSheet:
+      type: object
+      properties:
+        productId:
+          type: string
+          format: uuid
+        complete:
+          type: boolean
+        ingredientCmv:
+          type: string
+        lines:
+          type: array
+          items:
+            $ref: "#/components/schemas/TechnicalSheetLine"
+    TechnicalSheetLine:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        ingredientId:
+          type: string
+          format: uuid
+        ingredientName:
+          type: string
+        quantityUsed:
+          type: number
+        unitCostSnapshot:
+          type: string
+        itemCost:
+          type: string
+        isPackaging:
+          type: boolean
+        notes:
+          type: string
+          nullable: true
+    TechnicalSheetLineInput:
+      type: object
+      required: [ingredientId, quantityUsed]
+      properties:
+        ingredientId:
+          type: string
+          format: uuid
+        quantityUsed:
+          type: number
+        isPackaging:
+          type: boolean
+        notes:
+          type: string
+
+    ProductPricing:
+      type: object
+      properties:
+        productId:
+          type: string
+          format: uuid
+        productName:
+          type: string
+        currentPrice:
+          type: string
+        totalCmv:
+          type: string
+        cmvRate:
+          type: number
+        idealPrice:
+          type: string
+        estimatedProfit:
+          type: string
+        estimatedMarginRate:
+          type: number
+        status:
+          type: string
+          enum: [OK, REVIEW_PRICE, MISSING_TECHNICAL_SHEET]
+
+    InventoryBalance:
+      type: object
+      properties:
+        ingredientId:
+          type: string
+          format: uuid
+        ingredientName:
+          type: string
+        currentStock:
+          type: number
+        reservedOrConsumed:
+          type: number
+        manualEntries:
+          type: number
+        estimatedBalance:
+          type: number
+        minimumStock:
+          type: number
+        status:
+          type: string
+          enum: [OK, BUY, INSUFFICIENT]
+    StockMovement:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        ingredientId:
+          type: string
+          format: uuid
+        movementType:
+          type: string
+        quantity:
+          type: number
+        reason:
+          type: string
+          nullable: true
+    StockMovementInput:
+      type: object
+      required: [ingredientId, movementType, quantity]
+      properties:
+        ingredientId:
+          type: string
+          format: uuid
+        movementType:
+          type: string
+          enum: [MANUAL_ENTRY, MANUAL_ADJUSTMENT]
+        quantity:
+          type: number
+        reason:
+          type: string
+
+    DreSummary:
+      type: object
+      example:
+        grossRevenue: "1250.00"
+        discounts: "0.00"
+        netRevenue: "1250.00"
+        acquiredNetRevenue: "1225.00"
+        cmv: "412.50"
+        feesAndTaxes: "225.00"
+        grossProfit: "612.50"
+        fixedExpenses: "8000.00"
+        estimatedNetProfit: "-7387.50"
+        netMarginRate: -5.91
+        breakEvenRevenue: "16326.53"
+      properties:
+        grossRevenue:
+          type: string
+        discounts:
+          type: string
+        netRevenue:
+          type: string
+        acquiredNetRevenue:
+          type: string
+        cmv:
+          type: string
+        feesAndTaxes:
+          type: string
+        grossProfit:
+          type: string
+        fixedExpenses:
+          type: string
+        estimatedNetProfit:
+          type: string
+        netMarginRate:
+          type: number
+        breakEvenRevenue:
+          type: string
+
+    MenuEngineeringReport:
+      type: object
+      example:
+        periodStart: "2026-05-01T00:00:00.000Z"
+        periodEnd: "2026-05-31T23:59:59.999Z"
+        insufficientData: false
+        averageVolume: 12.5
+        averageMarginRate: 0.42
+        items:
+          - productId: "33333333-3333-4333-8333-333333333333"
+            productName: "Burger Alto Giro"
+            volumeSold: 20
+            revenue: "1000.00"
+            cmv: "300.00"
+            grossProfit: "700.00"
+            marginRate: 0.7
+            classification: STAR
+      properties:
+        periodStart:
+          type: string
+          format: date-time
+        periodEnd:
+          type: string
+          format: date-time
+        insufficientData:
+          type: boolean
+        averageVolume:
+          type: number
+        averageMarginRate:
+          type: number
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/MenuEngineeringItem"
+
+    MenuEngineeringItem:
+      type: object
+      properties:
+        productId:
+          type: string
+          format: uuid
+        productName:
+          type: string
+        volumeSold:
+          type: number
+        revenue:
+          type: string
+        cmv:
+          type: string
+        grossProfit:
+          type: string
+        marginRate:
+          type: number
+        classification:
+          type: string
+          enum: [STAR, WORKHORSE, PUZZLE, DOG]

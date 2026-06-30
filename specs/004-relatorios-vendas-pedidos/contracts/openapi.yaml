@@ -1,0 +1,398 @@
+openapi: 3.0.3
+info:
+  title: BurgoOS Sales Reports API
+  version: 0.1.0
+  description: Admin API contract for sales/order reports.
+paths:
+  /api/admin/reports/sales:
+    get:
+      summary: Get sales/orders report for a period
+      parameters:
+        - name: start
+          in: query
+          required: true
+          schema:
+            type: string
+            format: date
+        - name: end
+          in: query
+          required: true
+          schema:
+            type: string
+            format: date
+        - name: paymentInstitution
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [PAGBANK, MERCADO_PAGO, DINHEIRO, CAIXA_LOCAL]
+        - name: paymentMethod
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [CASH, PIX_MANUAL, CARD_ON_DELIVERY, DEBIT_CARD, CREDIT_CARD, VOUCHER, PIX]
+        - name: orderPlatformId
+          in: query
+          required: false
+          schema:
+            type: string
+            format: uuid
+        - name: status
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [PENDING, PREPARING, SHIPPED, DELIVERED, CANCELLED]
+        - name: page
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+        - name: pageSize
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 50
+      responses:
+        "200":
+          description: Sales report
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SalesReportResponse"
+        "400":
+          description: Invalid filters
+        "401":
+          description: Missing or invalid authentication
+
+components:
+  schemas:
+    SalesReportResponse:
+      type: object
+      required:
+        - filters
+        - summary
+        - daily
+        - byPaymentInstitution
+        - byPaymentMethod
+        - byChannel
+        - analytical
+        - receivables
+      properties:
+        filters:
+          type: object
+          required: [start, end, page, pageSize]
+          properties:
+            start:
+              type: string
+              format: date
+            end:
+              type: string
+              format: date
+            paymentInstitution:
+              type: string
+              nullable: true
+            paymentMethod:
+              type: string
+              nullable: true
+            orderPlatformId:
+              type: string
+              nullable: true
+            status:
+              type: string
+              nullable: true
+            page:
+              type: integer
+            pageSize:
+              type: integer
+        summary:
+          $ref: "#/components/schemas/SalesReportSummary"
+        daily:
+          type: array
+          items:
+            $ref: "#/components/schemas/DailySalesSummary"
+        byPaymentInstitution:
+          type: array
+          items:
+            $ref: "#/components/schemas/PaymentDimensionSummary"
+        byPaymentMethod:
+          type: array
+          items:
+            $ref: "#/components/schemas/PaymentDimensionSummary"
+        byChannel:
+          type: array
+          items:
+            $ref: "#/components/schemas/ChannelSummary"
+        analytical:
+          $ref: "#/components/schemas/SalesAnalyticalPage"
+        receivables:
+          $ref: "#/components/schemas/ReceivablesSummary"
+      example:
+        filters:
+          start: "2026-05-30"
+          end: "2026-06-01"
+          page: 1
+          pageSize: 50
+        summary:
+          orderCount: 98
+          grossRevenue: "2777.00"
+          acquiredNetRevenue: "2748.55"
+          releasedNetRevenue: "2400.00"
+          receivableNetAmount: "348.55"
+          paymentFeeAmount: "28.45"
+          averageTicket: "28.34"
+          periodStart: "2026-05-30"
+          periodEnd: "2026-06-01"
+        daily:
+          - date: "2026-05-30"
+            orderCount: 65
+            grossRevenue: "2061.00"
+            acquiredNetRevenue: "2048.55"
+            releasedNetRevenue: "1800.00"
+            receivableNetAmount: "248.55"
+            paymentFeeAmount: "12.45"
+            averageTicket: "31.71"
+            grossRevenueDeltaRate: null
+            orderCountDeltaRate: null
+        byPaymentInstitution:
+          - dimensionKey: "MERCADO_PAGO"
+            dimensionLabel: "Mercado Pago"
+            orderCount: 90
+            grossRevenue: "2374.00"
+            acquiredNetRevenue: "2361.55"
+            releasedNetRevenue: "2100.00"
+            receivableNetAmount: "261.55"
+            paymentFeeAmount: "12.45"
+            shareOfGrossRevenue: 0.85
+        byPaymentMethod:
+          - dimensionKey: "PIX"
+            dimensionLabel: "Pix"
+            orderCount: 20
+            grossRevenue: "650.00"
+            acquiredNetRevenue: "650.00"
+            releasedNetRevenue: "650.00"
+            receivableNetAmount: "0.00"
+            paymentFeeAmount: "0.00"
+            shareOfGrossRevenue: 0.23
+        byChannel:
+          - orderPlatformId: null
+            orderPlatformName: "FOOD_TRUCK"
+            orderCount: 98
+            grossRevenue: "2777.00"
+            acquiredNetRevenue: "2748.55"
+            releasedNetRevenue: "2400.00"
+            receivableNetAmount: "348.55"
+            paymentFeeAmount: "28.45"
+            averageTicket: "28.34"
+        analytical:
+          page: 1
+          pageSize: 50
+          total: 98
+          items:
+            - orderId: "00000000-0000-0000-0000-000000000000"
+              createdAt: "2026-05-30T18:31:52.000-03:00"
+              status: "DELIVERED"
+              customerName: "Cliente importado"
+              orderPlatformName: "FOOD_TRUCK"
+              paymentInstitution: "MERCADO_PAGO"
+              paymentMethod: "CREDIT_CARD"
+              externalPaymentId: "161753244614"
+              paymentBrand: "Visa"
+              grossAmount: "46.00"
+              paymentFeeAmount: "0.34"
+              acquiredNetAmount: "45.66"
+              paymentReleaseExpectedAt: "2026-06-29T18:31:52.000-03:00"
+              paymentReleaseStatus: "PENDING_RELEASE"
+              itemCount: 1
+              assignedProducts:
+                - quantity: 1
+                  productName: "X-BURGUER"
+              imported: true
+        receivables:
+          pendingOrderCount: 12
+          receivableNetAmount: "348.55"
+          nextExpectedReleaseDate: "2026-06-29"
+
+    SalesReportSummary:
+      type: object
+      properties:
+        orderCount:
+          type: integer
+        grossRevenue:
+          type: string
+        acquiredNetRevenue:
+          type: string
+        releasedNetRevenue:
+          type: string
+        receivableNetAmount:
+          type: string
+        paymentFeeAmount:
+          type: string
+        averageTicket:
+          type: string
+        periodStart:
+          type: string
+          format: date
+        periodEnd:
+          type: string
+          format: date
+
+    DailySalesSummary:
+      type: object
+      properties:
+        date:
+          type: string
+          format: date
+        orderCount:
+          type: integer
+        grossRevenue:
+          type: string
+        acquiredNetRevenue:
+          type: string
+        releasedNetRevenue:
+          type: string
+        receivableNetAmount:
+          type: string
+        paymentFeeAmount:
+          type: string
+        averageTicket:
+          type: string
+        grossRevenueDeltaRate:
+          type: number
+          nullable: true
+        orderCountDeltaRate:
+          type: number
+          nullable: true
+
+    PaymentDimensionSummary:
+      type: object
+      properties:
+        dimensionKey:
+          type: string
+        dimensionLabel:
+          type: string
+        orderCount:
+          type: integer
+        grossRevenue:
+          type: string
+        acquiredNetRevenue:
+          type: string
+        releasedNetRevenue:
+          type: string
+        receivableNetAmount:
+          type: string
+        paymentFeeAmount:
+          type: string
+        shareOfGrossRevenue:
+          type: number
+
+    ChannelSummary:
+      type: object
+      properties:
+        orderPlatformId:
+          type: string
+          format: uuid
+          nullable: true
+        orderPlatformName:
+          type: string
+        orderCount:
+          type: integer
+        grossRevenue:
+          type: string
+        acquiredNetRevenue:
+          type: string
+        releasedNetRevenue:
+          type: string
+        receivableNetAmount:
+          type: string
+        paymentFeeAmount:
+          type: string
+        averageTicket:
+          type: string
+
+    SalesAnalyticalPage:
+      type: object
+      properties:
+        page:
+          type: integer
+        pageSize:
+          type: integer
+        total:
+          type: integer
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/SalesAnalyticalOrder"
+
+    SalesAnalyticalOrder:
+      type: object
+      properties:
+        orderId:
+          type: string
+          format: uuid
+        createdAt:
+          type: string
+          format: date-time
+        status:
+          type: string
+        customerName:
+          type: string
+        orderPlatformName:
+          type: string
+          nullable: true
+        paymentInstitution:
+          type: string
+          nullable: true
+        paymentMethod:
+          type: string
+        externalPaymentId:
+          type: string
+          nullable: true
+        paymentBrand:
+          type: string
+          nullable: true
+        grossAmount:
+          type: string
+        paymentFeeAmount:
+          type: string
+          nullable: true
+        acquiredNetAmount:
+          type: string
+        paymentReleaseExpectedAt:
+          type: string
+          format: date-time
+          nullable: true
+        paymentReleaseStatus:
+          type: string
+          enum: [RELEASED, PENDING_RELEASE]
+        itemCount:
+          type: integer
+        assignedProducts:
+          type: array
+          items:
+            type: object
+            properties:
+              quantity:
+                type: integer
+              productName:
+                type: string
+        imported:
+          type: boolean
+
+    ReceivablesSummary:
+      type: object
+      properties:
+        pendingOrderCount:
+          type: integer
+        receivableNetAmount:
+          type: string
+        nextExpectedReleaseDate:
+          type: string
+          format: date
+          nullable: true

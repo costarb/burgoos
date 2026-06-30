@@ -1,0 +1,1 @@
+ALTER TYPE "PaymentInstitution" ADD VALUE 'CAIXA_LOCAL';

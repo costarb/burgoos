@@ -1,0 +1,396 @@
+openapi: 3.0.3
+info:
+  title: BurgoOS Financial Operations API
+  version: 0.1.0
+  description: Tenant-scoped admin contracts for accounts payable and cash flow.
+paths:
+  /api/admin/financial/accounts:
+    get:
+      summary: List financial accounts with current balances
+      responses:
+        "200":
+          description: Financial account list
+    post:
+      summary: Create a financial account
+      requestBody:
+        $ref: "#/components/requestBodies/FinancialAccount"
+      responses:
+        "201":
+          description: Financial account created
+        "409":
+          description: Name or payment institution mapping already exists
+  /api/admin/financial/accounts/{id}:
+    patch:
+      summary: Update or inactivate a financial account
+      parameters:
+        - $ref: "#/components/parameters/Id"
+      requestBody:
+        $ref: "#/components/requestBodies/FinancialAccount"
+      responses:
+        "200":
+          description: Financial account updated
+  /api/admin/financial/categories:
+    get:
+      summary: List financial categories
+      responses:
+        "200":
+          description: Category list
+    post:
+      summary: Create a financial category
+      responses:
+        "201":
+          description: Category created
+  /api/admin/financial/payables:
+    get:
+      summary: List and summarize payables
+      parameters:
+        - $ref: "#/components/parameters/Start"
+        - $ref: "#/components/parameters/End"
+        - name: status
+          in: query
+          schema:
+            $ref: "#/components/schemas/PayableStatus"
+        - name: categoryId
+          in: query
+          schema:
+            type: string
+            format: uuid
+        - name: supplierId
+          in: query
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Filtered payable list and totals
+    post:
+      summary: Create one payable or recurring occurrences
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PayableInput"
+      responses:
+        "201":
+          description: Payable occurrences created
+  /api/admin/financial/payables/{id}:
+    get:
+      summary: Get payable detail and payment history
+      parameters:
+        - $ref: "#/components/parameters/Id"
+      responses:
+        "200":
+          description: Payable detail
+    patch:
+      summary: Update an unpaid payable occurrence
+      parameters:
+        - $ref: "#/components/parameters/Id"
+      responses:
+        "200":
+          description: Payable updated
+        "409":
+          description: Update conflicts with realized payments
+  /api/admin/financial/payables/{id}/cancel:
+    post:
+      summary: Cancel an unpaid payable
+      parameters:
+        - $ref: "#/components/parameters/Id"
+      requestBody:
+        $ref: "#/components/requestBodies/Reason"
+      responses:
+        "200":
+          description: Payable cancelled
+        "409":
+          description: Active payments must be reversed first
+  /api/admin/financial/payables/{id}/payments:
+    post:
+      summary: Register a total or partial payment
+      parameters:
+        - $ref: "#/components/parameters/Id"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PayablePaymentInput"
+      responses:
+        "201":
+          description: Payment registered
+        "409":
+          description: Payment exceeds payable remaining amount
+  /api/admin/financial/payable-payments/{id}/reverse:
+    post:
+      summary: Reverse a payable payment
+      parameters:
+        - $ref: "#/components/parameters/Id"
+      requestBody:
+        $ref: "#/components/requestBodies/Reason"
+      responses:
+        "200":
+          description: Payment reversed
+  /api/admin/financial/cash-flow/position:
+    get:
+      summary: Get current and projected cash position
+      parameters:
+        - name: asOf
+          in: query
+          required: true
+          schema:
+            type: string
+            format: date
+        - name: projectionEnd
+          in: query
+          required: true
+          schema:
+            type: string
+            format: date
+        - name: financialAccountId
+          in: query
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Current balance, receivables, payables and projection
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CashPosition"
+  /api/admin/financial/cash-flow/ledger:
+    get:
+      summary: Get unified realized and projected ledger
+      parameters:
+        - $ref: "#/components/parameters/Start"
+        - $ref: "#/components/parameters/End"
+        - name: financialAccountId
+          in: query
+          schema:
+            type: string
+            format: uuid
+        - name: realizationStatus
+          in: query
+          schema:
+            type: string
+            enum: [REALIZED, PROJECTED]
+      responses:
+        "200":
+          description: Paginated ledger
+  /api/admin/financial/cash-flow/movements:
+    post:
+      summary: Create manual inflow, outflow, adjustment or transfer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CashMovementInput"
+      responses:
+        "201":
+          description: Movement created
+  /api/admin/financial/cash-flow/movements/{id}/reverse:
+    post:
+      summary: Reverse a manual cash movement
+      parameters:
+        - $ref: "#/components/parameters/Id"
+      requestBody:
+        $ref: "#/components/requestBodies/Reason"
+      responses:
+        "200":
+          description: Movement reversed
+  /api/admin/financial/audit:
+    get:
+      summary: Query financial audit history
+      parameters:
+        - name: entityType
+          in: query
+          schema:
+            type: string
+        - name: entityId
+          in: query
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Audit history
+components:
+  parameters:
+    Id:
+      name: id
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    Start:
+      name: start
+      in: query
+      required: true
+      schema:
+        type: string
+        format: date
+    End:
+      name: end
+      in: query
+      required: true
+      schema:
+        type: string
+        format: date
+  requestBodies:
+    Reason:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ReasonInput"
+    FinancialAccount:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/FinancialAccountInput"
+  schemas:
+    FinancialAccountInput:
+      type: object
+      required: [name, openingBalance, openingBalanceAt, active]
+      properties:
+        name:
+          type: string
+        paymentInstitution:
+          type: string
+          nullable: true
+          enum: [PAGBANK, MERCADO_PAGO, DINHEIRO, CAIXA_LOCAL]
+        openingBalance:
+          type: string
+          example: "100.00"
+        openingBalanceAt:
+          type: string
+          format: date-time
+        active:
+          type: boolean
+    PayableStatus:
+      type: string
+      enum: [OPEN, PARTIALLY_PAID, PAID, OVERDUE, CANCELLED]
+    PayableInput:
+      type: object
+      required: [categoryId, description, dueDate, expectedAmount]
+      properties:
+        categoryId:
+          type: string
+          format: uuid
+        supplierId:
+          type: string
+          format: uuid
+          nullable: true
+        description:
+          type: string
+        dueDate:
+          type: string
+          format: date
+        expectedAmount:
+          type: string
+          example: "250.00"
+        recurrence:
+          nullable: true
+          allOf:
+            - $ref: "#/components/schemas/RecurrenceInput"
+    RecurrenceInput:
+      type: object
+      required: [frequency, interval, startsOn]
+      properties:
+        frequency:
+          type: string
+          enum: [WEEKLY, MONTHLY, YEARLY]
+        interval:
+          type: integer
+          minimum: 1
+        startsOn:
+          type: string
+          format: date
+        endsOn:
+          type: string
+          format: date
+          nullable: true
+        occurrenceCount:
+          type: integer
+          minimum: 1
+          nullable: true
+    PayablePaymentInput:
+      type: object
+      required: [financialAccountId, amount, paidAt]
+      properties:
+        financialAccountId:
+          type: string
+          format: uuid
+        amount:
+          type: string
+          example: "100.00"
+        paidAt:
+          type: string
+          format: date-time
+        notes:
+          type: string
+          nullable: true
+    CashMovementInput:
+      type: object
+      required: [type, financialAccountId, amount, occurredAt, description]
+      properties:
+        type:
+          type: string
+          enum: [MANUAL_INFLOW, MANUAL_OUTFLOW, TRANSFER, ADJUSTMENT]
+        financialAccountId:
+          type: string
+          format: uuid
+        destinationAccountId:
+          type: string
+          format: uuid
+          nullable: true
+        categoryId:
+          type: string
+          format: uuid
+          nullable: true
+        amount:
+          type: string
+          example: "50.00"
+        occurredAt:
+          type: string
+          format: date-time
+        description:
+          type: string
+        justification:
+          type: string
+          nullable: true
+    ReasonInput:
+      type: object
+      required: [reason]
+      properties:
+        reason:
+          type: string
+          minLength: 3
+    CashPosition:
+      type: object
+      required: [asOf, projectionEnd, currentBalance, receivableAmount, payableAmount, projectedBalance, accounts, timeline]
+      properties:
+        asOf:
+          type: string
+          format: date
+        projectionEnd:
+          type: string
+          format: date
+        currentBalance:
+          type: string
+        receivableAmount:
+          type: string
+        payableAmount:
+          type: string
+        projectedBalance:
+          type: string
+        accounts:
+          type: array
+          items:
+            type: object
+        timeline:
+          type: array
+          items:
+            type: object

@@ -1,0 +1,187 @@
+openapi: 3.0.3
+info:
+  title: BurgoOS Order Maintenance API
+  version: 0.1.0
+  description: Admin API contract for auditable order editing and logical deletion.
+paths:
+  /api/admin/orders/maintenance:
+    get:
+      summary: Search tenant orders available for maintenance
+      parameters:
+        - { name: start, in: query, schema: { type: string, format: date } }
+        - { name: end, in: query, schema: { type: string, format: date } }
+        - name: status
+          in: query
+          schema: { $ref: "#/components/schemas/OrderStatus" }
+        - name: includeDeleted
+          in: query
+          schema: { type: boolean, default: false }
+        - name: search
+          in: query
+          description: Matches order ID, external payment ID, customer name or phone.
+          schema: { type: string }
+      responses:
+        "200":
+          description: Maintenance order list
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/MaintainableOrder" }
+        "401": { description: Missing or invalid authentication }
+        "403": { description: OWNER or ADMIN role required }
+  /api/admin/orders/{orderId}/maintenance:
+    patch:
+      summary: Edit an active or finalized order and reconcile effects
+      parameters:
+        - { $ref: "#/components/parameters/OrderId" }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/EditOrderRequest" }
+      responses:
+        "200":
+          description: Corrected order
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/MaintainableOrder" }
+        "400": { description: Invalid order or financial values }
+        "403": { description: OWNER or ADMIN role required }
+        "404": { description: Order not found in authenticated tenant }
+        "409": { description: Order changed since opened or is deleted }
+    delete:
+      summary: Logically delete an order and compensate effects
+      parameters:
+        - { $ref: "#/components/parameters/OrderId" }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/DeleteOrderRequest" }
+      responses:
+        "200":
+          description: Logical deletion result
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/OrderDeletionResult" }
+        "400": { description: Missing or invalid reason }
+        "403": { description: OWNER or ADMIN role required }
+        "404": { description: Order not found in authenticated tenant }
+        "409": { description: Order changed since opened or is deleted }
+  /api/admin/orders/{orderId}/maintenance-history:
+    get:
+      summary: Get immutable edit/delete history for an order
+      parameters:
+        - { $ref: "#/components/parameters/OrderId" }
+      responses:
+        "200":
+          description: Maintenance history
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/OrderMaintenanceRecord" }
+        "403": { description: OWNER or ADMIN role required }
+        "404": { description: Order not found in authenticated tenant }
+components:
+  parameters:
+    OrderId:
+      name: orderId
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
+  schemas:
+    OrderStatus:
+      type: string
+      enum: [PENDING, PREPARING, SHIPPED, DELIVERED, CANCELLED]
+    MaintainableOrder:
+      type: object
+      required: [id, status, total, customerName, customerPhone, fulfillmentMethod, paymentMethod, items, createdAt, updatedAt]
+      properties:
+        id: { type: string, format: uuid }
+        status: { $ref: "#/components/schemas/OrderStatus" }
+        total: { type: string, example: "35.00" }
+        customerName: { type: string }
+        customerPhone: { type: string }
+        fulfillmentMethod: { type: string, enum: [DELIVERY, PICKUP] }
+        deliveryAddress: { type: object, nullable: true, additionalProperties: true }
+        notes: { type: string, nullable: true }
+        paymentMethod: { type: string }
+        paymentInstitution: { type: string, nullable: true }
+        externalPaymentId: { type: string, nullable: true }
+        paymentGrossAmount: { type: string, nullable: true }
+        paymentFeeAmount: { type: string, nullable: true }
+        paymentNetAmount: { type: string, nullable: true }
+        paymentBrand: { type: string, nullable: true }
+        paymentReleaseExpectedAt: { type: string, format: date-time, nullable: true }
+        orderPlatformId: { type: string, format: uuid, nullable: true }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+        deletedAt: { type: string, format: date-time, nullable: true }
+        deletionReason: { type: string, nullable: true }
+        items:
+          type: array
+          items: { $ref: "#/components/schemas/EditOrderItem" }
+    EditOrderItem:
+      type: object
+      required: [productId, productNameSnapshot, quantity, unitPrice]
+      properties:
+        id: { type: string, format: uuid, nullable: true }
+        productId: { type: string, format: uuid }
+        productNameSnapshot: { type: string }
+        quantity: { type: integer, minimum: 1 }
+        unitPrice: { type: string, example: "17.50" }
+    EditOrderRequest:
+      type: object
+      required: [expectedUpdatedAt, customerName, customerPhone, fulfillmentMethod, paymentMethod, items]
+      properties:
+        expectedUpdatedAt: { type: string, format: date-time }
+        reason:
+          type: string
+          description: Required for finalized orders or financial changes.
+        customerName: { type: string }
+        customerPhone: { type: string }
+        fulfillmentMethod: { type: string, enum: [DELIVERY, PICKUP] }
+        deliveryAddress: { type: object, nullable: true, additionalProperties: true }
+        notes: { type: string, nullable: true }
+        createdAt: { type: string, format: date-time }
+        paymentMethod: { type: string }
+        paymentInstitution: { type: string, nullable: true }
+        externalPaymentId: { type: string, nullable: true }
+        paymentGrossAmount: { type: string, nullable: true }
+        paymentFeeAmount: { type: string, nullable: true }
+        paymentNetAmount: { type: string, nullable: true }
+        paymentBrand: { type: string, nullable: true }
+        paymentReleaseExpectedAt: { type: string, format: date-time, nullable: true }
+        orderPlatformId: { type: string, format: uuid, nullable: true }
+        items:
+          type: array
+          minItems: 1
+          items: { $ref: "#/components/schemas/EditOrderItem" }
+    DeleteOrderRequest:
+      type: object
+      required: [expectedUpdatedAt, reason]
+      properties:
+        expectedUpdatedAt: { type: string, format: date-time }
+        reason: { type: string, minLength: 3 }
+    OrderDeletionResult:
+      type: object
+      required: [orderId, deletedAt, reason]
+      properties:
+        orderId: { type: string, format: uuid }
+        deletedAt: { type: string, format: date-time }
+        reason: { type: string }
+    OrderMaintenanceRecord:
+      type: object
+      required: [id, action, actorUserId, actorName, reason, beforeSnapshot, impactSummary, createdAt]
+      properties:
+        id: { type: string, format: uuid }
+        action: { type: string, enum: [EDIT, DELETE] }
+        actorUserId: { type: string, format: uuid }
+        actorName: { type: string }
+        reason: { type: string }
+        beforeSnapshot: { type: object, additionalProperties: true }
+        afterSnapshot: { type: object, nullable: true, additionalProperties: true }
+        impactSummary: { type: object, additionalProperties: true }
+        createdAt: { type: string, format: date-time }

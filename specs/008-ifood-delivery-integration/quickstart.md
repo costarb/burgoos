@@ -1,0 +1,126 @@
+# Quickstart: iFood Delivery Integration
+
+This quickstart validates the first releasable slice for the pilot store: configure iFood, validate merchant access, simulate event ingestion, create an internal order, confirm it, evolve status, and inspect health/audit.
+
+## Prerequisites
+
+- Current branch: `008-ifood-delivery-integration`
+- Local PostgreSQL running through Docker
+- Database migrated and seeded
+- Admin user with permissions to manage integrations and orders for the pilot store
+- iFood sandbox/homologation credentials, or mocked iFood adapter enabled for local tests
+
+## Local Setup
+
+```powershell
+npm ci
+npm run db:up
+npm run db:migrate
+npm run db:seed
+npm run db:generate
+```
+
+Run API and web:
+
+```powershell
+npm run dev --workspace @burgoos/api
+npm run dev --workspace @burgoos/web
+```
+
+## Manual Validation Flow
+
+1. Login as an admin user with access to the pilot store.
+2. Open `Admin > Integracoes > Delivery`.
+3. Create an iFood integration for the active store:
+   - provider: `IFOOD`
+   - display name: `iFood`
+   - external merchant id: sandbox or homologation merchant
+   - order platform: existing or newly created iFood `OrderPlatform`
+4. Generate the iFood authorization code:
+   - Fill client ID and client secret.
+   - Click `Gerar codigo iFood`.
+   - Copy the `userCode` or `verificationUrlComplete`.
+   - Open the URL, approve the application in the iFood portal and keep the generated authorization code.
+5. Save credentials. Confirm that no secret value is shown after saving.
+   - Paste the authorization code returned after approval.
+   - The system sends the saved `authorizationCodeVerifier` with the authorization code when requesting the token.
+   - Do not save credentials before completing this authorization step; the current iFood distributed client rejects `client_credentials`.
+6. Run validation.
+   - Expected: credentials valid, merchant accessible, merchant status visible, integration ready or pending propagation.
+7. Activate the integration.
+8. Trigger mocked or sandbox polling for a new iFood order event.
+9. Confirm that:
+   - inbound event is persisted once
+   - order details are fetched or retried when temporarily unavailable
+   - one internal `Order` is created for the active store
+   - `PlatformOrderLink` contains provider, merchant id, external order id, modality and deadline
+   - duplicate polling of the same event does not duplicate the order
+10. Open `Admin > Pedidos`.
+11. Confirm the iFood order before its deadline.
+12. Move the order through preparation and the correct ready/dispatch action based on modality.
+13. Inspect `Admin > Integracoes > Delivery > Saude`.
+    - Expected: last polling success, pending events, failed events, retryable syncs and homologation checks are visible.
+14. Simulate exception events if available in sandbox:
+    - order patched event updates the platform snapshot and appears as an operator exception
+    - cancellation result event updates the platform status
+    - dispute event creates a pending dispute and appears in health counters
+15. Review the audit table in `Admin > Integracoes > Delivery`.
+    - Expected: configuration, event ACK, order update, dispute and sync actions appear without credential or customer-sensitive payloads.
+
+## Test Commands
+
+Focused backend tests:
+
+```powershell
+npm run test --workspace @burgoos/api -- delivery-integration
+npm run test --workspace @burgoos/api -- ifood
+npm run test --workspace @burgoos/api -- ifood-event-poller ifood-dispute
+```
+
+Focused web tests:
+
+```powershell
+npm run test --workspace @burgoos/web -- delivery-integrations
+npm run test --workspace @burgoos/web -- delivery-integrations-page
+npm run test --workspace @burgoos/web -- orders
+```
+
+Prisma validation:
+
+```powershell
+npm run db:generate
+npx prisma validate --schema packages/database/prisma/schema.prisma
+```
+
+Full validation before opening PR:
+
+```powershell
+npm run lint
+npm run typecheck
+npm run test
+npm run build
+```
+
+## Expected Outcomes
+
+- Store admin can configure and validate iFood without seeing stored secrets.
+- Polling respects the iFood interval and does not run for paused/invalid integrations.
+- Successfully processed events are acknowledged only after durable event/order persistence.
+- iFood orders appear in the existing order queue with source, deadline and platform sync state.
+- Accept/refuse/status actions create provider sync attempts and visible retry state on failure.
+- iFood exception events create visible health/audit signals instead of silently changing orders.
+- Cross-store access is denied for integration configuration, events, and platform-origin orders.
+
+## Production/Homologation Notes
+
+- Production activation depends on iFood homologation approval.
+- Webhooks, if enabled later, must validate provider signatures.
+- Token expiration must be driven by provider metadata.
+- Merchant permission propagation can temporarily show validation as pending.
+- Customer data imported from iFood must respect provider privacy limitations in views and printouts.
+- Render API build command:
+  `npm ci && npm run db:generate && npx prisma migrate deploy --schema packages/database/prisma/schema.prisma && npm run build --workspace @burgoos/api`
+- Render API start command: `npm run start --workspace @burgoos/api`
+- Render web build command:
+  `npm ci && npm run db:generate && npm run build --workspace @burgoos/web`
+- Do not rotate `DELIVERY_INTEGRATION_SECRET_KEY` after saving credentials unless all store credentials are re-saved.

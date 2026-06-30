@@ -1,0 +1,706 @@
+openapi: 3.0.3
+info:
+  title: BurgoOS Store Access Management API
+  version: 0.1.0
+  description: Tenant-scoped admin contracts for login, users, access profiles, permissions and access audit.
+paths:
+  /api/auth/login:
+    post:
+      summary: Authenticate an administrative user
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LoginInput"
+            examples:
+              masterLogin:
+                value:
+                  email: master@burgoos.local
+                  password: admin123
+      responses:
+        "200":
+          description: Authenticated session with allowed stores and permissions
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthSession"
+              examples:
+                multiStoreSession:
+                  value:
+                    accessToken: eyJhbGciOi...
+                    refreshToken: eyJhbGciOi...
+                    activeStoreId: 11111111-1111-4111-8111-111111111111
+                    allowedStores:
+                      - id: 11111111-1111-4111-8111-111111111111
+                        name: Loja Centro
+                        slug: loja-centro
+                        active: true
+                    permissions:
+                      - access.users.manage
+                      - access.profiles.manage
+                    accessTokenExpiresAt: "2026-06-10T22:15:00.000Z"
+                    user:
+                      id: 33333333-3333-4333-8333-333333333333
+                      login: master@burgoos.local
+                      name: Master
+                      email: master@burgoos.local
+                      status: ACTIVE
+                      isMaster: true
+        "401":
+          description: Invalid credentials or inactive user
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              examples:
+                invalidCredentials:
+                  value:
+                    statusCode: 401
+                    message: Invalid credentials
+                    error: Unauthorized
+  /api/auth/refresh:
+    post:
+      summary: Refresh an administrative session
+      responses:
+        "200":
+          description: Refreshed session
+        "401":
+          description: Refresh token invalid, revoked or expired
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /api/auth/logout:
+    post:
+      summary: Revoke the current administrative session
+      responses:
+        "204":
+          description: Session revoked
+  /api/auth/password-reset/request:
+    post:
+      summary: Request password reset or first-access link
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PasswordResetRequest"
+      responses:
+        "202":
+          description: Request accepted when eligible without exposing account existence
+  /api/auth/password-reset/confirm:
+    post:
+      summary: Confirm password reset or first access
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PasswordResetConfirm"
+      responses:
+        "204":
+          description: Password changed
+        "400":
+          description: Token invalid, used or expired
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /api/admin/session/store:
+    patch:
+      summary: Change active store context for the current user
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [storeId]
+              properties:
+                storeId:
+                  type: string
+                  format: uuid
+      responses:
+        "200":
+          description: Active store changed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthSession"
+        "403":
+          description: Store is not authorized for current user
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /api/admin/access/users:
+    get:
+      summary: List users visible to the current actor
+      parameters:
+        - name: storeId
+          in: query
+          schema:
+            type: string
+            format: uuid
+        - name: status
+          in: query
+          schema:
+            $ref: "#/components/schemas/UserStatus"
+        - name: profileId
+          in: query
+          schema:
+            type: string
+            format: uuid
+        - name: search
+          in: query
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Scoped user list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/UserSummary"
+    post:
+      summary: Create a user within the actor's allowed scope
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UserInput"
+      responses:
+        "201":
+          description: User created
+        "403":
+          description: Actor cannot assign requested store or profile
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "409":
+          description: Login already exists
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /api/admin/access/users/{id}:
+    get:
+      summary: Get scoped user detail
+      parameters:
+        - $ref: "#/components/parameters/Id"
+      responses:
+        "200":
+          description: User detail
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserDetail"
+        "403":
+          description: User is outside actor scope
+    patch:
+      summary: Update a user, status or assignments within actor scope
+      parameters:
+        - $ref: "#/components/parameters/Id"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UserUpdate"
+      responses:
+        "200":
+          description: User updated
+        "403":
+          description: Actor cannot perform requested change
+        "409":
+          description: Change would violate master or uniqueness rules
+  /api/admin/access/profiles:
+    get:
+      summary: List access profiles visible to the current actor
+      parameters:
+        - name: storeId
+          in: query
+          schema:
+            type: string
+            format: uuid
+        - name: status
+          in: query
+          schema:
+            $ref: "#/components/schemas/ProfileStatus"
+        - name: search
+          in: query
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Scoped access profile list
+    post:
+      summary: Create an access profile
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AccessProfileInput"
+      responses:
+        "201":
+          description: Access profile created
+        "403":
+          description: Actor cannot create profile in requested scope
+        "409":
+          description: Profile name already exists in scope
+  /api/admin/access/profiles/{id}:
+    get:
+      summary: Get access profile detail
+      parameters:
+        - $ref: "#/components/parameters/Id"
+      responses:
+        "200":
+          description: Access profile detail
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AccessProfileDetail"
+    patch:
+      summary: Update access profile and permission grants
+      parameters:
+        - $ref: "#/components/parameters/Id"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AccessProfileUpdate"
+      responses:
+        "200":
+          description: Access profile updated
+        "403":
+          description: Actor cannot update this profile
+        "409":
+          description: Update conflicts with users assigned to this profile
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+              examples:
+                profileInUse:
+                  value:
+                    statusCode: 409
+                    message: Perfil em uso por usuarios ativos
+                    error: Conflict
+  /api/admin/access/profiles/{id}/duplicate:
+    post:
+      summary: Duplicate an access profile
+      parameters:
+        - $ref: "#/components/parameters/Id"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name]
+              properties:
+                name:
+                  type: string
+                storeId:
+                  type: string
+                  format: uuid
+                  nullable: true
+      responses:
+        "201":
+          description: Access profile duplicated
+  /api/admin/access/permissions:
+    get:
+      summary: List available permission catalog grouped for review
+      responses:
+        "200":
+          description: Permission catalog
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/PermissionGroup"
+  /api/admin/access/audit:
+    get:
+      summary: Query access-management audit events visible to the actor
+      parameters:
+        - name: storeId
+          in: query
+          schema:
+            type: string
+            format: uuid
+        - name: eventType
+          in: query
+          schema:
+            type: string
+        - name: targetUserId
+          in: query
+          schema:
+            type: string
+            format: uuid
+        - name: start
+          in: query
+          schema:
+            type: string
+            format: date-time
+        - name: end
+          in: query
+          schema:
+            type: string
+            format: date-time
+      responses:
+        "200":
+          description: Scoped audit event list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/AccessAuditEvent"
+components:
+  parameters:
+    Id:
+      name: id
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+  schemas:
+    LoginInput:
+      type: object
+      required: [email, password]
+      properties:
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+          format: password
+    PasswordResetRequest:
+      type: object
+      required: [login]
+      properties:
+        login:
+          type: string
+    PasswordResetConfirm:
+      type: object
+      required: [token, newPassword]
+      properties:
+        token:
+          type: string
+        newPassword:
+          type: string
+          format: password
+          minLength: 8
+    UserStatus:
+      type: string
+      enum: [INVITED, ACTIVE, INACTIVE, LOCKED]
+    ProfileStatus:
+      type: string
+      enum: [ACTIVE, INACTIVE]
+    ProfileScope:
+      type: string
+      enum: [GLOBAL, STORE]
+    AuthSession:
+      type: object
+      required:
+        [
+          accessToken,
+          refreshToken,
+          user,
+          activeStoreId,
+          allowedStores,
+          permissions,
+          accessTokenExpiresAt,
+        ]
+      properties:
+        accessToken:
+          type: string
+        refreshToken:
+          type: string
+        user:
+          $ref: "#/components/schemas/UserSummary"
+        activeStoreId:
+          type: string
+          format: uuid
+          nullable: true
+        allowedStores:
+          type: array
+          items:
+            $ref: "#/components/schemas/StoreSummary"
+        permissions:
+          type: array
+          items:
+            type: string
+        accessTokenExpiresAt:
+          type: string
+          format: date-time
+    StoreSummary:
+      type: object
+      required: [id, name, slug, active]
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        slug:
+          type: string
+        active:
+          type: boolean
+    UserSummary:
+      type: object
+      required: [id, login, name, status, isMaster]
+      properties:
+        id:
+          type: string
+          format: uuid
+        login:
+          type: string
+        name:
+          type: string
+        email:
+          type: string
+          format: email
+        status:
+          $ref: "#/components/schemas/UserStatus"
+        isMaster:
+          type: boolean
+    UserDetail:
+      allOf:
+        - $ref: "#/components/schemas/UserSummary"
+        - type: object
+          required: [assignments]
+          properties:
+            phone:
+              type: string
+              nullable: true
+            lastLoginAt:
+              type: string
+              format: date-time
+              nullable: true
+            assignments:
+              type: array
+              items:
+                $ref: "#/components/schemas/UserStoreAssignment"
+    UserInput:
+      type: object
+      required: [login, name, email, isMaster, assignments]
+      properties:
+        login:
+          type: string
+        name:
+          type: string
+        email:
+          type: string
+          format: email
+        phone:
+          type: string
+          nullable: true
+        isMaster:
+          type: boolean
+        assignments:
+          type: array
+          items:
+            $ref: "#/components/schemas/UserStoreAssignmentInput"
+    UserUpdate:
+      type: object
+      properties:
+        name:
+          type: string
+        email:
+          type: string
+          format: email
+        phone:
+          type: string
+          nullable: true
+        status:
+          $ref: "#/components/schemas/UserStatus"
+        isMaster:
+          type: boolean
+        assignments:
+          type: array
+          items:
+            $ref: "#/components/schemas/UserStoreAssignmentInput"
+    UserStoreAssignment:
+      type: object
+      required: [store, profile, canManageStoreAccess, status]
+      properties:
+        store:
+          $ref: "#/components/schemas/StoreSummary"
+        profile:
+          $ref: "#/components/schemas/AccessProfileSummary"
+        canManageStoreAccess:
+          type: boolean
+        status:
+          type: string
+          enum: [ACTIVE, INACTIVE]
+    UserStoreAssignmentInput:
+      type: object
+      required: [storeId, profileId, canManageStoreAccess, status]
+      properties:
+        storeId:
+          type: string
+          format: uuid
+        profileId:
+          type: string
+          format: uuid
+        canManageStoreAccess:
+          type: boolean
+        status:
+          type: string
+          enum: [ACTIVE, INACTIVE]
+    AccessProfileSummary:
+      type: object
+      required: [id, name, scope, status]
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        scope:
+          $ref: "#/components/schemas/ProfileScope"
+        storeId:
+          type: string
+          format: uuid
+          nullable: true
+        status:
+          $ref: "#/components/schemas/ProfileStatus"
+    AccessProfileDetail:
+      allOf:
+        - $ref: "#/components/schemas/AccessProfileSummary"
+        - type: object
+          required: [permissions]
+          properties:
+            description:
+              type: string
+              nullable: true
+            permissions:
+              type: array
+              items:
+                $ref: "#/components/schemas/Permission"
+    AccessProfileInput:
+      type: object
+      required: [name, scope, permissionKeys]
+      properties:
+        name:
+          type: string
+        description:
+          type: string
+          nullable: true
+        scope:
+          $ref: "#/components/schemas/ProfileScope"
+        storeId:
+          type: string
+          format: uuid
+          nullable: true
+        permissionKeys:
+          type: array
+          items:
+            type: string
+    AccessProfileUpdate:
+      type: object
+      properties:
+        name:
+          type: string
+        description:
+          type: string
+          nullable: true
+        status:
+          $ref: "#/components/schemas/ProfileStatus"
+        permissionKeys:
+          type: array
+          items:
+            type: string
+    Permission:
+      type: object
+      required: [key, area, screen, action, description, sensitive]
+      properties:
+        key:
+          type: string
+        area:
+          type: string
+        screen:
+          type: string
+        action:
+          type: string
+          enum: [VIEW, CREATE, UPDATE, DELETE, APPROVE, MANAGE]
+        description:
+          type: string
+        sensitive:
+          type: boolean
+    PermissionGroup:
+      type: object
+      required: [area, screens]
+      properties:
+        area:
+          type: string
+        screens:
+          type: array
+          items:
+            type: object
+            required: [screen, permissions]
+            properties:
+              screen:
+                type: string
+              permissions:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Permission"
+    AccessAuditEvent:
+      type: object
+      required: [id, eventType, result, occurredAt]
+      properties:
+        id:
+          type: string
+          format: uuid
+        actorUserId:
+          type: string
+          format: uuid
+          nullable: true
+        targetUserId:
+          type: string
+          format: uuid
+          nullable: true
+        storeId:
+          type: string
+          format: uuid
+          nullable: true
+        eventType:
+          type: string
+        result:
+          type: string
+          enum: [SUCCESS, DENIED, FAILED]
+        reason:
+          type: string
+          nullable: true
+        occurredAt:
+          type: string
+          format: date-time
+        metadata:
+          type: object
+          nullable: true
+          additionalProperties: true
+    ErrorResponse:
+      type: object
+      required: [statusCode, message]
+      properties:
+        statusCode:
+          type: integer
+        message:
+          oneOf:
+            - type: string
+            - type: array
+              items:
+                type: string
+        error:
+          type: string

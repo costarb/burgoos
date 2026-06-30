@@ -1,0 +1,561 @@
+openapi: 3.0.3
+info:
+  title: BurgoOS Delivery Integrations API
+  version: 0.1.0
+  description: Tenant-scoped admin contracts for configuring delivery integrations and operating iFood-origin orders.
+paths:
+  /api/admin/integrations/delivery:
+    get:
+      summary: List delivery integrations for the active store
+      responses:
+        "200":
+          description: Active-store delivery integrations
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/DeliveryIntegrationSummary"
+    post:
+      summary: Create or replace a delivery integration configuration for the active store
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DeliveryIntegrationInput"
+      responses:
+        "201":
+          description: Integration configuration saved
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DeliveryIntegrationDetail"
+        "403":
+          description: Actor cannot manage integrations for the active store
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "409":
+          description: Provider already configured or invalid state transition
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /api/admin/integrations/delivery/{id}:
+    get:
+      summary: Get delivery integration detail
+      parameters:
+        - $ref: "#/components/parameters/Id"
+      responses:
+        "200":
+          description: Integration detail
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DeliveryIntegrationDetail"
+        "404":
+          description: Integration not found in active store
+    patch:
+      summary: Update delivery integration settings without exposing secrets
+      parameters:
+        - $ref: "#/components/parameters/Id"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DeliveryIntegrationUpdate"
+      responses:
+        "200":
+          description: Integration updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DeliveryIntegrationDetail"
+        "403":
+          description: Actor cannot update this integration
+        "409":
+          description: Update conflicts with current processing state
+  /api/admin/integrations/delivery/{id}/validate:
+    post:
+      summary: Validate credentials, merchant access and store readiness
+      parameters:
+        - $ref: "#/components/parameters/Id"
+      responses:
+        "200":
+          description: Validation result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/IntegrationValidationResult"
+        "409":
+          description: Validation failed or merchant permission still propagating
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/IntegrationValidationResult"
+  /api/admin/integrations/delivery/{id}/activate:
+    post:
+      summary: Activate a validated delivery integration
+      parameters:
+        - $ref: "#/components/parameters/Id"
+      responses:
+        "200":
+          description: Integration activated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DeliveryIntegrationDetail"
+        "409":
+          description: Integration is not ready to activate
+  /api/admin/integrations/delivery/{id}/pause:
+    post:
+      summary: Pause ingestion without deleting credentials or history
+      parameters:
+        - $ref: "#/components/parameters/Id"
+      responses:
+        "200":
+          description: Integration paused
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DeliveryIntegrationDetail"
+  /api/admin/integrations/delivery/{id}/credentials:
+    post:
+      summary: Rotate or save provider credentials
+      parameters:
+        - $ref: "#/components/parameters/Id"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DeliveryCredentialInput"
+      responses:
+        "204":
+          description: Credentials saved; secret values are not returned
+        "403":
+          description: Actor cannot manage credentials
+  /api/admin/integrations/delivery/{id}/health:
+    get:
+      summary: Get integration health, polling and homologation readiness
+      parameters:
+        - $ref: "#/components/parameters/Id"
+      responses:
+        "200":
+          description: Health detail
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DeliveryIntegrationHealth"
+  /api/admin/integrations/delivery/{id}/events:
+    get:
+      summary: List recent provider events for audit and troubleshooting
+      parameters:
+        - $ref: "#/components/parameters/Id"
+        - name: status
+          in: query
+          schema:
+            $ref: "#/components/schemas/PlatformEventStatus"
+        - name: externalOrderId
+          in: query
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Event list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/PlatformEvent"
+  /api/admin/orders/{id}/platform-actions/confirm:
+    post:
+      summary: Confirm a platform-origin order and move it into preparation flow
+      parameters:
+        - $ref: "#/components/parameters/Id"
+      responses:
+        "200":
+          description: Confirmation accepted locally and queued/sent to provider
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PlatformOrderActionResult"
+        "409":
+          description: Order cannot be confirmed or deadline expired
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /api/admin/orders/{id}/platform-actions/refuse:
+    post:
+      summary: Refuse or request cancellation of a platform-origin order
+      parameters:
+        - $ref: "#/components/parameters/Id"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PlatformRefusalInput"
+      responses:
+        "200":
+          description: Refusal/cancellation request recorded
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PlatformOrderActionResult"
+        "409":
+          description: Provider reason invalid or order cannot be refused
+  /api/admin/orders/{id}/platform-actions/status:
+    post:
+      summary: Send provider status transition for a platform-origin order
+      parameters:
+        - $ref: "#/components/parameters/Id"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PlatformStatusInput"
+      responses:
+        "200":
+          description: Status transition recorded
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PlatformOrderActionResult"
+        "409":
+          description: Status transition is not valid for this platform order
+  /api/admin/orders/{id}/platform-sync:
+    get:
+      summary: Get platform linkage, deadlines and sync attempts for an order
+      parameters:
+        - $ref: "#/components/parameters/Id"
+      responses:
+        "200":
+          description: Platform order sync detail
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PlatformOrderSyncDetail"
+components:
+  parameters:
+    Id:
+      name: id
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+  schemas:
+    DeliveryProvider:
+      type: string
+      enum: [IFOOD]
+    DeliveryIntegrationStatus:
+      type: string
+      enum: [DRAFT, VALIDATING, ACTIVE, PAUSED, REQUIRES_ATTENTION, DISABLED]
+    CredentialStatus:
+      type: string
+      enum: [ACTIVE, EXPIRED, REVOKED, ROTATED, REQUIRES_REAUTHORIZATION]
+    PlatformEventStatus:
+      type: string
+      enum: [RECEIVED, PROCESSING, PROCESSED, IGNORED, FAILED, ACK_PENDING, ACKED]
+    SyncAttemptStatus:
+      type: string
+      enum: [PENDING, SENT, CONFIRMED, FAILED, RETRYABLE, CANCELLED]
+    PlatformOrderAction:
+      type: string
+      enum:
+        [
+          CONFIRM,
+          REFUSE,
+          START_PREPARATION,
+          READY_TO_PICKUP,
+          DISPATCH,
+          DELIVER,
+          REQUEST_CANCELLATION,
+          RESPOND_DISPUTE,
+        ]
+    DeliveryIntegrationInput:
+      type: object
+      required: [provider, displayName, externalMerchantId, orderPlatformId]
+      properties:
+        provider:
+          $ref: "#/components/schemas/DeliveryProvider"
+        displayName:
+          type: string
+        externalMerchantId:
+          type: string
+        orderPlatformId:
+          type: string
+          format: uuid
+        pollingEnabled:
+          type: boolean
+          default: true
+        webhookEnabled:
+          type: boolean
+          default: false
+    DeliveryIntegrationUpdate:
+      type: object
+      properties:
+        displayName:
+          type: string
+        externalMerchantId:
+          type: string
+        pollingEnabled:
+          type: boolean
+        webhookEnabled:
+          type: boolean
+    DeliveryCredentialInput:
+      type: object
+      required: [clientId, clientSecret]
+      properties:
+        clientId:
+          type: string
+        clientSecret:
+          type: string
+          format: password
+        authorizationCode:
+          type: string
+          nullable: true
+        refreshToken:
+          type: string
+          nullable: true
+    DeliveryIntegrationSummary:
+      type: object
+      required:
+        [
+          id,
+          provider,
+          displayName,
+          status,
+          externalMerchantId,
+          pollingEnabled,
+          webhookEnabled,
+          lastSuccessfulPollingAt,
+        ]
+      properties:
+        id:
+          type: string
+          format: uuid
+        provider:
+          $ref: "#/components/schemas/DeliveryProvider"
+        displayName:
+          type: string
+        status:
+          $ref: "#/components/schemas/DeliveryIntegrationStatus"
+        externalMerchantId:
+          type: string
+          nullable: true
+        pollingEnabled:
+          type: boolean
+        webhookEnabled:
+          type: boolean
+        lastSuccessfulPollingAt:
+          type: string
+          format: date-time
+          nullable: true
+        lastErrorMessage:
+          type: string
+          nullable: true
+    DeliveryIntegrationDetail:
+      allOf:
+        - $ref: "#/components/schemas/DeliveryIntegrationSummary"
+        - type: object
+          required: [credentialStatus, homologationStatus, lastValidationAt]
+          properties:
+            credentialStatus:
+              $ref: "#/components/schemas/CredentialStatus"
+            homologationStatus:
+              type: string
+            lastValidationAt:
+              type: string
+              format: date-time
+              nullable: true
+            createdAt:
+              type: string
+              format: date-time
+            updatedAt:
+              type: string
+              format: date-time
+    IntegrationValidationResult:
+      type: object
+      required: [status, valid, checks]
+      properties:
+        status:
+          $ref: "#/components/schemas/DeliveryIntegrationStatus"
+        valid:
+          type: boolean
+        checks:
+          type: array
+          items:
+            type: object
+            required: [key, status, message]
+            properties:
+              key:
+                type: string
+              status:
+                type: string
+                enum: [PASS, WARNING, FAIL, PENDING]
+              message:
+                type: string
+    DeliveryIntegrationHealth:
+      type: object
+      required: [integrationId, status, merchantStatus, pendingEvents, failedEvents, retryableSyncs]
+      properties:
+        integrationId:
+          type: string
+          format: uuid
+        status:
+          $ref: "#/components/schemas/DeliveryIntegrationStatus"
+        merchantStatus:
+          type: string
+        lastSuccessfulPollingAt:
+          type: string
+          format: date-time
+          nullable: true
+        pendingEvents:
+          type: integer
+        failedEvents:
+          type: integer
+        retryableSyncs:
+          type: integer
+        homologationChecks:
+          type: array
+          items:
+            type: object
+            required: [key, passed]
+            properties:
+              key:
+                type: string
+              passed:
+                type: boolean
+              message:
+                type: string
+                nullable: true
+    PlatformEvent:
+      type: object
+      required: [id, provider, externalEventId, eventCode, status, receivedAt]
+      properties:
+        id:
+          type: string
+          format: uuid
+        provider:
+          $ref: "#/components/schemas/DeliveryProvider"
+        externalEventId:
+          type: string
+        externalOrderId:
+          type: string
+          nullable: true
+        eventCode:
+          type: string
+        status:
+          $ref: "#/components/schemas/PlatformEventStatus"
+        receivedAt:
+          type: string
+          format: date-time
+        processedAt:
+          type: string
+          format: date-time
+          nullable: true
+        acknowledgedAt:
+          type: string
+          format: date-time
+          nullable: true
+        errorMessage:
+          type: string
+          nullable: true
+    PlatformRefusalInput:
+      type: object
+      required: [providerReasonId]
+      properties:
+        providerReasonId:
+          type: string
+        notes:
+          type: string
+          nullable: true
+    PlatformStatusInput:
+      type: object
+      required: [action]
+      properties:
+        action:
+          $ref: "#/components/schemas/PlatformOrderAction"
+        notes:
+          type: string
+          nullable: true
+    PlatformOrderActionResult:
+      type: object
+      required: [orderId, action, syncStatus]
+      properties:
+        orderId:
+          type: string
+          format: uuid
+        action:
+          $ref: "#/components/schemas/PlatformOrderAction"
+        syncStatus:
+          $ref: "#/components/schemas/SyncAttemptStatus"
+        message:
+          type: string
+          nullable: true
+        deadlineAt:
+          type: string
+          format: date-time
+          nullable: true
+    PlatformOrderSyncDetail:
+      type: object
+      required: [orderId, provider, externalOrderId, externalStatus, attempts]
+      properties:
+        orderId:
+          type: string
+          format: uuid
+        provider:
+          $ref: "#/components/schemas/DeliveryProvider"
+        externalOrderId:
+          type: string
+        externalMerchantId:
+          type: string
+        externalStatus:
+          type: string
+        confirmationDeadlineAt:
+          type: string
+          format: date-time
+          nullable: true
+        attempts:
+          type: array
+          items:
+            type: object
+            required: [id, action, status, attemptNumber, createdAt]
+            properties:
+              id:
+                type: string
+                format: uuid
+              action:
+                $ref: "#/components/schemas/PlatformOrderAction"
+              status:
+                $ref: "#/components/schemas/SyncAttemptStatus"
+              attemptNumber:
+                type: integer
+              errorMessage:
+                type: string
+                nullable: true
+              createdAt:
+                type: string
+                format: date-time
+    ErrorResponse:
+      type: object
+      required: [statusCode, message]
+      properties:
+        statusCode:
+          type: integer
+        message:
+          oneOf:
+            - type: string
+            - type: array
+              items:
+                type: string
+        error:
+          type: string
