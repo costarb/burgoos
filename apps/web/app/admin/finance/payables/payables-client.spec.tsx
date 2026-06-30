@@ -2,7 +2,7 @@ import React, { act } from "react";
 import { createRoot, Root } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { Payable, PayableInput, PayableOptions, PayablesResponse } from "@burgoos/types";
-import { createPayable, getPayables, updatePayable } from "../../../../lib/api";
+import { createPayable, getPayables, requestExportJob, updatePayable } from "../../../../lib/api";
 import { PayablesClient } from "./payables-client";
 
 vi.mock("../../../../lib/api", () => ({
@@ -11,6 +11,7 @@ vi.mock("../../../../lib/api", () => ({
   createPayable: vi.fn(),
   getPayableAuditHistory: vi.fn(),
   getPayables: vi.fn(),
+  requestExportJob: vi.fn(),
   reversePayablePayment: vi.fn(),
   updatePayable: vi.fn(),
 }));
@@ -75,6 +76,7 @@ vi.mock("./payable-detail-dialog", () => ({
 
 const getPayablesMock = vi.mocked(getPayables);
 const createPayableMock = vi.mocked(createPayable);
+const requestExportJobMock = vi.mocked(requestExportJob);
 const updatePayableMock = vi.mocked(updatePayable);
 
 describe("PayablesClient filters", () => {
@@ -90,8 +92,26 @@ describe("PayablesClient filters", () => {
     root = createRoot(container);
     getPayablesMock.mockReset();
     createPayableMock.mockReset();
+    requestExportJobMock.mockReset();
     updatePayableMock.mockReset();
     createPayableMock.mockResolvedValue(response([payable()]));
+    requestExportJobMock.mockResolvedValue({
+      id: "export-1",
+      context: "PAYABLES",
+      format: "CSV",
+      status: "PENDING",
+      filtersSnapshot: {},
+      columnsSnapshot: null,
+      requestedAt: "2026-06-29T00:00:00.000Z",
+      startedAt: null,
+      completedAt: null,
+      failedAt: null,
+      errorMessage: null,
+      fileName: null,
+      fileMimeType: null,
+      fileSizeBytes: null,
+      downloadUrl: null,
+    });
     updatePayableMock.mockResolvedValue(payable({ description: "Conta editada" }));
   });
 
@@ -227,6 +247,20 @@ describe("PayablesClient filters", () => {
     expect(container.querySelector('[role="dialog"]')?.textContent).toContain(
       "Editar conta a pagar"
     );
+  });
+
+  it("requests reusable async export with current filters", async () => {
+    await renderClient();
+    changeSelect("Todas as categorias", "category-food");
+    await clickButton("CSV");
+
+    expect(requestExportJobMock).toHaveBeenCalledWith("token", {
+      context: "PAYABLES",
+      format: "CSV",
+      filters: expect.objectContaining({ categoryId: "category-food" }),
+    });
+    expect(container.textContent).toContain("Operacao concluida com sucesso.");
+    expect(button("Filtrar").disabled).toBe(false);
   });
 
   it("submits and clears supplier filter", async () => {

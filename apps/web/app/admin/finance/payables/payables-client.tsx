@@ -11,7 +11,9 @@ import type {
   PayablePaymentInput,
   PayablesResponse,
   PayableStatus,
+  ExportFormat,
 } from "@burgoos/types";
+import { AsyncExportMenu } from "../../../../components/admin/async-export-menu";
 import { OperationFeedback } from "../../../../components/admin/operation-feedback";
 import {
   addPayablePayment,
@@ -19,6 +21,7 @@ import {
   createPayable,
   getPayableAuditHistory,
   getPayables,
+  requestExportJob,
   reversePayablePayment,
   updatePayable,
 } from "../../../../lib/api";
@@ -161,6 +164,16 @@ export function PayablesClient({ token, initialPayables, options }: PayablesClie
     });
   }
 
+  async function requestPayablesExport(format: ExportFormat) {
+    await run(`Solicitando exportacao ${format}.`, async () => {
+      await requestExportJob(token, {
+        context: "PAYABLES",
+        format,
+        filters: { ...filters },
+      });
+    });
+  }
+
   return (
     <main className="mx-auto max-w-7xl px-6 py-8 text-slate-900">
       <div className="flex flex-wrap items-end justify-between gap-4">
@@ -213,6 +226,11 @@ export function PayablesClient({ token, initialPayables, options }: PayablesClie
               Pesquise por vencimento, status, categoria, fornecedor e competencia.
             </p>
           </div>
+          <AsyncExportMenu
+            busy={busy}
+            disabled={payables.items.length === 0}
+            onExport={requestPayablesExport}
+          />
         </div>
         <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-[1fr_1fr_1fr_1fr_1fr_1fr_auto_auto]">
           <input

@@ -41,8 +41,8 @@
 - [x] T011 Implement notification controller endpoints in apps/api/src/management/notifications/notifications.controller.ts
 - [x] T012 Register notification module/providers in apps/api/src/management/management.module.ts
 - [x] T013 [P] Add API client helpers for notifications and generic export jobs in apps/web/lib/api.ts
-- [ ] T013a [P] Add reusable async export menu tests in apps/web/components/admin/async-export-menu.spec.tsx
-- [ ] T013b [P] Implement reusable async export menu component in apps/web/components/admin/async-export-menu.tsx
+- [x] T013a [P] Add reusable async export menu tests in apps/web/components/admin/async-export-menu.spec.tsx
+- [x] T013b [P] Implement reusable async export menu component in apps/web/components/admin/async-export-menu.tsx
 - [ ] T014 [P] Add shared notification UI tests in apps/web/components/admin/notification-center-button.spec.tsx
 - [ ] T015 Implement notification center button unread/read behavior in apps/web/components/admin/notification-center-button.tsx
 - [ ] T016 Add notification center route shell in apps/web/app/admin/notifications/page.tsx
@@ -135,7 +135,7 @@
 - [ ] T042 [P] [US4] Add generic export job service tests for accepted job, filter snapshot, context dispatch and tenant isolation in apps/api/src/management/exports/export-job.service.spec.ts
 - [ ] T043 [P] [US4] Add generic export worker tests for CSV, PDF and XLSX generation outcomes in apps/api/src/management/exports/export-job.worker.spec.ts
 - [ ] T044 [P] [US4] Add export controller integration tests for request, status and download permissions in apps/api/src/test/export-job.integration.spec.ts
-- [ ] T045 [P] [US4] Add web tests for reusable async export menu request and nonblocking UI in apps/web/app/admin/finance/payables/payables-client.spec.tsx
+- [x] T045 [P] [US4] Add web tests for reusable async export menu request and nonblocking UI in apps/web/app/admin/finance/payables/payables-client.spec.tsx
 
 ### Implementation for User Story 4
 
@@ -148,8 +148,8 @@
 - [ ] T052 [US4] Implement payables export provider in apps/api/src/management/exports/providers/payables-export.provider.ts
 - [ ] T053 [US4] Register payables export provider in apps/api/src/management/exports/export-provider.registry.ts
 - [x] T054 [US4] Add generic export API client helpers in apps/web/lib/api.ts
-- [ ] T054a [US4] Add reusable CSV/PDF/XLSX export controls to payables page in apps/web/app/admin/finance/payables/payables-client.tsx
-- [ ] T054b [US4] Show immediate accepted/pending feedback after export request in apps/web/app/admin/finance/payables/payables-client.tsx
+- [x] T054a [US4] Add reusable CSV/PDF/XLSX export controls to payables page in apps/web/app/admin/finance/payables/payables-client.tsx
+- [x] T054b [US4] Show immediate accepted/pending feedback after export request in apps/web/app/admin/finance/payables/payables-client.tsx
 
 **Checkpoint**: User Story 4 is complete and testable independently.
 
