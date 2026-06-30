@@ -108,6 +108,45 @@ describe("ExportJobWorker", () => {
       })
     );
   });
+
+  it("renders PDF exports with a readable table layout", async () => {
+    const prisma = createPrismaMock(exportJob({ format: ExportFormat.PDF }));
+    const notifications = { create: vi.fn().mockResolvedValue(null) };
+    const registry = {
+      get: vi.fn().mockReturnValue({
+        build: vi.fn().mockResolvedValue({
+          title: "Contas a pagar",
+          columns: [
+            { key: "description", label: "Conta" },
+            { key: "supplierName", label: "Fornecedor" },
+            { key: "expectedAmount", label: "Previsto" },
+          ],
+          rows: [
+            {
+              description: "Compra de insumos",
+              supplierName: "Mercado Central",
+              expectedAmount: "120.00",
+            },
+          ],
+        }),
+      }),
+    };
+    const worker = new ExportJobWorker(prisma as never, registry as never, notifications as never);
+
+    await worker.process("export-1");
+
+    const completed = prisma.exportJob.update.mock.calls.at(-1)?.[0].data as {
+      fileStorageKey: string;
+    };
+    const file = await readFile(join(process.cwd(), "tmp", "exports", completed.fileStorageKey));
+    const pdfContent = file.toString("utf8");
+
+    expect(pdfContent).toContain("(Contas a pagar) Tj");
+    expect(pdfContent).toContain("(Conta) Tj");
+    expect(pdfContent).toContain("(Fornecedor) Tj");
+    expect(pdfContent).toContain("(Previsto) Tj");
+    expect(pdfContent).not.toContain("Conta | Fornecedor | Previsto");
+  });
 });
 
 function createPrismaMock(job: ReturnType<typeof exportJob>) {

@@ -261,7 +261,9 @@ describe("PayablesClient filters", () => {
       format: "CSV",
       filters: expect.objectContaining({ categoryId: "category-food" }),
     });
-    expect(container.textContent).toContain("Operacao concluida com sucesso.");
+    expect(container.textContent).toContain(
+      "Arquivo CSV solicitado. Ele sera criado em paralelo e voce sera notificado quando estiver concluido."
+    );
     expect(button("Filtrar").disabled).toBe(false);
   });
 

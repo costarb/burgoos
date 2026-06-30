@@ -69,7 +69,7 @@ export function PayablesClient({ token, initialPayables, options }: PayablesClie
     [payables.items, selectedPayable]
   );
 
-  async function run(message: string, action: () => Promise<void>) {
+  async function run(message: string, action: () => Promise<void>, successMessage?: string) {
     if (busy) {
       return;
     }
@@ -79,7 +79,10 @@ export function PayablesClient({ token, initialPayables, options }: PayablesClie
 
     try {
       await action();
-      setOperation({ status: "success", message: "Operacao concluida com sucesso." });
+      setOperation({
+        status: "success",
+        message: successMessage ?? "Operacao concluida com sucesso.",
+      });
     } catch (error) {
       setOperation({
         status: "error",
@@ -165,13 +168,17 @@ export function PayablesClient({ token, initialPayables, options }: PayablesClie
   }
 
   async function requestPayablesExport(format: ExportFormat) {
-    await run(`Solicitando exportacao ${format}.`, async () => {
-      await requestExportJob(token, {
-        context: "PAYABLES",
-        format,
-        filters: { ...filters },
-      });
-    });
+    await run(
+      `Solicitando exportacao ${format}.`,
+      async () => {
+        await requestExportJob(token, {
+          context: "PAYABLES",
+          format,
+          filters: { ...filters },
+        });
+      },
+      `Arquivo ${format} solicitado. Ele sera criado em paralelo e voce sera notificado quando estiver concluido.`
+    );
   }
 
   return (

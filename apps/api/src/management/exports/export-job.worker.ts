@@ -152,26 +152,84 @@ function csvCell(value: string | number | null): string {
 }
 
 function renderPdf(dataset: ExportDataset): Buffer {
-  const lines = [
-    dataset.title,
-    "",
-    dataset.columns.map((column) => column.label).join(" | "),
-    ...dataset.rows.map((row) =>
-      dataset.columns.map((column) => String(row[column.key] ?? "")).join(" | ")
-    ),
-  ].slice(0, 48);
-  const stream = ["BT", "/F1 10 Tf", "50 780 Td"];
+  const page = { width: 595, height: 842, margin: 42 };
+  const availableWidth = page.width - page.margin * 2;
+  const visibleColumns = dataset.columns.slice(0, 6);
+  const columnWidth = availableWidth / Math.max(visibleColumns.length, 1);
+  const rowHeight = 18;
+  const headerY = 740;
+  const maxRows = Math.max(Math.floor((headerY - page.margin) / rowHeight) - 2, 1);
+  const tableHeight = 24 + rowHeight * Math.min(dataset.rows.length, maxRows);
+  const stream: string[] = [
+    "0.96 0.97 0.98 rg",
+    `${page.margin} ${headerY - 6} ${availableWidth} 24 re f`,
+    "0.86 0.89 0.93 RG",
+    `${page.margin} ${headerY - tableHeight + 18} ${availableWidth} ${tableHeight} re S`,
+  ];
 
-  lines.forEach((line, index) => {
-    if (index > 0) {
-      stream.push("0 -14 Td");
-    }
+  stream.push(...pdfTextAt(dataset.title, page.margin, 794, 16));
+  stream.push(...pdfTextAt(`Gerado em ${formatPdfDate(new Date())}`, page.margin, 774, 9));
 
-    stream.push(`(${escapePdfText(line.slice(0, 115))}) Tj`);
+  visibleColumns.forEach((column, index) => {
+    stream.push(
+      ...pdfTextAt(
+        truncatePdfText(column.label, Math.floor(columnWidth / 5.8)),
+        page.margin + index * columnWidth + 6,
+        headerY,
+        9
+      )
+    );
   });
 
-  stream.push("ET");
+  dataset.rows.slice(0, maxRows).forEach((row, rowIndex) => {
+    const y = headerY - 22 - rowIndex * rowHeight;
+
+    stream.push("0.90 0.92 0.95 RG", `${page.margin} ${y - 5} ${availableWidth} 0.5 re f`);
+
+    visibleColumns.forEach((column, columnIndex) => {
+      stream.push(
+        ...pdfTextAt(
+          truncatePdfText(String(row[column.key] ?? ""), Math.floor(columnWidth / 5.8)),
+          page.margin + columnIndex * columnWidth + 6,
+          y,
+          8
+        )
+      );
+    });
+  });
+
+  if (dataset.rows.length > maxRows) {
+    stream.push(
+      ...pdfTextAt(
+        `Exibindo ${maxRows} de ${dataset.rows.length} registros neste arquivo.`,
+        page.margin,
+        page.margin,
+        8
+      )
+    );
+  }
+
   return buildPdf(stream.join("\n"));
+}
+
+function pdfTextAt(value: string, x: number, y: number, size: number): string[] {
+  return ["0 0 0 rg", "BT", `/F1 ${size} Tf`, `${x} ${y} Td`, `(${escapePdfText(value)}) Tj`, "ET"];
+}
+
+function truncatePdfText(value: string, maxLength: number): string {
+  if (value.length <= maxLength) {
+    return value;
+  }
+
+  return `${value.slice(0, Math.max(maxLength - 1, 1))}.`;
+}
+
+function formatPdfDate(value: Date): string {
+  return new Intl.DateTimeFormat("pt-BR", {
+    dateStyle: "short",
+    timeStyle: "short",
+    timeZone: "America/Sao_Paulo",
+  }).format(value);
 }
 
 function buildPdf(contentStream: string): Buffer {
