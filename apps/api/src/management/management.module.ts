@@ -44,6 +44,10 @@ import { PermissionsService } from "./access/permissions/permissions.service";
 import { UsersController } from "./access/users/users.controller";
 import { UsersService } from "./access/users/users.service";
 import { DeliveryIntegrationsModule } from "./integrations/delivery-integrations.module";
+import { ExportJobController } from "./exports/export-job.controller";
+import { ExportJobService } from "./exports/export-job.service";
+import { NotificationsController } from "./notifications/notifications.controller";
+import { NotificationsService } from "./notifications/notifications.service";
 
 @Module({
   imports: [AuthModule, DatabaseModule, DeliveryIntegrationsModule],
@@ -65,6 +69,8 @@ import { DeliveryIntegrationsModule } from "./integrations/delivery-integrations
     UsersController,
     AccessProfilesController,
     PermissionsController,
+    ExportJobController,
+    NotificationsController,
   ],
   providers: [
     ReportsService,
@@ -92,6 +98,8 @@ import { DeliveryIntegrationsModule } from "./integrations/delivery-integrations
     UsersService,
     AccessProfilesService,
     PermissionsService,
+    ExportJobService,
+    NotificationsService,
   ],
   exports: [OrderProfitabilityService, DeliveryIntegrationsModule],
 })

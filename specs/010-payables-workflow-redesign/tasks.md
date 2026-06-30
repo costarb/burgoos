@@ -18,12 +18,12 @@
 
 **Purpose**: Prepare shared contracts and project structure needed by the feature.
 
-- [ ] T001 Update shared generic export and notification type exports in packages/types/src/index.ts
-- [ ] T001a [P] Create reusable export shared contract types in packages/types/src/exports.ts
-- [ ] T002 [P] Create notification shared contract types in packages/types/src/notifications.ts
-- [ ] T003 [P] Create generic export job DTO file in apps/api/src/management/exports/dto/export-job.dto.ts
-- [ ] T004 [P] Create notification API DTO file in apps/api/src/management/notifications/dto/notification.dto.ts
-- [X] T005 [P] Create reusable modal shell component in apps/web/components/admin/modal-shell.tsx
+- [x] T001 Update shared generic export and notification type exports in packages/types/src/index.ts
+- [x] T001a [P] Create reusable export shared contract types in packages/types/src/exports.ts
+- [x] T002 [P] Create notification shared contract types in packages/types/src/notifications.ts
+- [x] T003 [P] Create generic export job DTO file in apps/api/src/management/exports/dto/export-job.dto.ts
+- [x] T004 [P] Create notification API DTO file in apps/api/src/management/notifications/dto/notification.dto.ts
+- [x] T005 [P] Create reusable modal shell component in apps/web/components/admin/modal-shell.tsx
 - [ ] T006 [P] Create notification center button placeholder in apps/web/components/admin/notification-center-button.tsx
 
 ---
@@ -34,13 +34,13 @@
 
 **Critical**: No export or notification user story can be completed until this phase is done.
 
-- [ ] T007 Add generic ExportJob and OperationalNotification models/enums to packages/database/prisma/schema.prisma
-- [ ] T008 Create Prisma migration for export jobs and operational notifications in packages/database/prisma/migrations/
+- [x] T007 Add generic ExportJob and OperationalNotification models/enums to packages/database/prisma/schema.prisma
+- [x] T008 Create Prisma migration for export jobs and operational notifications in packages/database/prisma/migrations/
 - [ ] T009 [P] Add notification service tests for tenant/user scoping and read state in apps/api/src/management/notifications/notifications.service.spec.ts
-- [ ] T010 Implement notification persistence and read operations in apps/api/src/management/notifications/notifications.service.ts
-- [ ] T011 Implement notification controller endpoints in apps/api/src/management/notifications/notifications.controller.ts
-- [ ] T012 Register notification module/providers in apps/api/src/management/management.module.ts
-- [ ] T013 [P] Add API client helpers for notifications and generic export jobs in apps/web/lib/api.ts
+- [x] T010 Implement notification persistence and read operations in apps/api/src/management/notifications/notifications.service.ts
+- [x] T011 Implement notification controller endpoints in apps/api/src/management/notifications/notifications.controller.ts
+- [x] T012 Register notification module/providers in apps/api/src/management/management.module.ts
+- [x] T013 [P] Add API client helpers for notifications and generic export jobs in apps/web/lib/api.ts
 - [ ] T013a [P] Add reusable async export menu tests in apps/web/components/admin/async-export-menu.spec.tsx
 - [ ] T013b [P] Implement reusable async export menu component in apps/web/components/admin/async-export-menu.tsx
 - [ ] T014 [P] Add shared notification UI tests in apps/web/components/admin/notification-center-button.spec.tsx
@@ -60,17 +60,17 @@
 
 ### Tests for User Story 1
 
-- [X] T018 [P] [US1] Add web interaction tests for opening and closing new payable modal in apps/web/app/admin/finance/payables/payables-client.spec.tsx
-- [X] T019 [P] [US1] Add web interaction test for submitting a valid new payable and refreshing summary in apps/web/app/admin/finance/payables/payables-client.spec.tsx
+- [x] T018 [P] [US1] Add web interaction tests for opening and closing new payable modal in apps/web/app/admin/finance/payables/payables-client.spec.tsx
+- [x] T019 [P] [US1] Add web interaction test for submitting a valid new payable and refreshing summary in apps/web/app/admin/finance/payables/payables-client.spec.tsx
 - [ ] T020 [P] [US1] Add form validation test for required fields inside modal in apps/web/app/admin/finance/payables/payable-form.spec.tsx
 
 ### Implementation for User Story 1
 
-- [X] T021 [US1] Refactor PayableForm to support modal submit/cancel layout in apps/web/app/admin/finance/payables/payable-form.tsx
-- [X] T022 [US1] Add new payable modal state and trigger button in apps/web/app/admin/finance/payables/payables-client.tsx
-- [X] T023 [US1] Move inline new payable section into modal shell in apps/web/app/admin/finance/payables/payables-client.tsx
-- [X] T024 [US1] Refresh payables and close new payable modal after successful create in apps/web/app/admin/finance/payables/payables-client.tsx
-- [X] T025 [US1] Preserve validation feedback and pending state inside the new payable modal in apps/web/app/admin/finance/payables/payables-client.tsx
+- [x] T021 [US1] Refactor PayableForm to support modal submit/cancel layout in apps/web/app/admin/finance/payables/payable-form.tsx
+- [x] T022 [US1] Add new payable modal state and trigger button in apps/web/app/admin/finance/payables/payables-client.tsx
+- [x] T023 [US1] Move inline new payable section into modal shell in apps/web/app/admin/finance/payables/payables-client.tsx
+- [x] T024 [US1] Refresh payables and close new payable modal after successful create in apps/web/app/admin/finance/payables/payables-client.tsx
+- [x] T025 [US1] Preserve validation feedback and pending state inside the new payable modal in apps/web/app/admin/finance/payables/payables-client.tsx
 
 **Checkpoint**: User Story 1 is complete and testable independently.
 
@@ -85,14 +85,14 @@
 ### Tests for User Story 2
 
 - [ ] T026 [P] [US2] Add API summary regression tests for expected, paid, remaining and overdue totals in apps/api/src/management/financial/accounts-payable/accounts-payable.service.spec.ts
-- [X] T027 [P] [US2] Add web tests for visible cards before and after filtering in apps/web/app/admin/finance/payables/payables-client.spec.tsx
-- [X] T028 [P] [US2] Add web empty-state card test for zero summary values in apps/web/app/admin/finance/payables/payables-client.spec.tsx
+- [x] T027 [P] [US2] Add web tests for visible cards before and after filtering in apps/web/app/admin/finance/payables/payables-client.spec.tsx
+- [x] T028 [P] [US2] Add web empty-state card test for zero summary values in apps/web/app/admin/finance/payables/payables-client.spec.tsx
 
 ### Implementation for User Story 2
 
-- [X] T029 [US2] Extract payables metric cards into stable component in apps/web/app/admin/finance/payables/payables-client.tsx
-- [X] T030 [US2] Keep metric cards above query and list sections across loading and empty states in apps/web/app/admin/finance/payables/payables-client.tsx
-- [X] T031 [US2] Ensure filter refresh updates payables summary without stale card values in apps/web/app/admin/finance/payables/payables-client.tsx
+- [x] T029 [US2] Extract payables metric cards into stable component in apps/web/app/admin/finance/payables/payables-client.tsx
+- [x] T030 [US2] Keep metric cards above query and list sections across loading and empty states in apps/web/app/admin/finance/payables/payables-client.tsx
+- [x] T031 [US2] Ensure filter refresh updates payables summary without stale card values in apps/web/app/admin/finance/payables/payables-client.tsx
 - [ ] T032 [US2] Align open/overdue count labels with summary values in apps/web/app/admin/finance/payables/payables-client.tsx
 
 **Checkpoint**: User Story 2 is complete and testable independently.
@@ -107,18 +107,18 @@
 
 ### Tests for User Story 3
 
-- [X] T033 [P] [US3] Add web tests for visible consultation controls in apps/web/app/admin/finance/payables/payables-client.spec.tsx
-- [X] T034 [P] [US3] Add web tests for opening edit modal from list and detail in apps/web/app/admin/finance/payables/payables-client.spec.tsx
-- [X] T035 [P] [US3] Add web test for saving edit and refreshing list/detail/cards in apps/web/app/admin/finance/payables/payables-client.spec.tsx
+- [x] T033 [P] [US3] Add web tests for visible consultation controls in apps/web/app/admin/finance/payables/payables-client.spec.tsx
+- [x] T034 [P] [US3] Add web tests for opening edit modal from list and detail in apps/web/app/admin/finance/payables/payables-client.spec.tsx
+- [x] T035 [P] [US3] Add web test for saving edit and refreshing list/detail/cards in apps/web/app/admin/finance/payables/payables-client.spec.tsx
 
 ### Implementation for User Story 3
 
-- [X] T036 [US3] Create payable editor dialog wrapper in apps/web/app/admin/finance/payables/payable-editor-dialog.tsx
-- [X] T037 [US3] Replace inline edit section with editor dialog state in apps/web/app/admin/finance/payables/payables-client.tsx
-- [X] T038 [US3] Make consultation/filter actions visually persistent and accessible in apps/web/app/admin/finance/payables/payables-client.tsx
-- [X] T039 [US3] Add edit action from payable details dialog in apps/web/app/admin/finance/payables/payable-detail-dialog.tsx
-- [X] T040 [US3] Refresh selected payable snapshot after edit completion in apps/web/app/admin/finance/payables/payables-client.tsx
-- [X] T041 [US3] Add unsaved-change protection for create/edit modal close attempts in apps/web/app/admin/finance/payables/payable-editor-dialog.tsx
+- [x] T036 [US3] Create payable editor dialog wrapper in apps/web/app/admin/finance/payables/payable-editor-dialog.tsx
+- [x] T037 [US3] Replace inline edit section with editor dialog state in apps/web/app/admin/finance/payables/payables-client.tsx
+- [x] T038 [US3] Make consultation/filter actions visually persistent and accessible in apps/web/app/admin/finance/payables/payables-client.tsx
+- [x] T039 [US3] Add edit action from payable details dialog in apps/web/app/admin/finance/payables/payable-detail-dialog.tsx
+- [x] T040 [US3] Refresh selected payable snapshot after edit completion in apps/web/app/admin/finance/payables/payables-client.tsx
+- [x] T041 [US3] Add unsaved-change protection for create/edit modal close attempts in apps/web/app/admin/finance/payables/payable-editor-dialog.tsx
 
 **Checkpoint**: User Story 3 is complete and testable independently.
 
@@ -139,15 +139,15 @@
 
 ### Implementation for User Story 4
 
-- [ ] T046 [US4] Implement generic export request DTO validation in apps/api/src/management/exports/dto/export-job.dto.ts
-- [ ] T047 [US4] Implement generic export job creation and status lookup in apps/api/src/management/exports/export-job.service.ts
+- [x] T046 [US4] Implement generic export request DTO validation in apps/api/src/management/exports/dto/export-job.dto.ts
+- [x] T047 [US4] Implement generic export job creation and status lookup in apps/api/src/management/exports/export-job.service.ts
 - [ ] T048 [US4] Implement reusable CSV/PDF/XLSX file generation worker in apps/api/src/management/exports/export-job.worker.ts
-- [ ] T049 [US4] Add generic export endpoints in apps/api/src/management/exports/export-job.controller.ts
+- [x] T049 [US4] Add generic export endpoints in apps/api/src/management/exports/export-job.controller.ts
 - [ ] T050 [US4] Add local export file storage and download handling in apps/api/src/management/exports/export-job.service.ts
 - [ ] T051 [US4] Emit success and failure notifications from generic export processing in apps/api/src/management/exports/export-job.worker.ts
 - [ ] T052 [US4] Implement payables export provider in apps/api/src/management/exports/providers/payables-export.provider.ts
 - [ ] T053 [US4] Register payables export provider in apps/api/src/management/exports/export-provider.registry.ts
-- [ ] T054 [US4] Add generic export API client helpers in apps/web/lib/api.ts
+- [x] T054 [US4] Add generic export API client helpers in apps/web/lib/api.ts
 - [ ] T054a [US4] Add reusable CSV/PDF/XLSX export controls to payables page in apps/web/app/admin/finance/payables/payables-client.tsx
 - [ ] T054b [US4] Show immediate accepted/pending feedback after export request in apps/web/app/admin/finance/payables/payables-client.tsx
 
