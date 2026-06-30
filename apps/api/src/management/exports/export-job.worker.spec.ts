@@ -123,8 +123,8 @@ describe("ExportJobWorker", () => {
           ],
           rows: [
             {
-              description: "Compra de insumos",
-              supplierName: "Mercado Central",
+              description: "Pao de acucar",
+              supplierName: "Prestador de Servico",
               expectedAmount: "120.00",
             },
           ],
@@ -141,13 +141,20 @@ describe("ExportJobWorker", () => {
     const file = await readFile(join(process.cwd(), "tmp", "exports", completed.fileStorageKey));
     const pdfContent = file.toString("utf8");
 
-    expect(pdfContent).toContain("(Contas a pagar) Tj");
-    expect(pdfContent).toContain("(Conta) Tj");
-    expect(pdfContent).toContain("(Fornecedor) Tj");
-    expect(pdfContent).toContain("(Previsto) Tj");
+    expect(pdfContent).toContain("/MediaBox [0 0 842 595]");
+    expect(pdfContent).toContain("/WinAnsiEncoding");
+    expect(pdfContent).toContain(`<${pdfHex("Contas a pagar")}> Tj`);
+    expect(pdfContent).toContain(`<${pdfHex("Conta")}> Tj`);
+    expect(pdfContent).toContain(`<${pdfHex("Fornecedor")}> Tj`);
+    expect(pdfContent).toContain(`<${pdfHex("Previsto")}> Tj`);
+    expect(pdfContent).toContain(`<${pdfHex("Prestador de Servico")}> Tj`);
     expect(pdfContent).not.toContain("Conta | Fornecedor | Previsto");
   });
 });
+
+function pdfHex(value: string): string {
+  return Buffer.from(value, "latin1").toString("hex").toUpperCase();
+}
 
 function createPrismaMock(job: ReturnType<typeof exportJob>) {
   return {

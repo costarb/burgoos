@@ -152,31 +152,37 @@ function csvCell(value: string | number | null): string {
 }
 
 function renderPdf(dataset: ExportDataset): Buffer {
-  const page = { width: 595, height: 842, margin: 42 };
+  const page = { width: 842, height: 595, margin: 28 };
   const availableWidth = page.width - page.margin * 2;
-  const visibleColumns = dataset.columns.slice(0, 6);
-  const columnWidth = availableWidth / Math.max(visibleColumns.length, 1);
-  const rowHeight = 18;
-  const headerY = 740;
+  const visibleColumns = dataset.columns.slice(0, 8);
+  const columnWidths = calculatePdfColumnWidths(visibleColumns, availableWidth);
+  const rowHeight = 17;
+  const headerY = 500;
   const maxRows = Math.max(Math.floor((headerY - page.margin) / rowHeight) - 2, 1);
   const tableHeight = 24 + rowHeight * Math.min(dataset.rows.length, maxRows);
   const stream: string[] = [
-    "0.96 0.97 0.98 rg",
+    "0.98 0.98 0.98 rg",
+    `0 0 ${page.width} ${page.height} re f`,
+    "0.12 0.16 0.22 rg",
+    `${page.margin} 548 ${availableWidth} 1.2 re f`,
+    "0.93 0.95 0.97 rg",
     `${page.margin} ${headerY - 6} ${availableWidth} 24 re f`,
-    "0.86 0.89 0.93 RG",
+    "0.78 0.82 0.88 RG",
     `${page.margin} ${headerY - tableHeight + 18} ${availableWidth} ${tableHeight} re S`,
   ];
 
-  stream.push(...pdfTextAt(dataset.title, page.margin, 794, 16));
-  stream.push(...pdfTextAt(`Gerado em ${formatPdfDate(new Date())}`, page.margin, 774, 9));
+  stream.push(...pdfTextAt(dataset.title, page.margin, 560, 16, true));
+  stream.push(...pdfTextAt(`Gerado em ${formatPdfDate(new Date())}`, page.margin, 532, 8));
 
   visibleColumns.forEach((column, index) => {
+    const x = page.margin + sumBefore(columnWidths, index);
     stream.push(
       ...pdfTextAt(
-        truncatePdfText(column.label, Math.floor(columnWidth / 5.8)),
-        page.margin + index * columnWidth + 6,
+        truncatePdfText(column.label, Math.floor(columnWidths[index] / 4.8)),
+        x + 5,
         headerY,
-        9
+        7,
+        true
       )
     );
   });
@@ -184,15 +190,26 @@ function renderPdf(dataset: ExportDataset): Buffer {
   dataset.rows.slice(0, maxRows).forEach((row, rowIndex) => {
     const y = headerY - 22 - rowIndex * rowHeight;
 
-    stream.push("0.90 0.92 0.95 RG", `${page.margin} ${y - 5} ${availableWidth} 0.5 re f`);
+    if (rowIndex % 2 === 1) {
+      stream.push(
+        "0.97 0.98 0.99 rg",
+        `${page.margin} ${y - 5} ${availableWidth} ${rowHeight} re f`
+      );
+    }
+
+    stream.push("0.86 0.89 0.93 rg", `${page.margin} ${y - 6} ${availableWidth} 0.4 re f`);
 
     visibleColumns.forEach((column, columnIndex) => {
+      const x = page.margin + sumBefore(columnWidths, columnIndex);
       stream.push(
         ...pdfTextAt(
-          truncatePdfText(String(row[column.key] ?? ""), Math.floor(columnWidth / 5.8)),
-          page.margin + columnIndex * columnWidth + 6,
+          truncatePdfText(
+            String(row[column.key] ?? ""),
+            Math.floor(columnWidths[columnIndex] / 4.5)
+          ),
+          x + 5,
           y,
-          8
+          7
         )
       );
     });
@@ -209,11 +226,46 @@ function renderPdf(dataset: ExportDataset): Buffer {
     );
   }
 
-  return buildPdf(stream.join("\n"));
+  return buildPdf(stream.join("\n"), page);
 }
 
-function pdfTextAt(value: string, x: number, y: number, size: number): string[] {
-  return ["0 0 0 rg", "BT", `/F1 ${size} Tf`, `${x} ${y} Td`, `(${escapePdfText(value)}) Tj`, "ET"];
+function calculatePdfColumnWidths(
+  columns: ExportDataset["columns"],
+  availableWidth: number
+): number[] {
+  if (columns.length === 0) {
+    return [availableWidth];
+  }
+
+  const preferred = columns.map((column) => {
+    const label = column.label.toLowerCase();
+
+    if (label.includes("conta")) return 170;
+    if (label.includes("categoria")) return 90;
+    if (label.includes("fornecedor")) return 125;
+    if (label.includes("compet")) return 76;
+    if (label.includes("venc")) return 76;
+    if (label.includes("status")) return 58;
+    return 70;
+  });
+  const total = preferred.reduce((sum, width) => sum + width, 0);
+
+  return preferred.map((width) => (width / total) * availableWidth);
+}
+
+function sumBefore(values: number[], index: number): number {
+  return values.slice(0, index).reduce((sum, value) => sum + value, 0);
+}
+
+function pdfTextAt(value: string, x: number, y: number, size: number, bold = false): string[] {
+  return [
+    "0 0 0 rg",
+    "BT",
+    `/${bold ? "F2" : "F1"} ${size} Tf`,
+    `${x} ${y} Td`,
+    `<${pdfTextHex(value)}> Tj`,
+    "ET",
+  ];
 }
 
 function truncatePdfText(value: string, maxLength: number): string {
@@ -232,12 +284,13 @@ function formatPdfDate(value: Date): string {
   }).format(value);
 }
 
-function buildPdf(contentStream: string): Buffer {
+function buildPdf(contentStream: string, page: { width: number; height: number }): Buffer {
   const objects = [
     "<< /Type /Catalog /Pages 2 0 R >>",
     "<< /Type /Pages /Kids [3 0 R] /Count 1 >>",
-    "<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 4 0 R >> >> /Contents 5 0 R >>",
-    "<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>",
+    `<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ${page.width} ${page.height}] /Resources << /Font << /F1 4 0 R /F2 5 0 R >> >> /Contents 6 0 R >>`,
+    "<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >>",
+    "<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold /Encoding /WinAnsiEncoding >>",
     `<< /Length ${Buffer.byteLength(contentStream, "utf8")} >>\nstream\n${contentStream}\nendstream`,
   ];
   const chunks = ["%PDF-1.4\n"];
@@ -260,8 +313,10 @@ function buildPdf(contentStream: string): Buffer {
   return Buffer.from(chunks.join(""), "utf8");
 }
 
-function escapePdfText(value: string): string {
-  return value.replace(/[\\()]/g, (character) => `\\${character}`);
+function pdfTextHex(value: string): string {
+  return Buffer.from(value.replace(/\u2013|\u2014/g, "-"), "latin1")
+    .toString("hex")
+    .toUpperCase();
 }
 
 function renderXlsx(dataset: ExportDataset): Buffer {
