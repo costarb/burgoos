@@ -24,7 +24,7 @@
 - [x] T003 [P] Create generic export job DTO file in apps/api/src/management/exports/dto/export-job.dto.ts
 - [x] T004 [P] Create notification API DTO file in apps/api/src/management/notifications/dto/notification.dto.ts
 - [x] T005 [P] Create reusable modal shell component in apps/web/components/admin/modal-shell.tsx
-- [ ] T006 [P] Create notification center button placeholder in apps/web/components/admin/notification-center-button.tsx
+- [x] T006 [P] Create notification center button placeholder in apps/web/components/admin/notification-center-button.tsx
 
 ---
 
@@ -43,10 +43,10 @@
 - [x] T013 [P] Add API client helpers for notifications and generic export jobs in apps/web/lib/api.ts
 - [x] T013a [P] Add reusable async export menu tests in apps/web/components/admin/async-export-menu.spec.tsx
 - [x] T013b [P] Implement reusable async export menu component in apps/web/components/admin/async-export-menu.tsx
-- [ ] T014 [P] Add shared notification UI tests in apps/web/components/admin/notification-center-button.spec.tsx
-- [ ] T015 Implement notification center button unread/read behavior in apps/web/components/admin/notification-center-button.tsx
-- [ ] T016 Add notification center route shell in apps/web/app/admin/notifications/page.tsx
-- [ ] T017 Add notification center client list and mark-read behavior in apps/web/app/admin/notifications/notifications-client.tsx
+- [x] T014 [P] Add shared notification UI tests in apps/web/components/admin/notification-center-button.spec.tsx
+- [x] T015 Implement notification center button unread/read behavior in apps/web/components/admin/notification-center-button.tsx
+- [x] T016 Add notification center route shell in apps/web/app/admin/notifications/page.tsx
+- [x] T017 Add notification center client list and mark-read behavior in apps/web/app/admin/notifications/notifications-client.tsx
 
 **Checkpoint**: Foundational notification and export data structures are ready.
 
@@ -164,16 +164,16 @@
 ### Tests for User Story 5
 
 - [ ] T055 [P] [US5] Add notification controller integration tests for list and mark-read in apps/api/src/test/notifications.integration.spec.ts
-- [ ] T056 [P] [US5] Add web notification center tests for unread count, read state and action links in apps/web/app/admin/notifications/notifications-client.spec.tsx
-- [ ] T057 [P] [US5] Add admin shell notification button tests in apps/web/components/admin/notification-center-button.spec.tsx
+- [x] T056 [P] [US5] Add web notification center tests for unread count, read state and action links in apps/web/app/admin/notifications/notifications-client.spec.tsx
+- [x] T057 [P] [US5] Add admin shell notification button tests in apps/web/components/admin/notification-center-button.spec.tsx
 
 ### Implementation for User Story 5
 
-- [ ] T058 [US5] Add notification API helpers to apps/web/lib/api.ts
-- [ ] T059 [US5] Implement notification center page data loading in apps/web/app/admin/notifications/page.tsx
-- [ ] T060 [US5] Implement notification list, empty state and mark-read action in apps/web/app/admin/notifications/notifications-client.tsx
-- [ ] T061 [US5] Add notification center button to admin shell in apps/web/components/admin/admin-shell.tsx
-- [ ] T062 [US5] Display export completion and failure actions consistently in apps/web/app/admin/notifications/notifications-client.tsx
+- [x] T058 [US5] Add notification API helpers to apps/web/lib/api.ts
+- [x] T059 [US5] Implement notification center page data loading in apps/web/app/admin/notifications/page.tsx
+- [x] T060 [US5] Implement notification list, empty state and mark-read action in apps/web/app/admin/notifications/notifications-client.tsx
+- [x] T061 [US5] Add notification center button to admin shell in apps/web/components/admin/admin-shell.tsx
+- [x] T062 [US5] Display export completion and failure actions consistently in apps/web/app/admin/notifications/notifications-client.tsx
 - [ ] T063 [US5] Ensure notification action URLs only expose authenticated same-tenant resources in apps/api/src/management/notifications/notifications.service.ts
 
 **Checkpoint**: User Story 5 is complete and testable independently.
