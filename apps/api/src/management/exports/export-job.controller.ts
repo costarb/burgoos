@@ -33,4 +33,17 @@ export class ExportJobController {
   get(@CurrentUser() user: AuthUser, @Param("exportId") exportId: string) {
     return this.exportJobService.get(user.tenantId, user.id, exportId);
   }
+
+  @Get(":exportId/download")
+  @RequirePermission("finance.view", "finance.manage")
+  async download(
+    @CurrentUser() user: AuthUser,
+    @Param("exportId") exportId: string,
+    @Res() response: Response
+  ) {
+    const file = await this.exportJobService.getDownload(user.tenantId, user.id, exportId);
+    response.setHeader("Content-Type", file.mimeType);
+    response.setHeader("Content-Disposition", `attachment; filename="${file.fileName}"`);
+    return response.sendFile(file.absolutePath);
+  }
 }

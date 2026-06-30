@@ -1,12 +1,26 @@
-import { BadRequestException, Inject, Injectable, NotFoundException } from "@nestjs/common";
+import {
+  BadRequestException,
+  ConflictException,
+  Inject,
+  Injectable,
+  NotFoundException,
+} from "@nestjs/common";
 import { ExportContext, ExportJobStatus, Prisma } from "@prisma/client";
+import { access } from "node:fs/promises";
+import { join } from "node:path";
 import { AuthUser } from "../../platform/auth/auth.types";
 import { PrismaService } from "../../platform/database/prisma.service";
 import { CreateExportJobDto } from "./dto/export-job.dto";
+import { ExportJobWorker } from "./export-job.worker";
+
+const exportStorageRoot = join(process.cwd(), "tmp", "exports");
 
 @Injectable()
 export class ExportJobService {
-  constructor(@Inject(PrismaService) private readonly prisma: PrismaService) {}
+  constructor(
+    @Inject(PrismaService) private readonly prisma: PrismaService,
+    @Inject(ExportJobWorker) private readonly exportJobWorker: ExportJobWorker
+  ) {}
 
   async create(user: AuthUser, dto: CreateExportJobDto) {
     this.assertSupportedContext(dto.context);
@@ -22,6 +36,8 @@ export class ExportJobService {
       },
     });
 
+    void this.exportJobWorker.process(job.id).catch(() => undefined);
+
     return this.toResponse(job);
   }
 
@@ -35,6 +51,39 @@ export class ExportJobService {
     }
 
     return this.toResponse(job);
+  }
+
+  async getDownload(tenantId: string, requestedByUserId: string, exportId: string) {
+    const job = await this.prisma.exportJob.findFirst({
+      where: { id: exportId, tenantId, requestedByUserId },
+    });
+
+    if (!job) {
+      throw new NotFoundException("Exportacao nao encontrada");
+    }
+
+    if (
+      job.status !== ExportJobStatus.COMPLETED ||
+      !job.fileStorageKey ||
+      !job.fileName ||
+      !job.fileMimeType
+    ) {
+      throw new ConflictException("Exportacao ainda nao esta pronta para download");
+    }
+
+    const absolutePath = join(exportStorageRoot, job.fileStorageKey);
+
+    try {
+      await access(absolutePath);
+    } catch {
+      throw new NotFoundException("Arquivo de exportacao nao encontrado");
+    }
+
+    return {
+      absolutePath,
+      fileName: job.fileName,
+      mimeType: job.fileMimeType,
+    };
   }
 
   private assertSupportedContext(context: ExportContext) {

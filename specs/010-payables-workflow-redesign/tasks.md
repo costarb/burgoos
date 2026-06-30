@@ -132,8 +132,8 @@
 
 ### Tests for User Story 4
 
-- [ ] T042 [P] [US4] Add generic export job service tests for accepted job, filter snapshot, context dispatch and tenant isolation in apps/api/src/management/exports/export-job.service.spec.ts
-- [ ] T043 [P] [US4] Add generic export worker tests for CSV, PDF and XLSX generation outcomes in apps/api/src/management/exports/export-job.worker.spec.ts
+- [x] T042 [P] [US4] Add generic export job service tests for accepted job, filter snapshot, context dispatch and tenant isolation in apps/api/src/management/exports/export-job.service.spec.ts
+- [x] T043 [P] [US4] Add generic export worker tests for CSV, PDF and XLSX generation outcomes in apps/api/src/management/exports/export-job.worker.spec.ts
 - [ ] T044 [P] [US4] Add export controller integration tests for request, status and download permissions in apps/api/src/test/export-job.integration.spec.ts
 - [x] T045 [P] [US4] Add web tests for reusable async export menu request and nonblocking UI in apps/web/app/admin/finance/payables/payables-client.spec.tsx
 
@@ -141,12 +141,12 @@
 
 - [x] T046 [US4] Implement generic export request DTO validation in apps/api/src/management/exports/dto/export-job.dto.ts
 - [x] T047 [US4] Implement generic export job creation and status lookup in apps/api/src/management/exports/export-job.service.ts
-- [ ] T048 [US4] Implement reusable CSV/PDF/XLSX file generation worker in apps/api/src/management/exports/export-job.worker.ts
+- [x] T048 [US4] Implement reusable CSV/PDF/XLSX file generation worker in apps/api/src/management/exports/export-job.worker.ts
 - [x] T049 [US4] Add generic export endpoints in apps/api/src/management/exports/export-job.controller.ts
-- [ ] T050 [US4] Add local export file storage and download handling in apps/api/src/management/exports/export-job.service.ts
-- [ ] T051 [US4] Emit success and failure notifications from generic export processing in apps/api/src/management/exports/export-job.worker.ts
-- [ ] T052 [US4] Implement payables export provider in apps/api/src/management/exports/providers/payables-export.provider.ts
-- [ ] T053 [US4] Register payables export provider in apps/api/src/management/exports/export-provider.registry.ts
+- [x] T050 [US4] Add local export file storage and download handling in apps/api/src/management/exports/export-job.service.ts
+- [x] T051 [US4] Emit success and failure notifications from generic export processing in apps/api/src/management/exports/export-job.worker.ts
+- [x] T052 [US4] Implement payables export provider in apps/api/src/management/exports/providers/payables-export.provider.ts
+- [x] T053 [US4] Register payables export provider in apps/api/src/management/exports/export-provider.registry.ts
 - [x] T054 [US4] Add generic export API client helpers in apps/web/lib/api.ts
 - [x] T054a [US4] Add reusable CSV/PDF/XLSX export controls to payables page in apps/web/app/admin/finance/payables/payables-client.tsx
 - [x] T054b [US4] Show immediate accepted/pending feedback after export request in apps/web/app/admin/finance/payables/payables-client.tsx

@@ -46,6 +46,9 @@ import { UsersService } from "./access/users/users.service";
 import { DeliveryIntegrationsModule } from "./integrations/delivery-integrations.module";
 import { ExportJobController } from "./exports/export-job.controller";
 import { ExportJobService } from "./exports/export-job.service";
+import { ExportJobWorker } from "./exports/export-job.worker";
+import { ExportProviderRegistry } from "./exports/export-provider.registry";
+import { PayablesExportProvider } from "./exports/providers/payables-export.provider";
 import { NotificationsController } from "./notifications/notifications.controller";
 import { NotificationsService } from "./notifications/notifications.service";
 
@@ -99,6 +102,9 @@ import { NotificationsService } from "./notifications/notifications.service";
     AccessProfilesService,
     PermissionsService,
     ExportJobService,
+    ExportJobWorker,
+    ExportProviderRegistry,
+    PayablesExportProvider,
     NotificationsService,
   ],
   exports: [OrderProfitabilityService, DeliveryIntegrationsModule],
