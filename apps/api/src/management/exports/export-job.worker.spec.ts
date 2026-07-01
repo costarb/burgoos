@@ -14,7 +14,9 @@ describe("ExportJobWorker", () => {
     vi.restoreAllMocks();
     await rm(join(process.cwd(), "tmp", "exports", "tenant-1"), {
       force: true,
+      maxRetries: 3,
       recursive: true,
+      retryDelay: 50,
     });
   });
 

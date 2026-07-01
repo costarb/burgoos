@@ -309,11 +309,14 @@ function renderManagementReportPdf(title: string, report: ManagementReportPdf): 
     )
   );
 
+  const topSummary = buildPdfTopSummary(report);
+
   drawMetricCards(pageOne, page.margin, 489, contentWidth, [
-    ["Receita bruta", money(report.executiveSummary.grossRevenue)],
-    ["Receita liquida", money(report.executiveSummary.netRevenue)],
-    ["Liquido caixa", money(report.executiveSummary.cashNet)],
-    ["Saldo final", money(report.executiveSummary.finalBalance)],
+    ["Receita liquida", money(topSummary.netRevenue)],
+    ["Despesas pagas", money(topSummary.paidExpenses)],
+    ["Saldo atual", money(topSummary.currentBalance)],
+    ["Despesas a realizar", money(topSummary.pendingExpenses)],
+    ["Saldo futuro", money(topSummary.futureBalance)],
   ]);
 
   pageOne.push(...pdfTextAt("Resumo executivo", page.margin, 474, 9, true));
@@ -355,16 +358,49 @@ function renderManagementReportPdf(title: string, report: ManagementReportPdf): 
     68
   );
 
-  const payablesY = 178;
-  drawPanel(pageOne, page.margin, payablesY, fullPanelWidth, 126, "Contas a pagar");
-  drawCompactMetrics(pageOne, page.margin + 10, payablesY + 84, 250, [
+  const groupY = 92;
+  const middleGroupX = page.margin + panelWidth + panelGap;
+  const rightGroupX = middleGroupX + panelWidth + panelGap;
+
+  drawPanel(pageOne, page.margin, groupY, panelWidth, 180, "Por instituicao");
+  drawSalesGroup(
+    pageOne,
+    report.sales.byInstitution,
+    page.margin + 10,
+    groupY + 18,
+    panelWidth - 20
+  );
+
+  drawPanel(pageOne, middleGroupX, groupY, panelWidth, 180, "Por meio");
+  drawSalesGroup(
+    pageOne,
+    report.sales.byPaymentMethod,
+    middleGroupX + 10,
+    groupY + 18,
+    panelWidth - 20
+  );
+
+  drawPanel(pageOne, rightGroupX, groupY, panelWidth, 180, "Por canal");
+  drawSalesGroup(pageOne, report.sales.byChannel, rightGroupX + 10, groupY + 18, panelWidth - 20);
+
+  const pageTwo = [
+    "0.98 0.98 0.98 rg",
+    `0 0 ${page.width} ${page.height} re f`,
+    "0.12 0.16 0.22 rg",
+    `${page.margin} 548 ${contentWidth} 1.2 re f`,
+    ...pdfTextAt(title, page.margin, 563, 14, true),
+    ...pdfTextAt("Contas a pagar e caixa", page.margin, 532, 10, true),
+  ];
+  const payablesY = 360;
+  drawPanel(pageTwo, page.margin, payablesY, fullPanelWidth, 126, "Contas a pagar");
+  drawCompactMetrics(pageTwo, page.margin + 10, payablesY + 84, 250, [
     ["Previsto", money(report.payables.expected)],
     ["Pago", money(report.payables.paid)],
     ["Em aberto", money(report.payables.open)],
     ["Vencido", money(report.payables.overdue)],
   ]);
   drawBars(
-    pageOne,
+    pageTwo,
     "Despesas por categoria",
     report.payables.byCategory.map((category) => [
       `${category.categoryName} (${money(category.open)} aberto)`,
@@ -376,16 +412,16 @@ function renderManagementReportPdf(title: string, report: ManagementReportPdf): 
     5
   );
 
-  const cashY = 40;
-  drawPanel(pageOne, page.margin, cashY, fullPanelWidth, 126, "Caixa");
-  drawCompactMetrics(pageOne, page.margin + 10, cashY + 84, 250, [
+  const cashY = 210;
+  drawPanel(pageTwo, page.margin, cashY, fullPanelWidth, 126, "Caixa");
+  drawCompactMetrics(pageTwo, page.margin + 10, cashY + 84, 250, [
     ["Creditos", money(report.cashFlow.credits)],
     ["Debitos", money(report.cashFlow.debits)],
     ["Liquido", money(report.cashFlow.net)],
     ["Saldo final", money(report.cashFlow.finalBalance)],
   ]);
   drawList(
-    pageOne,
+    pageTwo,
     "Saldos por conta",
     report.cashFlow.balancesByAccount.map((account) => [
       account.accountName,
@@ -396,39 +432,6 @@ function renderManagementReportPdf(title: string, report: ManagementReportPdf): 
     contentWidth - 306,
     5
   );
-
-  const pageTwo = [
-    "0.98 0.98 0.98 rg",
-    `0 0 ${page.width} ${page.height} re f`,
-    "0.12 0.16 0.22 rg",
-    `${page.margin} 548 ${contentWidth} 1.2 re f`,
-    ...pdfTextAt(title, page.margin, 563, 14, true),
-    ...pdfTextAt("Detalhamento de vendas", page.margin, 532, 10, true),
-  ];
-  const groupY = 330;
-  const middleGroupX = page.margin + panelWidth + panelGap;
-  const rightGroupX = middleGroupX + panelWidth + panelGap;
-
-  drawPanel(pageTwo, page.margin, groupY, panelWidth, 180, "Por instituicao");
-  drawSalesGroup(
-    pageTwo,
-    report.sales.byInstitution,
-    page.margin + 10,
-    groupY + 18,
-    panelWidth - 20
-  );
-
-  drawPanel(pageTwo, middleGroupX, groupY, panelWidth, 180, "Por meio");
-  drawSalesGroup(
-    pageTwo,
-    report.sales.byPaymentMethod,
-    middleGroupX + 10,
-    groupY + 18,
-    panelWidth - 20
-  );
-
-  drawPanel(pageTwo, rightGroupX, groupY, panelWidth, 180, "Por canal");
-  drawSalesGroup(pageTwo, report.sales.byChannel, rightGroupX + 10, groupY + 18, panelWidth - 20);
 
   return buildPdfPages([pageOne.join("\n"), pageTwo.join("\n")], page);
 }
@@ -695,6 +698,26 @@ function isManagementReportPdf(value: unknown): value is ManagementReportPdf {
 
 function money(value: string): string {
   return `R$ ${value}`;
+}
+
+function buildPdfTopSummary(report: ManagementReportPdf) {
+  const netRevenue = Number(report.sales.netRevenue);
+  const paidExpenses = Number(report.payables.paid);
+  const pendingExpenses = Number(report.payables.open);
+  const currentBalance = netRevenue - paidExpenses;
+  const futureBalance = currentBalance - pendingExpenses;
+
+  return {
+    netRevenue: moneyString(netRevenue),
+    paidExpenses: moneyString(paidExpenses),
+    currentBalance: moneyString(currentBalance),
+    pendingExpenses: moneyString(pendingExpenses),
+    futureBalance: moneyString(futureBalance),
+  };
+}
+
+function moneyString(value: number): string {
+  return value.toFixed(2);
 }
 
 function calculatePdfColumnWidths(

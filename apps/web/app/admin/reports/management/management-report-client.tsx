@@ -26,6 +26,7 @@ export function ManagementReportClient({ token, initialReport }: ManagementRepor
     () => Math.max(...report.sales.daily.map((day) => Number(day.grossRevenue)), 0),
     [report.sales.daily]
   );
+  const topSummary = useMemo(() => buildTopSummary(report), [report]);
 
   async function applyFilters(nextStart = start, nextEnd = end) {
     if (busy) {
@@ -177,11 +178,12 @@ export function ManagementReportClient({ token, initialReport }: ManagementRepor
           state={operation}
         />
 
-        <section className="mt-6 grid gap-4 md:grid-cols-4">
-          <MetricCard label="Receita bruta" value={report.executiveSummary.grossRevenue} />
-          <MetricCard label="Receita liquida" value={report.executiveSummary.netRevenue} />
-          <MetricCard label="Liquido caixa" value={report.executiveSummary.cashNet} />
-          <MetricCard label="Saldo final" value={report.executiveSummary.finalBalance} />
+        <section className="mt-6 grid gap-4 md:grid-cols-5">
+          <MetricCard label="Receita liquida" value={topSummary.netRevenue} />
+          <MetricCard label="Despesas pagas" value={topSummary.paidExpenses} />
+          <MetricCard label="Saldo atual" value={topSummary.currentBalance} />
+          <MetricCard label="Despesas a realizar" value={topSummary.pendingExpenses} />
+          <MetricCard label="Saldo futuro" value={topSummary.futureBalance} />
         </section>
 
         <section className="mt-6 rounded-md border border-slate-200 bg-white p-5 shadow-sm">
@@ -214,6 +216,12 @@ export function ManagementReportClient({ token, initialReport }: ManagementRepor
               />
             </div>
           </Panel>
+
+          <section className="grid gap-6 lg:grid-cols-3">
+            <DimensionPanel title="Por instituicao" rows={report.sales.byInstitution} />
+            <DimensionPanel title="Por meio" rows={report.sales.byPaymentMethod} />
+            <DimensionPanel title="Por canal" rows={report.sales.byChannel} />
+          </section>
 
           <Panel title="Contas a pagar">
             <div className="grid gap-5 xl:grid-cols-[minmax(300px,0.75fr)_minmax(420px,1.75fr)]">
@@ -258,12 +266,6 @@ export function ManagementReportClient({ token, initialReport }: ManagementRepor
               </ListEmptyGuard>
             </div>
           </Panel>
-        </section>
-
-        <section className="mt-6 grid gap-6 lg:grid-cols-3">
-          <DimensionPanel title="Por instituicao" rows={report.sales.byInstitution} />
-          <DimensionPanel title="Por meio" rows={report.sales.byPaymentMethod} />
-          <DimensionPanel title="Por canal" rows={report.sales.byChannel} />
         </section>
       </section>
     </main>
@@ -492,4 +494,24 @@ function toInputDate(value: Date): string {
   const month = String(value.getMonth() + 1).padStart(2, "0");
   const day = String(value.getDate()).padStart(2, "0");
   return `${year}-${month}-${day}`;
+}
+
+function buildTopSummary(report: ManagementReportResponse) {
+  const netRevenue = Number(report.sales.netRevenue);
+  const paidExpenses = Number(report.payables.paid);
+  const pendingExpenses = Number(report.payables.open);
+  const currentBalance = netRevenue - paidExpenses;
+  const futureBalance = currentBalance - pendingExpenses;
+
+  return {
+    netRevenue: moneyString(netRevenue),
+    paidExpenses: moneyString(paidExpenses),
+    currentBalance: moneyString(currentBalance),
+    pendingExpenses: moneyString(pendingExpenses),
+    futureBalance: moneyString(futureBalance),
+  };
+}
+
+function moneyString(value: number): string {
+  return value.toFixed(2);
 }

@@ -59,6 +59,10 @@ describe("ManagementReportClient", () => {
           grossRevenue: "2000.00",
           periodNarrative: "Novo periodo carregado.",
         },
+        sales: {
+          ...reportFixture().sales,
+          netRevenue: "2000.00",
+        },
       }),
     });
 
@@ -71,7 +75,7 @@ describe("ManagementReportClient", () => {
       start: "2026-07-01",
       end: "2026-07-31",
     });
-    expect(container.textContent).toContain("R$ 2000.00");
+    expect(container.textContent).toContain("Receita liquidaR$ 2000.00");
     expect(container.textContent).toContain("Novo periodo carregado.");
   });
 
