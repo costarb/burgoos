@@ -92,6 +92,12 @@ describe("AccountsPayableService", () => {
         dueDate: new Date(2020, 0, 11),
         expectedAmount: new Prisma.Decimal(120),
       }),
+      payable({
+        id: "payable-cancelled",
+        dueDate: new Date(2020, 0, 12),
+        expectedAmount: new Prisma.Decimal(80),
+        cancelledAt: new Date(2020, 0, 1) as never,
+      }),
     ]);
     const service = new AccountsPayableService(prismaMock as never, createAuditMock());
 

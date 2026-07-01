@@ -491,6 +491,10 @@ export class AccountsPayableService {
   private buildSummary(items: ReturnType<AccountsPayableService["toResponse"]>[]) {
     const summary = items.reduce(
       (accumulator, item) => {
+        if (item.status === "CANCELLED") {
+          return accumulator;
+        }
+
         const expectedAmount = toDecimal(item.expectedAmount);
         const paidAmount = toDecimal(item.paidAmount);
         const remainingAmount = toDecimal(item.remainingAmount);
