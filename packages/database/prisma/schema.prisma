@@ -271,6 +271,7 @@ enum DeliveryIntegrationAuditAction {
 
 enum ExportContext {
   PAYABLES
+  MANAGEMENT_REPORT
 }
 
 enum ExportFormat {

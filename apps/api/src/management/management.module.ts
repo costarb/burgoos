@@ -28,6 +28,8 @@ import { ProductPricingService } from "./pricing/product-pricing.service";
 import { DreService } from "./reports/dre.service";
 import { FinancialDashboardService } from "./reports/financial-dashboard.service";
 import { FinancialReportsController } from "./reports/financial-reports.controller";
+import { ManagementReportController } from "./reports/management-report.controller";
+import { ManagementReportService } from "./reports/management-report.service";
 import { MenuEngineeringController } from "./reports/menu-engineering.controller";
 import { MenuEngineeringService } from "./reports/menu-engineering.service";
 import { OrderProfitabilityService } from "./reports/order-profitability.service";
@@ -48,6 +50,7 @@ import { ExportJobController } from "./exports/export-job.controller";
 import { ExportJobService } from "./exports/export-job.service";
 import { ExportJobWorker } from "./exports/export-job.worker";
 import { ExportProviderRegistry } from "./exports/export-provider.registry";
+import { ManagementReportExportProvider } from "./exports/providers/management-report-export.provider";
 import { PayablesExportProvider } from "./exports/providers/payables-export.provider";
 import { NotificationsController } from "./notifications/notifications.controller";
 import { NotificationsService } from "./notifications/notifications.service";
@@ -64,6 +67,7 @@ import { NotificationsService } from "./notifications/notifications.service";
     TechnicalSheetController,
     PricingController,
     FinancialReportsController,
+    ManagementReportController,
     MenuEngineeringController,
     SalesReportController,
     AccountsPayableController,
@@ -88,6 +92,7 @@ import { NotificationsService } from "./notifications/notifications.service";
     OrderProfitabilityService,
     DreService,
     FinancialDashboardService,
+    ManagementReportService,
     MenuEngineeringService,
     SalesReportService,
     TenantScopeService,
@@ -105,6 +110,7 @@ import { NotificationsService } from "./notifications/notifications.service";
     ExportJobWorker,
     ExportProviderRegistry,
     PayablesExportProvider,
+    ManagementReportExportProvider,
     NotificationsService,
   ],
   exports: [OrderProfitabilityService, DeliveryIntegrationsModule],

@@ -69,6 +69,8 @@ import type {
   VisualConfiguration,
   NotificationCenterState,
   OperationalNotification,
+  ManagementReportFilters,
+  ManagementReportResponse,
 } from "@burgoos/types";
 import { clearAuthSession, readAuthSession } from "./auth-client";
 
@@ -872,6 +874,27 @@ export async function getSalesReport(
     token,
     `/api/admin/reports/sales${query ? `?${query}` : ""}`
   );
+}
+
+export async function getManagementReport(
+  filters: ManagementReportFilters = {}
+): Promise<{ token: string; report: ManagementReportResponse }> {
+  const token = await getAdminToken();
+  const params = new URLSearchParams();
+
+  Object.entries(filters).forEach(([key, value]) => {
+    if (value) {
+      params.set(key, value);
+    }
+  });
+
+  const query = params.toString();
+  const report = await fetchAdmin<ManagementReportResponse>(
+    token,
+    `/api/admin/reports/management${query ? `?${query}` : ""}`
+  );
+
+  return { token, report };
 }
 
 export async function getFinancialConfiguration(): Promise<FinancialConfiguration> {

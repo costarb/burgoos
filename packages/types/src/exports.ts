@@ -1,4 +1,4 @@
-export type ExportContext = "PAYABLES";
+export type ExportContext = "PAYABLES" | "MANAGEMENT_REPORT";
 
 export type ExportFormat = "CSV" | "PDF" | "XLSX";
 

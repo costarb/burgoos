@@ -150,6 +150,13 @@ export const adminNavigation: AdminNavigationGroup[] = [
         description: "Evolucao e analise",
         permissions: ["finance.view"],
       },
+      {
+        href: "/admin/reports/management",
+        label: "Gerencial",
+        icon: FileChartColumn,
+        description: "Caixa, vendas e contas a pagar",
+        permissions: ["finance.view"],
+      },
     ],
   },
   {
