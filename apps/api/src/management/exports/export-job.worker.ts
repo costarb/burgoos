@@ -312,7 +312,8 @@ function renderManagementReportPdf(title: string, report: ManagementReportPdf): 
   const topSummary = buildPdfTopSummary(report);
 
   drawMetricCards(pageOne, page.margin, 489, contentWidth, [
-    ["Receita liquida", money(topSummary.netRevenue)],
+    ["Receita recebida", money(topSummary.receivedRevenue)],
+    ["Valores a receber", money(topSummary.receivableRevenue)],
     ["Despesas pagas", money(topSummary.paidExpenses)],
     ["Saldo atual", money(topSummary.currentBalance)],
     ["Despesas a realizar", money(topSummary.pendingExpenses)],
@@ -701,14 +702,16 @@ function money(value: string): string {
 }
 
 function buildPdfTopSummary(report: ManagementReportPdf) {
-  const netRevenue = Number(report.sales.netRevenue);
+  const receivedRevenue = Number(report.sales.releasedAmount);
+  const receivableRevenue = Number(report.sales.receivableAmount);
   const paidExpenses = Number(report.payables.paid);
   const pendingExpenses = Number(report.payables.open);
   const currentBalance = Number(report.cashFlow.finalBalance);
   const futureBalance = currentBalance - pendingExpenses;
 
   return {
-    netRevenue: moneyString(netRevenue),
+    receivedRevenue: moneyString(receivedRevenue),
+    receivableRevenue: moneyString(receivableRevenue),
     paidExpenses: moneyString(paidExpenses),
     currentBalance: moneyString(currentBalance),
     pendingExpenses: moneyString(pendingExpenses),

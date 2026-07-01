@@ -178,8 +178,9 @@ export function ManagementReportClient({ token, initialReport }: ManagementRepor
           state={operation}
         />
 
-        <section className="mt-6 grid gap-4 md:grid-cols-5">
-          <MetricCard label="Receita liquida" value={topSummary.netRevenue} />
+        <section className="mt-6 grid gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
+          <MetricCard label="Receita recebida" value={topSummary.receivedRevenue} />
+          <MetricCard label="Valores a receber" value={topSummary.receivableRevenue} />
           <MetricCard label="Despesas pagas" value={topSummary.paidExpenses} />
           <MetricCard label="Saldo atual" value={topSummary.currentBalance} />
           <MetricCard label="Despesas a realizar" value={topSummary.pendingExpenses} />
@@ -497,14 +498,16 @@ function toInputDate(value: Date): string {
 }
 
 function buildTopSummary(report: ManagementReportResponse) {
-  const netRevenue = Number(report.sales.netRevenue);
+  const receivedRevenue = Number(report.sales.releasedAmount);
+  const receivableRevenue = Number(report.sales.receivableAmount);
   const paidExpenses = Number(report.payables.paid);
   const pendingExpenses = Number(report.payables.open);
   const currentBalance = Number(report.cashFlow.finalBalance);
   const futureBalance = currentBalance - pendingExpenses;
 
   return {
-    netRevenue: moneyString(netRevenue),
+    receivedRevenue: moneyString(receivedRevenue),
+    receivableRevenue: moneyString(receivableRevenue),
     paidExpenses: moneyString(paidExpenses),
     currentBalance: moneyString(currentBalance),
     pendingExpenses: moneyString(pendingExpenses),
