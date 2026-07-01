@@ -87,7 +87,7 @@ export class ExportJobService {
   }
 
   private assertSupportedContext(context: ExportContext) {
-    if (context !== ExportContext.PAYABLES) {
+    if (context !== ExportContext.PAYABLES && context !== ExportContext.MANAGEMENT_REPORT) {
       throw new BadRequestException("Contexto de exportacao nao suportado");
     }
   }

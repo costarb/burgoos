@@ -14,7 +14,9 @@ describe("ExportJobWorker", () => {
     vi.restoreAllMocks();
     await rm(join(process.cwd(), "tmp", "exports", "tenant-1"), {
       force: true,
+      maxRetries: 3,
       recursive: true,
+      retryDelay: 50,
     });
   });
 
@@ -150,6 +152,47 @@ describe("ExportJobWorker", () => {
     expect(pdfContent).toContain(`<${pdfHex("Prestador de Servico")}> Tj`);
     expect(pdfContent).not.toContain("Conta | Fornecedor | Previsto");
   });
+
+  it("renders management report PDF with the same executive sections as the screen", async () => {
+    const prisma = createPrismaMock(
+      exportJob({ context: ExportContext.MANAGEMENT_REPORT, format: ExportFormat.PDF })
+    );
+    const notifications = { create: vi.fn().mockResolvedValue(null) };
+    const registry = {
+      get: vi.fn().mockReturnValue({
+        build: vi.fn().mockResolvedValue({
+          title: "Relatorio gerencial 2026-06-01 a 2026-06-30",
+          layout: "MANAGEMENT_REPORT",
+          metadata: { report: managementReportFixture() },
+          columns: [],
+          rows: [],
+        }),
+      }),
+    };
+    const worker = new ExportJobWorker(prisma as never, registry as never, notifications as never);
+
+    await worker.process("export-1");
+
+    const completed = prisma.exportJob.update.mock.calls.at(-1)?.[0].data as {
+      fileStorageKey: string;
+    };
+    const file = await readFile(join(process.cwd(), "tmp", "exports", completed.fileStorageKey));
+    const pdfContent = file.toString("utf8");
+
+    expect(pdfContent).toContain(`<${pdfHex("Resumo executivo")}> Tj`);
+    expect(pdfContent).toContain(`<${pdfHex("Receita bruta")}> Tj`);
+    expect(pdfContent).toContain(`<${pdfHex("Caixa")}> Tj`);
+    expect(pdfContent).toContain(`<${pdfHex("Vendas")}> Tj`);
+    expect(pdfContent).toContain(`<${pdfHex("Receita bruta por dia")}> Tj`);
+    expect(pdfContent).toContain(`<${pdfHex("R$ 1.0k")}> Tj`);
+    expect(pdfContent).toContain(`<${pdfHex("Contas a pagar")}> Tj`);
+    expect(pdfContent).toContain(`<${pdfHex("Por instituicao")}> Tj`);
+    expect(pdfContent).toContain(`<${pdfHex("Por meio")}> Tj`);
+    expect(pdfContent).toContain(`<${pdfHex("Por canal")}> Tj`);
+    expect(pdfContent).toContain(`<${pdfHex("Despesas por categoria")}> Tj`);
+    expect(pdfContent).toContain(`<${pdfHex("Mercado Pago")}> Tj`);
+    expect(pdfContent).not.toContain("Secao | Indicador | Valor");
+  });
 });
 
 function pdfHex(value: string): string {
@@ -174,7 +217,7 @@ function baseExportJob() {
     id: "export-1",
     tenantId: "tenant-1",
     requestedByUserId: "user-1",
-    context: ExportContext.PAYABLES,
+    context: ExportContext.PAYABLES as ExportContext,
     format: ExportFormat.CSV as ExportFormat,
     status: ExportJobStatus.PENDING,
     filtersSnapshot: {},
@@ -189,5 +232,57 @@ function baseExportJob() {
     fileStorageKey: null,
     fileSizeBytes: null,
     expiresAt: null,
+  };
+}
+
+function managementReportFixture() {
+  return {
+    period: { start: "2026-06-01", end: "2026-06-30" },
+    executiveSummary: {
+      grossRevenue: "1000.00",
+      netRevenue: "920.00",
+      cashNet: "600.00",
+      finalBalance: "1600.00",
+      payablesOpen: "300.00",
+      payablesOverdue: "100.00",
+      receivableAmount: "120.00",
+      periodNarrative:
+        "No periodo de 2026-06-01 a 2026-06-30, a operacao registrou receita liquida.",
+    },
+    cashFlow: {
+      credits: "800.00",
+      debits: "200.00",
+      net: "600.00",
+      finalBalance: "1600.00",
+      balancesByAccount: [{ accountName: "Conta Caixa", balance: "1600.00" }],
+    },
+    sales: {
+      orders: 2,
+      grossRevenue: "1000.00",
+      netRevenue: "920.00",
+      releasedAmount: "800.00",
+      receivableAmount: "120.00",
+      feeAmount: "80.00",
+      averageTicket: "500.00",
+      daily: [{ date: "2026-06-01", orders: 2, grossRevenue: "1000.00", netRevenue: "920.00" }],
+      byInstitution: [{ label: "Mercado Pago", orders: 2, grossRevenue: "1000.00" }],
+      byPaymentMethod: [{ label: "Pix", orders: 2, grossRevenue: "1000.00" }],
+      byChannel: [{ label: "Balcao", orders: 2, grossRevenue: "1000.00" }],
+    },
+    payables: {
+      expected: "500.00",
+      paid: "200.00",
+      open: "300.00",
+      overdue: "100.00",
+      byCategory: [
+        {
+          categoryName: "Taxas",
+          expected: "300.00",
+          paid: "200.00",
+          open: "100.00",
+          overdue: "100.00",
+        },
+      ],
+    },
   };
 }

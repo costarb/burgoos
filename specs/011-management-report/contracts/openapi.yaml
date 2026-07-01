@@ -1,0 +1,309 @@
+openapi: 3.0.3
+info:
+  title: BurgoOS Management Report API
+  version: 0.1.0
+  description: Admin API contract for the consolidated management report.
+paths:
+  /api/admin/reports/management:
+    get:
+      summary: Get consolidated management report for a period
+      parameters:
+        - name: start
+          in: query
+          required: true
+          schema:
+            type: string
+            format: date
+        - name: end
+          in: query
+          required: true
+          schema:
+            type: string
+            format: date
+      responses:
+        "200":
+          description: Management report
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ManagementReportResponse"
+        "400":
+          description: Invalid period
+        "401":
+          description: Missing or invalid authentication
+        "403":
+          description: Missing report or financial permission
+  /api/admin/exports:
+    post:
+      summary: Request asynchronous management report PDF export
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ManagementReportExportRequest"
+      responses:
+        "201":
+          description: Export job created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ExportJob"
+        "400":
+          description: Invalid export context, format or period
+        "401":
+          description: Missing or invalid authentication
+        "403":
+          description: Missing report or financial permission
+components:
+  schemas:
+    ManagementReportExportRequest:
+      type: object
+      required: [context, format, filters]
+      properties:
+        context:
+          type: string
+          enum: [MANAGEMENT_REPORT]
+        format:
+          type: string
+          enum: [PDF]
+        filters:
+          type: object
+          required: [start, end]
+          properties:
+            start:
+              type: string
+              format: date
+            end:
+              type: string
+              format: date
+    ExportJob:
+      type: object
+      required:
+        - id
+        - context
+        - format
+        - status
+        - filtersSnapshot
+        - requestedAt
+        - downloadUrl
+      properties:
+        id:
+          type: string
+        context:
+          type: string
+          enum: [MANAGEMENT_REPORT, PAYABLES]
+        format:
+          type: string
+          enum: [CSV, PDF, XLSX]
+        status:
+          type: string
+          enum: [PENDING, PROCESSING, COMPLETED, FAILED, EXPIRED]
+        filtersSnapshot:
+          type: object
+        requestedAt:
+          type: string
+          format: date-time
+        downloadUrl:
+          type: string
+          nullable: true
+    ManagementReportResponse:
+      type: object
+      required: [period, executiveSummary, cashFlow, sales, payables]
+      properties:
+        period:
+          $ref: "#/components/schemas/Period"
+        executiveSummary:
+          $ref: "#/components/schemas/ExecutiveSummary"
+        cashFlow:
+          $ref: "#/components/schemas/ManagementCashFlowSection"
+        sales:
+          $ref: "#/components/schemas/ManagementSalesSection"
+        payables:
+          $ref: "#/components/schemas/ManagementPayablesSection"
+    Period:
+      type: object
+      required: [start, end]
+      properties:
+        start:
+          type: string
+          format: date
+        end:
+          type: string
+          format: date
+    ExecutiveSummary:
+      type: object
+      required:
+        - grossRevenue
+        - netRevenue
+        - cashNet
+        - finalBalance
+        - payablesOpen
+        - payablesOverdue
+        - receivableAmount
+        - periodNarrative
+      properties:
+        grossRevenue:
+          type: string
+        netRevenue:
+          type: string
+        cashNet:
+          type: string
+        finalBalance:
+          type: string
+        payablesOpen:
+          type: string
+        payablesOverdue:
+          type: string
+        receivableAmount:
+          type: string
+        periodNarrative:
+          type: string
+    ManagementCashFlowSection:
+      type: object
+      required: [credits, debits, net, finalBalance, balancesByAccount]
+      properties:
+        credits:
+          type: string
+        debits:
+          type: string
+        net:
+          type: string
+        finalBalance:
+          type: string
+        balancesByAccount:
+          type: array
+          items:
+            $ref: "#/components/schemas/AccountBalanceSummary"
+    AccountBalanceSummary:
+      type: object
+      required: [accountId, accountName, balance]
+      properties:
+        accountId:
+          type: string
+          nullable: true
+        accountName:
+          type: string
+        balance:
+          type: string
+    ManagementSalesSection:
+      type: object
+      required:
+        - orders
+        - grossRevenue
+        - netRevenue
+        - releasedAmount
+        - receivableAmount
+        - feeAmount
+        - averageTicket
+        - daily
+        - byInstitution
+        - byPaymentMethod
+        - byChannel
+      properties:
+        orders:
+          type: integer
+        grossRevenue:
+          type: string
+        netRevenue:
+          type: string
+        releasedAmount:
+          type: string
+        receivableAmount:
+          type: string
+        feeAmount:
+          type: string
+        averageTicket:
+          type: string
+        daily:
+          type: array
+          items:
+            $ref: "#/components/schemas/SalesTrendPoint"
+        byInstitution:
+          type: array
+          items:
+            $ref: "#/components/schemas/SalesDimensionSummary"
+        byPaymentMethod:
+          type: array
+          items:
+            $ref: "#/components/schemas/SalesDimensionSummary"
+        byChannel:
+          type: array
+          items:
+            $ref: "#/components/schemas/SalesDimensionSummary"
+    SalesTrendPoint:
+      type: object
+      required: [date, orders, grossRevenue, netRevenue]
+      properties:
+        date:
+          type: string
+          format: date
+        orders:
+          type: integer
+        grossRevenue:
+          type: string
+        netRevenue:
+          type: string
+    SalesDimensionSummary:
+      type: object
+      required: [key, label, orders, grossRevenue, netRevenue, shareOfGrossRevenue]
+      properties:
+        key:
+          type: string
+          nullable: true
+        label:
+          type: string
+        orders:
+          type: integer
+        grossRevenue:
+          type: string
+        netRevenue:
+          type: string
+        shareOfGrossRevenue:
+          type: number
+    ManagementPayablesSection:
+      type: object
+      required: [expected, paid, open, overdue, openCount, overdueCount, byCategory]
+      properties:
+        expected:
+          type: string
+        paid:
+          type: string
+        open:
+          type: string
+        overdue:
+          type: string
+        openCount:
+          type: integer
+        overdueCount:
+          type: integer
+        byCategory:
+          type: array
+          items:
+            $ref: "#/components/schemas/ExpenseCategorySummary"
+    ExpenseCategorySummary:
+      type: object
+      required:
+        - categoryId
+        - categoryName
+        - expected
+        - paid
+        - open
+        - overdue
+        - shareOfExpected
+      properties:
+        categoryId:
+          type: string
+          nullable: true
+        categoryName:
+          type: string
+        expected:
+          type: string
+        paid:
+          type: string
+        open:
+          type: string
+        overdue:
+          type: string
+        shareOfExpected:
+          type: number
