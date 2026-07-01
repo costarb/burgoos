@@ -704,7 +704,7 @@ function buildPdfTopSummary(report: ManagementReportPdf) {
   const netRevenue = Number(report.sales.netRevenue);
   const paidExpenses = Number(report.payables.paid);
   const pendingExpenses = Number(report.payables.open);
-  const currentBalance = netRevenue - paidExpenses;
+  const currentBalance = Number(report.cashFlow.finalBalance);
   const futureBalance = currentBalance - pendingExpenses;
 
   return {
