@@ -319,9 +319,12 @@ function renderManagementReportPdf(title: string, report: ManagementReportPdf): 
   stream.push(...pdfTextAt("Resumo executivo", page.margin, 474, 9, true));
   drawTextBlock(stream, report.executiveSummary.periodNarrative, page.margin, 462, contentWidth, 8);
 
-  const panelY = 248;
-  drawPanel(stream, page.margin, panelY, panelWidth, 190, "Caixa");
-  drawCompactMetrics(stream, page.margin + 10, panelY + 146, panelWidth - 20, [
+  const topPanelY = 312;
+  const topPanelHeight = 126;
+  const halfPanelWidth = (contentWidth - panelGap) / 2;
+
+  drawPanel(stream, page.margin, topPanelY, halfPanelWidth, topPanelHeight, "Caixa");
+  drawCompactMetrics(stream, page.margin + 10, topPanelY + 84, halfPanelWidth - 20, [
     ["Creditos", money(report.cashFlow.credits)],
     ["Debitos", money(report.cashFlow.debits)],
     ["Liquido", money(report.cashFlow.net)],
@@ -335,42 +338,14 @@ function renderManagementReportPdf(title: string, report: ManagementReportPdf): 
       money(account.balance),
     ]),
     page.margin + 10,
-    panelY + 16,
-    panelWidth - 20,
-    5
+    topPanelY + 8,
+    halfPanelWidth - 20,
+    3
   );
 
-  const salesX = page.margin + panelWidth + panelGap;
-  drawPanel(stream, salesX, panelY, panelWidth, 190, "Vendas");
-  drawCompactMetrics(
-    stream,
-    salesX + 10,
-    panelY + 146,
-    panelWidth - 20,
-    [
-      ["Pedidos", String(report.sales.orders)],
-      ["Receita bruta", money(report.sales.grossRevenue)],
-      ["Receita liquida", money(report.sales.netRevenue)],
-      ["Disponivel", money(report.sales.releasedAmount)],
-      ["A receber", money(report.sales.receivableAmount)],
-      ["Taxas", money(report.sales.feeAmount)],
-      ["Ticket medio", money(report.sales.averageTicket)],
-    ],
-    { columns: 3, rowGap: 24, valueMaxLength: 12 }
-  );
-  drawBars(
-    stream,
-    "Evolucao",
-    report.sales.daily.map((day) => [day.date.slice(5), Number(day.grossRevenue)]),
-    salesX + 10,
-    panelY + 4,
-    panelWidth - 20,
-    5
-  );
-
-  const payablesX = salesX + panelWidth + panelGap;
-  drawPanel(stream, payablesX, panelY, panelWidth, 190, "Contas a pagar");
-  drawCompactMetrics(stream, payablesX + 10, panelY + 146, panelWidth - 20, [
+  const payablesX = page.margin + halfPanelWidth + panelGap;
+  drawPanel(stream, payablesX, topPanelY, halfPanelWidth, topPanelHeight, "Contas a pagar");
+  drawCompactMetrics(stream, payablesX + 10, topPanelY + 84, halfPanelWidth - 20, [
     ["Previsto", money(report.payables.expected)],
     ["Pago", money(report.payables.paid)],
     ["Em aberto", money(report.payables.open)],
@@ -384,12 +359,43 @@ function renderManagementReportPdf(title: string, report: ManagementReportPdf): 
       Number(category.expected),
     ]),
     payablesX + 10,
-    panelY + 4,
-    panelWidth - 20,
-    5
+    topPanelY + 8,
+    halfPanelWidth - 20,
+    3
   );
 
-  const bottomY = 35;
+  const salesY = 192;
+  drawPanel(stream, page.margin, salesY, contentWidth, 108, "Vendas");
+  drawCompactMetrics(
+    stream,
+    page.margin + 10,
+    salesY + 68,
+    250,
+    [
+      ["Pedidos", String(report.sales.orders)],
+      ["Receita bruta", money(report.sales.grossRevenue)],
+      ["Receita liquida", money(report.sales.netRevenue)],
+      ["Disponivel", money(report.sales.releasedAmount)],
+      ["A receber", money(report.sales.receivableAmount)],
+      ["Taxas", money(report.sales.feeAmount)],
+      ["Ticket medio", money(report.sales.averageTicket)],
+    ],
+    { columns: 3, rowGap: 22, valueMaxLength: 12 }
+  );
+  drawLineChart(
+    stream,
+    "Receita bruta por dia",
+    report.sales.daily.map((day) => [day.date.slice(5), Number(day.grossRevenue)]),
+    page.margin + 286,
+    salesY + 14,
+    contentWidth - 306,
+    62
+  );
+
+  const bottomY = 24;
+  const middleGroupX = page.margin + panelWidth + panelGap;
+  const rightGroupX = middleGroupX + panelWidth + panelGap;
+
   drawPanel(stream, page.margin, bottomY, panelWidth, 180, "Por instituicao");
   drawSalesGroup(
     stream,
@@ -399,11 +405,17 @@ function renderManagementReportPdf(title: string, report: ManagementReportPdf): 
     panelWidth - 20
   );
 
-  drawPanel(stream, salesX, bottomY, panelWidth, 180, "Por meio");
-  drawSalesGroup(stream, report.sales.byPaymentMethod, salesX + 10, bottomY + 18, panelWidth - 20);
+  drawPanel(stream, middleGroupX, bottomY, panelWidth, 180, "Por meio");
+  drawSalesGroup(
+    stream,
+    report.sales.byPaymentMethod,
+    middleGroupX + 10,
+    bottomY + 18,
+    panelWidth - 20
+  );
 
-  drawPanel(stream, payablesX, bottomY, panelWidth, 180, "Por canal");
-  drawSalesGroup(stream, report.sales.byChannel, payablesX + 10, bottomY + 18, panelWidth - 20);
+  drawPanel(stream, rightGroupX, bottomY, panelWidth, 180, "Por canal");
+  drawSalesGroup(stream, report.sales.byChannel, rightGroupX + 10, bottomY + 18, panelWidth - 20);
 
   return buildPdf(stream.join("\n"), page);
 }
@@ -525,6 +537,79 @@ function drawBars(
     stream.push("0.9 0.28 0.2 rg", `${barStartX} ${rowY - 2} ${barWidth} 5 re f`);
     stream.push(...pdfTextAt(`R$ ${value.toFixed(2)}`, valueX, rowY, 5.6));
   });
+}
+
+function drawLineChart(
+  stream: string[],
+  title: string,
+  rows: Array<[string, number]>,
+  x: number,
+  y: number,
+  width: number,
+  height: number
+) {
+  stream.push(...pdfTextAt(title, x, y + height + 14, 7, true));
+
+  const nonZeroRows = rows.filter(([, value]) => value > 0);
+
+  if (nonZeroRows.length === 0) {
+    stream.push(...pdfTextAt("Sem vendas no periodo.", x, y + height / 2, 7));
+    return;
+  }
+
+  const visibleRows = sampleChartRows(rows, 10);
+  const max = Math.max(...visibleRows.map(([, value]) => value), 0);
+  const axisY = y + 16;
+  const chartHeight = height - 20;
+  const step = visibleRows.length > 1 ? width / (visibleRows.length - 1) : width;
+  const points = visibleRows.map(([label, value], index) => ({
+    label,
+    value,
+    x: x + index * step,
+    y: axisY + (max === 0 ? 0 : (value / max) * chartHeight),
+  }));
+
+  stream.push("0.86 0.89 0.93 RG", `${x} ${axisY} ${width} 0.6 re S`);
+
+  for (let index = 0; index < points.length - 1; index += 1) {
+    const current = points[index];
+    const next = points[index + 1];
+    stream.push(
+      "0.9 0.28 0.2 RG",
+      "1.4 w",
+      `${current.x} ${current.y} m ${next.x} ${next.y} l S`,
+      "1 w"
+    );
+  }
+
+  points.forEach((point) => {
+    stream.push("0.9 0.28 0.2 rg", `${point.x - 2} ${point.y - 2} 4 4 re f`);
+    stream.push(...pdfTextAt(formatCompactMoney(point.value), point.x - 14, point.y + 7, 5));
+    stream.push(...pdfTextAt(point.label, point.x - 9, y, 5));
+  });
+}
+
+function sampleChartRows(
+  rows: Array<[string, number]>,
+  maxPoints: number
+): Array<[string, number]> {
+  if (rows.length <= maxPoints) {
+    return rows;
+  }
+
+  const step = (rows.length - 1) / (maxPoints - 1);
+  const sampled = Array.from({ length: maxPoints }, (_, index) => rows[Math.round(index * step)]);
+  return sampled.filter(
+    (row, index) => sampled.findIndex((candidate) => candidate[0] === row[0]) === index
+  );
+}
+
+function formatCompactMoney(value: number): string {
+  if (Math.abs(value) >= 1000) {
+    return `R$ ${(value / 1000).toFixed(1)}k`;
+  }
+
+  return `R$ ${value.toFixed(0)}`;
 }
 
 function drawSalesGroup(
