@@ -132,7 +132,8 @@ export class ManagementReportService {
 }
 
 function groupPayablesByCategory(items: PayableListItem[]): ManagementExpenseCategorySummary[] {
-  const totalExpected = items.reduce(
+  const activeItems = items.filter((item) => item.status !== "CANCELLED");
+  const totalExpected = activeItems.reduce(
     (total, item) => total.plus(item.expectedAmount),
     new Prisma.Decimal(0)
   );
@@ -148,7 +149,7 @@ function groupPayablesByCategory(items: PayableListItem[]): ManagementExpenseCat
     }
   >();
 
-  items.forEach((item) => {
+  activeItems.forEach((item) => {
     const key = item.categoryId ?? "NO_CATEGORY";
     const bucket = buckets.get(key) ?? {
       categoryId: item.categoryId ?? null,

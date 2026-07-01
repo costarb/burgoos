@@ -201,6 +201,15 @@ function accountsPayableMock() {
           remainingAmount: "200.00",
           status: "OPEN",
         }),
+        payable({
+          categoryId: "category-cancelled",
+          categoryName: "Canceladas",
+          expectedAmount: "900.00",
+          paidAmount: "0.00",
+          remainingAmount: "900.00",
+          status: "CANCELLED",
+          cancelledAt: "2026-06-10T00:00:00.000Z",
+        }),
       ],
     }),
   };
