@@ -152,6 +152,14 @@ function csvCell(value: string | number | null): string {
 }
 
 function renderPdf(dataset: ExportDataset): Buffer {
+  if (dataset.layout === "MANAGEMENT_REPORT") {
+    const report = dataset.metadata?.report;
+
+    if (isManagementReportPdf(report)) {
+      return renderManagementReportPdf(dataset.title, report);
+    }
+  }
+
   const page = { width: 842, height: 595, margin: 28 };
   const availableWidth = page.width - page.margin * 2;
   const visibleColumns = dataset.columns.slice(0, 8);
@@ -227,6 +235,351 @@ function renderPdf(dataset: ExportDataset): Buffer {
   }
 
   return buildPdf(stream.join("\n"), page);
+}
+
+interface ManagementReportPdf {
+  period: { start: string; end: string };
+  executiveSummary: {
+    grossRevenue: string;
+    netRevenue: string;
+    cashNet: string;
+    finalBalance: string;
+    periodNarrative: string;
+  };
+  cashFlow: {
+    credits: string;
+    debits: string;
+    net: string;
+    finalBalance: string;
+    balancesByAccount: Array<{ accountName: string; balance: string }>;
+  };
+  sales: {
+    orders: number;
+    grossRevenue: string;
+    netRevenue: string;
+    releasedAmount: string;
+    receivableAmount: string;
+    feeAmount: string;
+    averageTicket: string;
+    daily: Array<{ date: string; orders: number; grossRevenue: string; netRevenue: string }>;
+    byInstitution: ManagementSalesPdfGroup[];
+    byPaymentMethod: ManagementSalesPdfGroup[];
+    byChannel: ManagementSalesPdfGroup[];
+  };
+  payables: {
+    expected: string;
+    paid: string;
+    open: string;
+    overdue: string;
+    byCategory: Array<{
+      categoryName: string;
+      expected: string;
+      paid: string;
+      open: string;
+      overdue: string;
+    }>;
+  };
+}
+
+interface ManagementSalesPdfGroup {
+  label: string;
+  orders: number;
+  grossRevenue: string;
+}
+
+function renderManagementReportPdf(title: string, report: ManagementReportPdf): Buffer {
+  const page = { width: 842, height: 595, margin: 28 };
+  const contentWidth = page.width - page.margin * 2;
+  const panelGap = 12;
+  const panelWidth = (contentWidth - panelGap * 2) / 3;
+  const stream: string[] = [
+    "0.98 0.98 0.98 rg",
+    `0 0 ${page.width} ${page.height} re f`,
+    "0.12 0.16 0.22 rg",
+    `${page.margin} 548 ${contentWidth} 1.2 re f`,
+  ];
+
+  stream.push(...pdfTextAt(title, page.margin, 563, 16, true));
+  stream.push(
+    ...pdfTextAt(
+      `Periodo: ${report.period.start} a ${report.period.end} | Gerado em ${formatPdfDate(new Date())}`,
+      page.margin,
+      538,
+      8
+    )
+  );
+
+  drawMetricCards(stream, page.margin, 489, contentWidth, [
+    ["Receita bruta", money(report.executiveSummary.grossRevenue)],
+    ["Receita liquida", money(report.executiveSummary.netRevenue)],
+    ["Liquido caixa", money(report.executiveSummary.cashNet)],
+    ["Saldo final", money(report.executiveSummary.finalBalance)],
+  ]);
+
+  stream.push(...pdfTextAt("Resumo executivo", page.margin, 474, 9, true));
+  drawTextBlock(stream, report.executiveSummary.periodNarrative, page.margin, 462, contentWidth, 8);
+
+  const panelY = 248;
+  drawPanel(stream, page.margin, panelY, panelWidth, 190, "Caixa");
+  drawCompactMetrics(stream, page.margin + 10, panelY + 146, panelWidth - 20, [
+    ["Creditos", money(report.cashFlow.credits)],
+    ["Debitos", money(report.cashFlow.debits)],
+    ["Liquido", money(report.cashFlow.net)],
+    ["Saldo final", money(report.cashFlow.finalBalance)],
+  ]);
+  drawList(
+    stream,
+    "Saldos por conta",
+    report.cashFlow.balancesByAccount.map((account) => [
+      account.accountName,
+      money(account.balance),
+    ]),
+    page.margin + 10,
+    panelY + 16,
+    panelWidth - 20,
+    5
+  );
+
+  const salesX = page.margin + panelWidth + panelGap;
+  drawPanel(stream, salesX, panelY, panelWidth, 190, "Vendas");
+  drawCompactMetrics(stream, salesX + 10, panelY + 146, panelWidth - 20, [
+    ["Pedidos", String(report.sales.orders)],
+    ["Receita bruta", money(report.sales.grossRevenue)],
+    ["Receita liquida", money(report.sales.netRevenue)],
+    ["Disponivel", money(report.sales.releasedAmount)],
+    ["A receber", money(report.sales.receivableAmount)],
+    ["Taxas", money(report.sales.feeAmount)],
+    ["Ticket medio", money(report.sales.averageTicket)],
+  ]);
+  drawBars(
+    stream,
+    "Evolucao",
+    report.sales.daily.map((day) => [day.date.slice(5), Number(day.grossRevenue)]),
+    salesX + 10,
+    panelY + 14,
+    panelWidth - 20,
+    6
+  );
+
+  const payablesX = salesX + panelWidth + panelGap;
+  drawPanel(stream, payablesX, panelY, panelWidth, 190, "Contas a pagar");
+  drawCompactMetrics(stream, payablesX + 10, panelY + 146, panelWidth - 20, [
+    ["Previsto", money(report.payables.expected)],
+    ["Pago", money(report.payables.paid)],
+    ["Em aberto", money(report.payables.open)],
+    ["Vencido", money(report.payables.overdue)],
+  ]);
+  drawBars(
+    stream,
+    "Despesas por categoria",
+    report.payables.byCategory.map((category) => [
+      `${category.categoryName} (${money(category.open)} aberto)`,
+      Number(category.expected),
+    ]),
+    payablesX + 10,
+    panelY + 14,
+    panelWidth - 20,
+    6
+  );
+
+  const bottomY = 35;
+  drawPanel(stream, page.margin, bottomY, panelWidth, 180, "Por instituicao");
+  drawSalesGroup(
+    stream,
+    report.sales.byInstitution,
+    page.margin + 10,
+    bottomY + 18,
+    panelWidth - 20
+  );
+
+  drawPanel(stream, salesX, bottomY, panelWidth, 180, "Por meio");
+  drawSalesGroup(stream, report.sales.byPaymentMethod, salesX + 10, bottomY + 18, panelWidth - 20);
+
+  drawPanel(stream, payablesX, bottomY, panelWidth, 180, "Por canal");
+  drawSalesGroup(stream, report.sales.byChannel, payablesX + 10, bottomY + 18, panelWidth - 20);
+
+  return buildPdf(stream.join("\n"), page);
+}
+
+function drawMetricCards(
+  stream: string[],
+  x: number,
+  y: number,
+  width: number,
+  cards: Array<[string, string]>
+) {
+  const gap = 10;
+  const cardWidth = (width - gap * (cards.length - 1)) / cards.length;
+
+  cards.forEach(([label, value], index) => {
+    const cardX = x + index * (cardWidth + gap);
+    stream.push(
+      "1 1 1 rg",
+      `${cardX} ${y} ${cardWidth} 42 re f`,
+      "0.82 0.86 0.9 RG",
+      `${cardX} ${y} ${cardWidth} 42 re S`
+    );
+    stream.push(...pdfTextAt(label, cardX + 8, y + 26, 7, true));
+    stream.push(...pdfTextAt(value, cardX + 8, y + 10, 13, true));
+  });
+}
+
+function drawPanel(
+  stream: string[],
+  x: number,
+  y: number,
+  width: number,
+  height: number,
+  title: string
+) {
+  stream.push(
+    "1 1 1 rg",
+    `${x} ${y} ${width} ${height} re f`,
+    "0.82 0.86 0.9 RG",
+    `${x} ${y} ${width} ${height} re S`
+  );
+  stream.push(...pdfTextAt(title, x + 10, y + height - 18, 11, true));
+}
+
+function drawCompactMetrics(
+  stream: string[],
+  x: number,
+  y: number,
+  width: number,
+  metrics: Array<[string, string]>
+) {
+  const columnWidth = width / 2;
+
+  metrics.slice(0, 8).forEach(([label, value], index) => {
+    const column = index % 2;
+    const row = Math.floor(index / 2);
+    const metricX = x + column * columnWidth;
+    const metricY = y - row * 26;
+    stream.push(...pdfTextAt(label, metricX, metricY, 6, true));
+    stream.push(...pdfTextAt(truncatePdfText(value, 18), metricX, metricY - 12, 8));
+  });
+}
+
+function drawList(
+  stream: string[],
+  title: string,
+  rows: Array<[string, string]>,
+  x: number,
+  y: number,
+  width: number,
+  maxRows: number
+) {
+  stream.push(...pdfTextAt(title, x, y + maxRows * 14 + 12, 7, true));
+
+  if (rows.length === 0) {
+    stream.push(...pdfTextAt("Sem dados no periodo.", x, y + maxRows * 14 - 2, 7));
+    return;
+  }
+
+  rows.slice(0, maxRows).forEach(([label, value], index) => {
+    const rowY = y + (maxRows - index - 1) * 14;
+    stream.push(...pdfTextAt(truncatePdfText(label, 28), x, rowY, 7));
+    stream.push(...pdfTextAt(truncatePdfText(value, 14), x + width - 58, rowY, 7, true));
+  });
+}
+
+function drawBars(
+  stream: string[],
+  title: string,
+  rows: Array<[string, number]>,
+  x: number,
+  y: number,
+  width: number,
+  maxRows: number
+) {
+  const max = Math.max(...rows.map(([, value]) => value), 0);
+  stream.push(...pdfTextAt(title, x, y + maxRows * 14 + 12, 7, true));
+
+  if (rows.length === 0 || max === 0) {
+    stream.push(...pdfTextAt("Sem dados no periodo.", x, y + maxRows * 14 - 2, 7));
+    return;
+  }
+
+  rows.slice(0, maxRows).forEach(([label, value], index) => {
+    const rowY = y + (maxRows - index - 1) * 14;
+    const barWidth = Math.max(8, (value / max) * (width - 92));
+    stream.push(...pdfTextAt(truncatePdfText(label, 22), x, rowY, 6));
+    stream.push("0.93 0.95 0.97 rg", `${x + 82} ${rowY - 2} ${width - 92} 5 re f`);
+    stream.push("0.9 0.28 0.2 rg", `${x + 82} ${rowY - 2} ${barWidth} 5 re f`);
+    stream.push(...pdfTextAt(`R$ ${value.toFixed(2)}`, x + width - 54, rowY, 6));
+  });
+}
+
+function drawSalesGroup(
+  stream: string[],
+  rows: ManagementSalesPdfGroup[],
+  x: number,
+  y: number,
+  width: number
+) {
+  if (rows.length === 0) {
+    stream.push(...pdfTextAt("Sem dados no periodo.", x, y + 126, 7));
+    return;
+  }
+
+  rows.slice(0, 6).forEach((row, index) => {
+    const rowY = y + (5 - index) * 22;
+    stream.push(...pdfTextAt(truncatePdfText(row.label, 26), x, rowY + 8, 7, true));
+    stream.push(...pdfTextAt(`${row.orders} pedido(s)`, x, rowY - 3, 6));
+    stream.push(...pdfTextAt(money(row.grossRevenue), x + width - 62, rowY + 4, 7, true));
+  });
+}
+
+function drawTextBlock(
+  stream: string[],
+  value: string,
+  x: number,
+  y: number,
+  width: number,
+  size: number
+) {
+  wrapPdfText(value, Math.floor(width / (size * 0.58)))
+    .slice(0, 2)
+    .forEach((line, index) => {
+      stream.push(...pdfTextAt(line, x, y - index * 11, size));
+    });
+}
+
+function wrapPdfText(value: string, maxLength: number): string[] {
+  const lines: string[] = [];
+  let current = "";
+
+  value.split(/\s+/).forEach((word) => {
+    const next = current ? `${current} ${word}` : word;
+
+    if (next.length > maxLength && current) {
+      lines.push(current);
+      current = word;
+    } else {
+      current = next;
+    }
+  });
+
+  if (current) {
+    lines.push(current);
+  }
+
+  return lines;
+}
+
+function isManagementReportPdf(value: unknown): value is ManagementReportPdf {
+  if (!value || typeof value !== "object") {
+    return false;
+  }
+
+  const report = value as Partial<ManagementReportPdf>;
+  return Boolean(
+    report.period && report.executiveSummary && report.cashFlow && report.sales && report.payables
+  );
+}
+
+function money(value: string): string {
+  return `R$ ${value}`;
 }
 
 function calculatePdfColumnWidths(

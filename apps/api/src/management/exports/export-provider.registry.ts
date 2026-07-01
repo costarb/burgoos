@@ -20,6 +20,8 @@ export interface ExportDataset {
   title: string;
   columns: ExportColumn[];
   rows: Array<Record<string, string | number | null>>;
+  layout?: "MANAGEMENT_REPORT";
+  metadata?: Record<string, unknown>;
 }
 
 export interface ExportProvider {

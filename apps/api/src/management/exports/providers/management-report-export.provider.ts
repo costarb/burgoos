@@ -29,6 +29,8 @@ export class ManagementReportExportProvider implements ExportProvider {
 
     return {
       title: `Relatorio gerencial ${report.period.start} a ${report.period.end}`,
+      layout: "MANAGEMENT_REPORT",
+      metadata: { report },
       columns: managementReportColumns,
       rows: [
         row("Resumo executivo", "Periodo", `${report.period.start} a ${report.period.end}`),

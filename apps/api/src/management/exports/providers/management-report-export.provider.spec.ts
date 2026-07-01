@@ -23,6 +23,8 @@ describe("ManagementReportExportProvider", () => {
       expect.objectContaining({ start: "2026-06-01", end: "2026-06-30" })
     );
     expect(dataset.title).toBe("Relatorio gerencial 2026-06-01 a 2026-06-30");
+    expect(dataset.layout).toBe("MANAGEMENT_REPORT");
+    expect(dataset.metadata?.report).toEqual(reportFixture());
     expect(dataset.columns.map((column) => column.label)).toEqual([
       "Secao",
       "Indicador",
