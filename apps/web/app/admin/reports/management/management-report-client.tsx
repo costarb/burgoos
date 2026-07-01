@@ -191,64 +191,72 @@ export function ManagementReportClient({ token, initialReport }: ManagementRepor
           </p>
         </section>
 
-        <section className="mt-6 grid gap-6 xl:grid-cols-3">
-          <Panel title="Caixa">
-            <div className="grid gap-3 sm:grid-cols-2">
-              <SmallMetric label="Creditos" value={report.cashFlow.credits} />
-              <SmallMetric label="Debitos" value={report.cashFlow.debits} />
-              <SmallMetric label="Liquido" value={report.cashFlow.net} />
-              <SmallMetric label="Saldo final" value={report.cashFlow.finalBalance} />
-            </div>
-            <ListEmptyGuard empty={report.cashFlow.balancesByAccount.length === 0}>
-              <div className="mt-4 space-y-2">
-                {report.cashFlow.balancesByAccount.map((account) => (
-                  <div
-                    className="flex justify-between text-sm"
-                    key={account.accountId ?? account.accountName}
-                  >
-                    <span className="text-slate-600">{account.accountName}</span>
-                    <span className="font-semibold">R$ {account.balance}</span>
-                  </div>
-                ))}
-              </div>
-            </ListEmptyGuard>
-          </Panel>
-
+        <section className="mt-6 grid gap-6">
           <Panel title="Vendas">
-            <div className="grid gap-3 sm:grid-cols-2">
-              <SmallMetric currency={false} label="Pedidos" value={String(report.sales.orders)} />
-              <SmallMetric label="Receita bruta" value={report.sales.grossRevenue} />
-              <SmallMetric label="Receita liquida" value={report.sales.netRevenue} />
-              <SmallMetric label="Disponivel" value={report.sales.releasedAmount} />
-              <SmallMetric label="A receber" value={report.sales.receivableAmount} />
-              <SmallMetric label="Taxa" value={report.sales.feeAmount} />
-              <SmallMetric label="Ticket medio" value={report.sales.averageTicket} />
+            <div className="grid gap-5 xl:grid-cols-[minmax(300px,0.9fr)_minmax(420px,1.6fr)]">
+              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-2">
+                <SmallMetric currency={false} label="Pedidos" value={String(report.sales.orders)} />
+                <SmallMetric label="Receita bruta" value={report.sales.grossRevenue} />
+                <SmallMetric label="Receita liquida" value={report.sales.netRevenue} />
+                <SmallMetric label="Disponivel" value={report.sales.releasedAmount} />
+                <SmallMetric label="A receber" value={report.sales.receivableAmount} />
+                <SmallMetric label="Taxa" value={report.sales.feeAmount} />
+                <SmallMetric label="Ticket medio" value={report.sales.averageTicket} />
+              </div>
+              <LineChart
+                emptyText="Sem vendas no periodo."
+                max={maxSales}
+                rows={report.sales.daily.map((day) => ({
+                  label: day.date.slice(5),
+                  value: Number(day.grossRevenue),
+                }))}
+                title="Receita bruta por dia"
+              />
             </div>
-            <MiniBars
-              emptyText="Sem vendas no periodo."
-              max={maxSales}
-              rows={report.sales.daily.map((day) => ({
-                label: day.date.slice(5),
-                value: Number(day.grossRevenue),
-              }))}
-            />
           </Panel>
 
           <Panel title="Contas a pagar">
-            <div className="grid gap-3 sm:grid-cols-2">
-              <SmallMetric label="Previsto" value={report.payables.expected} />
-              <SmallMetric label="Pago" value={report.payables.paid} />
-              <SmallMetric label="Em aberto" value={report.payables.open} />
-              <SmallMetric label="Vencido" value={report.payables.overdue} />
+            <div className="grid gap-5 xl:grid-cols-[minmax(300px,0.75fr)_minmax(420px,1.75fr)]">
+              <div className="grid gap-3 sm:grid-cols-2">
+                <SmallMetric label="Previsto" value={report.payables.expected} />
+                <SmallMetric label="Pago" value={report.payables.paid} />
+                <SmallMetric label="Em aberto" value={report.payables.open} />
+                <SmallMetric label="Vencido" value={report.payables.overdue} />
+              </div>
+              <MiniBars
+                emptyText="Sem despesas no periodo."
+                max={maxExpense}
+                rows={report.payables.byCategory.map((category) => ({
+                  label: category.categoryName,
+                  value: Number(category.expected),
+                }))}
+                title="Despesas por categoria"
+              />
             </div>
-            <MiniBars
-              emptyText="Sem despesas no periodo."
-              max={maxExpense}
-              rows={report.payables.byCategory.map((category) => ({
-                label: category.categoryName,
-                value: Number(category.expected),
-              }))}
-            />
+          </Panel>
+
+          <Panel title="Caixa">
+            <div className="grid gap-5 xl:grid-cols-[minmax(300px,0.75fr)_minmax(420px,1.75fr)]">
+              <div className="grid gap-3 sm:grid-cols-2">
+                <SmallMetric label="Creditos" value={report.cashFlow.credits} />
+                <SmallMetric label="Debitos" value={report.cashFlow.debits} />
+                <SmallMetric label="Liquido" value={report.cashFlow.net} />
+                <SmallMetric label="Saldo final" value={report.cashFlow.finalBalance} />
+              </div>
+              <ListEmptyGuard empty={report.cashFlow.balancesByAccount.length === 0}>
+                <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+                  {report.cashFlow.balancesByAccount.map((account) => (
+                    <div
+                      className="flex justify-between gap-3 rounded-md border border-slate-100 bg-slate-50 px-3 py-2 text-sm"
+                      key={account.accountId ?? account.accountName}
+                    >
+                      <span className="truncate text-slate-600">{account.accountName}</span>
+                      <span className="shrink-0 font-semibold">R$ {account.balance}</span>
+                    </div>
+                  ))}
+                </div>
+              </ListEmptyGuard>
+            </div>
           </Panel>
         </section>
 
@@ -319,17 +327,20 @@ function MiniBars({
   rows,
   max,
   emptyText,
+  title,
 }: {
   rows: Array<{ label: string; value: number }>;
   max: number;
   emptyText: string;
+  title?: string;
 }) {
   if (rows.length === 0 || max === 0) {
     return <p className="mt-4 text-sm text-slate-500">{emptyText}</p>;
   }
 
   return (
-    <div className="mt-4 space-y-2">
+    <div className="space-y-2">
+      {title ? <p className="text-sm font-semibold text-slate-700">{title}</p> : null}
       {rows.slice(0, 8).map((row) => (
         <div className="grid gap-1" key={row.label}>
           <div className="flex justify-between text-xs text-slate-500">
@@ -346,6 +357,98 @@ function MiniBars({
       ))}
     </div>
   );
+}
+
+function LineChart({
+  rows,
+  max,
+  title,
+  emptyText,
+}: {
+  rows: Array<{ label: string; value: number }>;
+  max: number;
+  title: string;
+  emptyText: string;
+}) {
+  const visibleRows = sampleRows(rows, 10);
+  const chartWidth = 720;
+  const chartHeight = 220;
+  const padding = { top: 28, right: 18, bottom: 32, left: 18 };
+  const innerWidth = chartWidth - padding.left - padding.right;
+  const innerHeight = chartHeight - padding.top - padding.bottom;
+  const points = visibleRows.map((row, index) => {
+    const x =
+      padding.left + (visibleRows.length > 1 ? (index / (visibleRows.length - 1)) * innerWidth : 0);
+    const y = padding.top + innerHeight - (max > 0 ? (row.value / max) * innerHeight : 0);
+    return { ...row, x, y };
+  });
+  const line = points.map((point) => `${point.x},${point.y}`).join(" ");
+
+  if (rows.length === 0 || max === 0) {
+    return (
+      <div className="rounded-md border border-slate-100 bg-slate-50 p-4">
+        <p className="text-sm font-semibold text-slate-700">{title}</p>
+        <p className="mt-4 text-sm text-slate-500">{emptyText}</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="rounded-md border border-slate-100 bg-slate-50 p-4">
+      <p className="text-sm font-semibold text-slate-700">{title}</p>
+      <svg
+        aria-label={title}
+        className="mt-3 h-64 w-full overflow-visible"
+        preserveAspectRatio="none"
+        role="img"
+        viewBox={`0 0 ${chartWidth} ${chartHeight}`}
+      >
+        <line
+          stroke="#cbd5e1"
+          strokeWidth="1"
+          x1={padding.left}
+          x2={chartWidth - padding.right}
+          y1={padding.top + innerHeight}
+          y2={padding.top + innerHeight}
+        />
+        <polyline fill="none" points={line} stroke="#e54835" strokeWidth="3" />
+        {points.map((point) => (
+          <g key={point.label}>
+            <circle cx={point.x} cy={point.y} fill="#e54835" r="4" />
+            <text
+              fill="#334155"
+              fontSize="11"
+              textAnchor="middle"
+              x={point.x}
+              y={Math.max(12, point.y - 10)}
+            >
+              {formatCompactMoney(point.value)}
+            </text>
+            <text fill="#64748b" fontSize="10" textAnchor="middle" x={point.x} y={chartHeight - 8}>
+              {point.label}
+            </text>
+          </g>
+        ))}
+      </svg>
+    </div>
+  );
+}
+
+function sampleRows<T>(rows: T[], maxRows: number): T[] {
+  if (rows.length <= maxRows) {
+    return rows;
+  }
+
+  const step = (rows.length - 1) / (maxRows - 1);
+  return Array.from({ length: maxRows }, (_, index) => rows[Math.round(index * step)]);
+}
+
+function formatCompactMoney(value: number): string {
+  if (Math.abs(value) >= 1000) {
+    return `R$ ${(value / 1000).toFixed(1)}k`;
+  }
+
+  return `R$ ${value.toFixed(0)}`;
 }
 
 function DimensionPanel({

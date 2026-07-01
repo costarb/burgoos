@@ -292,15 +292,15 @@ function renderManagementReportPdf(title: string, report: ManagementReportPdf): 
   const contentWidth = page.width - page.margin * 2;
   const panelGap = 12;
   const panelWidth = (contentWidth - panelGap * 2) / 3;
-  const stream: string[] = [
+  const pageOne: string[] = [
     "0.98 0.98 0.98 rg",
     `0 0 ${page.width} ${page.height} re f`,
     "0.12 0.16 0.22 rg",
     `${page.margin} 548 ${contentWidth} 1.2 re f`,
   ];
 
-  stream.push(...pdfTextAt(title, page.margin, 563, 16, true));
-  stream.push(
+  pageOne.push(...pdfTextAt(title, page.margin, 563, 16, true));
+  pageOne.push(
     ...pdfTextAt(
       `Periodo: ${report.period.start} a ${report.period.end} | Gerado em ${formatPdfDate(new Date())}`,
       page.margin,
@@ -309,67 +309,30 @@ function renderManagementReportPdf(title: string, report: ManagementReportPdf): 
     )
   );
 
-  drawMetricCards(stream, page.margin, 489, contentWidth, [
+  drawMetricCards(pageOne, page.margin, 489, contentWidth, [
     ["Receita bruta", money(report.executiveSummary.grossRevenue)],
     ["Receita liquida", money(report.executiveSummary.netRevenue)],
     ["Liquido caixa", money(report.executiveSummary.cashNet)],
     ["Saldo final", money(report.executiveSummary.finalBalance)],
   ]);
 
-  stream.push(...pdfTextAt("Resumo executivo", page.margin, 474, 9, true));
-  drawTextBlock(stream, report.executiveSummary.periodNarrative, page.margin, 462, contentWidth, 8);
-
-  const topPanelY = 312;
-  const topPanelHeight = 126;
-  const halfPanelWidth = (contentWidth - panelGap) / 2;
-
-  drawPanel(stream, page.margin, topPanelY, halfPanelWidth, topPanelHeight, "Caixa");
-  drawCompactMetrics(stream, page.margin + 10, topPanelY + 84, halfPanelWidth - 20, [
-    ["Creditos", money(report.cashFlow.credits)],
-    ["Debitos", money(report.cashFlow.debits)],
-    ["Liquido", money(report.cashFlow.net)],
-    ["Saldo final", money(report.cashFlow.finalBalance)],
-  ]);
-  drawList(
-    stream,
-    "Saldos por conta",
-    report.cashFlow.balancesByAccount.map((account) => [
-      account.accountName,
-      money(account.balance),
-    ]),
-    page.margin + 10,
-    topPanelY + 8,
-    halfPanelWidth - 20,
-    3
+  pageOne.push(...pdfTextAt("Resumo executivo", page.margin, 474, 9, true));
+  drawTextBlock(
+    pageOne,
+    report.executiveSummary.periodNarrative,
+    page.margin,
+    462,
+    contentWidth,
+    8
   );
 
-  const payablesX = page.margin + halfPanelWidth + panelGap;
-  drawPanel(stream, payablesX, topPanelY, halfPanelWidth, topPanelHeight, "Contas a pagar");
-  drawCompactMetrics(stream, payablesX + 10, topPanelY + 84, halfPanelWidth - 20, [
-    ["Previsto", money(report.payables.expected)],
-    ["Pago", money(report.payables.paid)],
-    ["Em aberto", money(report.payables.open)],
-    ["Vencido", money(report.payables.overdue)],
-  ]);
-  drawBars(
-    stream,
-    "Despesas por categoria",
-    report.payables.byCategory.map((category) => [
-      `${category.categoryName} (${money(category.open)} aberto)`,
-      Number(category.expected),
-    ]),
-    payablesX + 10,
-    topPanelY + 8,
-    halfPanelWidth - 20,
-    3
-  );
-
-  const salesY = 192;
-  drawPanel(stream, page.margin, salesY, contentWidth, 108, "Vendas");
+  const fullPanelWidth = contentWidth;
+  const salesY = 316;
+  drawPanel(pageOne, page.margin, salesY, fullPanelWidth, 118, "Vendas");
   drawCompactMetrics(
-    stream,
+    pageOne,
     page.margin + 10,
-    salesY + 68,
+    salesY + 78,
     250,
     [
       ["Pedidos", String(report.sales.orders)],
@@ -383,41 +346,91 @@ function renderManagementReportPdf(title: string, report: ManagementReportPdf): 
     { columns: 3, rowGap: 22, valueMaxLength: 12 }
   );
   drawLineChart(
-    stream,
+    pageOne,
     "Receita bruta por dia",
     report.sales.daily.map((day) => [day.date.slice(5), Number(day.grossRevenue)]),
     page.margin + 286,
-    salesY + 14,
+    salesY + 16,
     contentWidth - 306,
-    62
+    68
   );
 
-  const bottomY = 24;
+  const payablesY = 178;
+  drawPanel(pageOne, page.margin, payablesY, fullPanelWidth, 126, "Contas a pagar");
+  drawCompactMetrics(pageOne, page.margin + 10, payablesY + 84, 250, [
+    ["Previsto", money(report.payables.expected)],
+    ["Pago", money(report.payables.paid)],
+    ["Em aberto", money(report.payables.open)],
+    ["Vencido", money(report.payables.overdue)],
+  ]);
+  drawBars(
+    pageOne,
+    "Despesas por categoria",
+    report.payables.byCategory.map((category) => [
+      `${category.categoryName} (${money(category.open)} aberto)`,
+      Number(category.expected),
+    ]),
+    page.margin + 286,
+    payablesY + 20,
+    contentWidth - 306,
+    5
+  );
+
+  const cashY = 40;
+  drawPanel(pageOne, page.margin, cashY, fullPanelWidth, 126, "Caixa");
+  drawCompactMetrics(pageOne, page.margin + 10, cashY + 84, 250, [
+    ["Creditos", money(report.cashFlow.credits)],
+    ["Debitos", money(report.cashFlow.debits)],
+    ["Liquido", money(report.cashFlow.net)],
+    ["Saldo final", money(report.cashFlow.finalBalance)],
+  ]);
+  drawList(
+    pageOne,
+    "Saldos por conta",
+    report.cashFlow.balancesByAccount.map((account) => [
+      account.accountName,
+      money(account.balance),
+    ]),
+    page.margin + 286,
+    cashY + 18,
+    contentWidth - 306,
+    5
+  );
+
+  const pageTwo = [
+    "0.98 0.98 0.98 rg",
+    `0 0 ${page.width} ${page.height} re f`,
+    "0.12 0.16 0.22 rg",
+    `${page.margin} 548 ${contentWidth} 1.2 re f`,
+    ...pdfTextAt(title, page.margin, 563, 14, true),
+    ...pdfTextAt("Detalhamento de vendas", page.margin, 532, 10, true),
+  ];
+  const groupY = 330;
   const middleGroupX = page.margin + panelWidth + panelGap;
   const rightGroupX = middleGroupX + panelWidth + panelGap;
 
-  drawPanel(stream, page.margin, bottomY, panelWidth, 180, "Por instituicao");
+  drawPanel(pageTwo, page.margin, groupY, panelWidth, 180, "Por instituicao");
   drawSalesGroup(
-    stream,
+    pageTwo,
     report.sales.byInstitution,
     page.margin + 10,
-    bottomY + 18,
+    groupY + 18,
     panelWidth - 20
   );
 
-  drawPanel(stream, middleGroupX, bottomY, panelWidth, 180, "Por meio");
+  drawPanel(pageTwo, middleGroupX, groupY, panelWidth, 180, "Por meio");
   drawSalesGroup(
-    stream,
+    pageTwo,
     report.sales.byPaymentMethod,
     middleGroupX + 10,
-    bottomY + 18,
+    groupY + 18,
     panelWidth - 20
   );
 
-  drawPanel(stream, rightGroupX, bottomY, panelWidth, 180, "Por canal");
-  drawSalesGroup(stream, report.sales.byChannel, rightGroupX + 10, bottomY + 18, panelWidth - 20);
+  drawPanel(pageTwo, rightGroupX, groupY, panelWidth, 180, "Por canal");
+  drawSalesGroup(pageTwo, report.sales.byChannel, rightGroupX + 10, groupY + 18, panelWidth - 20);
 
-  return buildPdf(stream.join("\n"), page);
+  return buildPdfPages([pageOne.join("\n"), pageTwo.join("\n")], page);
 }
 
 function drawMetricCards(
@@ -740,14 +753,27 @@ function formatPdfDate(value: Date): string {
 }
 
 function buildPdf(contentStream: string, page: { width: number; height: number }): Buffer {
+  return buildPdfPages([contentStream], page);
+}
+
+function buildPdfPages(contentStreams: string[], page: { width: number; height: number }): Buffer {
+  const pageObjectStart = 5;
+  const pageObjectIds = contentStreams.map((_, index) => pageObjectStart + index * 2);
+  const contentObjectIds = contentStreams.map((_, index) => pageObjectStart + index * 2 + 1);
   const objects = [
     "<< /Type /Catalog /Pages 2 0 R >>",
-    "<< /Type /Pages /Kids [3 0 R] /Count 1 >>",
-    `<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ${page.width} ${page.height}] /Resources << /Font << /F1 4 0 R /F2 5 0 R >> >> /Contents 6 0 R >>`,
+    `<< /Type /Pages /Kids [${pageObjectIds.map((id) => `${id} 0 R`).join(" ")}] /Count ${contentStreams.length} >>`,
     "<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >>",
     "<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold /Encoding /WinAnsiEncoding >>",
-    `<< /Length ${Buffer.byteLength(contentStream, "utf8")} >>\nstream\n${contentStream}\nendstream`,
   ];
+
+  contentStreams.forEach((contentStream, index) => {
+    objects.push(
+      `<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ${page.width} ${page.height}] /Resources << /Font << /F1 3 0 R /F2 4 0 R >> >> /Contents ${contentObjectIds[index]} 0 R >>`,
+      `<< /Length ${Buffer.byteLength(contentStream, "utf8")} >>\nstream\n${contentStream}\nendstream`
+    );
+  });
+
   const chunks = ["%PDF-1.4\n"];
   const offsets = [0];
 
