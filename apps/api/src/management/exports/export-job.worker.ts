@@ -342,23 +342,30 @@ function renderManagementReportPdf(title: string, report: ManagementReportPdf): 
 
   const salesX = page.margin + panelWidth + panelGap;
   drawPanel(stream, salesX, panelY, panelWidth, 190, "Vendas");
-  drawCompactMetrics(stream, salesX + 10, panelY + 146, panelWidth - 20, [
-    ["Pedidos", String(report.sales.orders)],
-    ["Receita bruta", money(report.sales.grossRevenue)],
-    ["Receita liquida", money(report.sales.netRevenue)],
-    ["Disponivel", money(report.sales.releasedAmount)],
-    ["A receber", money(report.sales.receivableAmount)],
-    ["Taxas", money(report.sales.feeAmount)],
-    ["Ticket medio", money(report.sales.averageTicket)],
-  ]);
+  drawCompactMetrics(
+    stream,
+    salesX + 10,
+    panelY + 146,
+    panelWidth - 20,
+    [
+      ["Pedidos", String(report.sales.orders)],
+      ["Receita bruta", money(report.sales.grossRevenue)],
+      ["Receita liquida", money(report.sales.netRevenue)],
+      ["Disponivel", money(report.sales.releasedAmount)],
+      ["A receber", money(report.sales.receivableAmount)],
+      ["Taxas", money(report.sales.feeAmount)],
+      ["Ticket medio", money(report.sales.averageTicket)],
+    ],
+    { columns: 3, rowGap: 24, valueMaxLength: 12 }
+  );
   drawBars(
     stream,
     "Evolucao",
     report.sales.daily.map((day) => [day.date.slice(5), Number(day.grossRevenue)]),
     salesX + 10,
-    panelY + 14,
+    panelY + 4,
     panelWidth - 20,
-    6
+    5
   );
 
   const payablesX = salesX + panelWidth + panelGap;
@@ -377,9 +384,9 @@ function renderManagementReportPdf(title: string, report: ManagementReportPdf): 
       Number(category.expected),
     ]),
     payablesX + 10,
-    panelY + 14,
+    panelY + 4,
     panelWidth - 20,
-    6
+    5
   );
 
   const bottomY = 35;
@@ -446,17 +453,21 @@ function drawCompactMetrics(
   x: number,
   y: number,
   width: number,
-  metrics: Array<[string, string]>
+  metrics: Array<[string, string]>,
+  options: { columns?: number; rowGap?: number; valueMaxLength?: number } = {}
 ) {
-  const columnWidth = width / 2;
+  const columns = options.columns ?? 2;
+  const rowGap = options.rowGap ?? 26;
+  const valueMaxLength = options.valueMaxLength ?? 18;
+  const columnWidth = width / columns;
 
   metrics.slice(0, 8).forEach(([label, value], index) => {
-    const column = index % 2;
-    const row = Math.floor(index / 2);
+    const column = index % columns;
+    const row = Math.floor(index / columns);
     const metricX = x + column * columnWidth;
-    const metricY = y - row * 26;
-    stream.push(...pdfTextAt(label, metricX, metricY, 6, true));
-    stream.push(...pdfTextAt(truncatePdfText(value, 18), metricX, metricY - 12, 8));
+    const metricY = y - row * rowGap;
+    stream.push(...pdfTextAt(truncatePdfText(label, 16), metricX, metricY, 5.6, true));
+    stream.push(...pdfTextAt(truncatePdfText(value, valueMaxLength), metricX, metricY - 11, 7.2));
   });
 }
 
@@ -500,13 +511,19 @@ function drawBars(
     return;
   }
 
+  const labelWidth = 76;
+  const valueWidth = 56;
+  const barStartX = x + labelWidth;
+  const valueX = x + width - valueWidth;
+  const barMaxWidth = Math.max(valueX - barStartX - 8, 16);
+
   rows.slice(0, maxRows).forEach(([label, value], index) => {
     const rowY = y + (maxRows - index - 1) * 14;
-    const barWidth = Math.max(8, (value / max) * (width - 92));
-    stream.push(...pdfTextAt(truncatePdfText(label, 22), x, rowY, 6));
-    stream.push("0.93 0.95 0.97 rg", `${x + 82} ${rowY - 2} ${width - 92} 5 re f`);
-    stream.push("0.9 0.28 0.2 rg", `${x + 82} ${rowY - 2} ${barWidth} 5 re f`);
-    stream.push(...pdfTextAt(`R$ ${value.toFixed(2)}`, x + width - 54, rowY, 6));
+    const barWidth = Math.max(6, (value / max) * barMaxWidth);
+    stream.push(...pdfTextAt(truncatePdfText(label, 18), x, rowY, 5.6));
+    stream.push("0.93 0.95 0.97 rg", `${barStartX} ${rowY - 2} ${barMaxWidth} 5 re f`);
+    stream.push("0.9 0.28 0.2 rg", `${barStartX} ${rowY - 2} ${barWidth} 5 re f`);
+    stream.push(...pdfTextAt(`R$ ${value.toFixed(2)}`, valueX, rowY, 5.6));
   });
 }
 
