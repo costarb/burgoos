@@ -181,6 +181,8 @@ describe("ExportJobWorker", () => {
 
     expect(pdfContent).toContain(`<${pdfHex("Resumo executivo")}> Tj`);
     expect(pdfContent).toContain(`<${pdfHex("Receita bruta")}> Tj`);
+    expect(pdfContent).toContain(`<${pdfHex("Saldo atual")}> Tj`);
+    expect(pdfContent).toContain(`<${pdfHex("R$ 1600.00")}> Tj`);
     expect(pdfContent).toContain(`<${pdfHex("Caixa")}> Tj`);
     expect(pdfContent).toContain(`<${pdfHex("Vendas")}> Tj`);
     expect(pdfContent).toContain(`<${pdfHex("Receita bruta por dia")}> Tj`);

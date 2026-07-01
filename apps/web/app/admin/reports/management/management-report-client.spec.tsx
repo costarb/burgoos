@@ -45,6 +45,8 @@ describe("ManagementReportClient", () => {
     expect(container.textContent).toContain("Caixa");
     expect(container.textContent).toContain("Vendas");
     expect(container.textContent).toContain("Contas a pagar");
+    expect(container.textContent).toContain("Saldo atualR$ 1600.00");
+    expect(container.textContent).toContain("Saldo futuroR$ 1300.00");
     expect(inputByType("date", 0).value).toBe("2026-06-01");
     expect(inputByType("date", 1).value).toBe("2026-06-30");
   });
