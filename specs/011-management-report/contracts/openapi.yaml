@@ -33,8 +33,80 @@ paths:
           description: Missing or invalid authentication
         "403":
           description: Missing report or financial permission
+  /api/admin/exports:
+    post:
+      summary: Request asynchronous management report PDF export
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ManagementReportExportRequest"
+      responses:
+        "201":
+          description: Export job created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ExportJob"
+        "400":
+          description: Invalid export context, format or period
+        "401":
+          description: Missing or invalid authentication
+        "403":
+          description: Missing report or financial permission
 components:
   schemas:
+    ManagementReportExportRequest:
+      type: object
+      required: [context, format, filters]
+      properties:
+        context:
+          type: string
+          enum: [MANAGEMENT_REPORT]
+        format:
+          type: string
+          enum: [PDF]
+        filters:
+          type: object
+          required: [start, end]
+          properties:
+            start:
+              type: string
+              format: date
+            end:
+              type: string
+              format: date
+    ExportJob:
+      type: object
+      required:
+        - id
+        - context
+        - format
+        - status
+        - filtersSnapshot
+        - requestedAt
+        - downloadUrl
+      properties:
+        id:
+          type: string
+        context:
+          type: string
+          enum: [MANAGEMENT_REPORT, PAYABLES]
+        format:
+          type: string
+          enum: [CSV, PDF, XLSX]
+        status:
+          type: string
+          enum: [PENDING, PROCESSING, COMPLETED, FAILED, EXPIRED]
+        filtersSnapshot:
+          type: object
+        requestedAt:
+          type: string
+          format: date-time
+        downloadUrl:
+          type: string
+          nullable: true
     ManagementReportResponse:
       type: object
       required: [period, executiveSummary, cashFlow, sales, payables]

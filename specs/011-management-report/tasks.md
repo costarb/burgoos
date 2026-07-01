@@ -18,10 +18,10 @@
 
 **Purpose**: Prepare shared contracts and route structure for the management report.
 
-- [ ] T001 Create management report shared contract types in packages/types/src/index.ts
-- [ ] T002 [P] Create API management report query/types helper in apps/api/src/management/reports/management-report.types.ts
-- [ ] T003 [P] Add web API helper for management report in apps/web/lib/api.ts
-- [ ] T004 [P] Add management report route shell in apps/web/app/admin/reports/management/page.tsx
+- [X] T001 Create management report shared contract types in packages/types/src/index.ts
+- [X] T002 [P] Create API management report query/types helper in apps/api/src/management/reports/management-report.types.ts
+- [X] T003 [P] Add web API helper for management report in apps/web/lib/api.ts
+- [X] T004 [P] Add management report route shell in apps/web/app/admin/reports/management/page.tsx
 
 ---
 
@@ -31,12 +31,12 @@
 
 **Critical**: No user story can be completed until the report service and endpoint exist.
 
-- [ ] T005 [P] Add management report service tests for period validation, tenant scope and source total mapping in apps/api/src/management/reports/management-report.service.spec.ts
-- [ ] T006 [P] Add management report integration contract tests in apps/api/test/management-report.integration.spec.ts
-- [ ] T007 Implement management report aggregator in apps/api/src/management/reports/management-report.service.ts
-- [ ] T008 Implement management report controller endpoint in apps/api/src/management/reports/management-report.controller.ts
-- [ ] T009 Register management report service/controller in apps/api/src/management/management.module.ts
-- [ ] T010 Add OpenAPI decorators for management report endpoint in apps/api/src/management/reports/management-report.controller.ts
+- [X] T005 [P] Add management report service tests for period validation, tenant scope and source total mapping in apps/api/src/management/reports/management-report.service.spec.ts
+- [X] T006 [P] Add management report integration contract tests in apps/api/test/management-report.integration.spec.ts
+- [X] T007 Implement management report aggregator in apps/api/src/management/reports/management-report.service.ts
+- [X] T008 Implement management report controller endpoint in apps/api/src/management/reports/management-report.controller.ts
+- [X] T009 Register management report service/controller in apps/api/src/management/management.module.ts
+- [X] T010 Add OpenAPI decorators for management report endpoint in apps/api/src/management/reports/management-report.controller.ts
 
 **Checkpoint**: Backend can return consolidated report JSON for a period.
 
@@ -50,17 +50,17 @@
 
 ### Tests for User Story 1
 
-- [ ] T011 [P] [US1] Add web test for default current-month period and visible report sections in apps/web/app/admin/reports/management/management-report-client.spec.tsx
-- [ ] T012 [P] [US1] Add web test for applying date filter and refreshing all sections in apps/web/app/admin/reports/management/management-report-client.spec.tsx
-- [ ] T013 [P] [US1] Add API test for zero-data period response in apps/api/src/management/reports/management-report.service.spec.ts
+- [X] T011 [P] [US1] Add web test for default current-month period and visible report sections in apps/web/app/admin/reports/management/management-report-client.spec.tsx
+- [X] T012 [P] [US1] Add web test for applying date filter and refreshing all sections in apps/web/app/admin/reports/management/management-report-client.spec.tsx
+- [X] T013 [P] [US1] Add API test for zero-data period response in apps/api/src/management/reports/management-report.service.spec.ts
 
 ### Implementation for User Story 1
 
-- [ ] T014 [US1] Implement management report client layout with period filters and shortcut buttons in apps/web/app/admin/reports/management/management-report-client.tsx
-- [ ] T015 [US1] Render executive summary cards in apps/web/app/admin/reports/management/management-report-client.tsx
-- [ ] T016 [US1] Render cash, sales and payables summary cards in apps/web/app/admin/reports/management/management-report-client.tsx
-- [ ] T017 [US1] Add empty-state handling for zero-data sections in apps/web/app/admin/reports/management/management-report-client.tsx
-- [ ] T018 [US1] Wire server page data loading to management report client in apps/web/app/admin/reports/management/page.tsx
+- [X] T014 [US1] Implement management report client layout with period filters and shortcut buttons in apps/web/app/admin/reports/management/management-report-client.tsx
+- [X] T015 [US1] Render executive summary cards in apps/web/app/admin/reports/management/management-report-client.tsx
+- [X] T016 [US1] Render cash, sales and payables summary cards in apps/web/app/admin/reports/management/management-report-client.tsx
+- [X] T017 [US1] Add empty-state handling for zero-data sections in apps/web/app/admin/reports/management/management-report-client.tsx
+- [X] T018 [US1] Wire server page data loading to management report client in apps/web/app/admin/reports/management/page.tsx
 
 **Checkpoint**: User Story 1 is complete and testable independently.
 
@@ -74,14 +74,14 @@
 
 ### Tests for User Story 2
 
-- [ ] T019 [P] [US2] Add API test mapping sales report summary/daily/dimensions into management report in apps/api/src/management/reports/management-report.service.spec.ts
-- [ ] T020 [P] [US2] Add web test for sales evolution chart and dimension blocks in apps/web/app/admin/reports/management/management-report-client.spec.tsx
+- [X] T019 [P] [US2] Add API test mapping sales report summary/daily/dimensions into management report in apps/api/src/management/reports/management-report.service.spec.ts
+- [X] T020 [P] [US2] Add web test for sales evolution chart and dimension blocks in apps/web/app/admin/reports/management/management-report-client.spec.tsx
 
 ### Implementation for User Story 2
 
-- [ ] T021 [US2] Map sales daily trend and grouped dimensions in apps/api/src/management/reports/management-report.service.ts
-- [ ] T022 [US2] Render sales evolution chart in apps/web/app/admin/reports/management/management-report-client.tsx
-- [ ] T023 [US2] Render sales grouped blocks by institution, payment method and channel in apps/web/app/admin/reports/management/management-report-client.tsx
+- [X] T021 [US2] Map sales daily trend and grouped dimensions in apps/api/src/management/reports/management-report.service.ts
+- [X] T022 [US2] Render sales evolution chart in apps/web/app/admin/reports/management/management-report-client.tsx
+- [X] T023 [US2] Render sales grouped blocks by institution, payment method and channel in apps/web/app/admin/reports/management/management-report-client.tsx
 
 **Checkpoint**: User Story 2 is complete and testable independently.
 
@@ -95,16 +95,16 @@
 
 ### Tests for User Story 3
 
-- [ ] T024 [P] [US3] Add API test for cash statement/account balance mapping in apps/api/src/management/reports/management-report.service.spec.ts
-- [ ] T025 [P] [US3] Add API test for payables category grouping totals in apps/api/src/management/reports/management-report.service.spec.ts
-- [ ] T026 [P] [US3] Add web test for account balances and expense bar chart in apps/web/app/admin/reports/management/management-report-client.spec.tsx
+- [X] T024 [P] [US3] Add API test for cash statement/account balance mapping in apps/api/src/management/reports/management-report.service.spec.ts
+- [X] T025 [P] [US3] Add API test for payables category grouping totals in apps/api/src/management/reports/management-report.service.spec.ts
+- [X] T026 [P] [US3] Add web test for account balances and expense bar chart in apps/web/app/admin/reports/management/management-report-client.spec.tsx
 
 ### Implementation for User Story 3
 
-- [ ] T027 [US3] Map cash statement totals and balances by account in apps/api/src/management/reports/management-report.service.ts
-- [ ] T028 [US3] Add payable expenses grouped by category in apps/api/src/management/reports/management-report.service.ts
-- [ ] T029 [US3] Render balances by account in apps/web/app/admin/reports/management/management-report-client.tsx
-- [ ] T030 [US3] Render expenses by category bar chart in apps/web/app/admin/reports/management/management-report-client.tsx
+- [X] T027 [US3] Map cash statement totals and balances by account in apps/api/src/management/reports/management-report.service.ts
+- [X] T028 [US3] Add payable expenses grouped by category in apps/api/src/management/reports/management-report.service.ts
+- [X] T029 [US3] Render balances by account in apps/web/app/admin/reports/management/management-report-client.tsx
+- [X] T030 [US3] Render expenses by category bar chart in apps/web/app/admin/reports/management/management-report-client.tsx
 
 **Checkpoint**: User Story 3 is complete and testable independently.
 
@@ -118,16 +118,16 @@
 
 ### Tests for User Story 4
 
-- [ ] T031 [P] [US4] Add export provider test for management report PDF content in apps/api/src/management/exports/providers/management-report-export.provider.spec.ts
-- [ ] T032 [P] [US4] Add web test for management report PDF export request feedback in apps/web/app/admin/reports/management/management-report-client.spec.tsx
+- [X] T031 [P] [US4] Add export provider test for management report PDF content in apps/api/src/management/exports/providers/management-report-export.provider.spec.ts
+- [X] T032 [P] [US4] Add web test for management report PDF export request feedback in apps/web/app/admin/reports/management/management-report-client.spec.tsx
 
 ### Implementation for User Story 4
 
-- [ ] T033 [US4] Extend shared export context with MANAGEMENT_REPORT in packages/types/src/exports.ts
-- [ ] T034 [US4] Extend database ExportContext enum and migration for MANAGEMENT_REPORT in packages/database/prisma/schema.prisma
-- [ ] T035 [US4] Implement management report export provider in apps/api/src/management/exports/providers/management-report-export.provider.ts
-- [ ] T036 [US4] Register management report export provider in apps/api/src/management/exports/export-provider.registry.ts
-- [ ] T037 [US4] Add PDF export control to management report page in apps/web/app/admin/reports/management/management-report-client.tsx
+- [X] T033 [US4] Extend shared export context with MANAGEMENT_REPORT in packages/types/src/exports.ts
+- [X] T034 [US4] Extend database ExportContext enum and migration for MANAGEMENT_REPORT in packages/database/prisma/schema.prisma
+- [X] T035 [US4] Implement management report export provider in apps/api/src/management/exports/providers/management-report-export.provider.ts
+- [X] T036 [US4] Register management report export provider in apps/api/src/management/exports/export-provider.registry.ts
+- [X] T037 [US4] Add PDF export control to management report page in apps/web/app/admin/reports/management/management-report-client.tsx
 
 **Checkpoint**: User Story 4 is complete and testable independently.
 
@@ -137,13 +137,13 @@
 
 **Purpose**: Documentation, validation and final hardening.
 
-- [ ] T038 [P] Update OpenAPI contract if implementation differs in specs/011-management-report/contracts/openapi.yaml
-- [ ] T039 [P] Add management report navigation link in apps/web/components/admin/admin-navigation.ts
-- [ ] T040 Run Prisma format/generate after enum migration using packages/database/prisma/schema.prisma
-- [ ] T041 Run API tests for management report and export provider using apps/api/src/management/reports/management-report.service.spec.ts
-- [ ] T042 Run web tests for management report using apps/web/app/admin/reports/management/management-report-client.spec.tsx
-- [ ] T043 Run typecheck and lint across affected workspaces using package.json
-- [ ] T044 Execute quickstart validation and record deviations in specs/011-management-report/quickstart.md
+- [X] T038 [P] Update OpenAPI contract if implementation differs in specs/011-management-report/contracts/openapi.yaml
+- [X] T039 [P] Add management report navigation link in apps/web/components/admin/admin-navigation.ts
+- [X] T040 Run Prisma format/generate after enum migration using packages/database/prisma/schema.prisma
+- [X] T041 Run API tests for management report and export provider using apps/api/src/management/reports/management-report.service.spec.ts
+- [X] T042 Run web tests for management report using apps/web/app/admin/reports/management/management-report-client.spec.tsx
+- [X] T043 Run typecheck and lint across affected workspaces using package.json
+- [X] T044 Execute quickstart validation and record deviations in specs/011-management-report/quickstart.md
 
 ---
 

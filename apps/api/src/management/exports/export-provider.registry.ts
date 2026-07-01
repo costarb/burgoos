@@ -1,5 +1,6 @@
 import { Inject, Injectable } from "@nestjs/common";
 import { ExportContext, Prisma } from "@prisma/client";
+import { ManagementReportExportProvider } from "./providers/management-report-export.provider";
 import { PayablesExportProvider } from "./providers/payables-export.provider";
 
 export interface ExportProviderJob {
@@ -30,8 +31,15 @@ export interface ExportProvider {
 export class ExportProviderRegistry {
   private readonly providers: Map<ExportContext, ExportProvider>;
 
-  constructor(@Inject(PayablesExportProvider) payablesExportProvider: PayablesExportProvider) {
-    this.providers = new Map([[payablesExportProvider.context, payablesExportProvider]]);
+  constructor(
+    @Inject(PayablesExportProvider) payablesExportProvider: PayablesExportProvider,
+    @Inject(ManagementReportExportProvider)
+    managementReportExportProvider: ManagementReportExportProvider
+  ) {
+    this.providers = new Map<ExportContext, ExportProvider>([
+      [payablesExportProvider.context, payablesExportProvider],
+      [managementReportExportProvider.context, managementReportExportProvider],
+    ]);
   }
 
   get(context: ExportContext): ExportProvider | null {

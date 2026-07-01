@@ -66,3 +66,11 @@ npm.cmd run lint --workspace @burgoos/web
 - Expense grouping is visible and understandable.
 - PDF export is asynchronous and notifies success/failure.
 - PDF can be understood without access to the web screen.
+
+## Validation Notes
+
+- Automated API tests passed for the management report service, HTTP contract, export job flow and management report export provider.
+- Automated web tests passed for management report filters, sections and asynchronous PDF export request feedback.
+- API and web typecheck/lint passed after implementation.
+- Prisma schema was formatted and Prisma Client was generated.
+- Local `prisma migrate deploy` could not be completed during implementation because the local Prisma schema engine returned a generic error and Docker Desktop was not reachable through the Docker API at validation time.

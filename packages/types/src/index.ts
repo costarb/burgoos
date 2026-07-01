@@ -567,6 +567,99 @@ export interface SalesReportResponse {
   receivables: ReceivablesSummary;
 }
 
+export interface ManagementReportFilters {
+  start?: string;
+  end?: string;
+}
+
+export interface ManagementReportPeriod {
+  start: string;
+  end: string;
+}
+
+export interface ManagementExecutiveSummary {
+  grossRevenue: string;
+  netRevenue: string;
+  cashNet: string;
+  finalBalance: string;
+  payablesOpen: string;
+  payablesOverdue: string;
+  receivableAmount: string;
+  periodNarrative: string;
+}
+
+export interface ManagementAccountBalanceSummary {
+  accountId: string | null;
+  accountName: string;
+  balance: string;
+}
+
+export interface ManagementCashFlowSection {
+  credits: string;
+  debits: string;
+  net: string;
+  finalBalance: string;
+  balancesByAccount: ManagementAccountBalanceSummary[];
+}
+
+export interface ManagementSalesTrendPoint {
+  date: string;
+  orders: number;
+  grossRevenue: string;
+  netRevenue: string;
+}
+
+export interface ManagementSalesDimensionSummary {
+  key: string | null;
+  label: string;
+  orders: number;
+  grossRevenue: string;
+  netRevenue: string;
+  shareOfGrossRevenue: number;
+}
+
+export interface ManagementSalesSection {
+  orders: number;
+  grossRevenue: string;
+  netRevenue: string;
+  releasedAmount: string;
+  receivableAmount: string;
+  feeAmount: string;
+  averageTicket: string;
+  daily: ManagementSalesTrendPoint[];
+  byInstitution: ManagementSalesDimensionSummary[];
+  byPaymentMethod: ManagementSalesDimensionSummary[];
+  byChannel: ManagementSalesDimensionSummary[];
+}
+
+export interface ManagementExpenseCategorySummary {
+  categoryId: string | null;
+  categoryName: string;
+  expected: string;
+  paid: string;
+  open: string;
+  overdue: string;
+  shareOfExpected: number;
+}
+
+export interface ManagementPayablesSection {
+  expected: string;
+  paid: string;
+  open: string;
+  overdue: string;
+  openCount: number;
+  overdueCount: number;
+  byCategory: ManagementExpenseCategorySummary[];
+}
+
+export interface ManagementReportResponse {
+  period: ManagementReportPeriod;
+  executiveSummary: ManagementExecutiveSummary;
+  cashFlow: ManagementCashFlowSection;
+  sales: ManagementSalesSection;
+  payables: ManagementPayablesSection;
+}
+
 export type PurchaseUnitKind = "WEIGHT" | "VOLUME" | "COUNT" | "PACKAGE";
 
 export interface FinancialConfiguration {
