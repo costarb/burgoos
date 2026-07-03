@@ -209,9 +209,9 @@ export function OrdersClient({
           </a>
           <a
             className="rounded-md border border-slate-300 px-4 py-2 text-sm font-semibold"
-            href="/admin/orders/maintenance"
+            href="/admin/reports/sales"
           >
-            Manutencao
+            Consultar vendas
           </a>
           <span className="rounded-md border border-slate-200 px-3 py-2 text-sm">
             {connected ? "Realtime conectado" : "Realtime desconectado"}
@@ -425,35 +425,6 @@ export function OrdersClient({
         ))}
       </section>
 
-      <section className="mt-8">
-        <h2 className="font-semibold">Historico</h2>
-        <div className="mt-3 divide-y divide-slate-200 rounded-md border border-slate-200 bg-white">
-          {historyOrders.length === 0 ? (
-            <p className="p-4 text-sm text-slate-500">Sem pedidos finalizados.</p>
-          ) : (
-            historyOrders.map((order) => (
-              <div
-                className="grid gap-2 p-4 text-sm sm:grid-cols-[1fr_auto_auto_auto]"
-                key={order.id}
-              >
-                <span>
-                  <span className="block font-medium">{order.customerName}</span>
-                  <span className="block text-xs text-slate-500">{paymentSummary(order)}</span>
-                </span>
-                <span>{statusLabels[order.status]}</span>
-                <span className="font-semibold">R$ {order.total}</span>
-                <button
-                  className="rounded-md border border-slate-300 px-3 py-1 text-xs font-semibold"
-                  onClick={() => setMaintenanceOrder(order)}
-                  type="button"
-                >
-                  Alterar
-                </button>
-              </div>
-            ))
-          )}
-        </div>
-      </section>
       {maintenanceOrder ? (
         <OrderMaintenanceDialog
           onClose={() => setMaintenanceOrder(null)}

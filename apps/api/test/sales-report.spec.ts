@@ -32,7 +32,7 @@ describe("sales report service", () => {
             paymentInstitution: PaymentInstitution.CAIXA_LOCAL,
             paymentMethod: PaymentMethod.CASH,
             externalPaymentId: null,
-            paymentReleaseExpectedAt: new Date("2026-07-01T18:00:00.000Z"),
+            paymentReleaseExpectedAt: new Date("2026-08-01T18:00:00.000Z"),
           }),
         ]),
         count: vi.fn().mockResolvedValue(2),
@@ -76,8 +76,19 @@ describe("sales report service", () => {
     );
     expect(report.analytical.items[0]).toMatchObject({
       externalPaymentId: "ext-33333333-3333-4333-8333-333333333333",
+      customerPhone: "11999999999",
+      fulfillmentMethod: "PICKUP",
+      total: "30.00",
       imported: true,
-      assignedProducts: [{ quantity: 1, productName: "X-BURGUER" }],
+      assignedProducts: [
+        expect.objectContaining({
+          productId: "55555555-5555-4555-8555-555555555555",
+          quantity: 1,
+          productName: "X-BURGUER",
+          unitPrice: "30.00",
+          total: "30.00",
+        }),
+      ],
     });
     expect(report.analytical.items[1]).toMatchObject({
       acquiredNetAmount: "20.00",
@@ -87,7 +98,7 @@ describe("sales report service", () => {
     expect(report.receivables).toEqual({
       pendingOrderCount: 1,
       receivableNetAmount: "20.00",
-      nextExpectedReleaseDate: "2026-07-01",
+      nextExpectedReleaseDate: "2026-08-01",
     });
   });
 
@@ -123,7 +134,9 @@ function order(overrides: {
     paymentMethod: overrides.paymentMethod,
     paymentInstitution: overrides.paymentInstitution,
     externalPaymentId:
-      overrides.externalPaymentId === undefined ? `ext-${overrides.id}` : overrides.externalPaymentId,
+      overrides.externalPaymentId === undefined
+        ? `ext-${overrides.id}`
+        : overrides.externalPaymentId,
     paymentGrossAmount: overrides.paymentGrossAmount ? decimal(overrides.paymentGrossAmount) : null,
     paymentFeeAmount: overrides.paymentFeeAmount ? decimal(overrides.paymentFeeAmount) : null,
     paymentNetAmount: overrides.paymentNetAmount ? decimal(overrides.paymentNetAmount) : null,

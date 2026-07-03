@@ -858,9 +858,10 @@ export async function getMenuEngineeringReport(
 }
 
 export async function getSalesReport(
-  filters: SalesReportFilters = {}
+  filters: SalesReportFilters = {},
+  tokenOverride?: string
 ): Promise<SalesReportResponse> {
-  const token = await getAdminToken();
+  const token = tokenOverride ?? (await getAdminToken());
   const params = new URLSearchParams();
 
   Object.entries(filters).forEach(([key, value]) => {

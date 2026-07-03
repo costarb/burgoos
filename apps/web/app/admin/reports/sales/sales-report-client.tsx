@@ -1,8 +1,14 @@
 "use client";
 
-import type { OrderPlatform, SalesReportResponse } from "@burgoos/types";
+import type {
+  AdminOrder,
+  OrderPlatform,
+  SalesAnalyticalOrder,
+  SalesReportResponse,
+} from "@burgoos/types";
 import { useSearchParams } from "next/navigation";
-import React from "react";
+import React, { useState } from "react";
+import { OrderMaintenanceDialog } from "../../orders/order-maintenance-dialog";
 
 const paymentInstitutions = [
   ["", "Todas instituicoes"],
@@ -35,13 +41,30 @@ const statuses = [
 interface SalesReportClientProps {
   report: SalesReportResponse;
   orderPlatforms: OrderPlatform[];
+  token: string;
 }
 
-export function SalesReportClient({ report, orderPlatforms }: SalesReportClientProps) {
+export function SalesReportClient({ report, orderPlatforms, token }: SalesReportClientProps) {
   const searchParams = useSearchParams();
+  const [maintenanceOrder, setMaintenanceOrder] = useState<AdminOrder | null>(null);
+  const [analyticalItems, setAnalyticalItems] = useState(report.analytical.items);
   const previousPage = Math.max(1, report.analytical.page - 1);
   const nextPage = report.analytical.page + 1;
   const hasNextPage = report.analytical.page * report.analytical.pageSize < report.analytical.total;
+
+  function replaceOrder(updatedOrder: AdminOrder): void {
+    setAnalyticalItems((current) =>
+      current.map((order) =>
+        order.orderId === updatedOrder.id ? salesOrderFromAdminOrder(order, updatedOrder) : order
+      )
+    );
+    setMaintenanceOrder(null);
+  }
+
+  function removeOrder(orderId: string): void {
+    setAnalyticalItems((current) => current.filter((order) => order.orderId !== orderId));
+    setMaintenanceOrder(null);
+  }
 
   return (
     <div className="mt-8 space-y-6">
@@ -115,7 +138,10 @@ export function SalesReportClient({ report, orderPlatforms }: SalesReportClientP
         <SummaryCard label="Pedidos" value={String(report.summary.orderCount)} />
         <SummaryCard label="Receita bruta" value={`R$ ${report.summary.grossRevenue}`} />
         <SummaryCard label="Recebido liquido" value={`R$ ${report.summary.acquiredNetRevenue}`} />
-        <SummaryCard label="Liberado/disponivel" value={`R$ ${report.summary.releasedNetRevenue}`} />
+        <SummaryCard
+          label="Liberado/disponivel"
+          value={`R$ ${report.summary.releasedNetRevenue}`}
+        />
         {Number(report.receivables.receivableNetAmount) > 0 ? (
           <SummaryCard
             detail={
@@ -179,7 +205,7 @@ export function SalesReportClient({ report, orderPlatforms }: SalesReportClientP
 
       <section className="overflow-hidden rounded-md border border-slate-200 bg-white shadow-sm">
         <SectionTitle title="Analitico de pedidos" />
-        {report.analytical.items.length === 0 ? (
+        {analyticalItems.length === 0 ? (
           <p className="px-4 py-6 text-sm text-slate-500">Nenhum pedido encontrado no periodo.</p>
         ) : (
           <div className="overflow-x-auto">
@@ -196,10 +222,11 @@ export function SalesReportClient({ report, orderPlatforms }: SalesReportClientP
                   <th className="px-4 py-3">Liquido</th>
                   <th className="px-4 py-3">Liberacao</th>
                   <th className="px-4 py-3">Produtos</th>
+                  <th className="px-4 py-3">Acoes</th>
                 </tr>
               </thead>
               <tbody>
-                {report.analytical.items.map((order) => (
+                {analyticalItems.map((order) => (
                   <tr className="border-t border-slate-100" key={order.orderId}>
                     <td className="px-4 py-3">
                       {new Date(order.createdAt).toLocaleString("pt-BR")}
@@ -230,6 +257,15 @@ export function SalesReportClient({ report, orderPlatforms }: SalesReportClientP
                         .map((product) => `${product.quantity}x ${product.productName}`)
                         .join(", ")}
                     </td>
+                    <td className="px-4 py-3">
+                      <button
+                        className="rounded-md border border-slate-300 px-3 py-1 text-xs font-semibold"
+                        onClick={() => setMaintenanceOrder(toAdminOrder(order))}
+                        type="button"
+                      >
+                        Alterar
+                      </button>
+                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -257,19 +293,89 @@ export function SalesReportClient({ report, orderPlatforms }: SalesReportClientP
           </div>
         </div>
       </section>
+      {maintenanceOrder ? (
+        <OrderMaintenanceDialog
+          onClose={() => setMaintenanceOrder(null)}
+          onDeleted={removeOrder}
+          onSaved={replaceOrder}
+          order={maintenanceOrder}
+          token={token}
+        />
+      ) : null}
     </div>
   );
 }
 
-function SummaryCard({
-  detail,
-  label,
-  value,
-}: {
-  detail?: string;
-  label: string;
-  value: string;
-}) {
+function toAdminOrder(order: SalesAnalyticalOrder): AdminOrder {
+  return {
+    id: order.orderId,
+    status: order.status,
+    total: order.total,
+    customerName: order.customerName,
+    customerPhone: order.customerPhone,
+    fulfillmentMethod: order.fulfillmentMethod,
+    paymentMethod: order.paymentMethod,
+    paymentInstitution: order.paymentInstitution,
+    externalPaymentId: order.externalPaymentId,
+    paymentGrossAmount: order.grossAmount,
+    paymentFeeAmount: order.paymentFeeAmount,
+    paymentNetAmount: order.acquiredNetAmount,
+    paymentBrand: order.paymentBrand,
+    paymentReleaseExpectedAt: order.paymentReleaseExpectedAt,
+    paymentReleaseSource: order.paymentReleaseSource,
+    orderPlatformId: order.orderPlatformId,
+    notes: order.notes,
+    createdAt: order.createdAt,
+    updatedAt: order.updatedAt,
+    items: order.assignedProducts.map((product) => ({
+      id: product.id,
+      productId: product.productId,
+      productNameSnapshot: product.productName,
+      quantity: product.quantity,
+      unitPrice: product.unitPrice,
+      total: product.total,
+    })),
+  };
+}
+
+function salesOrderFromAdminOrder(
+  current: SalesAnalyticalOrder,
+  updatedOrder: AdminOrder
+): SalesAnalyticalOrder {
+  return {
+    ...current,
+    createdAt: updatedOrder.createdAt ?? current.createdAt,
+    updatedAt: updatedOrder.updatedAt ?? current.updatedAt,
+    status: updatedOrder.status,
+    total: updatedOrder.total,
+    customerName: updatedOrder.customerName,
+    customerPhone: updatedOrder.customerPhone,
+    fulfillmentMethod: updatedOrder.fulfillmentMethod,
+    notes: updatedOrder.notes,
+    orderPlatformId: updatedOrder.orderPlatformId ?? null,
+    paymentInstitution: updatedOrder.paymentInstitution ?? null,
+    paymentMethod: updatedOrder.paymentMethod,
+    externalPaymentId: updatedOrder.externalPaymentId ?? null,
+    paymentBrand: updatedOrder.paymentBrand ?? null,
+    grossAmount: updatedOrder.paymentGrossAmount ?? updatedOrder.total,
+    paymentFeeAmount: updatedOrder.paymentFeeAmount ?? null,
+    acquiredNetAmount:
+      updatedOrder.paymentNetAmount ?? updatedOrder.paymentGrossAmount ?? updatedOrder.total,
+    paymentReleaseExpectedAt: updatedOrder.paymentReleaseExpectedAt ?? null,
+    paymentReleaseSource: updatedOrder.paymentReleaseSource ?? null,
+    itemCount: updatedOrder.items.reduce((total, item) => total + item.quantity, 0),
+    assignedProducts: updatedOrder.items.map((item) => ({
+      id: item.id,
+      productId: item.productId,
+      quantity: item.quantity,
+      productName: item.productNameSnapshot,
+      unitPrice: item.unitPrice,
+      total: item.total,
+    })),
+  };
+}
+
+function SummaryCard({ detail, label, value }: { detail?: string; label: string; value: string }) {
   return (
     <article className="rounded-md border border-slate-200 bg-white p-4 shadow-sm">
       <p className="text-sm text-slate-500">{label}</p>
@@ -288,11 +394,22 @@ function DailyTrendChart({ daily }: { daily: SalesReportResponse["daily"] }) {
   const padding = { top: 24, right: 24, bottom: 44, left: 64 };
   const plotWidth = width - padding.left - padding.right;
   const plotHeight = height - padding.top - padding.bottom;
-  const values = daily.flatMap((day) => [parseMoney(day.grossRevenue), parseMoney(day.acquiredNetRevenue)]);
+  const values = daily.flatMap((day) => [
+    parseMoney(day.grossRevenue),
+    parseMoney(day.acquiredNetRevenue),
+  ]);
   const maxValue = Math.max(...values, 0);
   const scaleMax = maxValue === 0 ? 1 : maxValue;
   const grossPoints = daily.map((day, index) =>
-    toPoint(index, daily.length, parseMoney(day.grossRevenue), scaleMax, plotWidth, plotHeight, padding)
+    toPoint(
+      index,
+      daily.length,
+      parseMoney(day.grossRevenue),
+      scaleMax,
+      plotWidth,
+      plotHeight,
+      padding
+    )
   );
   const netPoints = daily.map((day, index) =>
     toPoint(
@@ -343,11 +460,7 @@ function DailyTrendChart({ daily }: { daily: SalesReportResponse["daily"] }) {
               Periodo com um unico dia; o grafico mostra os pontos do dia selecionado.
             </p>
           ) : null}
-          <svg
-            className="min-w-[720px] max-w-full"
-            role="img"
-            viewBox={`0 0 ${width} ${height}`}
-          >
+          <svg className="min-w-[720px] max-w-full" role="img" viewBox={`0 0 ${width} ${height}`}>
             <title>Evolucao diaria de vendas</title>
             <desc>
               Grafico com receita bruta e recebido liquido para cada dia do periodo selecionado.
@@ -420,7 +533,15 @@ function DailyTrendChart({ daily }: { daily: SalesReportResponse["daily"] }) {
               if (index % labelStep !== 0 && index !== daily.length - 1) {
                 return null;
               }
-              const point = toPoint(index, daily.length, 0, scaleMax, plotWidth, plotHeight, padding);
+              const point = toPoint(
+                index,
+                daily.length,
+                0,
+                scaleMax,
+                plotWidth,
+                plotHeight,
+                padding
+              );
               return (
                 <text
                   fill="#64748B"
@@ -495,7 +616,10 @@ function ChannelTable({ rows }: { rows: SalesReportResponse["byChannel"] }) {
             </tr>
           ) : (
             rows.map((row) => (
-              <tr className="border-t border-slate-100" key={row.orderPlatformId ?? row.orderPlatformName}>
+              <tr
+                className="border-t border-slate-100"
+                key={row.orderPlatformId ?? row.orderPlatformName}
+              >
                 <td className="px-4 py-3">
                   <p className="font-medium">{row.orderPlatformName}</p>
                   <p className="text-xs text-slate-500">{row.orderCount} pedidos</p>
