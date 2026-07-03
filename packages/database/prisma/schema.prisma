@@ -321,6 +321,7 @@ model Tenant {
   visualConfigurations        StoreVisualConfiguration[]
   categories                  Category[]
   products                    Product[]
+  productExternalMappings     ProductExternalMapping[]
   orders                      Order[]
   financialConfiguration      FinancialConfiguration?
   purchaseUnits               PurchaseUnit[]
@@ -654,25 +655,43 @@ model Category {
 }
 
 model Product {
-  id                   String                @id @default(uuid()) @db.Uuid
-  tenantId             String                @map("tenant_id") @db.Uuid
-  categoryId           String                @map("category_id") @db.Uuid
+  id                   String                   @id @default(uuid()) @db.Uuid
+  tenantId             String                   @map("tenant_id") @db.Uuid
+  categoryId           String                   @map("category_id") @db.Uuid
   name                 String
-  description          String                @default("")
-  price                Decimal               @db.Decimal(10, 2)
-  imageUrl             String?               @map("image_url")
-  active               Boolean               @default(true)
-  createdAt            DateTime              @default(now()) @map("created_at")
-  updatedAt            DateTime              @updatedAt @map("updated_at")
-  tenant               Tenant                @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  category             Category              @relation(fields: [categoryId], references: [id], onDelete: Restrict)
+  description          String                   @default("")
+  price                Decimal                  @db.Decimal(10, 2)
+  imageUrl             String?                  @map("image_url")
+  active               Boolean                  @default(true)
+  createdAt            DateTime                 @default(now()) @map("created_at")
+  updatedAt            DateTime                 @updatedAt @map("updated_at")
+  tenant               Tenant                   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  category             Category                 @relation(fields: [categoryId], references: [id], onDelete: Restrict)
   orderItems           OrderItem[]
   technicalSheets      TechnicalSheet[]
   productCostSnapshots ProductCostSnapshot[]
+  externalMappings     ProductExternalMapping[]
 
   @@index([tenantId])
   @@index([categoryId])
   @@map("products")
+}
+
+model ProductExternalMapping {
+  id                String           @id @default(uuid()) @db.Uuid
+  tenantId          String           @map("tenant_id") @db.Uuid
+  productId         String           @map("product_id") @db.Uuid
+  provider          DeliveryProvider
+  externalProductId String           @map("external_product_id")
+  createdAt         DateTime         @default(now()) @map("created_at")
+  updatedAt         DateTime         @updatedAt @map("updated_at")
+  tenant            Tenant           @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  product           Product          @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, provider, externalProductId])
+  @@unique([productId, provider])
+  @@index([tenantId, productId])
+  @@map("product_external_mappings")
 }
 
 model Order {

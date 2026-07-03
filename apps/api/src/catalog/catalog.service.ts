@@ -1,5 +1,5 @@
 import { BadRequestException, Inject, Injectable, Logger, NotFoundException } from "@nestjs/common";
-import { Prisma, Product } from "@prisma/client";
+import { DeliveryProvider, Prisma } from "@prisma/client";
 import { StoreBrandingService } from "../customer-experience/branding/store-branding.service";
 import { PrismaService } from "../platform/database/prisma.service";
 import { CreateCategoryDto } from "./dto/create-category.dto";
@@ -32,6 +32,26 @@ interface PublicMenuResponse {
     }>;
   }>;
 }
+
+interface ProductFilters {
+  search?: string;
+  categoryId?: string;
+  active?: boolean;
+  provider?: DeliveryProvider;
+}
+
+type ProductWithExternalMappings = Prisma.ProductGetPayload<{
+  include: {
+    externalMappings: {
+      orderBy: {
+        provider: "asc";
+      };
+    };
+  };
+}>;
+type ProductResponseInput = Omit<ProductWithExternalMappings, "externalMappings"> & {
+  externalMappings?: ProductWithExternalMappings["externalMappings"];
+};
 
 @Injectable()
 export class CatalogService {
@@ -73,43 +93,88 @@ export class CatalogService {
     });
   }
 
-  async listProducts(tenantId: string) {
-    return this.prisma.product.findMany({
-      where: { tenantId },
+  async listProducts(tenantId: string, filters: ProductFilters = {}) {
+    const where: Prisma.ProductWhereInput = {
+      tenantId,
+      categoryId: filters.categoryId || undefined,
+      active: filters.active,
+      OR: filters.search
+        ? [
+            { name: { contains: filters.search, mode: "insensitive" } },
+            { description: { contains: filters.search, mode: "insensitive" } },
+            {
+              externalMappings: {
+                some: {
+                  externalProductId: { contains: filters.search, mode: "insensitive" },
+                },
+              },
+            },
+          ]
+        : undefined,
+      externalMappings: filters.provider
+        ? {
+            some: {
+              provider: filters.provider,
+            },
+          }
+        : undefined,
+    };
+
+    const products = await this.prisma.product.findMany({
+      where,
+      include: {
+        externalMappings: {
+          orderBy: {
+            provider: "asc",
+          },
+        },
+      },
       orderBy: [{ category: { sortOrder: "asc" } }, { name: "asc" }],
     });
+
+    return products.map((product) => this.toProductResponse(product));
   }
 
   async createProduct(tenantId: string, dto: CreateProductDto) {
     await this.ensureCategoryBelongsToTenant(tenantId, dto.categoryId);
 
-    return this.prisma.product.create({
+    const product = await this.prisma.product.create({
       data: this.toProductCreateInput(tenantId, dto),
     });
+
+    if (dto.externalMappings !== undefined) {
+      await this.replaceExternalMappings(this.prisma, tenantId, product.id, dto.externalMappings);
+      return this.findProductResponse(product.id);
+    }
+
+    return this.toProductResponse(product);
   }
 
-  async updateProduct(
-    tenantId: string,
-    productId: string,
-    dto: UpdateProductDto
-  ): Promise<Product> {
+  async updateProduct(tenantId: string, productId: string, dto: UpdateProductDto) {
     await this.ensureProductBelongsToTenant(tenantId, productId);
 
     if (dto.categoryId) {
       await this.ensureCategoryBelongsToTenant(tenantId, dto.categoryId);
     }
 
-    return this.prisma.product.update({
+    const product = await this.prisma.product.update({
       where: { id: productId },
       data: {
         categoryId: dto.categoryId,
         name: dto.name,
         description: dto.description,
         price: dto.price === undefined ? undefined : new Prisma.Decimal(dto.price),
-        imageUrl: dto.imageUrl,
+        imageUrl: this.normalizeImageValue(dto.imageUrl),
         active: dto.active,
       },
     });
+
+    if (dto.externalMappings !== undefined) {
+      await this.replaceExternalMappings(this.prisma, tenantId, productId, dto.externalMappings);
+      return this.findProductResponse(productId);
+    }
+
+    return this.toProductResponse(product);
   }
 
   async getPublicMenu(slug: string): Promise<PublicMenuResponse> {
@@ -236,8 +301,118 @@ export class CatalogService {
       name: dto.name,
       description: dto.description ?? "",
       price: new Prisma.Decimal(dto.price),
-      imageUrl: dto.imageUrl,
+      imageUrl: this.normalizeImageValue(dto.imageUrl),
       active: dto.active ?? true,
     };
   }
+
+  private async replaceExternalMappings(
+    client: Pick<PrismaService, "productExternalMapping">,
+    tenantId: string,
+    productId: string,
+    mappings: CreateProductDto["externalMappings"] | UpdateProductDto["externalMappings"]
+  ) {
+    const normalized = this.normalizeExternalMappings(mappings);
+
+    await client.productExternalMapping.deleteMany({
+      where: {
+        tenantId,
+        productId,
+      },
+    });
+
+    if (normalized.length === 0) {
+      return;
+    }
+
+    await client.productExternalMapping.createMany({
+      data: normalized.map((mapping) => ({
+        tenantId,
+        productId,
+        provider: mapping.provider,
+        externalProductId: mapping.externalProductId,
+      })),
+    });
+  }
+
+  private async findProductResponse(productId: string) {
+    const product = await this.prisma.product.findUniqueOrThrow({
+      where: { id: productId },
+      include: {
+        externalMappings: {
+          orderBy: {
+            provider: "asc",
+          },
+        },
+      },
+    });
+
+    return this.toProductResponse(product);
+  }
+
+  private normalizeExternalMappings(
+    mappings: CreateProductDto["externalMappings"] | UpdateProductDto["externalMappings"]
+  ) {
+    const normalized =
+      mappings
+        ?.map((mapping) => ({
+          provider: mapping.provider,
+          externalProductId: mapping.externalProductId.trim(),
+        }))
+        .filter((mapping) => mapping.externalProductId.length > 0) ?? [];
+    const providers = new Set<DeliveryProvider>();
+
+    normalized.forEach((mapping) => {
+      if (providers.has(mapping.provider)) {
+        throw new BadRequestException("Only one external product ID per provider is allowed");
+      }
+      providers.add(mapping.provider);
+    });
+
+    return normalized;
+  }
+
+  private normalizeImageValue(value?: string | null): string | null | undefined {
+    if (value === undefined) {
+      return undefined;
+    }
+
+    const normalized = value?.trim() ?? "";
+    if (!normalized) {
+      return null;
+    }
+
+    if (isHttpUrl(normalized) || isImageDataUrl(normalized)) {
+      return normalized;
+    }
+
+    throw new BadRequestException("Product image must be a URL or base64 image upload");
+  }
+
+  private toProductResponse(product: ProductResponseInput) {
+    const price = product.price as unknown;
+
+    return {
+      ...product,
+      price: typeof price === "string" ? price : product.price.toFixed(2),
+      externalMappings: (product.externalMappings ?? []).map((mapping) => ({
+        id: mapping.id,
+        provider: mapping.provider,
+        externalProductId: mapping.externalProductId,
+      })),
+    };
+  }
+}
+
+function isHttpUrl(value: string): boolean {
+  try {
+    const url = new URL(value);
+    return url.protocol === "http:" || url.protocol === "https:";
+  } catch {
+    return false;
+  }
+}
+
+function isImageDataUrl(value: string): boolean {
+  return /^data:image\/(png|jpe?g|webp|gif);base64,[a-z0-9+/=\s]+$/i.test(value);
 }
