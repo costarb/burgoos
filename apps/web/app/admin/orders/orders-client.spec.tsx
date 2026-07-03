@@ -21,6 +21,22 @@ describe("OrdersClient platform actions", () => {
     expect(html).toContain("Dentro do prazo de aceite");
     expect(html).not.toContain(">Preparando</button>");
   });
+
+  it("keeps finalized orders out of the operational queue", () => {
+    const html = renderToStaticMarkup(
+      <OrdersClient
+        apiUrl="http://localhost:3001"
+        initialActiveOrders={[]}
+        initialHistoryOrders={[{ ...ifoodOrder(), id: "delivered-1", status: "DELIVERED" }]}
+        tenantId="tenant-1"
+        token="token"
+      />
+    );
+
+    expect(html).not.toContain("Historico");
+    expect(html).not.toContain("Sem pedidos finalizados.");
+    expect(html).toContain("Consultar vendas");
+  });
 });
 
 function ifoodOrder(): AdminOrder {

@@ -1,5 +1,5 @@
 import React from "react";
-import { getOrderPlatforms, getSalesReport } from "../../../../lib/api";
+import { getAdminToken, getOrderPlatforms, getSalesReport } from "../../../../lib/api";
 import { SalesReportClient } from "./sales-report-client";
 
 export const dynamic = "force-dynamic";
@@ -18,17 +18,21 @@ interface SalesReportPageProps {
 }
 
 export default async function SalesReportPage({ searchParams }: SalesReportPageProps) {
+  const token = await getAdminToken();
   const [report, platformData] = await Promise.all([
-    getSalesReport({
-      start: searchParams.start,
-      end: searchParams.end,
-      paymentInstitution: searchParams.paymentInstitution as never,
-      paymentMethod: searchParams.paymentMethod as never,
-      orderPlatformId: searchParams.orderPlatformId,
-      status: searchParams.status as never,
-      page: searchParams.page ? Number(searchParams.page) : undefined,
-      pageSize: searchParams.pageSize ? Number(searchParams.pageSize) : undefined,
-    }),
+    getSalesReport(
+      {
+        start: searchParams.start,
+        end: searchParams.end,
+        paymentInstitution: searchParams.paymentInstitution as never,
+        paymentMethod: searchParams.paymentMethod as never,
+        orderPlatformId: searchParams.orderPlatformId,
+        status: searchParams.status as never,
+        page: searchParams.page ? Number(searchParams.page) : undefined,
+        pageSize: searchParams.pageSize ? Number(searchParams.pageSize) : undefined,
+      },
+      token
+    ),
     getOrderPlatforms(),
   ]);
 
@@ -51,7 +55,11 @@ export default async function SalesReportPage({ searchParams }: SalesReportPageP
           </a>
         </div>
 
-        <SalesReportClient orderPlatforms={platformData.orderPlatforms} report={report} />
+        <SalesReportClient
+          orderPlatforms={platformData.orderPlatforms}
+          report={report}
+          token={token}
+        />
       </section>
     </main>
   );

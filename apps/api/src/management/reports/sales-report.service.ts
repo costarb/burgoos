@@ -60,7 +60,12 @@ export class SalesReportService {
         periodStart: query.start,
         periodEnd: query.end,
       },
-      daily: this.createDailySummaries(orders, query.periodStart, query.periodEnd, reportReferenceDate),
+      daily: this.createDailySummaries(
+        orders,
+        query.periodStart,
+        query.periodEnd,
+        reportReferenceDate
+      ),
       byPaymentInstitution: this.createPaymentDimensionSummary(
         orders,
         totalGross,
@@ -237,8 +242,14 @@ export class SalesReportService {
         return {
           orderId: order.id,
           createdAt: order.createdAt.toISOString(),
+          updatedAt: order.updatedAt.toISOString(),
           status: order.status,
+          total: toMoneyString(order.total),
           customerName: order.customerName,
+          customerPhone: order.customerPhone,
+          fulfillmentMethod: order.fulfillmentMethod,
+          notes: order.notes,
+          orderPlatformId: order.orderPlatformId,
           orderPlatformName: order.orderPlatform?.name ?? null,
           paymentInstitution: order.paymentInstitution,
           paymentMethod: order.paymentMethod,
@@ -248,13 +259,18 @@ export class SalesReportService {
           paymentFeeAmount: order.paymentFeeAmount ? toMoneyString(order.paymentFeeAmount) : null,
           acquiredNetAmount: toMoneyString(acquiredNetAmount),
           paymentReleaseExpectedAt: order.paymentReleaseExpectedAt?.toISOString() ?? null,
+          paymentReleaseSource: order.paymentReleaseSource,
           paymentReleaseStatus: isPaymentReleased(order, referenceDate)
             ? "RELEASED"
             : "PENDING_RELEASE",
           itemCount: order.items.reduce((totalItems, item) => totalItems + item.quantity, 0),
           assignedProducts: order.items.map((item) => ({
+            id: item.id,
+            productId: item.productId,
             quantity: item.quantity,
             productName: item.productNameSnapshot,
+            unitPrice: toMoneyString(item.unitPrice),
+            total: toMoneyString(item.total),
           })),
           imported: Boolean(order.externalPaymentId),
         };

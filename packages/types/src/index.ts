@@ -518,15 +518,25 @@ export interface ChannelSummary {
 }
 
 export interface SalesAnalyticalProduct {
+  id: string;
+  productId: string;
   quantity: number;
   productName: string;
+  unitPrice: string;
+  total: string;
 }
 
 export interface SalesAnalyticalOrder {
   orderId: string;
   createdAt: string;
+  updatedAt: string;
   status: OrderStatus;
+  total: string;
   customerName: string;
+  customerPhone: string;
+  fulfillmentMethod: FulfillmentMethod;
+  notes: string | null;
+  orderPlatformId: string | null;
   orderPlatformName: string | null;
   paymentInstitution: PaymentInstitution | null;
   paymentMethod: PaymentMethod;
@@ -536,6 +546,7 @@ export interface SalesAnalyticalOrder {
   paymentFeeAmount: string | null;
   acquiredNetAmount: string;
   paymentReleaseExpectedAt: string | null;
+  paymentReleaseSource: PaymentReleaseSource | null;
   paymentReleaseStatus: PaymentReleaseStatus;
   itemCount: number;
   assignedProducts: SalesAnalyticalProduct[];

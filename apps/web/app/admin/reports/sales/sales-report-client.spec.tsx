@@ -22,6 +22,7 @@ describe("sales report client", () => {
           },
         ]}
         report={reportFixture}
+        token="token"
       />
     );
 
@@ -34,6 +35,7 @@ describe("sales report client", () => {
     expect(html).toContain("Liberado/disponivel");
     expect(html).toContain("Valores a receber");
     expect(html).toContain("A receber");
+    expect(html).toContain("Alterar");
   });
 });
 
@@ -104,8 +106,14 @@ const reportFixture: SalesReportResponse = {
       {
         orderId: "22222222-2222-4222-8222-222222222222",
         createdAt: "2026-06-01T18:00:00.000Z",
+        updatedAt: "2026-06-01T18:00:00.000Z",
         status: "DELIVERED",
+        total: "20.00",
         customerName: "Cliente importado",
+        customerPhone: "11999999999",
+        fulfillmentMethod: "PICKUP",
+        notes: null,
+        orderPlatformId: "11111111-1111-4111-8111-111111111111",
         orderPlatformName: "FOOD_TRUCK",
         paymentInstitution: "PAGBANK",
         paymentMethod: "VOUCHER",
@@ -115,9 +123,19 @@ const reportFixture: SalesReportResponse = {
         paymentFeeAmount: "0.00",
         acquiredNetAmount: "20.00",
         paymentReleaseExpectedAt: "2026-07-01T18:00:00.000Z",
+        paymentReleaseSource: "EXTRACT",
         paymentReleaseStatus: "PENDING_RELEASE",
         itemCount: 1,
-        assignedProducts: [{ quantity: 1, productName: "X-BURGUER" }],
+        assignedProducts: [
+          {
+            id: "item-1",
+            productId: "product-1",
+            quantity: 1,
+            productName: "X-BURGUER",
+            unitPrice: "20.00",
+            total: "20.00",
+          },
+        ],
         imported: true,
       },
     ],
