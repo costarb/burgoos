@@ -1,4 +1,15 @@
-import { Body, Controller, Get, Inject, Param, Patch, Post, UseGuards } from "@nestjs/common";
+import {
+  Body,
+  Controller,
+  Get,
+  Inject,
+  Param,
+  Patch,
+  Post,
+  Query,
+  UseGuards,
+} from "@nestjs/common";
+import { DeliveryProvider } from "@prisma/client";
 import { ApiBearerAuth, ApiTags } from "@nestjs/swagger";
 import { PermissionGuard } from "../../auth/guards/permission.guard";
 import { RequirePermission } from "../../auth/guards/require-permission.decorator";
@@ -18,8 +29,22 @@ export class AdminProductController {
   constructor(@Inject(CatalogService) private readonly catalogService: CatalogService) {}
 
   @Get()
-  list(@CurrentUser() user: AuthUser) {
-    return this.catalogService.listProducts(user.tenantId);
+  list(
+    @CurrentUser() user: AuthUser,
+    @Query()
+    query: {
+      search?: string;
+      categoryId?: string;
+      active?: string;
+      provider?: DeliveryProvider;
+    }
+  ) {
+    return this.catalogService.listProducts(user.tenantId, {
+      search: query.search?.trim() || undefined,
+      categoryId: query.categoryId || undefined,
+      active: parseBooleanQuery(query.active),
+      provider: parseProviderQuery(query.provider),
+    });
   }
 
   @Post()
@@ -31,4 +56,26 @@ export class AdminProductController {
   update(@CurrentUser() user: AuthUser, @Param("id") id: string, @Body() dto: UpdateProductDto) {
     return this.catalogService.updateProduct(user.tenantId, id, dto);
   }
+}
+
+function parseProviderQuery(value?: string): DeliveryProvider | undefined {
+  if (!value) {
+    return undefined;
+  }
+
+  return Object.values(DeliveryProvider).includes(value as DeliveryProvider)
+    ? (value as DeliveryProvider)
+    : undefined;
+}
+
+function parseBooleanQuery(value?: string): boolean | undefined {
+  if (value === "true") {
+    return true;
+  }
+
+  if (value === "false") {
+    return false;
+  }
+
+  return undefined;
 }

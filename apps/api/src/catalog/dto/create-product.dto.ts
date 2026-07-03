@@ -1,13 +1,25 @@
 import {
   IsBoolean,
+  IsEnum,
   IsNumber,
   IsOptional,
   IsString,
-  IsUrl,
   IsUUID,
   MaxLength,
-  Min
+  Min,
+  ValidateNested,
 } from "class-validator";
+import { Type } from "class-transformer";
+import { DeliveryProvider } from "@prisma/client";
+
+export class ProductExternalMappingDto {
+  @IsEnum(DeliveryProvider)
+  provider!: DeliveryProvider;
+
+  @IsString()
+  @MaxLength(120)
+  externalProductId!: string;
+}
 
 export class CreateProductDto {
   @IsUUID()
@@ -27,10 +39,15 @@ export class CreateProductDto {
   price!: number;
 
   @IsOptional()
-  @IsUrl({ require_protocol: true })
+  @IsString()
   imageUrl?: string;
 
   @IsOptional()
   @IsBoolean()
   active?: boolean;
+
+  @IsOptional()
+  @ValidateNested({ each: true })
+  @Type(() => ProductExternalMappingDto)
+  externalMappings?: ProductExternalMappingDto[];
 }
