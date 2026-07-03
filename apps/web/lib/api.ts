@@ -8,6 +8,7 @@ import type {
   AccessAuditEvent,
   DeleteOrderInput,
   DeliveryIntegrationDetail,
+  DeliveryProvider,
   DeliveryIntegrationHealth,
   DeliveryIntegrationStatus,
   EditOrderInput,
@@ -98,15 +99,33 @@ export interface AdminProduct {
   price: string;
   imageUrl: string | null;
   active: boolean;
+  externalMappings: AdminProductExternalMapping[];
 }
 
-export interface CreateAdminProductInput {
+export interface AdminProductExternalMapping {
+  id?: string;
+  provider: DeliveryProvider;
+  externalProductId: string;
+}
+
+export interface AdminProductFilters {
+  search?: string;
+  categoryId?: string;
+  active?: string;
+  provider?: DeliveryProvider | "";
+}
+
+export interface AdminProductInput {
   categoryId: string;
   name: string;
   description?: string;
   price: number;
-  imageUrl?: string;
+  imageUrl?: string | null;
   active?: boolean;
+  externalMappings?: Array<{
+    provider: DeliveryProvider;
+    externalProductId: string;
+  }>;
 }
 
 export interface AdminTenant {
@@ -572,36 +591,6 @@ export async function restoreBranding(token: string): Promise<VisualConfiguratio
   });
 }
 
-export async function getAdminCatalog(): Promise<{
-  token: string;
-  categories: AdminCategory[];
-  products: AdminProduct[];
-  technicalSheets: TechnicalSheetSummary[];
-}> {
-  const token = await getAdminToken();
-
-  const headers = {
-    Authorization: `Bearer ${token}`,
-  };
-
-  const [categoriesResponse, productsResponse, technicalSheetsResponse] = await Promise.all([
-    fetch(`${apiUrl}/api/admin/categories`, { headers, cache: "no-store" }),
-    fetch(`${apiUrl}/api/admin/products`, { headers, cache: "no-store" }),
-    fetch(`${apiUrl}/api/admin/technical-sheets`, { headers, cache: "no-store" }),
-  ]);
-
-  if (!categoriesResponse.ok || !productsResponse.ok || !technicalSheetsResponse.ok) {
-    throw new Error("Failed to load admin catalog");
-  }
-
-  return {
-    token,
-    categories: (await categoriesResponse.json()) as AdminCategory[],
-    products: (await productsResponse.json()) as AdminProduct[],
-    technicalSheets: (await technicalSheetsResponse.json()) as TechnicalSheetSummary[],
-  };
-}
-
 export async function createAdminCategory(
   token: string,
   payload: CreateAdminCategoryInput
@@ -626,24 +615,61 @@ export async function createAdminCategory(
 
 export async function createAdminProduct(
   token: string,
-  payload: CreateAdminProductInput
+  payload: AdminProductInput
 ): Promise<AdminProduct> {
-  const response = await fetch(`${apiUrl}/api/admin/products`, {
+  return fetchAdmin<AdminProduct>(token, "/api/admin/products", {
     method: "POST",
-    headers: {
-      Authorization: `Bearer ${token}`,
-      "Content-Type": "application/json",
-    },
     body: JSON.stringify(payload),
-    cache: "no-store",
+  });
+}
+
+export async function updateAdminProduct(
+  token: string,
+  productId: string,
+  payload: AdminProductInput
+): Promise<AdminProduct> {
+  return fetchAdmin<AdminProduct>(token, `/api/admin/products/${productId}`, {
+    method: "PATCH",
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function listAdminProducts(
+  token: string,
+  filters: AdminProductFilters = {}
+): Promise<AdminProduct[]> {
+  const params = new URLSearchParams();
+
+  Object.entries(filters).forEach(([key, value]) => {
+    if (value !== undefined && value !== null && value !== "") {
+      params.set(key, String(value));
+    }
   });
 
-  if (!response.ok) {
-    const error = (await response.json().catch(() => null)) as { message?: string } | null;
-    throw new Error(error?.message ?? "Nao foi possivel criar o produto");
-  }
+  const query = params.toString();
+  return fetchAdmin<AdminProduct[]>(token, `/api/admin/products${query ? `?${query}` : ""}`);
+}
 
-  return response.json() as Promise<AdminProduct>;
+export async function getAdminCatalog(): Promise<{
+  token: string;
+  categories: AdminCategory[];
+  products: AdminProduct[];
+  technicalSheets: TechnicalSheetSummary[];
+}> {
+  const token = await getAdminToken();
+
+  const [categories, products, technicalSheets] = await Promise.all([
+    fetchAdmin<AdminCategory[]>(token, "/api/admin/categories"),
+    listAdminProducts(token),
+    fetchAdmin<TechnicalSheetSummary[]>(token, "/api/admin/technical-sheets"),
+  ]);
+
+  return {
+    token,
+    categories,
+    products,
+    technicalSheets,
+  };
 }
 
 export async function getAdminOrderQueue(): Promise<{
