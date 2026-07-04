@@ -164,7 +164,7 @@ export function PublicMenuClient({ menu }: PublicMenuClientProps) {
         {branding?.headerImageUrl ? (
           <img
             alt=""
-            className="mx-auto mb-4 max-h-64 w-full max-w-5xl rounded-md object-cover"
+            className="mx-auto mb-4 h-auto w-full max-w-5xl rounded-md object-contain"
             src={branding.headerImageUrl}
           />
         ) : null}
@@ -199,7 +199,7 @@ export function PublicMenuClient({ menu }: PublicMenuClientProps) {
           {branding?.bodyImageUrl ? (
             <img
               alt=""
-              className="max-h-80 w-full rounded-md border border-orange-100 object-cover"
+              className="h-auto w-full rounded-md border border-orange-100 object-contain"
               src={branding.bodyImageUrl}
             />
           ) : null}
@@ -254,7 +254,7 @@ export function PublicMenuClient({ menu }: PublicMenuClientProps) {
           {branding?.footerImageUrl ? (
             <img
               alt=""
-              className="max-h-64 w-full rounded-md border border-orange-100 object-cover"
+              className="h-auto w-full rounded-md border border-orange-100 object-contain"
               src={branding.footerImageUrl}
             />
           ) : null}
