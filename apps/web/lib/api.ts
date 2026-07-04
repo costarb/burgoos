@@ -83,12 +83,18 @@ export interface AdminCategory {
   name: string;
   sortOrder: number;
   active: boolean;
+  productCount?: number;
 }
 
-export interface CreateAdminCategoryInput {
+export interface AdminCategoryInput {
   name: string;
   sortOrder?: number;
   active?: boolean;
+}
+
+export interface AdminCategoryFilters {
+  search?: string;
+  active?: string;
 }
 
 export interface AdminProduct {
@@ -253,9 +259,7 @@ async function fetchPlatform<T>(token: string, path: string, init?: RequestInit)
 
 export async function getPublicMenu(slug: string): Promise<PublicMenu | null> {
   const response = await fetch(`${apiUrl}/api/public/tenants/${slug}/menu`, {
-    next: {
-      revalidate: 30,
-    },
+    cache: "no-store",
   });
 
   if (response.status === 404) {
@@ -593,24 +597,45 @@ export async function restoreBranding(token: string): Promise<VisualConfiguratio
 
 export async function createAdminCategory(
   token: string,
-  payload: CreateAdminCategoryInput
+  payload: AdminCategoryInput
 ): Promise<AdminCategory> {
-  const response = await fetch(`${apiUrl}/api/admin/categories`, {
+  return fetchAdmin<AdminCategory>(token, "/api/admin/categories", {
     method: "POST",
-    headers: {
-      Authorization: `Bearer ${token}`,
-      "Content-Type": "application/json",
-    },
     body: JSON.stringify(payload),
-    cache: "no-store",
+  });
+}
+
+export async function updateAdminCategory(
+  token: string,
+  categoryId: string,
+  payload: AdminCategoryInput
+): Promise<AdminCategory> {
+  return fetchAdmin<AdminCategory>(token, `/api/admin/categories/${categoryId}`, {
+    method: "PATCH",
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function deleteAdminCategory(token: string, categoryId: string): Promise<void> {
+  await fetchAdmin<{ deleted: boolean }>(token, `/api/admin/categories/${categoryId}`, {
+    method: "DELETE",
+  });
+}
+
+export async function listAdminCategories(
+  token: string,
+  filters: AdminCategoryFilters = {}
+): Promise<AdminCategory[]> {
+  const params = new URLSearchParams();
+
+  Object.entries(filters).forEach(([key, value]) => {
+    if (value !== undefined && value !== null && value !== "") {
+      params.set(key, String(value));
+    }
   });
 
-  if (!response.ok) {
-    const error = (await response.json().catch(() => null)) as { message?: string } | null;
-    throw new Error(error?.message ?? "Nao foi possivel criar a categoria");
-  }
-
-  return response.json() as Promise<AdminCategory>;
+  const query = params.toString();
+  return fetchAdmin<AdminCategory[]>(token, `/api/admin/categories${query ? `?${query}` : ""}`);
 }
 
 export async function createAdminProduct(
@@ -659,7 +684,7 @@ export async function getAdminCatalog(): Promise<{
   const token = await getAdminToken();
 
   const [categories, products, technicalSheets] = await Promise.all([
-    fetchAdmin<AdminCategory[]>(token, "/api/admin/categories"),
+    listAdminCategories(token),
     listAdminProducts(token),
     fetchAdmin<TechnicalSheetSummary[]>(token, "/api/admin/technical-sheets"),
   ]);

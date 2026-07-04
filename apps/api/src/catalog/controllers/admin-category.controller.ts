@@ -1,4 +1,15 @@
-import { Body, Controller, Get, Inject, Param, Patch, Post, UseGuards } from "@nestjs/common";
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  Inject,
+  Param,
+  Patch,
+  Post,
+  Query,
+  UseGuards,
+} from "@nestjs/common";
 import { ApiBearerAuth, ApiTags } from "@nestjs/swagger";
 import { PermissionGuard } from "../../auth/guards/permission.guard";
 import { RequirePermission } from "../../auth/guards/require-permission.decorator";
@@ -18,8 +29,11 @@ export class AdminCategoryController {
   constructor(@Inject(CatalogService) private readonly catalogService: CatalogService) {}
 
   @Get()
-  list(@CurrentUser() user: AuthUser) {
-    return this.catalogService.listCategories(user.tenantId);
+  list(@CurrentUser() user: AuthUser, @Query() query: { search?: string; active?: string }) {
+    return this.catalogService.listCategories(user.tenantId, {
+      search: query.search?.trim() || undefined,
+      active: parseBooleanQuery(query.active),
+    });
   }
 
   @Post()
@@ -31,4 +45,17 @@ export class AdminCategoryController {
   update(@CurrentUser() user: AuthUser, @Param("id") id: string, @Body() dto: UpdateCategoryDto) {
     return this.catalogService.updateCategory(user.tenantId, id, dto);
   }
+
+  @Delete(":id")
+  delete(@CurrentUser() user: AuthUser, @Param("id") id: string) {
+    return this.catalogService.deleteCategory(user.tenantId, id);
+  }
+}
+
+function parseBooleanQuery(value?: string): boolean | undefined {
+  if (value === undefined || value === "") {
+    return undefined;
+  }
+
+  return value === "true";
 }
