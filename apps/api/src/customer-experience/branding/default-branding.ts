@@ -4,6 +4,9 @@ export interface StoreBrandingView {
   accentColor: string;
   neutralTheme: "LIGHT" | "DARK" | "SYSTEM_DEFAULT";
   layoutPreset: string;
+  showProductImages: boolean;
+  showProductDescriptions: boolean;
+  orderingEnabled: boolean;
 }
 
 export const DEFAULT_STORE_BRANDING: StoreBrandingView = {
@@ -12,6 +15,9 @@ export const DEFAULT_STORE_BRANDING: StoreBrandingView = {
   accentColor: "#F59F00",
   neutralTheme: "LIGHT",
   layoutPreset: "classic",
+  showProductImages: false,
+  showProductDescriptions: false,
+  orderingEnabled: true,
 };
 
 export function toPublicBranding(
@@ -22,6 +28,9 @@ export function toPublicBranding(
         accentColor: string;
         neutralTheme: "LIGHT" | "DARK" | "SYSTEM_DEFAULT";
         layoutPresetKey: string;
+        showProductImages?: boolean;
+        showProductDescriptions?: boolean;
+        orderingEnabled?: boolean;
       }
     | null
     | undefined
@@ -36,5 +45,9 @@ export function toPublicBranding(
     accentColor: configuration.accentColor,
     neutralTheme: configuration.neutralTheme,
     layoutPreset: configuration.layoutPresetKey,
+    showProductImages: configuration.showProductImages ?? DEFAULT_STORE_BRANDING.showProductImages,
+    showProductDescriptions:
+      configuration.showProductDescriptions ?? DEFAULT_STORE_BRANDING.showProductDescriptions,
+    orderingEnabled: configuration.orderingEnabled ?? DEFAULT_STORE_BRANDING.orderingEnabled,
   };
 }

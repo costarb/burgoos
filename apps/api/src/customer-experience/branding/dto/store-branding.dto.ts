@@ -1,4 +1,4 @@
-import { IsIn, IsOptional, IsString, IsUrl, Matches } from "class-validator";
+import { IsBoolean, IsIn, IsOptional, IsString, IsUrl, Matches } from "class-validator";
 
 export class StoreBrandingDto {
   @IsOptional()
@@ -16,4 +16,16 @@ export class StoreBrandingDto {
 
   @IsString()
   layoutPreset!: string;
+
+  @IsOptional()
+  @IsBoolean()
+  showProductImages?: boolean;
+
+  @IsOptional()
+  @IsBoolean()
+  showProductDescriptions?: boolean;
+
+  @IsOptional()
+  @IsBoolean()
+  orderingEnabled?: boolean;
 }

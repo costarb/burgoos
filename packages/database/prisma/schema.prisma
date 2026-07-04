@@ -95,6 +95,12 @@ enum NeutralTheme {
   SYSTEM_DEFAULT
 }
 
+enum StoreOpenMode {
+  SCHEDULE
+  FORCE_OPEN
+  FORCE_CLOSED
+}
+
 enum LayoutPresetSurface {
   PUBLIC_MENU
   ADMIN_CUE
@@ -308,6 +314,8 @@ model Tenant {
   phone                       String
   active                      Boolean                         @default(true)
   isOpen                      Boolean                         @default(false) @map("is_open")
+  openMode                    StoreOpenMode                   @default(FORCE_CLOSED) @map("open_mode")
+  operatingHours              Json                            @default("{}") @map("operating_hours")
   setupCompletedAt            DateTime?                       @map("setup_completed_at")
   deactivatedAt               DateTime?                       @map("deactivated_at")
   createdByPlatformUserId     String?                         @map("created_by_platform_user_id") @db.Uuid
@@ -614,23 +622,26 @@ model AccessAuditEvent {
 }
 
 model StoreVisualConfiguration {
-  id                String                    @id @default(uuid()) @db.Uuid
-  tenantId          String                    @map("tenant_id") @db.Uuid
-  status            VisualConfigurationStatus @default(DRAFT)
-  logoUrl           String?                   @map("logo_url")
-  primaryColor      String                    @map("primary_color")
-  accentColor       String                    @map("accent_color")
-  neutralTheme      NeutralTheme              @default(LIGHT) @map("neutral_theme")
-  layoutPresetKey   String                    @map("layout_preset_key")
-  createdByUserId   String?                   @map("created_by_user_id") @db.Uuid
-  publishedByUserId String?                   @map("published_by_user_id") @db.Uuid
-  publishedAt       DateTime?                 @map("published_at")
-  createdAt         DateTime                  @default(now()) @map("created_at")
-  updatedAt         DateTime                  @updatedAt @map("updated_at")
-  tenant            Tenant                    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  layoutPreset      LayoutPreset              @relation(fields: [layoutPresetKey], references: [key], onDelete: Restrict)
-  createdByUser     User?                     @relation("VisualConfigurationCreatedBy", fields: [createdByUserId], references: [id], onDelete: SetNull)
-  publishedByUser   User?                     @relation("VisualConfigurationPublishedBy", fields: [publishedByUserId], references: [id], onDelete: SetNull)
+  id                      String                    @id @default(uuid()) @db.Uuid
+  tenantId                String                    @map("tenant_id") @db.Uuid
+  status                  VisualConfigurationStatus @default(DRAFT)
+  logoUrl                 String?                   @map("logo_url")
+  primaryColor            String                    @map("primary_color")
+  accentColor             String                    @map("accent_color")
+  neutralTheme            NeutralTheme              @default(LIGHT) @map("neutral_theme")
+  layoutPresetKey         String                    @map("layout_preset_key")
+  showProductImages       Boolean                   @default(false) @map("show_product_images")
+  showProductDescriptions Boolean                   @default(false) @map("show_product_descriptions")
+  orderingEnabled         Boolean                   @default(true) @map("ordering_enabled")
+  createdByUserId         String?                   @map("created_by_user_id") @db.Uuid
+  publishedByUserId       String?                   @map("published_by_user_id") @db.Uuid
+  publishedAt             DateTime?                 @map("published_at")
+  createdAt               DateTime                  @default(now()) @map("created_at")
+  updatedAt               DateTime                  @updatedAt @map("updated_at")
+  tenant                  Tenant                    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  layoutPreset            LayoutPreset              @relation(fields: [layoutPresetKey], references: [key], onDelete: Restrict)
+  createdByUser           User?                     @relation("VisualConfigurationCreatedBy", fields: [createdByUserId], references: [id], onDelete: SetNull)
+  publishedByUser         User?                     @relation("VisualConfigurationPublishedBy", fields: [publishedByUserId], references: [id], onDelete: SetNull)
 
   @@index([tenantId, status])
   @@index([layoutPresetKey])

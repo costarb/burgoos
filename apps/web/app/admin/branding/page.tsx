@@ -17,7 +17,7 @@ export const dynamic = "force-dynamic";
 
 async function saveDraftAction(
   _previousState: OperationState,
-  formData: FormData,
+  formData: FormData
 ): Promise<OperationState> {
   "use server";
 
@@ -30,6 +30,9 @@ async function saveDraftAction(
       accentColor: String(formData.get("accentColor") ?? "#F59F00"),
       neutralTheme: String(formData.get("neutralTheme") ?? "LIGHT") as "LIGHT",
       layoutPreset: String(formData.get("layoutPreset") ?? "classic") as StoreLayoutPresetKey,
+      showProductImages: formData.get("showProductImages") === "on",
+      showProductDescriptions: formData.get("showProductDescriptions") === "on",
+      orderingEnabled: formData.get("orderingEnabled") === "on",
     });
 
     revalidatePath("/admin/branding");
@@ -76,7 +79,7 @@ async function restoreAction(): Promise<OperationState> {
 
 async function publishFormAction(
   _previousState: OperationState,
-  _formData: FormData,
+  _formData: FormData
 ): Promise<OperationState> {
   "use server";
 
@@ -85,7 +88,7 @@ async function publishFormAction(
 
 async function restoreFormAction(
   _previousState: OperationState,
-  _formData: FormData,
+  _formData: FormData
 ): Promise<OperationState> {
   "use server";
 
@@ -175,6 +178,51 @@ export default async function BrandingPage() {
                 )}
               </div>
             </fieldset>
+            <fieldset className="grid gap-3 rounded-md border border-slate-200 p-4">
+              <legend className="px-1 text-sm font-semibold">Cardapio publico</legend>
+              <label className="flex items-start gap-3 text-sm">
+                <input
+                  className="mt-1"
+                  defaultChecked={current?.showProductImages ?? false}
+                  name="showProductImages"
+                  type="checkbox"
+                />
+                <span>
+                  <span className="block font-medium">Mostrar fotos dos produtos</span>
+                  <span className="text-slate-600">
+                    Exibe a imagem cadastrada no produto quando ela existir.
+                  </span>
+                </span>
+              </label>
+              <label className="flex items-start gap-3 text-sm">
+                <input
+                  className="mt-1"
+                  defaultChecked={current?.showProductDescriptions ?? false}
+                  name="showProductDescriptions"
+                  type="checkbox"
+                />
+                <span>
+                  <span className="block font-medium">Mostrar descricoes</span>
+                  <span className="text-slate-600">
+                    Mostra o texto descritivo abaixo do nome do produto.
+                  </span>
+                </span>
+              </label>
+              <label className="flex items-start gap-3 text-sm">
+                <input
+                  className="mt-1"
+                  defaultChecked={current?.orderingEnabled ?? true}
+                  name="orderingEnabled"
+                  type="checkbox"
+                />
+                <span>
+                  <span className="block font-medium">Permitir pedidos pelo cardapio</span>
+                  <span className="text-slate-600">
+                    Desmarque para usar a pagina apenas como vitrine do cardapio.
+                  </span>
+                </span>
+              </label>
+            </fieldset>
             <SubmitButton className="w-fit" pendingLabel="Salvando rascunho...">
               Salvar rascunho
             </SubmitButton>
@@ -196,13 +244,22 @@ export default async function BrandingPage() {
               <p className="mt-1 text-sm text-slate-600">
                 Layout {current?.layoutPreset ?? "classic"}
               </p>
-              <button
-                className="mt-4 rounded-md px-3 py-2 text-sm font-semibold text-white"
-                style={{ backgroundColor: current?.accentColor ?? "#F59F00" }}
-                type="button"
-              >
-                Adicionar
-              </button>
+              {current?.showProductDescriptions ? (
+                <p className="mt-2 text-sm text-slate-600">Descricao visivel no cardapio.</p>
+              ) : null}
+              {(current?.orderingEnabled ?? true) ? (
+                <button
+                  className="mt-4 rounded-md px-3 py-2 text-sm font-semibold text-white"
+                  style={{ backgroundColor: current?.accentColor ?? "#F59F00" }}
+                  type="button"
+                >
+                  Adicionar
+                </button>
+              ) : (
+                <p className="mt-4 rounded-md bg-slate-100 p-2 text-sm text-slate-600">
+                  Modo somente consulta
+                </p>
+              )}
             </div>
           </aside>
         </div>
