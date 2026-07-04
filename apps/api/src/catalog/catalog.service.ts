@@ -14,6 +14,9 @@ interface PublicMenuResponse {
     isOpen: boolean;
     branding: {
       logoUrl: string | null;
+      headerImageUrl: string | null;
+      bodyImageUrl: string | null;
+      footerImageUrl: string | null;
       primaryColor: string;
       accentColor: string;
       neutralTheme: string;

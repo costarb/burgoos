@@ -151,6 +151,9 @@ export interface LayoutPreset {
 
 export interface PublicStoreBranding {
   logoUrl: string | null;
+  headerImageUrl: string | null;
+  bodyImageUrl: string | null;
+  footerImageUrl: string | null;
   primaryColor: string;
   accentColor: string;
   neutralTheme: NeutralTheme;
@@ -228,6 +231,9 @@ export interface StoreSetupResult {
 
 export interface BrandingDraftInput {
   logoUrl?: string | null;
+  headerImageUrl?: string | null;
+  bodyImageUrl?: string | null;
+  footerImageUrl?: string | null;
   primaryColor: string;
   accentColor: string;
   neutralTheme: NeutralTheme;

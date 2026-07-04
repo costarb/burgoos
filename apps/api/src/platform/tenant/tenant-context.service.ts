@@ -6,6 +6,9 @@ import { PrismaService } from "../database/prisma.service";
 export type TenantSummary = Pick<Tenant, "id" | "name" | "slug" | "phone" | "active" | "isOpen"> & {
   branding?: {
     logoUrl: string | null;
+    headerImageUrl: string | null;
+    bodyImageUrl: string | null;
+    footerImageUrl: string | null;
     primaryColor: string;
     accentColor: string;
     neutralTheme: string;

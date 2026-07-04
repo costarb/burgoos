@@ -32,6 +32,9 @@ describe("store onboarding and branding flow", () => {
     tenantId: string;
     status: "DRAFT" | "PUBLISHED" | "ARCHIVED";
     logoUrl: string | null;
+    headerImageUrl: string | null;
+    bodyImageUrl: string | null;
+    footerImageUrl: string | null;
     primaryColor: string;
     accentColor: string;
     neutralTheme: "LIGHT" | "DARK" | "SYSTEM_DEFAULT";
@@ -218,6 +221,9 @@ describe("store onboarding and branding flow", () => {
           tenantId: String(data.tenantId),
           status: "DRAFT" as const,
           logoUrl: data.logoUrl ? String(data.logoUrl) : null,
+          headerImageUrl: data.headerImageUrl ? String(data.headerImageUrl) : null,
+          bodyImageUrl: data.bodyImageUrl ? String(data.bodyImageUrl) : null,
+          footerImageUrl: data.footerImageUrl ? String(data.footerImageUrl) : null,
           primaryColor: String(data.primaryColor),
           accentColor: String(data.accentColor),
           neutralTheme: data.neutralTheme as "LIGHT",
