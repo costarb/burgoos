@@ -271,45 +271,67 @@ export default async function BrandingPage() {
           <aside className="h-fit rounded-md border border-slate-200 bg-white p-5 shadow-sm">
             <h2 className="text-lg font-semibold">Previsualizacao</h2>
             <div
-              className="mt-4 rounded-md border border-slate-200 p-4"
+              className="mt-4 overflow-hidden rounded-md border border-slate-200"
               style={{ borderTopColor: current?.primaryColor ?? "#C92A2A", borderTopWidth: 6 }}
             >
-              <ImagePreview imageUrl={current?.headerImageUrl ?? null} label="Header" />
-              <p
-                className="text-sm font-semibold"
-                style={{ color: current?.primaryColor ?? "#C92A2A" }}
+              <BackgroundPreviewSection
+                imageUrl={current?.headerImageUrl ?? null}
+                minHeightClass="min-h-24"
               >
-                /loja
-              </p>
-              {current?.logoUrl ? (
-                <img
-                  alt=""
-                  className="mt-3 h-12 w-12 rounded-md border border-slate-200 object-contain"
-                  src={current.logoUrl}
-                />
-              ) : null}
-              <p className="mt-2 text-xl font-bold">Produto exemplo</p>
-              <ImagePreview imageUrl={current?.bodyImageUrl ?? null} label="Body" />
-              <p className="mt-1 text-sm text-slate-600">
-                Layout {current?.layoutPreset ?? "classic"}
-              </p>
-              {current?.showProductDescriptions ? (
-                <p className="mt-2 text-sm text-slate-600">Descricao visivel no cardapio.</p>
-              ) : null}
-              {(current?.orderingEnabled ?? true) ? (
-                <button
-                  className="mt-4 rounded-md px-3 py-2 text-sm font-semibold text-white"
-                  style={{ backgroundColor: current?.accentColor ?? "#F59F00" }}
-                  type="button"
-                >
-                  Adicionar
-                </button>
-              ) : (
-                <p className="mt-4 rounded-md bg-slate-100 p-2 text-sm text-slate-600">
-                  Modo somente consulta
-                </p>
-              )}
-              <ImagePreview imageUrl={current?.footerImageUrl ?? null} label="Footer" />
+                <div className="rounded-md bg-white/85 p-3 shadow-sm">
+                  <p
+                    className="text-xs font-semibold"
+                    style={{ color: current?.primaryColor ?? "#C92A2A" }}
+                  >
+                    /loja
+                  </p>
+                  <div className="mt-2 flex items-center gap-2">
+                    {current?.logoUrl ? (
+                      <img
+                        alt=""
+                        className="h-8 w-8 rounded-md border border-slate-200 object-contain"
+                        src={current.logoUrl}
+                      />
+                    ) : null}
+                    <p className="font-bold">Nome da loja</p>
+                  </div>
+                </div>
+              </BackgroundPreviewSection>
+              <BackgroundPreviewSection
+                imageUrl={current?.bodyImageUrl ?? null}
+                minHeightClass="min-h-40"
+              >
+                <div className="rounded-md bg-white/90 p-3 shadow-sm">
+                  <p className="font-bold">Produto exemplo</p>
+                  <p className="mt-1 text-sm text-slate-600">
+                    Layout {current?.layoutPreset ?? "classic"}
+                  </p>
+                  {current?.showProductDescriptions ? (
+                    <p className="mt-2 text-sm text-slate-600">Descricao visivel no cardapio.</p>
+                  ) : null}
+                  {(current?.orderingEnabled ?? true) ? (
+                    <button
+                      className="mt-4 rounded-md px-3 py-2 text-sm font-semibold text-white"
+                      style={{ backgroundColor: current?.accentColor ?? "#F59F00" }}
+                      type="button"
+                    >
+                      Adicionar
+                    </button>
+                  ) : (
+                    <p className="mt-4 rounded-md bg-slate-100 p-2 text-sm text-slate-600">
+                      Modo somente consulta
+                    </p>
+                  )}
+                </div>
+              </BackgroundPreviewSection>
+              <BackgroundPreviewSection
+                imageUrl={current?.footerImageUrl ?? null}
+                minHeightClass="min-h-20"
+              >
+                <div className="rounded-md bg-white/80 p-3 text-sm text-slate-600 shadow-sm">
+                  Rodape da loja
+                </div>
+              </BackgroundPreviewSection>
             </div>
           </aside>
         </div>
@@ -424,16 +446,21 @@ function ImageAssetField({
   );
 }
 
-function ImagePreview({ imageUrl, label }: { imageUrl: string | null; label: string }) {
-  if (!imageUrl) {
-    return null;
-  }
-
+function BackgroundPreviewSection({
+  children,
+  imageUrl,
+  minHeightClass,
+}: {
+  children: React.ReactNode;
+  imageUrl: string | null;
+  minHeightClass: string;
+}) {
   return (
-    <img
-      alt={label}
-      className="mb-3 mt-3 h-auto w-full rounded-md border border-slate-200 object-contain"
-      src={imageUrl}
-    />
+    <div
+      className={`bg-cover bg-center p-3 ${minHeightClass}`}
+      style={imageUrl ? { backgroundImage: `url("${imageUrl}")` } : undefined}
+    >
+      {children}
+    </div>
   );
 }

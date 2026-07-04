@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useEffect, useMemo, useState } from "react";
+import { CSSProperties, FormEvent, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import type {
   CreatedOrder,
@@ -160,15 +160,15 @@ export function PublicMenuClient({ menu }: PublicMenuClientProps) {
     <main
       className={`public-menu-layout public-menu-layout-${layoutPreset} min-h-screen bg-cream text-ink`}
     >
-      <header className="border-b border-orange-100 bg-white px-4 py-5 shadow-sm">
-        {branding?.headerImageUrl ? (
-          <img
-            alt=""
-            className="mx-auto mb-4 h-auto w-full max-w-5xl rounded-md object-contain"
-            src={branding.headerImageUrl}
-          />
-        ) : null}
-        <div className="mx-auto flex max-w-5xl items-center justify-between gap-4">
+      <header
+        className="border-b border-orange-100 bg-white bg-cover bg-center px-4 py-8 shadow-sm"
+        style={backgroundStyle(branding?.headerImageUrl)}
+      >
+        <div
+          className={`mx-auto flex max-w-5xl items-center justify-between gap-4 rounded-md ${
+            branding?.headerImageUrl ? "bg-white/85 p-4 shadow-sm backdrop-blur-sm" : ""
+          }`}
+        >
           <div>
             <p className="text-xs font-semibold uppercase" style={{ color: primaryColor }}>
               {menu.tenant.slug}
@@ -190,195 +190,216 @@ export function PublicMenuClient({ menu }: PublicMenuClientProps) {
         </div>
       </header>
 
-      <div
-        className={`public-menu-shell mx-auto grid max-w-5xl gap-6 px-4 py-6 ${
-          orderingEnabled ? "lg:grid-cols-[1fr_360px]" : ""
-        }`}
+      <section
+        className="bg-cream bg-cover bg-center"
+        style={backgroundStyle(branding?.bodyImageUrl)}
       >
-        <section className="public-menu-categories space-y-8">
-          {branding?.bodyImageUrl ? (
-            <img
-              alt=""
-              className="h-auto w-full rounded-md border border-orange-100 object-contain"
-              src={branding.bodyImageUrl}
-            />
-          ) : null}
-          {!orderingEnabled ? (
-            <div className="rounded-md border border-orange-100 bg-white p-4 text-sm text-slate-700">
-              Este cardapio esta em modo consulta. Entre em contato com a loja para fazer pedidos.
-            </div>
-          ) : null}
-          {menu.categories.map((category) => (
-            <section key={category.id}>
-              <h2 className="text-xl font-semibold">{category.name}</h2>
-              <div className="public-menu-product-list mt-3 divide-y divide-orange-100 rounded-md border border-orange-100 bg-white">
-                {category.products.map((product) => (
-                  <article
-                    key={product.id}
-                    className="public-menu-product grid grid-cols-[1fr_auto] items-center gap-4 p-4"
-                  >
-                    <div className="grid min-w-0 gap-3 sm:grid-cols-[auto_1fr]">
-                      {showProductImages && product.imageUrl ? (
-                        <img
-                          alt=""
-                          className="h-20 w-20 rounded-md object-cover"
-                          src={product.imageUrl}
-                        />
-                      ) : null}
-                      <div>
-                        <h3 className="font-semibold">{product.name}</h3>
-                        {showProductDescriptions && product.description ? (
-                          <p className="mt-1 text-sm text-slate-600">{product.description}</p>
+        <div
+          className={`public-menu-shell mx-auto grid max-w-5xl gap-6 px-4 py-8 ${
+            orderingEnabled ? "lg:grid-cols-[1fr_360px]" : ""
+          }`}
+        >
+          <section className="public-menu-categories space-y-8">
+            {!orderingEnabled ? (
+              <div className="rounded-md border border-orange-100 bg-white/95 p-4 text-sm text-slate-700 shadow-sm">
+                Este cardapio esta em modo consulta. Entre em contato com a loja para fazer pedidos.
+              </div>
+            ) : null}
+            {menu.categories.map((category) => (
+              <section key={category.id}>
+                <h2 className="text-xl font-semibold">{category.name}</h2>
+                <div className="public-menu-product-list mt-3 divide-y divide-orange-100 rounded-md border border-orange-100 bg-white/95 shadow-sm">
+                  {category.products.map((product) => (
+                    <article
+                      key={product.id}
+                      className="public-menu-product grid grid-cols-[1fr_auto] items-center gap-4 p-4"
+                    >
+                      <div className="grid min-w-0 gap-3 sm:grid-cols-[auto_1fr]">
+                        {showProductImages && product.imageUrl ? (
+                          <img
+                            alt=""
+                            className="h-20 w-20 rounded-md object-cover"
+                            src={product.imageUrl}
+                          />
                         ) : null}
-                        <p className="mt-2 font-semibold" style={{ color: primaryColor }}>
-                          R$ {product.price}
-                        </p>
+                        <div>
+                          <h3 className="font-semibold">{product.name}</h3>
+                          {showProductDescriptions && product.description ? (
+                            <p className="mt-1 text-sm text-slate-600">{product.description}</p>
+                          ) : null}
+                          <p className="mt-2 font-semibold" style={{ color: primaryColor }}>
+                            R$ {product.price}
+                          </p>
+                        </div>
+                      </div>
+                      {orderingEnabled ? (
+                        <button
+                          className="rounded-md px-3 py-2 text-sm font-semibold text-white disabled:bg-slate-300"
+                          disabled={!canOrder}
+                          onClick={() => addProduct(product)}
+                          style={{ backgroundColor: primaryColor }}
+                          type="button"
+                        >
+                          Adicionar
+                        </button>
+                      ) : null}
+                    </article>
+                  ))}
+                </div>
+              </section>
+            ))}
+          </section>
+
+          {orderingEnabled ? (
+            <aside className="public-menu-cart h-fit rounded-md border border-orange-100 bg-white/95 p-4 shadow-sm">
+              <h2 className="text-lg font-semibold">Seu pedido</h2>
+
+              <div className="mt-4 space-y-3">
+                {cartLines.length === 0 ? (
+                  <p className="text-sm text-slate-600">Carrinho vazio.</p>
+                ) : (
+                  cartLines.map((line) => (
+                    <div key={line.product.id} className="grid grid-cols-[1fr_auto] gap-3">
+                      <div>
+                        <p className="font-medium">{line.product.name}</p>
+                        <p className="text-sm text-slate-600">R$ {line.product.price}</p>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <button
+                          className="h-8 w-8 rounded-md border border-slate-200"
+                          onClick={() => updateQuantity(line.product.id, line.quantity - 1)}
+                          type="button"
+                        >
+                          -
+                        </button>
+                        <span className="w-6 text-center text-sm font-semibold">
+                          {line.quantity}
+                        </span>
+                        <button
+                          className="h-8 w-8 rounded-md border border-slate-200"
+                          onClick={() => updateQuantity(line.product.id, line.quantity + 1)}
+                          type="button"
+                        >
+                          +
+                        </button>
                       </div>
                     </div>
-                    {orderingEnabled ? (
-                      <button
-                        className="rounded-md px-3 py-2 text-sm font-semibold text-white disabled:bg-slate-300"
-                        disabled={!canOrder}
-                        onClick={() => addProduct(product)}
-                        style={{ backgroundColor: primaryColor }}
-                        type="button"
-                      >
-                        Adicionar
-                      </button>
-                    ) : null}
-                  </article>
-                ))}
+                  ))
+                )}
               </div>
-            </section>
-          ))}
-          {branding?.footerImageUrl ? (
-            <img
-              alt=""
-              className="h-auto w-full rounded-md border border-orange-100 object-contain"
-              src={branding.footerImageUrl}
-            />
-          ) : null}
-        </section>
 
-        {orderingEnabled ? (
-          <aside className="public-menu-cart h-fit rounded-md border border-orange-100 bg-white p-4 shadow-sm">
-            <h2 className="text-lg font-semibold">Seu pedido</h2>
+              <div className="mt-4 flex items-center justify-between border-t border-slate-200 pt-4">
+                <span className="font-semibold">Total estimado</span>
+                <span className="font-bold" style={{ color: primaryColor }}>
+                  R$ {cartTotal.toFixed(2)}
+                </span>
+              </div>
 
-            <div className="mt-4 space-y-3">
-              {cartLines.length === 0 ? (
-                <p className="text-sm text-slate-600">Carrinho vazio.</p>
-              ) : (
-                cartLines.map((line) => (
-                  <div key={line.product.id} className="grid grid-cols-[1fr_auto] gap-3">
-                    <div>
-                      <p className="font-medium">{line.product.name}</p>
-                      <p className="text-sm text-slate-600">R$ {line.product.price}</p>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <button
-                        className="h-8 w-8 rounded-md border border-slate-200"
-                        onClick={() => updateQuantity(line.product.id, line.quantity - 1)}
-                        type="button"
-                      >
-                        -
-                      </button>
-                      <span className="w-6 text-center text-sm font-semibold">{line.quantity}</span>
-                      <button
-                        className="h-8 w-8 rounded-md border border-slate-200"
-                        onClick={() => updateQuantity(line.product.id, line.quantity + 1)}
-                        type="button"
-                      >
-                        +
-                      </button>
-                    </div>
-                  </div>
-                ))
-              )}
-            </div>
-
-            <div className="mt-4 flex items-center justify-between border-t border-slate-200 pt-4">
-              <span className="font-semibold">Total estimado</span>
-              <span className="font-bold" style={{ color: primaryColor }}>
-                R$ {cartTotal.toFixed(2)}
-              </span>
-            </div>
-
-            <form className="mt-5 space-y-3" onSubmit={handleSubmit}>
-              <input
-                className="w-full rounded-md border border-slate-200 px-3 py-2 text-sm"
-                onChange={(event) => setCustomerName(event.target.value)}
-                placeholder="Nome"
-                required
-                value={customerName}
-              />
-              <input
-                className="w-full rounded-md border border-slate-200 px-3 py-2 text-sm"
-                onChange={(event) => setCustomerPhone(event.target.value)}
-                placeholder="Telefone"
-                required
-                value={customerPhone}
-              />
-              <select
-                className="w-full rounded-md border border-slate-200 px-3 py-2 text-sm"
-                onChange={(event) => setFulfillmentMethod(event.target.value as FulfillmentMethod)}
-                value={fulfillmentMethod}
-              >
-                <option value="DELIVERY">Delivery</option>
-                <option value="PICKUP">Retirada</option>
-              </select>
-              {fulfillmentMethod === "DELIVERY" ? (
-                <textarea
-                  className="min-h-20 w-full rounded-md border border-slate-200 px-3 py-2 text-sm"
-                  onChange={(event) => setDeliveryAddress(event.target.value)}
-                  placeholder="Endereco de entrega"
+              <form className="mt-5 space-y-3" onSubmit={handleSubmit}>
+                <input
+                  className="w-full rounded-md border border-slate-200 px-3 py-2 text-sm"
+                  onChange={(event) => setCustomerName(event.target.value)}
+                  placeholder="Nome"
                   required
-                  value={deliveryAddress}
+                  value={customerName}
                 />
-              ) : null}
-              <select
-                className="w-full rounded-md border border-slate-200 px-3 py-2 text-sm"
-                onChange={(event) => setPaymentMethod(event.target.value as PaymentMethod)}
-                value={paymentMethod}
-              >
-                <option value="PIX_MANUAL">PIX</option>
-                <option value="CASH">Dinheiro</option>
-                <option value="CARD_ON_DELIVERY">Cartao na entrega</option>
-              </select>
-              <textarea
-                className="min-h-16 w-full rounded-md border border-slate-200 px-3 py-2 text-sm"
-                onChange={(event) => setNotes(event.target.value)}
-                placeholder="Observacoes"
-                value={notes}
-              />
+                <input
+                  className="w-full rounded-md border border-slate-200 px-3 py-2 text-sm"
+                  onChange={(event) => setCustomerPhone(event.target.value)}
+                  placeholder="Telefone"
+                  required
+                  value={customerPhone}
+                />
+                <select
+                  className="w-full rounded-md border border-slate-200 px-3 py-2 text-sm"
+                  onChange={(event) =>
+                    setFulfillmentMethod(event.target.value as FulfillmentMethod)
+                  }
+                  value={fulfillmentMethod}
+                >
+                  <option value="DELIVERY">Delivery</option>
+                  <option value="PICKUP">Retirada</option>
+                </select>
+                {fulfillmentMethod === "DELIVERY" ? (
+                  <textarea
+                    className="min-h-20 w-full rounded-md border border-slate-200 px-3 py-2 text-sm"
+                    onChange={(event) => setDeliveryAddress(event.target.value)}
+                    placeholder="Endereco de entrega"
+                    required
+                    value={deliveryAddress}
+                  />
+                ) : null}
+                <select
+                  className="w-full rounded-md border border-slate-200 px-3 py-2 text-sm"
+                  onChange={(event) => setPaymentMethod(event.target.value as PaymentMethod)}
+                  value={paymentMethod}
+                >
+                  <option value="PIX_MANUAL">PIX</option>
+                  <option value="CASH">Dinheiro</option>
+                  <option value="CARD_ON_DELIVERY">Cartao na entrega</option>
+                </select>
+                <textarea
+                  className="min-h-16 w-full rounded-md border border-slate-200 px-3 py-2 text-sm"
+                  onChange={(event) => setNotes(event.target.value)}
+                  placeholder="Observacoes"
+                  value={notes}
+                />
 
-              {error ? (
-                <p className="rounded-md bg-red-50 p-3 text-sm text-red-700">{error}</p>
-              ) : null}
+                {error ? (
+                  <p className="rounded-md bg-red-50 p-3 text-sm text-red-700">{error}</p>
+                ) : null}
 
-              {createdOrder ? (
-                <div className="rounded-md bg-green-50 p-3 text-sm text-green-800">
-                  <p className="font-semibold">Pedido criado: R$ {createdOrder.total}</p>
-                  <a
-                    className="mt-2 inline-block font-semibold underline"
-                    href={createdOrder.whatsappUrl}
-                  >
-                    Enviar resumo no WhatsApp
-                  </a>
-                </div>
-              ) : null}
+                {createdOrder ? (
+                  <div className="rounded-md bg-green-50 p-3 text-sm text-green-800">
+                    <p className="font-semibold">Pedido criado: R$ {createdOrder.total}</p>
+                    <a
+                      className="mt-2 inline-block font-semibold underline"
+                      href={createdOrder.whatsappUrl}
+                    >
+                      Enviar resumo no WhatsApp
+                    </a>
+                  </div>
+                ) : null}
 
-              <button
-                className="w-full rounded-md px-4 py-3 text-sm font-semibold text-white disabled:bg-slate-300"
-                disabled={submitting || !canOrder}
-                style={{ backgroundColor: accentColor }}
-                type="submit"
-              >
-                {submitting ? "Finalizando..." : "Finalizar pedido"}
-              </button>
-            </form>
-          </aside>
-        ) : null}
-      </div>
+                <button
+                  className="w-full rounded-md px-4 py-3 text-sm font-semibold text-white disabled:bg-slate-300"
+                  disabled={submitting || !canOrder}
+                  style={{ backgroundColor: accentColor }}
+                  type="submit"
+                >
+                  {submitting ? "Finalizando..." : "Finalizar pedido"}
+                </button>
+              </form>
+            </aside>
+          ) : null}
+        </div>
+      </section>
+
+      <footer
+        className={`bg-white bg-cover bg-center px-4 py-8 ${
+          branding?.footerImageUrl ? "min-h-40" : ""
+        }`}
+        style={backgroundStyle(branding?.footerImageUrl)}
+      >
+        <div
+          className={`mx-auto max-w-5xl text-sm text-slate-600 ${
+            branding?.footerImageUrl ? "rounded-md bg-white/80 p-4 shadow-sm backdrop-blur-sm" : ""
+          }`}
+        >
+          <p className="font-semibold text-slate-900">{menu.tenant.name}</p>
+          <p>{menu.tenant.isOpen ? "Aberto para pedidos" : "Loja fechada no momento"}</p>
+        </div>
+      </footer>
     </main>
   );
+}
+
+function backgroundStyle(imageUrl: string | null | undefined): CSSProperties | undefined {
+  if (!imageUrl) {
+    return undefined;
+  }
+
+  return {
+    backgroundImage: `url("${imageUrl}")`,
+  };
 }
