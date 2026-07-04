@@ -67,6 +67,9 @@ export class StoreBrandingService {
         id: "preview",
         status: VisualConfigurationStatus.DRAFT,
         logoUrl: data.logoUrl,
+        headerImageUrl: data.headerImageUrl,
+        bodyImageUrl: data.bodyImageUrl,
+        footerImageUrl: data.footerImageUrl,
         primaryColor: data.primaryColor,
         accentColor: data.accentColor,
         neutralTheme: data.neutralTheme,
@@ -215,7 +218,10 @@ export class StoreBrandingService {
     }
 
     return {
-      logoUrl: dto.logoUrl ?? null,
+      logoUrl: normalizeImageValue(dto.logoUrl, "Logo"),
+      headerImageUrl: normalizeImageValue(dto.headerImageUrl, "Imagem de header"),
+      bodyImageUrl: normalizeImageValue(dto.bodyImageUrl, "Imagem de body"),
+      footerImageUrl: normalizeImageValue(dto.footerImageUrl, "Imagem de footer"),
       primaryColor,
       accentColor,
       neutralTheme: dto.neutralTheme as NeutralTheme,
@@ -243,6 +249,9 @@ export class StoreBrandingService {
     id: string;
     status: VisualConfigurationStatus | string;
     logoUrl: string | null;
+    headerImageUrl?: string | null;
+    bodyImageUrl?: string | null;
+    footerImageUrl?: string | null;
     primaryColor: string;
     accentColor: string;
     neutralTheme: NeutralTheme | string;
@@ -256,6 +265,9 @@ export class StoreBrandingService {
       id: configuration.id,
       status: configuration.status,
       logoUrl: configuration.logoUrl,
+      headerImageUrl: configuration.headerImageUrl ?? DEFAULT_STORE_BRANDING.headerImageUrl,
+      bodyImageUrl: configuration.bodyImageUrl ?? DEFAULT_STORE_BRANDING.bodyImageUrl,
+      footerImageUrl: configuration.footerImageUrl ?? DEFAULT_STORE_BRANDING.footerImageUrl,
       primaryColor: configuration.primaryColor,
       accentColor: configuration.accentColor,
       neutralTheme: configuration.neutralTheme,
@@ -271,4 +283,30 @@ export class StoreBrandingService {
           : configuration.publishedAt,
     };
   }
+}
+
+function normalizeImageValue(value: string | null | undefined, label: string): string | null {
+  const normalized = value?.trim() ?? "";
+  if (!normalized) {
+    return null;
+  }
+
+  if (isHttpUrl(normalized) || isImageDataUrl(normalized)) {
+    return normalized;
+  }
+
+  throw new BadRequestException(`${label} deve ser uma URL ou upload de imagem em base64`);
+}
+
+function isHttpUrl(value: string): boolean {
+  try {
+    const url = new URL(value);
+    return url.protocol === "http:" || url.protocol === "https:";
+  } catch {
+    return false;
+  }
+}
+
+function isImageDataUrl(value: string): boolean {
+  return /^data:image\/(png|jpe?g|webp|gif);base64,[a-z0-9+/=\s]+$/i.test(value);
 }

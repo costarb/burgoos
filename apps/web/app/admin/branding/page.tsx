@@ -25,7 +25,10 @@ async function saveDraftAction(
     const token = await getAdminToken();
 
     await saveBrandingDraft(token, {
-      logoUrl: String(formData.get("logoUrl") ?? "") || null,
+      logoUrl: await readImageAsset(formData, "logoUrl", "logoUpload"),
+      headerImageUrl: await readImageAsset(formData, "headerImageUrl", "headerImageUpload"),
+      bodyImageUrl: await readImageAsset(formData, "bodyImageUrl", "bodyImageUpload"),
+      footerImageUrl: await readImageAsset(formData, "footerImageUrl", "footerImageUpload"),
       primaryColor: String(formData.get("primaryColor") ?? "#C92A2A"),
       accentColor: String(formData.get("accentColor") ?? "#F59F00"),
       neutralTheme: String(formData.get("neutralTheme") ?? "LIGHT") as "LIGHT",
@@ -95,6 +98,26 @@ async function restoreFormAction(
   return restoreAction();
 }
 
+async function readImageAsset(
+  formData: FormData,
+  textFieldName: string,
+  fileFieldName: string
+): Promise<string | null> {
+  const uploaded = formData.get(fileFieldName);
+
+  if (uploaded instanceof File && uploaded.size > 0) {
+    if (!uploaded.type.startsWith("image/")) {
+      throw new Error("Arquivo de imagem invalido.");
+    }
+
+    const base64 = Buffer.from(await uploaded.arrayBuffer()).toString("base64");
+    return `data:${uploaded.type};base64,${base64}`;
+  }
+
+  const textValue = String(formData.get(textFieldName) ?? "").trim();
+  return textValue || null;
+}
+
 export default async function BrandingPage() {
   const token = await getAdminToken();
   const [state, history] = await Promise.all([getBrandingState(token), getBrandingHistory(token)]);
@@ -112,16 +135,33 @@ export default async function BrandingPage() {
             className="grid gap-4 rounded-md border border-slate-200 bg-white p-5 shadow-sm"
             feedbackClassName="mt-4"
           >
-            <label className="grid gap-1 text-sm font-medium">
-              Logo URL
-              <input
-                className="rounded-md border border-slate-300 px-3 py-2"
-                defaultValue={current?.logoUrl ?? ""}
+            <fieldset className="grid gap-4 rounded-md border border-slate-200 p-4">
+              <legend className="px-1 text-sm font-semibold">Imagens da pagina</legend>
+              <ImageAssetField
+                currentValue={current?.logoUrl ?? ""}
+                fileName="logoUpload"
+                label="Logo"
                 name="logoUrl"
-                placeholder="https://..."
-                type="url"
               />
-            </label>
+              <ImageAssetField
+                currentValue={current?.headerImageUrl ?? ""}
+                fileName="headerImageUpload"
+                label="Imagem de header"
+                name="headerImageUrl"
+              />
+              <ImageAssetField
+                currentValue={current?.bodyImageUrl ?? ""}
+                fileName="bodyImageUpload"
+                label="Imagem de body"
+                name="bodyImageUrl"
+              />
+              <ImageAssetField
+                currentValue={current?.footerImageUrl ?? ""}
+                fileName="footerImageUpload"
+                label="Imagem de footer"
+                name="footerImageUrl"
+              />
+            </fieldset>
             <div className="grid gap-4 sm:grid-cols-2">
               <label className="grid gap-1 text-sm font-medium">
                 Cor principal
@@ -234,13 +274,22 @@ export default async function BrandingPage() {
               className="mt-4 rounded-md border border-slate-200 p-4"
               style={{ borderTopColor: current?.primaryColor ?? "#C92A2A", borderTopWidth: 6 }}
             >
+              <ImagePreview imageUrl={current?.headerImageUrl ?? null} label="Header" />
               <p
                 className="text-sm font-semibold"
                 style={{ color: current?.primaryColor ?? "#C92A2A" }}
               >
                 /loja
               </p>
+              {current?.logoUrl ? (
+                <img
+                  alt=""
+                  className="mt-3 h-12 w-12 rounded-md border border-slate-200 object-contain"
+                  src={current.logoUrl}
+                />
+              ) : null}
               <p className="mt-2 text-xl font-bold">Produto exemplo</p>
+              <ImagePreview imageUrl={current?.bodyImageUrl ?? null} label="Body" />
               <p className="mt-1 text-sm text-slate-600">
                 Layout {current?.layoutPreset ?? "classic"}
               </p>
@@ -260,6 +309,7 @@ export default async function BrandingPage() {
                   Modo somente consulta
                 </p>
               )}
+              <ImagePreview imageUrl={current?.footerImageUrl ?? null} label="Footer" />
             </div>
           </aside>
         </div>
@@ -329,5 +379,61 @@ export default async function BrandingPage() {
         </section>
       </section>
     </main>
+  );
+}
+
+function ImageAssetField({
+  currentValue,
+  fileName,
+  label,
+  name,
+}: {
+  currentValue: string;
+  fileName: string;
+  label: string;
+  name: string;
+}) {
+  return (
+    <div className="grid gap-2 rounded-md border border-slate-100 bg-slate-50 p-3">
+      <label className="grid gap-1 text-sm font-medium">
+        {label}
+        <textarea
+          className="min-h-16 rounded-md border border-slate-300 bg-white px-3 py-2"
+          defaultValue={currentValue}
+          name={name}
+          placeholder="https://... ou data:image/..."
+        />
+      </label>
+      <label className="grid gap-1 text-sm font-medium">
+        Upload
+        <input
+          accept="image/*"
+          className="rounded-md border border-slate-300 bg-white px-3 py-2"
+          name={fileName}
+          type="file"
+        />
+      </label>
+      {currentValue ? (
+        <img
+          alt=""
+          className="h-20 w-full rounded-md border border-slate-200 bg-white object-contain"
+          src={currentValue}
+        />
+      ) : null}
+    </div>
+  );
+}
+
+function ImagePreview({ imageUrl, label }: { imageUrl: string | null; label: string }) {
+  if (!imageUrl) {
+    return null;
+  }
+
+  return (
+    <img
+      alt={label}
+      className="mb-3 mt-3 max-h-28 w-full rounded-md border border-slate-200 object-cover"
+      src={imageUrl}
+    />
   );
 }

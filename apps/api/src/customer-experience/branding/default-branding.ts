@@ -1,5 +1,8 @@
 export interface StoreBrandingView {
   logoUrl: string | null;
+  headerImageUrl: string | null;
+  bodyImageUrl: string | null;
+  footerImageUrl: string | null;
   primaryColor: string;
   accentColor: string;
   neutralTheme: "LIGHT" | "DARK" | "SYSTEM_DEFAULT";
@@ -11,6 +14,9 @@ export interface StoreBrandingView {
 
 export const DEFAULT_STORE_BRANDING: StoreBrandingView = {
   logoUrl: null,
+  headerImageUrl: null,
+  bodyImageUrl: null,
+  footerImageUrl: null,
   primaryColor: "#C92A2A",
   accentColor: "#F59F00",
   neutralTheme: "LIGHT",
@@ -24,6 +30,9 @@ export function toPublicBranding(
   configuration:
     | {
         logoUrl: string | null;
+        headerImageUrl?: string | null;
+        bodyImageUrl?: string | null;
+        footerImageUrl?: string | null;
         primaryColor: string;
         accentColor: string;
         neutralTheme: "LIGHT" | "DARK" | "SYSTEM_DEFAULT";
@@ -41,6 +50,9 @@ export function toPublicBranding(
 
   return {
     logoUrl: configuration.logoUrl,
+    headerImageUrl: configuration.headerImageUrl ?? DEFAULT_STORE_BRANDING.headerImageUrl,
+    bodyImageUrl: configuration.bodyImageUrl ?? DEFAULT_STORE_BRANDING.bodyImageUrl,
+    footerImageUrl: configuration.footerImageUrl ?? DEFAULT_STORE_BRANDING.footerImageUrl,
     primaryColor: configuration.primaryColor,
     accentColor: configuration.accentColor,
     neutralTheme: configuration.neutralTheme,

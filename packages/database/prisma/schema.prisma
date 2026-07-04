@@ -626,6 +626,9 @@ model StoreVisualConfiguration {
   tenantId                String                    @map("tenant_id") @db.Uuid
   status                  VisualConfigurationStatus @default(DRAFT)
   logoUrl                 String?                   @map("logo_url")
+  headerImageUrl          String?                   @map("header_image_url")
+  bodyImageUrl            String?                   @map("body_image_url")
+  footerImageUrl          String?                   @map("footer_image_url")
   primaryColor            String                    @map("primary_color")
   accentColor             String                    @map("accent_color")
   neutralTheme            NeutralTheme              @default(LIGHT) @map("neutral_theme")

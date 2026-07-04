@@ -161,6 +161,13 @@ export function PublicMenuClient({ menu }: PublicMenuClientProps) {
       className={`public-menu-layout public-menu-layout-${layoutPreset} min-h-screen bg-cream text-ink`}
     >
       <header className="border-b border-orange-100 bg-white px-4 py-5 shadow-sm">
+        {branding?.headerImageUrl ? (
+          <img
+            alt=""
+            className="mx-auto mb-4 max-h-64 w-full max-w-5xl rounded-md object-cover"
+            src={branding.headerImageUrl}
+          />
+        ) : null}
         <div className="mx-auto flex max-w-5xl items-center justify-between gap-4">
           <div>
             <p className="text-xs font-semibold uppercase" style={{ color: primaryColor }}>
@@ -189,6 +196,13 @@ export function PublicMenuClient({ menu }: PublicMenuClientProps) {
         }`}
       >
         <section className="public-menu-categories space-y-8">
+          {branding?.bodyImageUrl ? (
+            <img
+              alt=""
+              className="max-h-80 w-full rounded-md border border-orange-100 object-cover"
+              src={branding.bodyImageUrl}
+            />
+          ) : null}
           {!orderingEnabled ? (
             <div className="rounded-md border border-orange-100 bg-white p-4 text-sm text-slate-700">
               Este cardapio esta em modo consulta. Entre em contato com a loja para fazer pedidos.
@@ -237,6 +251,13 @@ export function PublicMenuClient({ menu }: PublicMenuClientProps) {
               </div>
             </section>
           ))}
+          {branding?.footerImageUrl ? (
+            <img
+              alt=""
+              className="max-h-64 w-full rounded-md border border-orange-100 object-cover"
+              src={branding.footerImageUrl}
+            />
+          ) : null}
         </section>
 
         {orderingEnabled ? (

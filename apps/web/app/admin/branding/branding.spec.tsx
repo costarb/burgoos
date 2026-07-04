@@ -21,6 +21,9 @@ vi.mock("../../../lib/api", () => ({
       id: "33333333-3333-4333-8333-333333333333",
       status: "PUBLISHED",
       logoUrl: null,
+      headerImageUrl: null,
+      bodyImageUrl: null,
+      footerImageUrl: null,
       primaryColor: "#C92A2A",
       accentColor: "#F59F00",
       neutralTheme: "LIGHT",
@@ -49,6 +52,10 @@ describe("branding settings page", () => {
 
     expect(html).toContain("Identidade visual");
     expect(html).toContain('name="logoUrl"');
+    expect(html).toContain('name="logoUpload"');
+    expect(html).toContain('name="headerImageUrl"');
+    expect(html).toContain('name="bodyImageUrl"');
+    expect(html).toContain('name="footerImageUrl"');
     expect(html).toContain('name="primaryColor"');
     expect(html).toContain('name="accentColor"');
     expect(html).toContain('name="neutralTheme"');

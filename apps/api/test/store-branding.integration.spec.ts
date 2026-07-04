@@ -26,6 +26,9 @@ describe("store branding", () => {
     tenantId: tenant.id,
     status: "DRAFT",
     logoUrl: "https://example.com/logo.png",
+    headerImageUrl: null,
+    bodyImageUrl: null,
+    footerImageUrl: null,
     primaryColor: "#C92A2A",
     accentColor: "#F59F00",
     neutralTheme: "LIGHT",
@@ -140,6 +143,7 @@ describe("store branding", () => {
       .set("Authorization", `Bearer ${ownerToken}`)
       .send({
         logoUrl: "https://example.com/logo.png",
+        headerImageUrl: "data:image/png;base64,AAAA",
         primaryColor: "#c92a2a",
         accentColor: "#f59f00",
         neutralTheme: "LIGHT",
@@ -153,6 +157,7 @@ describe("store branding", () => {
         data: expect.objectContaining({
           primaryColor: "#C92A2A",
           accentColor: "#F59F00",
+          headerImageUrl: "data:image/png;base64,AAAA",
         }),
       })
     );
@@ -161,6 +166,9 @@ describe("store branding", () => {
       status: "DRAFT",
       primaryColor: "#C92A2A",
       layoutPreset: "classic",
+      headerImageUrl: null,
+      bodyImageUrl: null,
+      footerImageUrl: null,
     });
   });
 
