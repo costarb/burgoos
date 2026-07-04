@@ -432,7 +432,7 @@ function ImagePreview({ imageUrl, label }: { imageUrl: string | null; label: str
   return (
     <img
       alt={label}
-      className="mb-3 mt-3 max-h-28 w-full rounded-md border border-slate-200 object-cover"
+      className="mb-3 mt-3 h-auto w-full rounded-md border border-slate-200 object-contain"
       src={imageUrl}
     />
   );
