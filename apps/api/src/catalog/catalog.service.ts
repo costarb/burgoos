@@ -18,6 +18,9 @@ interface PublicMenuResponse {
       accentColor: string;
       neutralTheme: string;
       layoutPreset: string;
+      showProductImages: boolean;
+      showProductDescriptions: boolean;
+      orderingEnabled: boolean;
     };
   };
   categories: Array<{

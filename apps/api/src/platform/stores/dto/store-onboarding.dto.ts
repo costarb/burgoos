@@ -1,6 +1,8 @@
 import { Type } from "class-transformer";
 import {
   IsBoolean,
+  IsIn,
+  IsObject,
   IsEmail,
   IsOptional,
   IsString,
@@ -38,6 +40,14 @@ export class CreateStoreDto {
   @IsBoolean()
   isOpen?: boolean;
 
+  @IsOptional()
+  @IsIn(["SCHEDULE", "FORCE_OPEN", "FORCE_CLOSED"])
+  openMode?: "SCHEDULE" | "FORCE_OPEN" | "FORCE_CLOSED";
+
+  @IsOptional()
+  @IsObject()
+  operatingHours?: Record<string, unknown>;
+
   @ValidateNested()
   @Type(() => CreateStoreOwnerDto)
   owner!: CreateStoreOwnerDto;
@@ -63,4 +73,12 @@ export class UpdateStoreDto {
   @IsOptional()
   @IsBoolean()
   isOpen?: boolean;
+
+  @IsOptional()
+  @IsIn(["SCHEDULE", "FORCE_OPEN", "FORCE_CLOSED"])
+  openMode?: "SCHEDULE" | "FORCE_OPEN" | "FORCE_CLOSED";
+
+  @IsOptional()
+  @IsObject()
+  operatingHours?: Record<string, unknown>;
 }

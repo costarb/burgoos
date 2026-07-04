@@ -6,7 +6,7 @@ import {
   Logger,
   NotFoundException,
 } from "@nestjs/common";
-import { FulfillmentMethod, OrderStatus, Prisma } from "@prisma/client";
+import { FulfillmentMethod, OrderStatus, Prisma, VisualConfigurationStatus } from "@prisma/client";
 import { IfoodStatusSyncService } from "../management/integrations/ifood/ifood-status-sync.service";
 import { OrderProfitabilityService } from "../management/reports/order-profitability.service";
 import { InventoryService, OrderStockWarning } from "../operations/inventory/inventory.service";
@@ -53,6 +53,31 @@ export class OrderingService {
     if (!tenant.isOpen) {
       this.logger.warn(`Checkout rejected because store is closed slug=${slug}`);
       throw new ConflictException("Store is closed");
+    }
+
+    const storeVisualConfiguration = (
+      this.prisma as PrismaService & {
+        storeVisualConfiguration?: PrismaService["storeVisualConfiguration"];
+      }
+    ).storeVisualConfiguration;
+    const menuConfiguration = storeVisualConfiguration
+      ? await storeVisualConfiguration.findFirst({
+          where: {
+            tenantId: tenant.id,
+            status: VisualConfigurationStatus.PUBLISHED,
+          },
+          orderBy: {
+            publishedAt: "desc",
+          },
+          select: {
+            orderingEnabled: true,
+          },
+        })
+      : null;
+
+    if (menuConfiguration?.orderingEnabled === false) {
+      this.logger.warn(`Checkout rejected because ordering is disabled slug=${slug}`);
+      throw new ConflictException("Online ordering is disabled");
     }
 
     if (dto.items.length === 0) {
@@ -300,20 +325,25 @@ export class OrderingService {
       await this.orderProfitabilityService.createDeliveredOrderSnapshots(tenantId, orderId);
     }
 
-    const responseOrder = await this.prisma.order.findUnique({
-      where: { id: orderId },
-      include: {
-        items: true,
-        platformOrderLink: {
+    const orderDelegate = this.prisma.order as PrismaService["order"] & {
+      findUnique?: PrismaService["order"]["findUnique"];
+    };
+    const responseOrder = orderDelegate.findUnique
+      ? await orderDelegate.findUnique({
+          where: { id: orderId },
           include: {
-            syncAttempts: {
-              orderBy: { createdAt: "desc" },
-              take: 1,
+            items: true,
+            platformOrderLink: {
+              include: {
+                syncAttempts: {
+                  orderBy: { createdAt: "desc" },
+                  take: 1,
+                },
+              },
             },
           },
-        },
-      },
-    });
+        })
+      : null;
 
     this.logger.log(
       `Order status changed tenantId=${tenantId} orderId=${orderId} status=${status}`
