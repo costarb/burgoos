@@ -140,6 +140,7 @@ export type NeutralTheme = "LIGHT" | "DARK" | "SYSTEM_DEFAULT";
 export type VisualConfigurationStatus = "DRAFT" | "PUBLISHED" | "ARCHIVED";
 
 export type StoreLayoutPresetKey = "classic" | "compact" | "visual";
+export type StoreOpenMode = "SCHEDULE" | "FORCE_OPEN" | "FORCE_CLOSED";
 
 export interface LayoutPreset {
   key: StoreLayoutPresetKey;
@@ -154,6 +155,9 @@ export interface PublicStoreBranding {
   accentColor: string;
   neutralTheme: NeutralTheme;
   layoutPreset: StoreLayoutPresetKey;
+  showProductImages: boolean;
+  showProductDescriptions: boolean;
+  orderingEnabled: boolean;
 }
 
 export interface StoreOwnerInput {
@@ -168,6 +172,8 @@ export interface CreateStoreInput {
   phone: string;
   active?: boolean;
   isOpen?: boolean;
+  openMode?: StoreOpenMode;
+  operatingHours?: Record<string, unknown>;
   owner: StoreOwnerInput;
 }
 
@@ -177,6 +183,8 @@ export interface UpdateStoreInput {
   phone?: string;
   active?: boolean;
   isOpen?: boolean;
+  openMode?: StoreOpenMode;
+  operatingHours?: Record<string, unknown>;
 }
 
 export interface LaunchReadinessCheck {
@@ -196,6 +204,7 @@ export interface StoreSummary {
   slug: string;
   active: boolean;
   isOpen: boolean;
+  openMode: StoreOpenMode;
   readiness?: LaunchReadiness;
 }
 
@@ -207,6 +216,7 @@ export interface StoreResponsibleUser {
 
 export interface StoreDetail extends StoreSummary {
   phone: string;
+  operatingHours: Record<string, unknown>;
   owner?: StoreResponsibleUser;
   branding?: VisualConfiguration;
 }
@@ -222,6 +232,9 @@ export interface BrandingDraftInput {
   accentColor: string;
   neutralTheme: NeutralTheme;
   layoutPreset: StoreLayoutPresetKey;
+  showProductImages?: boolean;
+  showProductDescriptions?: boolean;
+  orderingEnabled?: boolean;
 }
 
 export interface VisualConfiguration extends PublicStoreBranding {

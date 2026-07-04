@@ -5,7 +5,7 @@ import {
   Injectable,
   NotFoundException,
 } from "@nestjs/common";
-import { UserRole } from "@prisma/client";
+import { Prisma, StoreOpenMode, UserRole } from "@prisma/client";
 import { hash } from "bcryptjs";
 import { PrismaService } from "../database/prisma.service";
 import { CreateStoreDto, UpdateStoreDto } from "./dto/store-onboarding.dto";
@@ -19,6 +19,7 @@ interface StoreSummary {
   slug: string;
   active: boolean;
   isOpen: boolean;
+  openMode: StoreOpenMode;
   readiness?: LaunchReadiness;
 }
 
@@ -30,6 +31,7 @@ interface StoreResponsibleUser {
 
 interface StoreDetail extends StoreSummary {
   phone: string;
+  operatingHours: Prisma.JsonValue;
   owner?: StoreResponsibleUser;
 }
 
@@ -54,6 +56,7 @@ export class PlatformStoreService {
       slug: store.slug,
       active: store.active,
       isOpen: store.isOpen,
+      openMode: store.openMode,
       readiness: calculateLaunchReadiness(store),
     }));
   }
@@ -70,7 +73,10 @@ export class PlatformStoreService {
         slug,
         phone: dto.phone,
         active: dto.active ?? true,
-        isOpen: dto.isOpen ?? false,
+        isOpen: this.resolveIsOpen(dto.openMode, dto.isOpen ?? false),
+        openMode:
+          dto.openMode ?? (dto.isOpen ? StoreOpenMode.FORCE_OPEN : StoreOpenMode.FORCE_CLOSED),
+        operatingHours: (dto.operatingHours ?? {}) as Prisma.InputJsonValue,
         setupCompletedAt: new Date(),
         createdByPlatformUserId: platformUserId,
         defaultLayoutPresetKey: "classic",
@@ -102,6 +108,8 @@ export class PlatformStoreService {
         phone: store.phone,
         active: store.active,
         isOpen: store.isOpen,
+        openMode: store.openMode,
+        operatingHours: store.operatingHours,
         owner: {
           id: owner.id,
           name: owner.name,
@@ -134,6 +142,15 @@ export class PlatformStoreService {
 
     if (dto.isOpen !== undefined) {
       data.isOpen = dto.isOpen;
+    }
+
+    if (dto.openMode !== undefined) {
+      data.openMode = dto.openMode;
+      data.isOpen = this.resolveIsOpen(dto.openMode, dto.isOpen);
+    }
+
+    if (dto.operatingHours !== undefined) {
+      data.operatingHours = dto.operatingHours as Prisma.InputJsonValue;
     }
 
     if (dto.active !== undefined) {
@@ -191,6 +208,8 @@ export class PlatformStoreService {
       phone: store.phone,
       active: store.active,
       isOpen: store.isOpen,
+      openMode: store.openMode,
+      operatingHours: store.operatingHours,
       owner: owner
         ? {
             id: owner.id,
@@ -228,6 +247,18 @@ export class PlatformStoreService {
     if (existing) {
       throw new ConflictException("E-mail do responsavel ja esta em uso");
     }
+  }
+
+  private resolveIsOpen(openMode?: StoreOpenMode | string, fallback = false): boolean {
+    if (openMode === StoreOpenMode.FORCE_OPEN) {
+      return true;
+    }
+
+    if (openMode === StoreOpenMode.FORCE_CLOSED) {
+      return false;
+    }
+
+    return fallback;
   }
 
   private readonly storeRelations = {

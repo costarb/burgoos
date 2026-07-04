@@ -27,6 +27,10 @@ export function PublicMenuClient({ menu }: PublicMenuClientProps) {
   const primaryColor = branding?.primaryColor ?? "#C92A2A";
   const accentColor = branding?.accentColor ?? "#F59F00";
   const layoutPreset = branding?.layoutPreset ?? "classic";
+  const showProductImages = branding?.showProductImages ?? false;
+  const showProductDescriptions = branding?.showProductDescriptions ?? false;
+  const orderingEnabled = branding?.orderingEnabled ?? true;
+  const canOrder = menu.tenant.isOpen && orderingEnabled;
   const router = useRouter();
   const [cart, setCart] = useState<Record<string, CartLine>>({});
   const [customerName, setCustomerName] = useState("");
@@ -96,6 +100,11 @@ export function PublicMenuClient({ menu }: PublicMenuClientProps) {
     event.preventDefault();
     setError(null);
     setCreatedOrder(null);
+
+    if (!orderingEnabled) {
+      setError("Este cardapio esta disponivel apenas para consulta.");
+      return;
+    }
 
     if (!menu.tenant.isOpen) {
       setError("A loja esta fechada no momento.");
@@ -174,8 +183,17 @@ export function PublicMenuClient({ menu }: PublicMenuClientProps) {
         </div>
       </header>
 
-      <div className="public-menu-shell mx-auto grid max-w-5xl gap-6 px-4 py-6 lg:grid-cols-[1fr_360px]">
+      <div
+        className={`public-menu-shell mx-auto grid max-w-5xl gap-6 px-4 py-6 ${
+          orderingEnabled ? "lg:grid-cols-[1fr_360px]" : ""
+        }`}
+      >
         <section className="public-menu-categories space-y-8">
+          {!orderingEnabled ? (
+            <div className="rounded-md border border-orange-100 bg-white p-4 text-sm text-slate-700">
+              Este cardapio esta em modo consulta. Entre em contato com a loja para fazer pedidos.
+            </div>
+          ) : null}
           {menu.categories.map((category) => (
             <section key={category.id}>
               <h2 className="text-xl font-semibold">{category.name}</h2>
@@ -185,22 +203,35 @@ export function PublicMenuClient({ menu }: PublicMenuClientProps) {
                     key={product.id}
                     className="public-menu-product grid grid-cols-[1fr_auto] items-center gap-4 p-4"
                   >
-                    <div>
-                      <h3 className="font-semibold">{product.name}</h3>
-                      <p className="mt-1 text-sm text-slate-600">{product.description}</p>
-                      <p className="mt-2 font-semibold" style={{ color: primaryColor }}>
-                        R$ {product.price}
-                      </p>
+                    <div className="grid min-w-0 gap-3 sm:grid-cols-[auto_1fr]">
+                      {showProductImages && product.imageUrl ? (
+                        <img
+                          alt=""
+                          className="h-20 w-20 rounded-md object-cover"
+                          src={product.imageUrl}
+                        />
+                      ) : null}
+                      <div>
+                        <h3 className="font-semibold">{product.name}</h3>
+                        {showProductDescriptions && product.description ? (
+                          <p className="mt-1 text-sm text-slate-600">{product.description}</p>
+                        ) : null}
+                        <p className="mt-2 font-semibold" style={{ color: primaryColor }}>
+                          R$ {product.price}
+                        </p>
+                      </div>
                     </div>
-                    <button
-                      className="rounded-md px-3 py-2 text-sm font-semibold text-white disabled:bg-slate-300"
-                      disabled={!menu.tenant.isOpen}
-                      onClick={() => addProduct(product)}
-                      style={{ backgroundColor: primaryColor }}
-                      type="button"
-                    >
-                      Adicionar
-                    </button>
+                    {orderingEnabled ? (
+                      <button
+                        className="rounded-md px-3 py-2 text-sm font-semibold text-white disabled:bg-slate-300"
+                        disabled={!canOrder}
+                        onClick={() => addProduct(product)}
+                        style={{ backgroundColor: primaryColor }}
+                        type="button"
+                      >
+                        Adicionar
+                      </button>
+                    ) : null}
                   </article>
                 ))}
               </div>
@@ -208,122 +239,124 @@ export function PublicMenuClient({ menu }: PublicMenuClientProps) {
           ))}
         </section>
 
-        <aside className="public-menu-cart h-fit rounded-md border border-orange-100 bg-white p-4 shadow-sm">
-          <h2 className="text-lg font-semibold">Seu pedido</h2>
+        {orderingEnabled ? (
+          <aside className="public-menu-cart h-fit rounded-md border border-orange-100 bg-white p-4 shadow-sm">
+            <h2 className="text-lg font-semibold">Seu pedido</h2>
 
-          <div className="mt-4 space-y-3">
-            {cartLines.length === 0 ? (
-              <p className="text-sm text-slate-600">Carrinho vazio.</p>
-            ) : (
-              cartLines.map((line) => (
-                <div key={line.product.id} className="grid grid-cols-[1fr_auto] gap-3">
-                  <div>
-                    <p className="font-medium">{line.product.name}</p>
-                    <p className="text-sm text-slate-600">R$ {line.product.price}</p>
+            <div className="mt-4 space-y-3">
+              {cartLines.length === 0 ? (
+                <p className="text-sm text-slate-600">Carrinho vazio.</p>
+              ) : (
+                cartLines.map((line) => (
+                  <div key={line.product.id} className="grid grid-cols-[1fr_auto] gap-3">
+                    <div>
+                      <p className="font-medium">{line.product.name}</p>
+                      <p className="text-sm text-slate-600">R$ {line.product.price}</p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <button
+                        className="h-8 w-8 rounded-md border border-slate-200"
+                        onClick={() => updateQuantity(line.product.id, line.quantity - 1)}
+                        type="button"
+                      >
+                        -
+                      </button>
+                      <span className="w-6 text-center text-sm font-semibold">{line.quantity}</span>
+                      <button
+                        className="h-8 w-8 rounded-md border border-slate-200"
+                        onClick={() => updateQuantity(line.product.id, line.quantity + 1)}
+                        type="button"
+                      >
+                        +
+                      </button>
+                    </div>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <button
-                      className="h-8 w-8 rounded-md border border-slate-200"
-                      onClick={() => updateQuantity(line.product.id, line.quantity - 1)}
-                      type="button"
-                    >
-                      -
-                    </button>
-                    <span className="w-6 text-center text-sm font-semibold">{line.quantity}</span>
-                    <button
-                      className="h-8 w-8 rounded-md border border-slate-200"
-                      onClick={() => updateQuantity(line.product.id, line.quantity + 1)}
-                      type="button"
-                    >
-                      +
-                    </button>
-                  </div>
-                </div>
-              ))
-            )}
-          </div>
+                ))
+              )}
+            </div>
 
-          <div className="mt-4 flex items-center justify-between border-t border-slate-200 pt-4">
-            <span className="font-semibold">Total estimado</span>
-            <span className="font-bold" style={{ color: primaryColor }}>
-              R$ {cartTotal.toFixed(2)}
-            </span>
-          </div>
+            <div className="mt-4 flex items-center justify-between border-t border-slate-200 pt-4">
+              <span className="font-semibold">Total estimado</span>
+              <span className="font-bold" style={{ color: primaryColor }}>
+                R$ {cartTotal.toFixed(2)}
+              </span>
+            </div>
 
-          <form className="mt-5 space-y-3" onSubmit={handleSubmit}>
-            <input
-              className="w-full rounded-md border border-slate-200 px-3 py-2 text-sm"
-              onChange={(event) => setCustomerName(event.target.value)}
-              placeholder="Nome"
-              required
-              value={customerName}
-            />
-            <input
-              className="w-full rounded-md border border-slate-200 px-3 py-2 text-sm"
-              onChange={(event) => setCustomerPhone(event.target.value)}
-              placeholder="Telefone"
-              required
-              value={customerPhone}
-            />
-            <select
-              className="w-full rounded-md border border-slate-200 px-3 py-2 text-sm"
-              onChange={(event) => setFulfillmentMethod(event.target.value as FulfillmentMethod)}
-              value={fulfillmentMethod}
-            >
-              <option value="DELIVERY">Delivery</option>
-              <option value="PICKUP">Retirada</option>
-            </select>
-            {fulfillmentMethod === "DELIVERY" ? (
-              <textarea
-                className="min-h-20 w-full rounded-md border border-slate-200 px-3 py-2 text-sm"
-                onChange={(event) => setDeliveryAddress(event.target.value)}
-                placeholder="Endereco de entrega"
+            <form className="mt-5 space-y-3" onSubmit={handleSubmit}>
+              <input
+                className="w-full rounded-md border border-slate-200 px-3 py-2 text-sm"
+                onChange={(event) => setCustomerName(event.target.value)}
+                placeholder="Nome"
                 required
-                value={deliveryAddress}
+                value={customerName}
               />
-            ) : null}
-            <select
-              className="w-full rounded-md border border-slate-200 px-3 py-2 text-sm"
-              onChange={(event) => setPaymentMethod(event.target.value as PaymentMethod)}
-              value={paymentMethod}
-            >
-              <option value="PIX_MANUAL">PIX</option>
-              <option value="CASH">Dinheiro</option>
-              <option value="CARD_ON_DELIVERY">Cartao na entrega</option>
-            </select>
-            <textarea
-              className="min-h-16 w-full rounded-md border border-slate-200 px-3 py-2 text-sm"
-              onChange={(event) => setNotes(event.target.value)}
-              placeholder="Observacoes"
-              value={notes}
-            />
+              <input
+                className="w-full rounded-md border border-slate-200 px-3 py-2 text-sm"
+                onChange={(event) => setCustomerPhone(event.target.value)}
+                placeholder="Telefone"
+                required
+                value={customerPhone}
+              />
+              <select
+                className="w-full rounded-md border border-slate-200 px-3 py-2 text-sm"
+                onChange={(event) => setFulfillmentMethod(event.target.value as FulfillmentMethod)}
+                value={fulfillmentMethod}
+              >
+                <option value="DELIVERY">Delivery</option>
+                <option value="PICKUP">Retirada</option>
+              </select>
+              {fulfillmentMethod === "DELIVERY" ? (
+                <textarea
+                  className="min-h-20 w-full rounded-md border border-slate-200 px-3 py-2 text-sm"
+                  onChange={(event) => setDeliveryAddress(event.target.value)}
+                  placeholder="Endereco de entrega"
+                  required
+                  value={deliveryAddress}
+                />
+              ) : null}
+              <select
+                className="w-full rounded-md border border-slate-200 px-3 py-2 text-sm"
+                onChange={(event) => setPaymentMethod(event.target.value as PaymentMethod)}
+                value={paymentMethod}
+              >
+                <option value="PIX_MANUAL">PIX</option>
+                <option value="CASH">Dinheiro</option>
+                <option value="CARD_ON_DELIVERY">Cartao na entrega</option>
+              </select>
+              <textarea
+                className="min-h-16 w-full rounded-md border border-slate-200 px-3 py-2 text-sm"
+                onChange={(event) => setNotes(event.target.value)}
+                placeholder="Observacoes"
+                value={notes}
+              />
 
-            {error ? (
-              <p className="rounded-md bg-red-50 p-3 text-sm text-red-700">{error}</p>
-            ) : null}
+              {error ? (
+                <p className="rounded-md bg-red-50 p-3 text-sm text-red-700">{error}</p>
+              ) : null}
 
-            {createdOrder ? (
-              <div className="rounded-md bg-green-50 p-3 text-sm text-green-800">
-                <p className="font-semibold">Pedido criado: R$ {createdOrder.total}</p>
-                <a
-                  className="mt-2 inline-block font-semibold underline"
-                  href={createdOrder.whatsappUrl}
-                >
-                  Enviar resumo no WhatsApp
-                </a>
-              </div>
-            ) : null}
+              {createdOrder ? (
+                <div className="rounded-md bg-green-50 p-3 text-sm text-green-800">
+                  <p className="font-semibold">Pedido criado: R$ {createdOrder.total}</p>
+                  <a
+                    className="mt-2 inline-block font-semibold underline"
+                    href={createdOrder.whatsappUrl}
+                  >
+                    Enviar resumo no WhatsApp
+                  </a>
+                </div>
+              ) : null}
 
-            <button
-              className="w-full rounded-md px-4 py-3 text-sm font-semibold text-white disabled:bg-slate-300"
-              disabled={submitting || !menu.tenant.isOpen}
-              style={{ backgroundColor: accentColor }}
-              type="submit"
-            >
-              {submitting ? "Finalizando..." : "Finalizar pedido"}
-            </button>
-          </form>
-        </aside>
+              <button
+                className="w-full rounded-md px-4 py-3 text-sm font-semibold text-white disabled:bg-slate-300"
+                disabled={submitting || !canOrder}
+                style={{ backgroundColor: accentColor }}
+                type="submit"
+              >
+                {submitting ? "Finalizando..." : "Finalizar pedido"}
+              </button>
+            </form>
+          </aside>
+        ) : null}
       </div>
     </main>
   );

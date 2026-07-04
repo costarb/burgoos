@@ -14,6 +14,7 @@ async function createStoreAction(formData: FormData) {
     name: String(formData.get("name") ?? ""),
     slug: String(formData.get("slug") ?? ""),
     phone: String(formData.get("phone") ?? ""),
+    openMode: formData.get("openMode") === "FORCE_OPEN" ? "FORCE_OPEN" : "FORCE_CLOSED",
     owner: {
       name: String(formData.get("ownerName") ?? ""),
       email: String(formData.get("ownerEmail") ?? ""),
@@ -52,13 +53,14 @@ export default async function StoresPage() {
                   <th className="px-4 py-3 font-semibold">Nome</th>
                   <th className="px-4 py-3 font-semibold">Slug</th>
                   <th className="px-4 py-3 font-semibold">Status</th>
+                  <th className="px-4 py-3 font-semibold">Operacao</th>
                   <th className="px-4 py-3 font-semibold">Pronta</th>
                 </tr>
               </thead>
               <tbody>
                 {stores.length === 0 ? (
                   <tr>
-                    <td className="px-4 py-6 text-slate-600" colSpan={4}>
+                    <td className="px-4 py-6 text-slate-600" colSpan={5}>
                       Nenhuma loja cadastrada.
                     </td>
                   </tr>
@@ -72,6 +74,7 @@ export default async function StoresPage() {
                       </td>
                       <td className="px-4 py-3 text-slate-600">{store.slug}</td>
                       <td className="px-4 py-3">{store.active ? "Ativa" : "Inativa"}</td>
+                      <td className="px-4 py-3">{store.isOpen ? "Aberta" : "Fechada"}</td>
                       <td className="px-4 py-3">{store.readiness?.ready ? "Sim" : "Nao"}</td>
                     </tr>
                   ))
@@ -136,6 +139,13 @@ export default async function StoresPage() {
                 required
                 type="password"
               />
+            </label>
+            <label className="grid gap-1 text-sm font-medium">
+              Operacao inicial
+              <select className="rounded-md border border-slate-300 px-3 py-2" name="openMode">
+                <option value="FORCE_CLOSED">Criar fechada</option>
+                <option value="FORCE_OPEN">Criar aberta</option>
+              </select>
             </label>
           </div>
           <button

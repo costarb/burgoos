@@ -71,6 +71,9 @@ export class StoreBrandingService {
         accentColor: data.accentColor,
         neutralTheme: data.neutralTheme,
         layoutPreset: data.layoutPresetKey,
+        showProductImages: data.showProductImages,
+        showProductDescriptions: data.showProductDescriptions,
+        orderingEnabled: data.orderingEnabled,
         publishedAt: null,
       },
     };
@@ -217,6 +220,10 @@ export class StoreBrandingService {
       accentColor,
       neutralTheme: dto.neutralTheme as NeutralTheme,
       layoutPresetKey: toLayoutPresetKey(dto.layoutPreset),
+      showProductImages: dto.showProductImages ?? DEFAULT_STORE_BRANDING.showProductImages,
+      showProductDescriptions:
+        dto.showProductDescriptions ?? DEFAULT_STORE_BRANDING.showProductDescriptions,
+      orderingEnabled: dto.orderingEnabled ?? DEFAULT_STORE_BRANDING.orderingEnabled,
     };
   }
 
@@ -240,6 +247,9 @@ export class StoreBrandingService {
     accentColor: string;
     neutralTheme: NeutralTheme | string;
     layoutPresetKey: string;
+    showProductImages?: boolean;
+    showProductDescriptions?: boolean;
+    orderingEnabled?: boolean;
     publishedAt: Date | string | null;
   }) {
     return {
@@ -250,6 +260,11 @@ export class StoreBrandingService {
       accentColor: configuration.accentColor,
       neutralTheme: configuration.neutralTheme,
       layoutPreset: configuration.layoutPresetKey,
+      showProductImages:
+        configuration.showProductImages ?? DEFAULT_STORE_BRANDING.showProductImages,
+      showProductDescriptions:
+        configuration.showProductDescriptions ?? DEFAULT_STORE_BRANDING.showProductDescriptions,
+      orderingEnabled: configuration.orderingEnabled ?? DEFAULT_STORE_BRANDING.orderingEnabled,
       publishedAt:
         configuration.publishedAt instanceof Date
           ? configuration.publishedAt.toISOString()
