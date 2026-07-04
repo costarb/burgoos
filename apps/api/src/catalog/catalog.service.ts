@@ -43,6 +43,11 @@ interface ProductFilters {
   provider?: DeliveryProvider;
 }
 
+interface CategoryFilters {
+  search?: string;
+  active?: boolean;
+}
+
 type ProductWithExternalMappings = Prisma.ProductGetPayload<{
   include: {
     externalMappings: {
@@ -65,11 +70,30 @@ export class CatalogService {
     @Inject(StoreBrandingService) private readonly brandingService: StoreBrandingService
   ) {}
 
-  async listCategories(tenantId: string) {
-    return this.prisma.category.findMany({
-      where: { tenantId },
+  async listCategories(tenantId: string, filters: CategoryFilters = {}) {
+    const categories = await this.prisma.category.findMany({
+      where: {
+        tenantId,
+        active: filters.active,
+        name: filters.search ? { contains: filters.search, mode: "insensitive" } : undefined,
+      },
+      include: {
+        _count: {
+          select: {
+            products: true,
+          },
+        },
+      },
       orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
     });
+
+    return categories.map((category) => ({
+      id: category.id,
+      name: category.name,
+      sortOrder: category.sortOrder,
+      active: category.active,
+      productCount: category._count.products,
+    }));
   }
 
   async createCategory(tenantId: string, dto: CreateCategoryDto) {
@@ -81,6 +105,29 @@ export class CatalogService {
         active: dto.active ?? true,
       },
     });
+  }
+
+  async deleteCategory(tenantId: string, categoryId: string) {
+    await this.ensureCategoryBelongsToTenant(tenantId, categoryId);
+
+    const productCount = await this.prisma.product.count({
+      where: {
+        tenantId,
+        categoryId,
+      },
+    });
+
+    if (productCount > 0) {
+      throw new BadRequestException(
+        "Nao e possivel excluir uma categoria com produtos vinculados. Inative a categoria ou mova os produtos antes."
+      );
+    }
+
+    await this.prisma.category.delete({
+      where: { id: categoryId },
+    });
+
+    return { deleted: true };
   }
 
   async updateCategory(tenantId: string, categoryId: string, dto: UpdateCategoryDto) {

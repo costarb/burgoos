@@ -21,6 +21,8 @@ describe("CatalogClient", () => {
     );
 
     expect(html).toContain("Consulta de produtos");
+    expect(html).toContain("Produtos");
+    expect(html).toContain("Categorias");
     expect(html).toContain("Novo produto");
     expect(html).toContain("IFOOD-123");
     expect(html).toContain("Editar");
