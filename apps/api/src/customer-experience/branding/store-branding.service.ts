@@ -183,6 +183,83 @@ export class StoreBrandingService {
     return toPublicBranding(published);
   }
 
+  async getPublicBrandingForMenu(tenantId: string, assetBaseUrl: string | null, slug: string) {
+    const storeVisualConfiguration = (
+      this.prisma as PrismaService & {
+        storeVisualConfiguration?: StoreVisualConfigurationDelegate;
+      }
+    ).storeVisualConfiguration;
+
+    if (!storeVisualConfiguration) {
+      return DEFAULT_STORE_BRANDING;
+    }
+
+    const published = await storeVisualConfiguration.findFirst({
+      where: { tenantId, status: VisualConfigurationStatus.PUBLISHED },
+      orderBy: { publishedAt: "desc" },
+      select: {
+        id: true,
+        primaryColor: true,
+        accentColor: true,
+        neutralTheme: true,
+        layoutPresetKey: true,
+        showProductImages: true,
+        showProductDescriptions: true,
+        orderingEnabled: true,
+      },
+    });
+
+    if (!published) {
+      return DEFAULT_STORE_BRANDING;
+    }
+
+    const [assets] = await this.prisma.$queryRaw<
+      Array<{
+        hasLogoUrl: boolean;
+        hasHeaderImageUrl: boolean;
+        hasBodyImageUrl: boolean;
+        hasFooterImageUrl: boolean;
+      }>
+    >`
+      SELECT
+        logo_url IS NOT NULL AS "hasLogoUrl",
+        header_image_url IS NOT NULL AS "hasHeaderImageUrl",
+        body_image_url IS NOT NULL AS "hasBodyImageUrl",
+        footer_image_url IS NOT NULL AS "hasFooterImageUrl"
+      FROM store_visual_configurations
+      WHERE id = ${published.id}::uuid
+      LIMIT 1
+    `;
+
+    const branding = toPublicBranding({
+      ...published,
+      logoUrl: null,
+      headerImageUrl: null,
+      bodyImageUrl: null,
+      footerImageUrl: null,
+    });
+
+    if (!assetBaseUrl || !assets) {
+      return branding;
+    }
+
+    return {
+      ...branding,
+      logoUrl: assets.hasLogoUrl
+        ? `${assetBaseUrl}/api/public/tenants/${slug}/branding/logo`
+        : null,
+      headerImageUrl: assets.hasHeaderImageUrl
+        ? `${assetBaseUrl}/api/public/tenants/${slug}/branding/header`
+        : null,
+      bodyImageUrl: assets.hasBodyImageUrl
+        ? `${assetBaseUrl}/api/public/tenants/${slug}/branding/body`
+        : null,
+      footerImageUrl: assets.hasFooterImageUrl
+        ? `${assetBaseUrl}/api/public/tenants/${slug}/branding/footer`
+        : null,
+    };
+  }
+
   getDefaultBranding() {
     return DEFAULT_STORE_BRANDING;
   }

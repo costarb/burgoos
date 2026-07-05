@@ -259,7 +259,7 @@ async function fetchPlatform<T>(token: string, path: string, init?: RequestInit)
 
 export async function getPublicMenu(slug: string): Promise<PublicMenu | null> {
   const response = await fetch(`${apiUrl}/api/public/tenants/${slug}/menu`, {
-    cache: "no-store",
+    next: { revalidate: 30 },
   });
 
   if (response.status === 404) {
@@ -270,7 +270,59 @@ export async function getPublicMenu(slug: string): Promise<PublicMenu | null> {
     throw new Error("Failed to load public menu");
   }
 
-  return response.json() as Promise<PublicMenu>;
+  const menu = (await response.json()) as PublicMenu;
+  return normalizePublicMenuAssets(menu);
+}
+
+function normalizePublicMenuAssets(menu: PublicMenu): PublicMenu {
+  const branding = menu.tenant.branding;
+
+  return {
+    ...menu,
+    tenant: {
+      ...menu.tenant,
+      branding: branding
+        ? {
+            ...branding,
+            logoUrl: toPublicAssetUrl(menu.tenant.slug, branding.logoUrl, "branding/logo"),
+            headerImageUrl: toPublicAssetUrl(
+              menu.tenant.slug,
+              branding.headerImageUrl,
+              "branding/header"
+            ),
+            bodyImageUrl: toPublicAssetUrl(
+              menu.tenant.slug,
+              branding.bodyImageUrl,
+              "branding/body"
+            ),
+            footerImageUrl: toPublicAssetUrl(
+              menu.tenant.slug,
+              branding.footerImageUrl,
+              "branding/footer"
+            ),
+          }
+        : branding,
+    },
+    categories: menu.categories.map((category) => ({
+      ...category,
+      products: category.products.map((product) => ({
+        ...product,
+        imageUrl: toPublicAssetUrl(
+          menu.tenant.slug,
+          product.imageUrl,
+          `products/${product.id}/image`
+        ),
+      })),
+    })),
+  };
+}
+
+function toPublicAssetUrl(slug: string, value: string | null, path: string): string | null {
+  if (!value?.startsWith("data:image/")) {
+    return value;
+  }
+
+  return `${apiUrl}/api/public/tenants/${slug}/${path}`;
 }
 
 export async function createPublicOrder(

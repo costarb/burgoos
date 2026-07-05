@@ -7,6 +7,12 @@ import { CreateProductDto } from "./dto/create-product.dto";
 import { UpdateCategoryDto } from "./dto/update-category.dto";
 import { UpdateProductDto } from "./dto/update-product.dto";
 
+type BrandingAssetKey = "logo" | "header" | "body" | "footer";
+
+interface PublicImageAsset {
+  value: string;
+}
+
 interface PublicMenuResponse {
   tenant: {
     name: string;
@@ -230,7 +236,10 @@ export class CatalogService {
     return this.toProductResponse(product);
   }
 
-  async getPublicMenu(slug: string): Promise<PublicMenuResponse> {
+  async getPublicMenu(
+    slug: string,
+    assetBaseUrl: string | null = null
+  ): Promise<PublicMenuResponse> {
     const tenant = await this.prisma.tenant.findFirst({
       where: {
         slug,
@@ -248,6 +257,12 @@ export class CatalogService {
       this.logger.warn(`Public menu tenant resolution failed slug=${slug}`);
       throw new NotFoundException("Tenant not found");
     }
+
+    const branding = await this.brandingService.getPublicBrandingForMenu(
+      tenant.id,
+      assetBaseUrl,
+      tenant.slug
+    );
 
     const categories = await this.prisma.category.findMany({
       where: {
@@ -275,13 +290,15 @@ export class CatalogService {
             name: true,
             description: true,
             price: true,
-            imageUrl: true,
           },
         },
       },
     });
 
-    const branding = await this.brandingService.getPublicBranding(tenant.id);
+    const productIdsWithImages =
+      assetBaseUrl && branding.showProductImages
+        ? await this.findPublicProductIdsWithImages(tenant.id)
+        : new Set<string>();
 
     return {
       tenant: {
@@ -298,10 +315,79 @@ export class CatalogService {
           name: product.name,
           description: product.description,
           price: product.price.toFixed(2),
-          imageUrl: product.imageUrl,
+          imageUrl: productIdsWithImages.has(product.id)
+            ? `${assetBaseUrl}/api/public/tenants/${tenant.slug}/products/${product.id}/image`
+            : null,
         })),
       })),
     };
+  }
+
+  async getPublicProductImage(slug: string, productId: string): Promise<PublicImageAsset> {
+    const product = await this.prisma.product.findFirst({
+      where: {
+        id: productId,
+        active: true,
+        tenant: {
+          slug,
+          active: true,
+        },
+        category: {
+          active: true,
+        },
+      },
+      select: {
+        imageUrl: true,
+      },
+    });
+
+    if (!product?.imageUrl) {
+      throw new NotFoundException("Product image not found");
+    }
+
+    return { value: product.imageUrl };
+  }
+
+  async getPublicBrandingImage(slug: string, asset: BrandingAssetKey): Promise<PublicImageAsset> {
+    const tenant = await this.prisma.tenant.findFirst({
+      where: {
+        slug,
+        active: true,
+      },
+      select: {
+        id: true,
+      },
+    });
+
+    if (!tenant) {
+      throw new NotFoundException("Tenant not found");
+    }
+
+    const branding = await this.brandingService.getPublicBranding(tenant.id);
+    const value = {
+      logo: branding.logoUrl,
+      header: branding.headerImageUrl,
+      body: branding.bodyImageUrl,
+      footer: branding.footerImageUrl,
+    }[asset];
+
+    if (!value) {
+      throw new NotFoundException("Branding image not found");
+    }
+
+    return { value };
+  }
+
+  private async findPublicProductIdsWithImages(tenantId: string): Promise<Set<string>> {
+    const rows = await this.prisma.$queryRaw<Array<{ id: string }>>`
+      SELECT id
+      FROM products
+      WHERE tenant_id = ${tenantId}::uuid
+        AND active = true
+        AND image_url IS NOT NULL
+    `;
+
+    return new Set(rows.map((row) => row.id));
   }
 
   private async ensureCategoryBelongsToTenant(tenantId: string, categoryId: string): Promise<void> {
