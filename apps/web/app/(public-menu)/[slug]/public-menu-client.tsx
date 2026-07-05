@@ -162,7 +162,7 @@ export function PublicMenuClient({ menu }: PublicMenuClientProps) {
     >
       <header
         className="border-b border-orange-100 bg-white bg-cover bg-center px-4 py-8 shadow-sm"
-        style={backgroundStyle(branding?.headerImageUrl)}
+        style={backgroundStyle(branding?.headerImageUrl, "header")}
       >
         <div
           className={`mx-auto flex max-w-5xl items-center justify-between gap-4 rounded-md ${
@@ -376,10 +376,8 @@ export function PublicMenuClient({ menu }: PublicMenuClientProps) {
       </section>
 
       <footer
-        className={`bg-white bg-cover bg-center px-4 py-8 ${
-          branding?.footerImageUrl ? "min-h-40" : ""
-        }`}
-        style={backgroundStyle(branding?.footerImageUrl)}
+        className="bg-white bg-cover bg-center px-4 py-8"
+        style={backgroundStyle(branding?.footerImageUrl, "footer")}
       >
         <div
           className={`mx-auto max-w-5xl text-sm text-slate-600 ${
@@ -394,12 +392,17 @@ export function PublicMenuClient({ menu }: PublicMenuClientProps) {
   );
 }
 
-function backgroundStyle(imageUrl: string | null | undefined): CSSProperties | undefined {
+function backgroundStyle(
+  imageUrl: string | null | undefined,
+  area?: "header" | "footer"
+): CSSProperties | undefined {
   if (!imageUrl) {
     return undefined;
   }
 
   return {
     backgroundImage: `url("${imageUrl}")`,
+    ...(area === "header" ? { minHeight: "clamp(220px, 25vw, 480px)" } : {}),
+    ...(area === "footer" ? { minHeight: "clamp(140px, 16.6667vw, 320px)" } : {}),
   };
 }

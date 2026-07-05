@@ -277,6 +277,7 @@ export default async function BrandingPage() {
               <BackgroundPreviewSection
                 imageUrl={current?.headerImageUrl ?? null}
                 minHeightClass="min-h-24"
+                style={{ aspectRatio: "4 / 1" }}
               >
                 <div className="rounded-md bg-white/85 p-3 shadow-sm">
                   <p
@@ -327,6 +328,7 @@ export default async function BrandingPage() {
               <BackgroundPreviewSection
                 imageUrl={current?.footerImageUrl ?? null}
                 minHeightClass="min-h-20"
+                style={{ aspectRatio: "6 / 1" }}
               >
                 <div className="rounded-md bg-white/80 p-3 text-sm text-slate-600 shadow-sm">
                   Rodape da loja
@@ -450,15 +452,21 @@ function BackgroundPreviewSection({
   children,
   imageUrl,
   minHeightClass,
+  style,
 }: {
   children: React.ReactNode;
   imageUrl: string | null;
   minHeightClass: string;
+  style?: React.CSSProperties;
 }) {
+  const backgroundStyle: React.CSSProperties | undefined = imageUrl
+    ? { backgroundImage: `url("${imageUrl}")` }
+    : undefined;
+
   return (
     <div
       className={`bg-cover bg-center p-3 ${minHeightClass}`}
-      style={imageUrl ? { backgroundImage: `url("${imageUrl}")` } : undefined}
+      style={{ ...backgroundStyle, ...style }}
     >
       {children}
     </div>
