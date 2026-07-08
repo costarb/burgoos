@@ -22,6 +22,54 @@ export class CreateStoreOwnerDto {
   temporaryPassword!: string;
 }
 
+export class StoreAddressDto {
+  @IsOptional()
+  @IsString()
+  street?: string;
+
+  @IsOptional()
+  @IsString()
+  number?: string;
+
+  @IsOptional()
+  @IsString()
+  complement?: string;
+
+  @IsOptional()
+  @IsString()
+  neighborhood?: string;
+
+  @IsOptional()
+  @IsString()
+  city?: string;
+
+  @IsOptional()
+  @IsString()
+  state?: string;
+
+  @IsOptional()
+  @IsString()
+  postalCode?: string;
+}
+
+export class StoreSocialLinksDto {
+  @IsOptional()
+  @IsString()
+  instagram?: string;
+
+  @IsOptional()
+  @IsString()
+  facebook?: string;
+
+  @IsOptional()
+  @IsString()
+  whatsapp?: string;
+
+  @IsOptional()
+  @IsString()
+  website?: string;
+}
+
 export class CreateStoreDto {
   @IsString()
   name!: string;
@@ -31,6 +79,16 @@ export class CreateStoreDto {
 
   @IsString()
   phone!: string;
+
+  @IsOptional()
+  @ValidateNested()
+  @Type(() => StoreAddressDto)
+  address?: StoreAddressDto;
+
+  @IsOptional()
+  @ValidateNested()
+  @Type(() => StoreSocialLinksDto)
+  socialLinks?: StoreSocialLinksDto;
 
   @IsOptional()
   @IsBoolean()
@@ -65,6 +123,16 @@ export class UpdateStoreDto {
   @IsOptional()
   @IsString()
   phone?: string;
+
+  @IsOptional()
+  @ValidateNested()
+  @Type(() => StoreAddressDto)
+  address?: StoreAddressDto;
+
+  @IsOptional()
+  @ValidateNested()
+  @Type(() => StoreSocialLinksDto)
+  socialLinks?: StoreSocialLinksDto;
 
   @IsOptional()
   @IsBoolean()

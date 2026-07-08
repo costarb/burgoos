@@ -1,6 +1,7 @@
 "use client";
 
 import { CSSProperties, FormEvent, useEffect, useMemo, useState } from "react";
+import { Globe } from "lucide-react";
 import { useRouter } from "next/navigation";
 import type {
   CreatedOrder,
@@ -30,6 +31,8 @@ export function PublicMenuClient({ menu }: PublicMenuClientProps) {
   const showProductImages = branding?.showProductImages ?? false;
   const showProductDescriptions = branding?.showProductDescriptions ?? false;
   const orderingEnabled = branding?.orderingEnabled ?? true;
+  const publicAddress = formatAddress(menu.tenant.address);
+  const socialLinks = publicSocialLinks(menu.tenant.socialLinks);
   const canOrder = menu.tenant.isOpen && orderingEnabled;
   const router = useRouter();
   const [cart, setCart] = useState<Record<string, CartLine>>({});
@@ -380,16 +383,161 @@ export function PublicMenuClient({ menu }: PublicMenuClientProps) {
         style={backgroundStyle(branding?.footerImageUrl, "footer")}
       >
         <div
-          className={`mx-auto max-w-5xl text-sm text-slate-600 ${
+          className={`mx-auto grid max-w-5xl gap-4 text-sm text-slate-600 md:grid-cols-[1fr_auto] ${
             branding?.footerImageUrl ? "rounded-md bg-white/80 p-4 shadow-sm backdrop-blur-sm" : ""
           }`}
         >
-          <p className="font-semibold text-slate-900">{menu.tenant.name}</p>
-          <p>{menu.tenant.isOpen ? "Aberto para pedidos" : "Loja fechada no momento"}</p>
+          <div>
+            <p className="font-semibold text-slate-900">{menu.tenant.name}</p>
+            <p>{menu.tenant.isOpen ? "Aberto para pedidos" : "Loja fechada no momento"}</p>
+            {menu.tenant.phone ? <p className="mt-2">{menu.tenant.phone}</p> : null}
+            {publicAddress ? <p className="mt-1">{publicAddress}</p> : null}
+          </div>
+          {socialLinks.length > 0 ? (
+            <nav
+              className="flex flex-wrap items-start gap-3 md:justify-end"
+              aria-label="Midias sociais"
+            >
+              {socialLinks.map((link) => (
+                <a
+                  className="inline-flex items-center gap-2 rounded-md border border-slate-200 bg-white/80 px-3 py-2 font-semibold text-slate-900 underline-offset-4 hover:underline"
+                  href={link.href}
+                  key={link.kind}
+                  rel="noreferrer"
+                  target="_blank"
+                  title={link.label}
+                >
+                  <SocialIcon kind={link.kind} />
+                  <span>{link.text}</span>
+                </a>
+              ))}
+            </nav>
+          ) : null}
         </div>
       </footer>
     </main>
   );
+}
+
+function formatAddress(address: PublicMenu["tenant"]["address"]): string | null {
+  if (!address) {
+    return null;
+  }
+
+  const streetLine = [address.street, address.number].filter(Boolean).join(", ");
+  const complementLine = address.complement;
+  const neighborhoodLine = address.neighborhood;
+  const cityLine = [address.city, address.state].filter(Boolean).join(" / ");
+  const postalCodeLine = address.postalCode;
+  const lines = [streetLine, complementLine, neighborhoodLine, cityLine, postalCodeLine].filter(
+    Boolean
+  );
+
+  return lines.length > 0 ? lines.join(" - ") : null;
+}
+
+function publicSocialLinks(
+  socialLinks: PublicMenu["tenant"]["socialLinks"]
+): Array<{ kind: SocialLinkKind; label: string; text: string; href: string }> {
+  if (!socialLinks) {
+    return [];
+  }
+
+  return [
+    socialLink("instagram", "Instagram", socialLinks.instagram, true),
+    socialLink("facebook", "Facebook", socialLinks.facebook, true),
+    socialLink("whatsapp", "WhatsApp", socialLinks.whatsapp, true),
+    socialLink("website", "Site", socialLinks.website, false),
+  ].filter((link): link is NonNullable<typeof link> => Boolean(link));
+}
+
+type SocialLinkKind = "instagram" | "facebook" | "whatsapp" | "website";
+
+function socialLink(
+  kind: SocialLinkKind,
+  label: string,
+  value: string | null | undefined,
+  useHandle: boolean
+) {
+  const href = normalizeExternalHref(value);
+
+  if (!href) {
+    return null;
+  }
+
+  const userText = extractLastUrlSegment(value ?? href);
+
+  return {
+    kind,
+    label,
+    href,
+    text: useHandle ? `@${userText}` : userText,
+  };
+}
+
+function SocialIcon({ kind }: { kind: SocialLinkKind }) {
+  if (kind === "instagram") {
+    return (
+      <span
+        aria-hidden
+        className="grid h-5 w-5 shrink-0 place-items-center rounded-md bg-gradient-to-br from-fuchsia-600 via-rose-500 to-amber-400 text-white"
+      >
+        <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24">
+          <rect height="16" rx="5" stroke="currentColor" strokeWidth="2" width="16" x="4" y="4" />
+          <circle cx="12" cy="12" r="3.5" stroke="currentColor" strokeWidth="2" />
+          <circle cx="16.5" cy="7.5" fill="currentColor" r="1.2" />
+        </svg>
+      </span>
+    );
+  }
+
+  if (kind === "website") {
+    return <Globe aria-hidden className="h-4 w-4 shrink-0" />;
+  }
+
+  const iconText: Record<Exclude<SocialLinkKind, "website" | "instagram">, string> = {
+    facebook: "f",
+    whatsapp: "WA",
+  };
+
+  return (
+    <span
+      aria-hidden
+      className="grid h-5 min-w-5 shrink-0 place-items-center rounded-sm bg-slate-900 px-1 text-[10px] font-bold leading-none text-white"
+    >
+      {iconText[kind]}
+    </span>
+  );
+}
+
+function normalizeExternalHref(value: string | null | undefined): string | null {
+  const trimmed = value?.trim();
+
+  if (!trimmed) {
+    return null;
+  }
+
+  if (/^(https?:|mailto:|tel:)/i.test(trimmed)) {
+    return trimmed;
+  }
+
+  return `https://${trimmed}`;
+}
+
+function extractLastUrlSegment(value: string): string {
+  const trimmed = value.trim().replace(/\/+$/, "");
+  let candidate = trimmed;
+
+  try {
+    const url = new URL(normalizeExternalHref(trimmed) ?? trimmed);
+    const pathToken = url.pathname.split("/").filter(Boolean).pop();
+    candidate = pathToken || url.hostname.replace(/^www\./i, "");
+  } catch {
+    candidate = trimmed.split(/[?#]/)[0].split("/").filter(Boolean).pop() ?? trimmed;
+  }
+
+  const decoded = decodeURIComponent(candidate).replace(/^@/, "").trim();
+  return decoded || trimmed;
 }
 
 function backgroundStyle(

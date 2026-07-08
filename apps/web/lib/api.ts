@@ -578,8 +578,22 @@ export async function getAccessAudit(
   return { token, events, stores: userOptions.stores };
 }
 
-export async function listPlatformStores(token: string): Promise<StoreSummary[]> {
-  return fetchPlatform<StoreSummary[]>(token, "/api/platform/stores");
+export async function listPlatformStores(
+  token: string,
+  filters: { search?: string; active?: string } = {}
+): Promise<StoreSummary[]> {
+  const params = new URLSearchParams();
+
+  if (filters.search) {
+    params.set("search", filters.search);
+  }
+
+  if (filters.active) {
+    params.set("active", filters.active);
+  }
+
+  const query = params.toString();
+  return fetchPlatform<StoreSummary[]>(token, `/api/platform/stores${query ? `?${query}` : ""}`);
 }
 
 export async function createPlatformStore(

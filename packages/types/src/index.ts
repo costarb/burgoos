@@ -129,7 +129,10 @@ export interface PublicMenu {
   tenant: {
     name: string;
     slug: string;
+    phone?: string | null;
     isOpen: boolean;
+    address?: StoreAddress | null;
+    socialLinks?: StoreSocialLinks | null;
     branding?: PublicStoreBranding;
   };
   categories: PublicMenuCategory[];
@@ -169,10 +172,29 @@ export interface StoreOwnerInput {
   temporaryPassword: string;
 }
 
+export interface StoreAddress {
+  street?: string;
+  number?: string;
+  complement?: string;
+  neighborhood?: string;
+  city?: string;
+  state?: string;
+  postalCode?: string;
+}
+
+export interface StoreSocialLinks {
+  instagram?: string;
+  facebook?: string;
+  whatsapp?: string;
+  website?: string;
+}
+
 export interface CreateStoreInput {
   name: string;
   slug: string;
   phone: string;
+  address?: StoreAddress;
+  socialLinks?: StoreSocialLinks;
   active?: boolean;
   isOpen?: boolean;
   openMode?: StoreOpenMode;
@@ -184,6 +206,8 @@ export interface UpdateStoreInput {
   name?: string;
   slug?: string;
   phone?: string;
+  address?: StoreAddress;
+  socialLinks?: StoreSocialLinks;
   active?: boolean;
   isOpen?: boolean;
   openMode?: StoreOpenMode;
@@ -205,6 +229,9 @@ export interface StoreSummary {
   id: string;
   name: string;
   slug: string;
+  phone?: string;
+  city?: string | null;
+  state?: string | null;
   active: boolean;
   isOpen: boolean;
   openMode: StoreOpenMode;
@@ -219,6 +246,8 @@ export interface StoreResponsibleUser {
 
 export interface StoreDetail extends StoreSummary {
   phone: string;
+  address?: StoreAddress | null;
+  socialLinks?: StoreSocialLinks | null;
   operatingHours: Record<string, unknown>;
   owner?: StoreResponsibleUser;
   branding?: VisualConfiguration;

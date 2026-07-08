@@ -161,20 +161,7 @@ export class AuthService {
       throw new UnauthorizedException("Invalid credentials");
     }
 
-    const authUser: AuthUser = {
-      id: platformUser.id,
-      tenantId: "",
-      role: UserRole.ADMIN,
-      email: platformUser.email,
-      name: platformUser.name,
-      isMaster: true,
-      activeStoreId: null,
-      allowedStoreIds: [],
-      manageableStoreIds: [],
-      permissions: [],
-      isPlatformAdmin: true,
-      platformRole: platformUser.role,
-    };
+    const authUser = this.toPlatformAuthUser(platformUser);
 
     return {
       accessToken: await this.signAccessToken(authUser),
@@ -189,6 +176,22 @@ export class AuthService {
 
   async refresh(refreshToken: string): Promise<LoginResult> {
     const payload = await this.verifyRefreshToken(refreshToken);
+
+    if (payload.isPlatformAdmin) {
+      const platformUser = await this.loadPlatformUserById(payload.sub);
+      const authUser = this.toPlatformAuthUser(platformUser);
+
+      return {
+        accessToken: await this.signAccessToken(authUser),
+        refreshToken,
+        user: authUser,
+        activeStoreId: null,
+        allowedStores: [],
+        permissions: [],
+        accessTokenExpiresAt: this.accessTokenExpiresAt().toISOString(),
+      };
+    }
+
     await this.sessionTokens.assertActive(payload.sub, refreshToken);
 
     const user = await this.loadUserById(payload.sub);
@@ -213,6 +216,11 @@ export class AuthService {
 
   async logout(refreshToken: string): Promise<void> {
     const payload = await this.verifyRefreshToken(refreshToken);
+
+    if (payload.isPlatformAdmin) {
+      return;
+    }
+
     await this.sessionTokens.revoke(payload.sub, refreshToken);
     await this.recordAccessAudit({
       actorUserId: payload.sub,
@@ -324,17 +332,29 @@ export class AuthService {
     return user;
   }
 
+  private async loadPlatformUserById(userId: string) {
+    const platformUser = await this.prisma.platformUser.findUnique({
+      where: { id: userId },
+    });
+
+    if (!platformUser?.active) {
+      throw new UnauthorizedException("User is inactive");
+    }
+
+    return platformUser;
+  }
+
   private async signAccessToken(user: AuthUser): Promise<string> {
     return this.jwtService.signAsync(this.toPayload(user), {
       secret: this.accessSecret,
-      expiresIn: "15m",
+      expiresIn: this.accessTokenTtl,
     });
   }
 
   private async signRefreshToken(user: AuthUser): Promise<string> {
     return this.jwtService.signAsync(this.toPayload(user), {
       secret: this.refreshSecret,
-      expiresIn: "7d",
+      expiresIn: this.refreshTokenTtl,
     });
   }
 
@@ -352,6 +372,28 @@ export class AuthService {
       permissions: user.permissions,
       isPlatformAdmin: user.isPlatformAdmin,
       platformRole: user.platformRole,
+    };
+  }
+
+  private toPlatformAuthUser(platformUser: {
+    id: string;
+    email: string;
+    name: string;
+    role: AuthUser["platformRole"];
+  }): AuthUser {
+    return {
+      id: platformUser.id,
+      tenantId: "",
+      role: UserRole.ADMIN,
+      email: platformUser.email,
+      name: platformUser.name,
+      isMaster: true,
+      activeStoreId: null,
+      allowedStoreIds: [],
+      manageableStoreIds: [],
+      permissions: [],
+      isPlatformAdmin: true,
+      platformRole: platformUser.role,
     };
   }
 
@@ -397,7 +439,7 @@ export class AuthService {
   }
 
   private accessTokenExpiresAt(): Date {
-    return new Date(Date.now() + 15 * 60 * 1000);
+    return new Date(Date.now() + durationToMilliseconds(this.accessTokenTtl));
   }
 
   private toAllowedStores(user: {
@@ -465,4 +507,31 @@ export class AuthService {
   private get refreshSecret(): string {
     return process.env.JWT_REFRESH_SECRET ?? "dev-refresh-secret";
   }
+
+  private get accessTokenTtl(): string {
+    return process.env.JWT_ACCESS_EXPIRES_IN ?? "12h";
+  }
+
+  private get refreshTokenTtl(): string {
+    return process.env.JWT_REFRESH_EXPIRES_IN ?? "7d";
+  }
+}
+
+function durationToMilliseconds(value: string): number {
+  const match = value.trim().match(/^(\d+)([smhd])?$/i);
+
+  if (!match) {
+    return 12 * 60 * 60 * 1000;
+  }
+
+  const amount = Number(match[1]);
+  const unit = match[2]?.toLowerCase() ?? "s";
+  const unitMilliseconds: Record<string, number> = {
+    s: 1000,
+    m: 60 * 1000,
+    h: 60 * 60 * 1000,
+    d: 24 * 60 * 60 * 1000,
+  };
+
+  return amount * unitMilliseconds[unit];
 }
