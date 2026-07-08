@@ -17,6 +17,7 @@ import type {
   BrandingState,
   CreatedOrder,
   CreatePublicOrderInput,
+  CreatePlatformUserInput,
   CreateStoreInput,
   FinancialConfiguration,
   FinancialAccount,
@@ -60,6 +61,7 @@ import type {
   StoreDetail,
   StoreSetupResult,
   StoreSummary,
+  PlatformUserSummary,
   Supplier,
   SupplierInput,
   StockMovementInput,
@@ -67,6 +69,7 @@ import type {
   TechnicalSheetInput,
   TechnicalSheetSummary,
   UpdateStoreInput,
+  UpdatePlatformUserInput,
   VisualConfiguration,
   NotificationCenterState,
   OperationalNotification,
@@ -616,6 +619,52 @@ export async function updatePlatformStore(
   payload: UpdateStoreInput
 ): Promise<StoreDetail> {
   return fetchPlatform<StoreDetail>(token, `/api/platform/stores/${storeId}`, {
+    method: "PATCH",
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function listPlatformUsers(
+  token: string,
+  filters: { search?: string; active?: string; role?: string } = {}
+): Promise<PlatformUserSummary[]> {
+  const params = new URLSearchParams();
+
+  if (filters.search) {
+    params.set("search", filters.search);
+  }
+
+  if (filters.active) {
+    params.set("active", filters.active);
+  }
+
+  if (filters.role) {
+    params.set("role", filters.role);
+  }
+
+  const query = params.toString();
+  return fetchPlatform<PlatformUserSummary[]>(
+    token,
+    `/api/platform/users${query ? `?${query}` : ""}`
+  );
+}
+
+export async function createPlatformUser(
+  token: string,
+  payload: CreatePlatformUserInput
+): Promise<PlatformUserSummary> {
+  return fetchPlatform<PlatformUserSummary>(token, "/api/platform/users", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function updatePlatformUser(
+  token: string,
+  userId: string,
+  payload: UpdatePlatformUserInput
+): Promise<PlatformUserSummary> {
+  return fetchPlatform<PlatformUserSummary>(token, `/api/platform/users/${userId}`, {
     method: "PATCH",
     body: JSON.stringify(payload),
   });

@@ -123,5 +123,5 @@ function postLogin(path: string, email: string, password: string): Promise<Respo
 }
 
 function isPlatformAdminSession(session: AuthSession): boolean {
-  return Boolean((session.user as { isPlatformAdmin?: boolean }).isPlatformAdmin);
+  return Boolean(session.user.isPlatformAdmin && session.user.platformRole === "SUPER_ADMIN");
 }
