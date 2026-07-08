@@ -2,8 +2,7 @@ import { notFound } from "next/navigation";
 import { getPublicMenu } from "../../../lib/api";
 import { PublicMenuClient } from "./public-menu-client";
 
-export const dynamic = "force-dynamic";
-export const revalidate = 0;
+export const revalidate = 30;
 
 interface PublicMenuPageProps {
   params: {

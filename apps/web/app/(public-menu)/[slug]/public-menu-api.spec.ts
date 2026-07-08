@@ -52,7 +52,22 @@ describe("getPublicMenu", () => {
       .mockResolvedValueOnce(Response.json(publicMenuPayload));
     vi.stubGlobal("fetch", fetchMock);
 
-    await expect(getPublicMenu("piloto")).resolves.toMatchObject({
+    await expect(getPublicMenu("piloto-retry")).resolves.toMatchObject({
+      tenant: {
+        slug: "piloto",
+      },
+    });
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
+
+  it("treats rate limiting as a transient public menu error", async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(new Response("Too Many Requests", { status: 429 }))
+      .mockResolvedValueOnce(Response.json(publicMenuPayload));
+    vi.stubGlobal("fetch", fetchMock);
+
+    await expect(getPublicMenu("piloto-rate-limit")).resolves.toMatchObject({
       tenant: {
         slug: "piloto",
       },
@@ -66,6 +81,8 @@ describe("getPublicMenu", () => {
       vi.fn(async () => new Response("unauthorized", { status: 401 }))
     );
 
-    await expect(getPublicMenu("piloto")).rejects.toThrow("[401] /api/public/tenants/piloto/menu");
+    await expect(getPublicMenu("piloto-error")).rejects.toThrow(
+      "[401] /api/public/tenants/piloto-error/menu"
+    );
   });
 });

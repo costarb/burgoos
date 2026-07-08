@@ -80,6 +80,17 @@ import { clearAuthSession, readAuthSession } from "./auth-client";
 
 const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? "http://127.0.0.1:3001";
 const AUTH_ACCESS_COOKIE = "burgoos.admin.access_token";
+const PUBLIC_MENU_REVALIDATE_SECONDS = 30;
+const PUBLIC_MENU_STALE_FALLBACK_MS = 10 * 60 * 1000;
+const PUBLIC_MENU_TRANSIENT_STATUSES = new Set([429, 502, 503, 504]);
+
+const publicMenuCache = new Map<
+  string,
+  {
+    menu: PublicMenu;
+    updatedAt: number;
+  }
+>();
 
 export interface AdminCategory {
   id: string;
@@ -262,13 +273,28 @@ async function fetchPlatform<T>(token: string, path: string, init?: RequestInit)
 
 export async function getPublicMenu(slug: string): Promise<PublicMenu | null> {
   const path = `/api/public/tenants/${slug}/menu`;
+  const cached = readPublicMenuCache(slug);
+
+  if (cached?.fresh) {
+    return cached.menu;
+  }
+
   const response = await fetchPublicMenu(path);
 
   if (response.status === 404) {
+    publicMenuCache.delete(slug);
     return null;
   }
 
   if (!response.ok) {
+    if (PUBLIC_MENU_TRANSIENT_STATUSES.has(response.status) && cached?.menu) {
+      console.warn("Serving stale public menu after transient API response", {
+        path,
+        status: response.status,
+      });
+      return cached.menu;
+    }
+
     const body = await readErrorBody(response);
 
     console.error("Public menu API request failed", {
@@ -281,11 +307,12 @@ export async function getPublicMenu(slug: string): Promise<PublicMenu | null> {
   }
 
   const menu = (await response.json()) as PublicMenu;
-  return normalizePublicMenuAssets(menu);
+  const normalizedMenu = normalizePublicMenuAssets(menu);
+  publicMenuCache.set(slug, { menu: normalizedMenu, updatedAt: Date.now() });
+  return normalizedMenu;
 }
 
 async function fetchPublicMenu(path: string): Promise<Response> {
-  const transientStatuses = new Set([502, 503, 504]);
   let lastError: unknown;
 
   for (let attempt = 1; attempt <= 3; attempt += 1) {
@@ -294,14 +321,18 @@ async function fetchPublicMenu(path: string): Promise<Response> {
         headers: {
           Accept: "application/json",
         },
-        cache: "no-store",
+        next: {
+          revalidate: PUBLIC_MENU_REVALIDATE_SECONDS,
+        },
       });
 
-      if (!transientStatuses.has(response.status) || attempt === 3) {
+      if (!PUBLIC_MENU_TRANSIENT_STATUSES.has(response.status) || attempt === 3) {
         return response;
       }
 
       lastError = new Error(`Transient public menu status ${response.status}`);
+      await delay(retryDelayMs(response, attempt));
+      continue;
     } catch (error) {
       lastError = error;
 
@@ -314,6 +345,49 @@ async function fetchPublicMenu(path: string): Promise<Response> {
   }
 
   throw lastError instanceof Error ? lastError : new Error("Failed to load public menu");
+}
+
+function readPublicMenuCache(slug: string): { menu: PublicMenu; fresh: boolean } | null {
+  const cached = publicMenuCache.get(slug);
+
+  if (!cached) {
+    return null;
+  }
+
+  const ageMs = Date.now() - cached.updatedAt;
+
+  if (ageMs > PUBLIC_MENU_STALE_FALLBACK_MS) {
+    publicMenuCache.delete(slug);
+    return null;
+  }
+
+  return {
+    menu: cached.menu,
+    fresh: ageMs <= PUBLIC_MENU_REVALIDATE_SECONDS * 1000,
+  };
+}
+
+function retryDelayMs(response: Response, attempt: number): number {
+  const retryAfter = response.headers.get("retry-after");
+  const fallbackMs = 500 * attempt;
+
+  if (!retryAfter) {
+    return fallbackMs;
+  }
+
+  const retryAfterSeconds = Number(retryAfter);
+
+  if (Number.isFinite(retryAfterSeconds)) {
+    return Math.min(Math.max(retryAfterSeconds * 1000, fallbackMs), 2_000);
+  }
+
+  const retryAfterDate = Date.parse(retryAfter);
+
+  if (Number.isFinite(retryAfterDate)) {
+    return Math.min(Math.max(retryAfterDate - Date.now(), fallbackMs), 2_000);
+  }
+
+  return fallbackMs;
 }
 
 async function readErrorBody(response: Response): Promise<string> {
