@@ -127,6 +127,7 @@ describe("login page", () => {
         status: "ACTIVE",
         isMaster: true,
         isPlatformAdmin: true,
+        platformRole: "SUPER_ADMIN",
       },
     };
     vi.stubGlobal(

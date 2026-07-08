@@ -23,7 +23,7 @@ const masterSession = {
 };
 
 const platformSession = {
-  user: { isPlatformAdmin: true },
+  user: { isPlatformAdmin: true, platformRole: "SUPER_ADMIN" },
   permissions: [],
 };
 
@@ -51,11 +51,14 @@ describe("admin navigation permissions", () => {
 
   it("keeps platform links restricted to platform admins", () => {
     const stores = secondaryNavigation.find((item) => item.href === "/platform/stores");
+    const users = secondaryNavigation.find((item) => item.href === "/platform/users");
 
     expect(stores).toBeDefined();
+    expect(users).toBeDefined();
     expect(canAccessNavigationItem(stores!, operatorSession)).toBe(false);
     expect(canAccessNavigationItem(stores!, masterSession)).toBe(false);
     expect(canAccessNavigationItem(stores!, platformSession)).toBe(true);
+    expect(canAccessNavigationItem(users!, platformSession)).toBe(true);
   });
 
   it("resolves direct route access using the same permission metadata", () => {

@@ -10,6 +10,7 @@ import { OrderingModule } from "./ordering/ordering.module";
 import { BrandingModule } from "./customer-experience/branding/branding.module";
 import { TenantModule } from "./platform/tenant/tenant.module";
 import { PlatformStoreModule } from "./platform/stores/platform-store.module";
+import { PlatformUserModule } from "./platform/users/platform-user.module";
 
 @Module({
   imports: [
@@ -20,6 +21,7 @@ import { PlatformStoreModule } from "./platform/stores/platform-store.module";
     AuthModule,
     TenantModule,
     PlatformStoreModule,
+    PlatformUserModule,
     BrandingModule,
     CatalogModule,
     OrderingModule,

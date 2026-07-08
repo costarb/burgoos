@@ -66,6 +66,8 @@ export interface AccessUserSummary {
   email: string;
   status: AccessUserStatus;
   isMaster: boolean;
+  isPlatformAdmin?: boolean;
+  platformRole?: PlatformUserRole;
 }
 
 export interface AccessUserDetail extends AccessUserSummary {
@@ -256,6 +258,34 @@ export interface StoreDetail extends StoreSummary {
 export interface StoreSetupResult {
   store: StoreDetail;
   owner: StoreResponsibleUser;
+}
+
+export type PlatformUserRole = "SUPER_ADMIN" | "SUPPORT";
+
+export interface PlatformUserSummary {
+  id: string;
+  name: string;
+  email: string;
+  role: PlatformUserRole;
+  active: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CreatePlatformUserInput {
+  name: string;
+  email: string;
+  role: PlatformUserRole;
+  active?: boolean;
+  temporaryPassword: string;
+}
+
+export interface UpdatePlatformUserInput {
+  name?: string;
+  email?: string;
+  role?: PlatformUserRole;
+  active?: boolean;
+  temporaryPassword?: string;
 }
 
 export interface BrandingDraftInput {
