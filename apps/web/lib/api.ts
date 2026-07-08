@@ -261,20 +261,70 @@ async function fetchPlatform<T>(token: string, path: string, init?: RequestInit)
 }
 
 export async function getPublicMenu(slug: string): Promise<PublicMenu | null> {
-  const response = await fetch(`${apiUrl}/api/public/tenants/${slug}/menu`, {
-    next: { revalidate: 30 },
-  });
+  const path = `/api/public/tenants/${slug}/menu`;
+  const response = await fetchPublicMenu(path);
 
   if (response.status === 404) {
     return null;
   }
 
   if (!response.ok) {
-    throw new Error("Failed to load public menu");
+    const body = await readErrorBody(response);
+
+    console.error("Public menu API request failed", {
+      path,
+      status: response.status,
+      body,
+    });
+
+    throw new Error(`[${response.status}] ${path}: Failed to load public menu`);
   }
 
   const menu = (await response.json()) as PublicMenu;
   return normalizePublicMenuAssets(menu);
+}
+
+async function fetchPublicMenu(path: string): Promise<Response> {
+  const transientStatuses = new Set([502, 503, 504]);
+  let lastError: unknown;
+
+  for (let attempt = 1; attempt <= 3; attempt += 1) {
+    try {
+      const response = await fetch(`${apiUrl}${path}`, {
+        headers: {
+          Accept: "application/json",
+        },
+        cache: "no-store",
+      });
+
+      if (!transientStatuses.has(response.status) || attempt === 3) {
+        return response;
+      }
+
+      lastError = new Error(`Transient public menu status ${response.status}`);
+    } catch (error) {
+      lastError = error;
+
+      if (attempt === 3) {
+        throw error;
+      }
+    }
+
+    await delay(500 * attempt);
+  }
+
+  throw lastError instanceof Error ? lastError : new Error("Failed to load public menu");
+}
+
+async function readErrorBody(response: Response): Promise<string> {
+  const body = await response.text().catch(() => "");
+  return body.length > 500 ? `${body.slice(0, 500)}...` : body;
+}
+
+function delay(ms: number): Promise<void> {
+  return new Promise((resolve) => {
+    setTimeout(resolve, ms);
+  });
 }
 
 function normalizePublicMenuAssets(menu: PublicMenu): PublicMenu {
