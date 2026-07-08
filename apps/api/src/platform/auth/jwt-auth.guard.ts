@@ -1,6 +1,7 @@
 import {
   CanActivate,
   ExecutionContext,
+  ForbiddenException,
   Inject,
   Injectable,
   UnauthorizedException,
@@ -37,6 +38,11 @@ export class JwtAuthGuard implements CanActivate {
     };
 
     request.user = user;
+
+    if (user.isPlatformAdmin && this.isStoreScopedRequest(request)) {
+      throw new ForbiddenException("Use as telas de plataforma para administrar lojas e usuarios");
+    }
+
     return true;
   }
 
@@ -66,5 +72,10 @@ export class JwtAuthGuard implements CanActivate {
 
       throw new UnauthorizedException("Sessao invalida");
     }
+  }
+
+  private isStoreScopedRequest(request: AuthenticatedRequest): boolean {
+    const path = request.originalUrl ?? request.url ?? "";
+    return path.startsWith("/api/admin/") || path === "/api/admin";
   }
 }

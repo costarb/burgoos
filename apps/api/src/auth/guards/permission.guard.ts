@@ -12,10 +12,13 @@ export class PermissionGuard implements CanActivate {
       ? metadataPermissions
       : this.fromHeader(request.headers["x-required-permission"]);
 
+    if (request.user.isPlatformAdmin) {
+      throw new ForbiddenException("Use as telas de plataforma para administrar lojas e usuarios");
+    }
+
     if (
       !required.length ||
       request.user.isMaster ||
-      request.user.isPlatformAdmin ||
       request.user.role === UserRole.OWNER ||
       request.user.role === UserRole.ADMIN
     ) {
