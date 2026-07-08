@@ -1,4 +1,14 @@
-import { Body, Controller, Get, Inject, Param, Patch, Post, UseGuards } from "@nestjs/common";
+import {
+  Body,
+  Controller,
+  Get,
+  Inject,
+  Param,
+  Patch,
+  Post,
+  Query,
+  UseGuards,
+} from "@nestjs/common";
 import { ApiBearerAuth, ApiTags } from "@nestjs/swagger";
 import { CurrentUser } from "../auth/current-user.decorator";
 import { JwtAuthGuard } from "../auth/jwt-auth.guard";
@@ -14,8 +24,11 @@ export class PlatformStoreController {
   constructor(@Inject(PlatformStoreService) private readonly service: PlatformStoreService) {}
 
   @Get()
-  list() {
-    return this.service.list();
+  list(@Query("search") search?: string, @Query("active") active?: string) {
+    return this.service.list({
+      search: search?.trim() || undefined,
+      active: active === undefined || active === "" ? undefined : active === "true",
+    });
   }
 
   @Post()

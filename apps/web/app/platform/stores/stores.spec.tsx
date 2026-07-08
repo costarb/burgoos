@@ -11,6 +11,10 @@ vi.mock("../../../lib/api", () => ({
       slug: "loja-centro",
       active: true,
       isOpen: false,
+      openMode: "FORCE_CLOSED",
+      phone: "(11) 99999-9999",
+      city: "Sao Paulo",
+      state: "SP",
       readiness: {
         ready: true,
         checks: [],
@@ -29,16 +33,16 @@ describe("platform stores page", () => {
     vi.clearAllMocks();
   });
 
-  it("renders store list and onboarding form fields", async () => {
-    const page = await StoresPage();
+  it("renders store filters, list and maintenance actions", async () => {
+    const page = await StoresPage({ searchParams: {} });
     const html = renderToStaticMarkup(page);
 
     expect(html).toContain("Lojas");
+    expect(html).toContain("Nova loja");
+    expect(html).toContain("Filtrar");
     expect(html).toContain("Loja Centro");
     expect(html).toContain("loja-centro");
-    expect(html).toContain('name="name"');
-    expect(html).toContain('name="slug"');
-    expect(html).toContain('name="ownerEmail"');
-    expect(html).toContain("Criar loja");
+    expect(html).toContain("Editar");
+    expect(html).toContain("Desativar");
   });
 });

@@ -8,7 +8,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect } from "react";
 import type { AuthSession } from "@burgoos/types";
-import { readAuthSession } from "../../lib/auth-client";
+import { readAuthSession, refreshAuthSessionIfNeeded } from "../../lib/auth-client";
 import { AccessDenied } from "./access-denied";
 import {
   adminNavigation,
@@ -34,15 +34,52 @@ export function AdminShell({ children }: { children: ReactNode }) {
   const currentAllowed = current ? canAccessNavigationItem(current, session) : true;
 
   useEffect(() => {
-    const storedSession = readAuthSession();
+    let active = true;
+    let refreshInProgress = false;
 
-    if (!storedSession) {
-      router.replace("/login");
-      return;
+    async function syncSession() {
+      if (refreshInProgress) {
+        return;
+      }
+
+      refreshInProgress = true;
+
+      try {
+        const refreshedSession = await refreshAuthSessionIfNeeded();
+
+        if (!active) {
+          return;
+        }
+
+        if (!refreshedSession) {
+          router.replace("/login");
+          return;
+        }
+
+        setSession(refreshedSession);
+        setSessionChecked(true);
+      } finally {
+        refreshInProgress = false;
+      }
     }
 
-    setSession(storedSession);
-    setSessionChecked(true);
+    void syncSession();
+
+    const interval = window.setInterval(syncSession, 5 * 60 * 1000);
+
+    function refreshVisibleSession() {
+      if (document.visibilityState === "visible") {
+        void syncSession();
+      }
+    }
+
+    document.addEventListener("visibilitychange", refreshVisibleSession);
+
+    return () => {
+      active = false;
+      window.clearInterval(interval);
+      document.removeEventListener("visibilitychange", refreshVisibleSession);
+    };
   }, [router]);
 
   if (!sessionChecked) {

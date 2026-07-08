@@ -17,6 +17,9 @@ interface StoreSummary {
   id: string;
   name: string;
   slug: string;
+  phone?: string;
+  city?: string | null;
+  state?: string | null;
   active: boolean;
   isOpen: boolean;
   openMode: StoreOpenMode;
@@ -31,6 +34,8 @@ interface StoreResponsibleUser {
 
 interface StoreDetail extends StoreSummary {
   phone: string;
+  address?: StoreAddress | null;
+  socialLinks?: StoreSocialLinks | null;
   operatingHours: Prisma.JsonValue;
   owner?: StoreResponsibleUser;
 }
@@ -40,25 +45,69 @@ interface StoreSetupResult {
   owner: StoreResponsibleUser;
 }
 
+interface StoreFilters {
+  search?: string;
+  active?: boolean;
+}
+
+interface StoreAddress {
+  street?: string;
+  number?: string;
+  complement?: string;
+  neighborhood?: string;
+  city?: string;
+  state?: string;
+  postalCode?: string;
+}
+
+interface StoreSocialLinks {
+  instagram?: string;
+  facebook?: string;
+  whatsapp?: string;
+  website?: string;
+}
+
+interface StoreProfile {
+  address: StoreAddress | null;
+  socialLinks: StoreSocialLinks | null;
+}
+
 @Injectable()
 export class PlatformStoreService {
   constructor(@Inject(PrismaService) private readonly prisma: PrismaService) {}
 
-  async list(): Promise<StoreSummary[]> {
+  async list(filters: StoreFilters = {}): Promise<StoreSummary[]> {
     const stores = await this.prisma.tenant.findMany({
+      where: {
+        active: filters.active,
+        OR: filters.search
+          ? [
+              { name: { contains: filters.search, mode: "insensitive" } },
+              { slug: { contains: filters.search, mode: "insensitive" } },
+              { phone: { contains: filters.search, mode: "insensitive" } },
+            ]
+          : undefined,
+      },
       orderBy: { createdAt: "desc" },
       include: this.storeRelations,
     });
 
-    return stores.map((store) => ({
-      id: store.id,
-      name: store.name,
-      slug: store.slug,
-      active: store.active,
-      isOpen: store.isOpen,
-      openMode: store.openMode,
-      readiness: calculateLaunchReadiness(store),
-    }));
+    return stores.map((store) => {
+      const profile = this.readStoreProfile(store.config);
+
+      return {
+        id: store.id,
+        name: store.name,
+        slug: store.slug,
+        phone: store.phone,
+        city: profile.address?.city ?? null,
+        state: profile.address?.state ?? null,
+        active: store.active,
+        isOpen: store.isOpen,
+        openMode: store.openMode,
+        readiness: calculateLaunchReadiness(store),
+      };
+    });
   }
 
   async create(dto: CreateStoreDto, platformUserId: string): Promise<StoreSetupResult> {
@@ -77,6 +126,7 @@ export class PlatformStoreService {
         openMode:
           dto.openMode ?? (dto.isOpen ? StoreOpenMode.FORCE_OPEN : StoreOpenMode.FORCE_CLOSED),
         operatingHours: (dto.operatingHours ?? {}) as Prisma.InputJsonValue,
+        config: this.mergeStoreProfile({}, dto.address, dto.socialLinks),
         setupCompletedAt: new Date(),
         createdByPlatformUserId: platformUserId,
         defaultLayoutPresetKey: "classic",
@@ -109,6 +159,8 @@ export class PlatformStoreService {
         active: store.active,
         isOpen: store.isOpen,
         openMode: store.openMode,
+        address: this.readStoreProfile(store.config).address,
+        socialLinks: this.readStoreProfile(store.config).socialLinks,
         operatingHours: store.operatingHours,
         owner: {
           id: owner.id,
@@ -151,6 +203,19 @@ export class PlatformStoreService {
 
     if (dto.operatingHours !== undefined) {
       data.operatingHours = dto.operatingHours as Prisma.InputJsonValue;
+    }
+
+    if (dto.address !== undefined || dto.socialLinks !== undefined) {
+      const current = await this.prisma.tenant.findUnique({
+        where: { id: storeId },
+        select: { config: true },
+      });
+
+      if (!current) {
+        throw new NotFoundException("Loja nao encontrada");
+      }
+
+      data.config = this.mergeStoreProfile(current.config, dto.address, dto.socialLinks);
     }
 
     if (dto.active !== undefined) {
@@ -200,16 +265,21 @@ export class PlatformStoreService {
 
   private toDetail(store: Awaited<ReturnType<PlatformStoreService["findStore"]>>): StoreDetail {
     const owner = store.users.find((user) => user.role === UserRole.OWNER);
+    const profile = this.readStoreProfile(store.config);
 
     return {
       id: store.id,
       name: store.name,
       slug: store.slug,
       phone: store.phone,
+      city: profile.address?.city ?? null,
+      state: profile.address?.state ?? null,
       active: store.active,
       isOpen: store.isOpen,
       openMode: store.openMode,
       operatingHours: store.operatingHours,
+      address: profile.address,
+      socialLinks: profile.socialLinks,
       owner: owner
         ? {
             id: owner.id,
@@ -259,6 +329,93 @@ export class PlatformStoreService {
     }
 
     return fallback;
+  }
+
+  private mergeStoreProfile(
+    config: Prisma.JsonValue,
+    address: CreateStoreDto["address"] | UpdateStoreDto["address"] | undefined,
+    socialLinks: CreateStoreDto["socialLinks"] | UpdateStoreDto["socialLinks"] | undefined
+  ): Prisma.InputJsonValue {
+    const normalizedConfig = this.toConfigObject(config);
+    const currentProfile = this.readStoreProfile(config);
+    const nextAddress =
+      address === undefined ? currentProfile.address : this.normalizeAddress(address);
+    const nextSocialLinks =
+      socialLinks === undefined
+        ? currentProfile.socialLinks
+        : this.normalizeSocialLinks(socialLinks);
+
+    return {
+      ...normalizedConfig,
+      storeProfile: {
+        address: nextAddress,
+        socialLinks: nextSocialLinks,
+      },
+    } as Prisma.InputJsonValue;
+  }
+
+  private readStoreProfile(config: Prisma.JsonValue): StoreProfile {
+    const root = this.toConfigObject(config);
+    const profile =
+      typeof root.storeProfile === "object" && root.storeProfile !== null
+        ? (root.storeProfile as Record<string, unknown>)
+        : {};
+
+    return {
+      address: this.normalizeAddress(profile.address as StoreAddress | undefined),
+      socialLinks: this.normalizeSocialLinks(profile.socialLinks as StoreSocialLinks | undefined),
+    };
+  }
+
+  private normalizeAddress(address: StoreAddress | null | undefined): StoreAddress | null {
+    if (!address || typeof address !== "object") {
+      return null;
+    }
+
+    const normalized = {
+      street: this.cleanText(address.street),
+      number: this.cleanText(address.number),
+      complement: this.cleanText(address.complement),
+      neighborhood: this.cleanText(address.neighborhood),
+      city: this.cleanText(address.city),
+      state: this.cleanText(address.state)?.toUpperCase(),
+      postalCode: this.cleanText(address.postalCode),
+    };
+
+    return this.withoutEmptyValues(normalized);
+  }
+
+  private normalizeSocialLinks(
+    socialLinks: StoreSocialLinks | null | undefined
+  ): StoreSocialLinks | null {
+    if (!socialLinks || typeof socialLinks !== "object") {
+      return null;
+    }
+
+    const normalized = {
+      instagram: this.cleanText(socialLinks.instagram),
+      facebook: this.cleanText(socialLinks.facebook),
+      whatsapp: this.cleanText(socialLinks.whatsapp),
+      website: this.cleanText(socialLinks.website),
+    };
+
+    return this.withoutEmptyValues(normalized);
+  }
+
+  private withoutEmptyValues<T extends Record<string, string | undefined>>(value: T): T | null {
+    const entries = Object.entries(value).filter(([, field]) => Boolean(field));
+
+    return entries.length > 0 ? (Object.fromEntries(entries) as T) : null;
+  }
+
+  private cleanText(value: unknown): string | undefined {
+    return typeof value === "string" && value.trim() ? value.trim() : undefined;
+  }
+
+  private toConfigObject(config: Prisma.JsonValue): Record<string, unknown> {
+    return typeof config === "object" && config !== null && !Array.isArray(config)
+      ? { ...(config as Record<string, unknown>) }
+      : {};
   }
 
   private readonly storeRelations = {
