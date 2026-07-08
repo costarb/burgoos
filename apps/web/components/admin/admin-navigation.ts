@@ -280,6 +280,10 @@ export function canAccessNavigationItem(
     return Boolean(session.user.isPlatformAdmin && session.user.platformRole === "SUPER_ADMIN");
   }
 
+  if (session.user.isPlatformAdmin) {
+    return !item.permissions?.length && !item.masterOnly;
+  }
+
   if (session.user.isMaster) {
     return true;
   }
@@ -297,7 +301,10 @@ export function canAccessNavigationItem(
 
 export function filterNavigationBySession(
   groups: AdminNavigationGroup[],
-  session: { user: { isMaster?: boolean }; permissions?: string[] } | null
+  session: {
+    user: { isMaster?: boolean; isPlatformAdmin?: boolean; platformRole?: string };
+    permissions?: string[];
+  } | null
 ): AdminNavigationGroup[] {
   return groups
     .map((group) => ({

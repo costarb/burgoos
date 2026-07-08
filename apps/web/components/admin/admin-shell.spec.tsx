@@ -52,13 +52,21 @@ describe("admin navigation permissions", () => {
   it("keeps platform links restricted to platform admins", () => {
     const stores = secondaryNavigation.find((item) => item.href === "/platform/stores");
     const users = secondaryNavigation.find((item) => item.href === "/platform/users");
+    const publicMenu = secondaryNavigation.find((item) => item.href === "/piloto");
+    const managementReport = adminNavigation
+      .flatMap((group) => group.items)
+      .find((item) => item.href === "/admin/reports/management");
 
     expect(stores).toBeDefined();
     expect(users).toBeDefined();
+    expect(publicMenu).toBeDefined();
+    expect(managementReport).toBeDefined();
     expect(canAccessNavigationItem(stores!, operatorSession)).toBe(false);
     expect(canAccessNavigationItem(stores!, masterSession)).toBe(false);
     expect(canAccessNavigationItem(stores!, platformSession)).toBe(true);
     expect(canAccessNavigationItem(users!, platformSession)).toBe(true);
+    expect(canAccessNavigationItem(publicMenu!, platformSession)).toBe(true);
+    expect(canAccessNavigationItem(managementReport!, platformSession)).toBe(false);
   });
 
   it("resolves direct route access using the same permission metadata", () => {

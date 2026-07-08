@@ -26,7 +26,22 @@ describe("PermissionGuard", () => {
     expect(() => guard.canActivate(contextWith([], UserRole.ADMIN))).not.toThrow();
   });
 
-  function contextWith(permissions: string[], role: UserRole = UserRole.OPERATOR) {
+  it("rejects platform administrators on store-scoped permission checks", () => {
+    expect(() =>
+      guard.canActivate(
+        contextWith([], UserRole.ADMIN, {
+          isMaster: true,
+          isPlatformAdmin: true,
+        })
+      )
+    ).toThrow(ForbiddenException);
+  });
+
+  function contextWith(
+    permissions: string[],
+    role: UserRole = UserRole.OPERATOR,
+    overrides: Record<string, unknown> = {}
+  ) {
     return {
       getHandler: () => handler,
       getClass: () => ProtectedController,
@@ -38,6 +53,7 @@ describe("PermissionGuard", () => {
             isMaster: false,
             isPlatformAdmin: false,
             permissions,
+            ...overrides,
           },
         }),
       }),
