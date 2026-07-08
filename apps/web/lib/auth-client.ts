@@ -2,6 +2,8 @@ import type { AuthSession } from "@burgoos/types";
 
 const AUTH_SESSION_KEY = "burgoos.admin.session";
 const AUTH_ACCESS_COOKIE = "burgoos.admin.access_token";
+const SESSION_REFRESH_THRESHOLD_MS = 30 * 60 * 1000;
+const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? "http://127.0.0.1:3001";
 
 export function readAuthSession(): AuthSession | null {
   if (typeof window === "undefined") {
@@ -40,6 +42,55 @@ export function clearAuthSession(): void {
 
 export function getAuthHeader(session = readAuthSession()): Record<string, string> {
   return session?.accessToken ? { Authorization: `Bearer ${session.accessToken}` } : {};
+}
+
+export function isAuthSessionExpiring(
+  session: AuthSession,
+  thresholdMs = SESSION_REFRESH_THRESHOLD_MS
+): boolean {
+  const expiresAt = Date.parse(session.accessTokenExpiresAt);
+
+  if (!Number.isFinite(expiresAt)) {
+    return true;
+  }
+
+  return expiresAt - Date.now() <= thresholdMs;
+}
+
+export async function refreshAuthSession(session = readAuthSession()): Promise<AuthSession | null> {
+  if (!session?.refreshToken) {
+    return session;
+  }
+
+  const response = await fetch(`${apiUrl}/api/auth/refresh`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ refreshToken: session.refreshToken }),
+  });
+
+  if (!response.ok) {
+    clearAuthSession();
+    return null;
+  }
+
+  const refreshedSession = normalizeAuthSession((await response.json()) as Partial<AuthSession>);
+  writeAuthSession(refreshedSession);
+  return refreshedSession;
+}
+
+export async function refreshAuthSessionIfNeeded(
+  session = readAuthSession(),
+  thresholdMs = SESSION_REFRESH_THRESHOLD_MS
+): Promise<AuthSession | null> {
+  if (!session) {
+    return null;
+  }
+
+  if (!isAuthSessionExpiring(session, thresholdMs)) {
+    return session;
+  }
+
+  return refreshAuthSession(session);
 }
 
 function normalizeAuthSession(session: Partial<AuthSession>): AuthSession {

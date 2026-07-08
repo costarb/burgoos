@@ -3,14 +3,12 @@
 import type { AuthSession } from "@burgoos/types";
 import { LogIn } from "lucide-react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { FormEvent, useState } from "react";
 import { writeAuthSession } from "../../lib/auth-client";
 
 const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? "http://127.0.0.1:3001";
 
 export default function LoginPage() {
-  const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [pending, setPending] = useState(false);
@@ -23,9 +21,10 @@ export default function LoginPage() {
 
     try {
       const session = await authenticate(email, password);
+      const targetPath = isPlatformAdminSession(session) ? "/platform/stores" : "/admin";
+
       writeAuthSession(session);
-      router.push(isPlatformAdminSession(session) ? "/platform/stores" : "/admin");
-      router.refresh();
+      window.location.assign(targetPath);
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : "Nao foi possivel entrar.");
     } finally {
@@ -124,5 +123,5 @@ function postLogin(path: string, email: string, password: string): Promise<Respo
 }
 
 function isPlatformAdminSession(session: AuthSession): boolean {
-  return Boolean((session.user as { isPlatformAdmin?: boolean }).isPlatformAdmin);
+  return Boolean(session.user.isPlatformAdmin && session.user.platformRole === "SUPER_ADMIN");
 }

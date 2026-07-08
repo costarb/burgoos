@@ -243,6 +243,13 @@ export const secondaryNavigation: AdminNavigationItem[] = [
     platformAdminOnly: true,
   },
   {
+    href: "/platform/users",
+    label: "Admins plataforma",
+    icon: Users,
+    description: "Usuarios da plataforma",
+    platformAdminOnly: true,
+  },
+  {
     href: "/piloto",
     label: "Cardapio publico",
     icon: Tags,
@@ -261,7 +268,7 @@ export function findNavigationItem(pathname: string): AdminNavigationItem | unde
 export function canAccessNavigationItem(
   item: AdminNavigationItem,
   session: {
-    user: { isMaster?: boolean; isPlatformAdmin?: boolean };
+    user: { isMaster?: boolean; isPlatformAdmin?: boolean; platformRole?: string };
     permissions?: string[];
   } | null
 ): boolean {
@@ -270,7 +277,7 @@ export function canAccessNavigationItem(
   }
 
   if (item.platformAdminOnly) {
-    return Boolean(session.user.isPlatformAdmin);
+    return Boolean(session.user.isPlatformAdmin && session.user.platformRole === "SUPER_ADMIN");
   }
 
   if (session.user.isMaster) {

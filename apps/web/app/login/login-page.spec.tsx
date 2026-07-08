@@ -4,12 +4,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import LoginPage from "./page";
 import { writeAuthSession } from "../../lib/auth-client";
 
-const push = vi.fn();
-const refresh = vi.fn();
-
-vi.mock("next/navigation", () => ({
-  useRouter: () => ({ push, refresh }),
-}));
+const locationAssign = vi.fn();
 
 vi.mock("../../lib/auth-client", () => ({
   writeAuthSession: vi.fn(),
@@ -22,6 +17,10 @@ describe("login page", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     vi.stubGlobal("React", React);
+    vi.stubGlobal("location", {
+      ...window.location,
+      assign: locationAssign,
+    });
     container = document.createElement("div");
     document.body.appendChild(container);
     root = createRoot(container);
@@ -109,8 +108,7 @@ describe("login page", () => {
       })
     );
     expect(writeAuthSession).toHaveBeenCalledWith(session);
-    expect(push).toHaveBeenCalledWith("/admin");
-    expect(refresh).toHaveBeenCalledOnce();
+    expect(locationAssign).toHaveBeenCalledWith("/admin");
   });
 
   it("falls back to platform login and redirects platform admins to stores", async () => {
@@ -129,6 +127,7 @@ describe("login page", () => {
         status: "ACTIVE",
         isMaster: true,
         isPlatformAdmin: true,
+        platformRole: "SUPER_ADMIN",
       },
     };
     vi.stubGlobal(
@@ -158,7 +157,7 @@ describe("login page", () => {
       expect.objectContaining({ method: "POST" })
     );
     expect(writeAuthSession).toHaveBeenCalledWith(session);
-    expect(push).toHaveBeenCalledWith("/platform/stores");
+    expect(locationAssign).toHaveBeenCalledWith("/platform/stores");
   });
 
   async function fillAndSubmit(emailValue = "admin@example.com", passwordValue = "admin123") {

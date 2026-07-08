@@ -17,6 +17,7 @@ import type {
   BrandingState,
   CreatedOrder,
   CreatePublicOrderInput,
+  CreatePlatformUserInput,
   CreateStoreInput,
   FinancialConfiguration,
   FinancialAccount,
@@ -60,6 +61,7 @@ import type {
   StoreDetail,
   StoreSetupResult,
   StoreSummary,
+  PlatformUserSummary,
   Supplier,
   SupplierInput,
   StockMovementInput,
@@ -67,6 +69,7 @@ import type {
   TechnicalSheetInput,
   TechnicalSheetSummary,
   UpdateStoreInput,
+  UpdatePlatformUserInput,
   VisualConfiguration,
   NotificationCenterState,
   OperationalNotification,
@@ -259,7 +262,7 @@ async function fetchPlatform<T>(token: string, path: string, init?: RequestInit)
 
 export async function getPublicMenu(slug: string): Promise<PublicMenu | null> {
   const response = await fetch(`${apiUrl}/api/public/tenants/${slug}/menu`, {
-    cache: "no-store",
+    next: { revalidate: 30 },
   });
 
   if (response.status === 404) {
@@ -270,7 +273,59 @@ export async function getPublicMenu(slug: string): Promise<PublicMenu | null> {
     throw new Error("Failed to load public menu");
   }
 
-  return response.json() as Promise<PublicMenu>;
+  const menu = (await response.json()) as PublicMenu;
+  return normalizePublicMenuAssets(menu);
+}
+
+function normalizePublicMenuAssets(menu: PublicMenu): PublicMenu {
+  const branding = menu.tenant.branding;
+
+  return {
+    ...menu,
+    tenant: {
+      ...menu.tenant,
+      branding: branding
+        ? {
+            ...branding,
+            logoUrl: toPublicAssetUrl(menu.tenant.slug, branding.logoUrl, "branding/logo"),
+            headerImageUrl: toPublicAssetUrl(
+              menu.tenant.slug,
+              branding.headerImageUrl,
+              "branding/header"
+            ),
+            bodyImageUrl: toPublicAssetUrl(
+              menu.tenant.slug,
+              branding.bodyImageUrl,
+              "branding/body"
+            ),
+            footerImageUrl: toPublicAssetUrl(
+              menu.tenant.slug,
+              branding.footerImageUrl,
+              "branding/footer"
+            ),
+          }
+        : branding,
+    },
+    categories: menu.categories.map((category) => ({
+      ...category,
+      products: category.products.map((product) => ({
+        ...product,
+        imageUrl: toPublicAssetUrl(
+          menu.tenant.slug,
+          product.imageUrl,
+          `products/${product.id}/image`
+        ),
+      })),
+    })),
+  };
+}
+
+function toPublicAssetUrl(slug: string, value: string | null, path: string): string | null {
+  if (!value?.startsWith("data:image/")) {
+    return value;
+  }
+
+  return `${apiUrl}/api/public/tenants/${slug}/${path}`;
 }
 
 export async function createPublicOrder(
@@ -526,8 +581,22 @@ export async function getAccessAudit(
   return { token, events, stores: userOptions.stores };
 }
 
-export async function listPlatformStores(token: string): Promise<StoreSummary[]> {
-  return fetchPlatform<StoreSummary[]>(token, "/api/platform/stores");
+export async function listPlatformStores(
+  token: string,
+  filters: { search?: string; active?: string } = {}
+): Promise<StoreSummary[]> {
+  const params = new URLSearchParams();
+
+  if (filters.search) {
+    params.set("search", filters.search);
+  }
+
+  if (filters.active) {
+    params.set("active", filters.active);
+  }
+
+  const query = params.toString();
+  return fetchPlatform<StoreSummary[]>(token, `/api/platform/stores${query ? `?${query}` : ""}`);
 }
 
 export async function createPlatformStore(
@@ -550,6 +619,52 @@ export async function updatePlatformStore(
   payload: UpdateStoreInput
 ): Promise<StoreDetail> {
   return fetchPlatform<StoreDetail>(token, `/api/platform/stores/${storeId}`, {
+    method: "PATCH",
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function listPlatformUsers(
+  token: string,
+  filters: { search?: string; active?: string; role?: string } = {}
+): Promise<PlatformUserSummary[]> {
+  const params = new URLSearchParams();
+
+  if (filters.search) {
+    params.set("search", filters.search);
+  }
+
+  if (filters.active) {
+    params.set("active", filters.active);
+  }
+
+  if (filters.role) {
+    params.set("role", filters.role);
+  }
+
+  const query = params.toString();
+  return fetchPlatform<PlatformUserSummary[]>(
+    token,
+    `/api/platform/users${query ? `?${query}` : ""}`
+  );
+}
+
+export async function createPlatformUser(
+  token: string,
+  payload: CreatePlatformUserInput
+): Promise<PlatformUserSummary> {
+  return fetchPlatform<PlatformUserSummary>(token, "/api/platform/users", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function updatePlatformUser(
+  token: string,
+  userId: string,
+  payload: UpdatePlatformUserInput
+): Promise<PlatformUserSummary> {
+  return fetchPlatform<PlatformUserSummary>(token, `/api/platform/users/${userId}`, {
     method: "PATCH",
     body: JSON.stringify(payload),
   });

@@ -24,6 +24,21 @@ async function updateStoreAction(storeId: string, formData: FormData) {
     name: String(formData.get("name") ?? ""),
     slug: String(formData.get("slug") ?? ""),
     phone: String(formData.get("phone") ?? ""),
+    address: {
+      street: String(formData.get("street") ?? ""),
+      number: String(formData.get("number") ?? ""),
+      complement: String(formData.get("complement") ?? ""),
+      neighborhood: String(formData.get("neighborhood") ?? ""),
+      city: String(formData.get("city") ?? ""),
+      state: String(formData.get("state") ?? ""),
+      postalCode: String(formData.get("postalCode") ?? ""),
+    },
+    socialLinks: {
+      instagram: String(formData.get("instagram") ?? ""),
+      facebook: String(formData.get("facebook") ?? ""),
+      whatsapp: String(formData.get("whatsapp") ?? ""),
+      website: String(formData.get("website") ?? ""),
+    },
     active,
     openMode,
     operatingHours: JSON.parse(operatingHoursText) as Record<string, unknown>,
@@ -48,6 +63,8 @@ export default async function StoreDetailPage({ params }: StoreDetailPageProps) 
   }
   const updateAction = updateStoreAction.bind(null, params.storeId);
   const operatingHours = JSON.stringify(store.operatingHours ?? {}, null, 2);
+  const address = store.address ?? {};
+  const socialLinks = store.socialLinks ?? {};
 
   return (
     <main className="min-h-screen bg-slate-50 px-6 py-8 text-slate-900">
@@ -57,6 +74,9 @@ export default async function StoreDetailPage({ params }: StoreDetailPageProps) 
         </a>
         <h1 className="mt-4 text-3xl font-semibold">{store.name}</h1>
         <p className="mt-2 text-slate-600">/{store.slug}</p>
+        <p className="mt-1 text-sm text-slate-600">
+          {[address.city, address.state].filter(Boolean).join(" / ") || store.phone}
+        </p>
 
         <section className="mt-6 grid gap-4 sm:grid-cols-2">
           <article className="rounded-md border border-slate-200 bg-white p-4 shadow-sm">
@@ -107,6 +127,111 @@ export default async function StoreDetailPage({ params }: StoreDetailPageProps) 
               />
             </label>
           </div>
+          <section className="grid gap-4 border-t border-slate-100 pt-4">
+            <h3 className="font-semibold">Endereco publico</h3>
+            <div className="grid gap-4 md:grid-cols-[2fr_120px_1fr]">
+              <label className="grid gap-1 text-sm font-medium">
+                Logradouro
+                <input
+                  className="rounded-md border border-slate-300 px-3 py-2"
+                  defaultValue={address.street ?? ""}
+                  name="street"
+                />
+              </label>
+              <label className="grid gap-1 text-sm font-medium">
+                Numero
+                <input
+                  className="rounded-md border border-slate-300 px-3 py-2"
+                  defaultValue={address.number ?? ""}
+                  name="number"
+                />
+              </label>
+              <label className="grid gap-1 text-sm font-medium">
+                Complemento
+                <input
+                  className="rounded-md border border-slate-300 px-3 py-2"
+                  defaultValue={address.complement ?? ""}
+                  name="complement"
+                />
+              </label>
+            </div>
+            <div className="grid gap-4 md:grid-cols-[1fr_1fr_80px_140px]">
+              <label className="grid gap-1 text-sm font-medium">
+                Bairro
+                <input
+                  className="rounded-md border border-slate-300 px-3 py-2"
+                  defaultValue={address.neighborhood ?? ""}
+                  name="neighborhood"
+                />
+              </label>
+              <label className="grid gap-1 text-sm font-medium">
+                Cidade
+                <input
+                  className="rounded-md border border-slate-300 px-3 py-2"
+                  defaultValue={address.city ?? ""}
+                  name="city"
+                />
+              </label>
+              <label className="grid gap-1 text-sm font-medium">
+                UF
+                <input
+                  className="rounded-md border border-slate-300 px-3 py-2 uppercase"
+                  defaultValue={address.state ?? ""}
+                  maxLength={2}
+                  name="state"
+                />
+              </label>
+              <label className="grid gap-1 text-sm font-medium">
+                CEP
+                <input
+                  className="rounded-md border border-slate-300 px-3 py-2"
+                  defaultValue={address.postalCode ?? ""}
+                  name="postalCode"
+                />
+              </label>
+            </div>
+          </section>
+          <section className="grid gap-4 border-t border-slate-100 pt-4">
+            <h3 className="font-semibold">Midias sociais</h3>
+            <div className="grid gap-4 md:grid-cols-2">
+              <label className="grid gap-1 text-sm font-medium">
+                Instagram
+                <input
+                  className="rounded-md border border-slate-300 px-3 py-2"
+                  defaultValue={socialLinks.instagram ?? ""}
+                  name="instagram"
+                  placeholder="https://instagram.com/loja"
+                />
+              </label>
+              <label className="grid gap-1 text-sm font-medium">
+                Facebook
+                <input
+                  className="rounded-md border border-slate-300 px-3 py-2"
+                  defaultValue={socialLinks.facebook ?? ""}
+                  name="facebook"
+                  placeholder="https://facebook.com/loja"
+                />
+              </label>
+              <label className="grid gap-1 text-sm font-medium">
+                WhatsApp
+                <input
+                  className="rounded-md border border-slate-300 px-3 py-2"
+                  defaultValue={socialLinks.whatsapp ?? ""}
+                  name="whatsapp"
+                  placeholder="https://wa.me/..."
+                />
+              </label>
+              <label className="grid gap-1 text-sm font-medium">
+                Site
+                <input
+                  className="rounded-md border border-slate-300 px-3 py-2"
+                  defaultValue={socialLinks.website ?? ""}
+                  name="website"
+                  placeholder="https://..."
+                />
+              </label>
+            </div>
+          </section>
           <div className="grid gap-4 md:grid-cols-[1fr_2fr]">
             <div className="grid gap-3">
               <label className="flex items-center gap-2 text-sm font-medium">
