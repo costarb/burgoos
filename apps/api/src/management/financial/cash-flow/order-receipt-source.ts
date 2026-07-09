@@ -5,6 +5,7 @@ export interface OrderReceiptEntry {
   sourceType: "ORDER_RECEIPT";
   sourceId: string;
   financialAccountId: string | null;
+  paymentInstitutionId: string | null;
   paymentInstitution: PaymentInstitution | null;
   occurredAt: Date;
   description: string;
@@ -19,6 +20,7 @@ export type CashFlowOrder = {
   customerName: string;
   total: Prisma.Decimal;
   paymentInstitution: PaymentInstitution | null;
+  paymentInstitutionId: string | null;
   paymentGrossAmount: Prisma.Decimal | null;
   paymentNetAmount: Prisma.Decimal | null;
   paymentReleaseExpectedAt: Date | null;
@@ -26,7 +28,10 @@ export type CashFlowOrder = {
   deletedAt: Date | null;
 };
 
-export type InstitutionAccountMap = Map<PaymentInstitution, string>;
+export interface InstitutionAccountMap {
+  byInstitutionId: Map<string, string>;
+  byLegacyInstitution: Map<PaymentInstitution, string>;
+}
 
 export function mapOrderReceipts(
   orders: CashFlowOrder[],
@@ -42,7 +47,15 @@ export function mapOrderReceipts(
       return {
         sourceType: "ORDER_RECEIPT" as const,
         sourceId: order.id,
-        financialAccountId: order.paymentInstitution ? accountMap.get(order.paymentInstitution) ?? null : null,
+        financialAccountId:
+          (order.paymentInstitutionId
+            ? accountMap.byInstitutionId.get(order.paymentInstitutionId)
+            : undefined) ??
+          (order.paymentInstitution
+            ? accountMap.byLegacyInstitution.get(order.paymentInstitution)
+            : undefined) ??
+          null,
+        paymentInstitutionId: order.paymentInstitutionId,
         paymentInstitution: order.paymentInstitution,
         occurredAt,
         description: `Recebimento pedido ${order.customerName}`,

@@ -50,7 +50,12 @@ export class CashFlowService {
     }));
   }
 
-  async getPosition(tenantId: string, asOf: Date, projectionEnd: Date, financialAccountId?: string) {
+  async getPosition(
+    tenantId: string,
+    asOf: Date,
+    projectionEnd: Date,
+    financialAccountId?: string
+  ) {
     const [accounts, orders, payables, payments, movements] = await Promise.all([
       this.prisma.financialAccount.findMany({
         where: { tenantId, ...(financialAccountId ? { id: financialAccountId } : {}) },
@@ -61,7 +66,10 @@ export class CashFlowService {
           tenantId,
           status: OrderStatus.DELIVERED,
           deletedAt: null,
-          OR: [{ paymentReleaseExpectedAt: null }, { paymentReleaseExpectedAt: { lte: projectionEnd } }],
+          OR: [
+            { paymentReleaseExpectedAt: null },
+            { paymentReleaseExpectedAt: { lte: projectionEnd } },
+          ],
         },
         select: {
           id: true,
@@ -69,6 +77,7 @@ export class CashFlowService {
           customerName: true,
           total: true,
           paymentInstitution: true,
+          paymentInstitutionId: true,
           paymentGrossAmount: true,
           paymentNetAmount: true,
           paymentReleaseExpectedAt: true,
@@ -105,7 +114,9 @@ export class CashFlowService {
           tenantId,
           reversedAt: null,
           occurredAt: { lte: asOf },
-          ...(financialAccountId ? { OR: [{ financialAccountId }, { destinationAccountId: financialAccountId }] } : {}),
+          ...(financialAccountId
+            ? { OR: [{ financialAccountId }, { destinationAccountId: financialAccountId }] }
+            : {}),
         },
         include: {
           financialAccount: { select: { name: true } },
@@ -114,11 +125,18 @@ export class CashFlowService {
       }),
     ]);
 
-    const accountMap = new Map(
-      accounts
-        .filter((account) => account.paymentInstitution)
-        .map((account) => [account.paymentInstitution!, account.id])
-    );
+    const accountMap = {
+      byInstitutionId: new Map(
+        accounts
+          .filter((account) => account.paymentInstitutionId)
+          .map((account) => [account.paymentInstitutionId!, account.id])
+      ),
+      byLegacyInstitution: new Map(
+        accounts
+          .filter((account) => account.paymentInstitution)
+          .map((account) => [account.paymentInstitution!, account.id])
+      ),
+    };
     const accountNames = new Map(accounts.map((account) => [account.id, account.name]));
     const orderReceipts = mapOrderReceipts(orders, accountMap, asOf).filter(
       (receipt) => !financialAccountId || receipt.financialAccountId === financialAccountId
@@ -240,7 +258,9 @@ export class CashFlowService {
       receivableAmount: toMoneyString(receivableAmount),
       payableAmount: toMoneyString(payableAmount),
       projectedBalance: toMoneyString(projectedBalance),
-      negativeBalanceDetected: projectedEntries.some((entry) => new Prisma.Decimal(entry.projectedBalance).lessThan(0)),
+      negativeBalanceDetected: projectedEntries.some((entry) =>
+        new Prisma.Decimal(entry.projectedBalance).lessThan(0)
+      ),
       accounts: formatAccountBalances(accounts, ledger),
       ledger: formatLedger(ledger),
       projection: projectedEntries,
@@ -308,7 +328,9 @@ function movementLedgerEntries(
       ];
     }
 
-    const isInflow = movement.type === CashMovementType.MANUAL_INFLOW || movement.type === CashMovementType.ADJUSTMENT;
+    const isInflow =
+      movement.type === CashMovementType.MANUAL_INFLOW ||
+      movement.type === CashMovementType.ADJUSTMENT;
 
     return [
       {
@@ -444,7 +466,10 @@ function formatProjection(entries: ProjectionAccumulatorEntry[], currentBalance:
 }
 
 function formatTimeline(entries: ProjectionAccumulatorEntry[]) {
-  const buckets = new Map<string, { inflowAmount: Prisma.Decimal; outflowAmount: Prisma.Decimal }>();
+  const buckets = new Map<
+    string,
+    { inflowAmount: Prisma.Decimal; outflowAmount: Prisma.Decimal }
+  >();
 
   entries.forEach((entry) => {
     const date = toDateOnly(entry.occurredAt);
@@ -467,12 +492,18 @@ function formatTimeline(entries: ProjectionAccumulatorEntry[]) {
     }));
 }
 
-function formatAccountBalances(accounts: { id: string; name: string }[], entries: LedgerAccumulatorEntry[]) {
+function formatAccountBalances(
+  accounts: { id: string; name: string }[],
+  entries: LedgerAccumulatorEntry[]
+) {
   const accountBalances = new Map<string | null, Prisma.Decimal>();
 
   entries.forEach((entry) => {
     const current = accountBalances.get(entry.financialAccountId) ?? new Prisma.Decimal(0);
-    accountBalances.set(entry.financialAccountId, current.plus(entry.inflowAmount).minus(entry.outflowAmount));
+    accountBalances.set(
+      entry.financialAccountId,
+      current.plus(entry.inflowAmount).minus(entry.outflowAmount)
+    );
   });
 
   const balances: Array<{

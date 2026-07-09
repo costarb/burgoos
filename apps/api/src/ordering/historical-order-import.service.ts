@@ -23,6 +23,8 @@ interface ParsedImportRow {
   amount: Prisma.Decimal;
   feeAmount?: Prisma.Decimal;
   netAmount?: Prisma.Decimal;
+  paymentInstitutionId?: string;
+  paymentInstitutionName?: string;
   paymentInstitution?: PaymentInstitution;
   paymentMethod?: PaymentMethod;
   externalPaymentId?: string;
@@ -46,6 +48,8 @@ interface ImportedOrderResult {
   productId: string;
   productName: string;
   paymentInstitution: PaymentInstitution | null;
+  paymentInstitutionId: string | null;
+  paymentInstitutionName: string | null;
   paymentMethod: PaymentMethod;
   externalPaymentId: string | null;
   grossAmount: string;
@@ -53,6 +57,22 @@ interface ImportedOrderResult {
   netAmount: string | null;
   paymentReleaseExpectedAt: string | null;
   paymentReleaseSource: PaymentReleaseSource | null;
+}
+
+interface ResolvedPaymentInstitution {
+  id: string;
+  name: string;
+  paymentInstitution: PaymentInstitution | null;
+}
+
+interface PaymentInstitutionOption extends ResolvedPaymentInstitution {
+  code: string;
+}
+
+interface ParsedPaymentInstitution {
+  paymentInstitutionId?: string;
+  paymentInstitutionName?: string;
+  paymentInstitution?: PaymentInstitution;
 }
 
 interface SkippedOrderResult {
@@ -71,13 +91,14 @@ export class HistoricalOrderImportService {
   async importFromCsv(tenantId: string, dto: ImportOrdersDto) {
     const strategy = dto.strategy ?? "PRICE_WEIGHTED";
     const layout = dto.layout ?? "SIMPLE";
-    const rows = this.parseCsv(dto.csvText, layout);
+    const institutionOptions = await this.listPaymentInstitutionOptions(tenantId);
+    const rows = this.parseCsv(dto.csvText, layout, institutionOptions);
 
     if (rows.length === 0) {
       throw new BadRequestException("Nenhuma venda valida encontrada no CSV");
     }
 
-    const [products, existingKeys, orderPlatform] = await Promise.all([
+    const [products, existingKeys, orderPlatform, defaultInstitution] = await Promise.all([
       this.getProductCandidates(tenantId, dto.fixedProductId, strategy),
       this.findExistingRows(
         tenantId,
@@ -87,6 +108,7 @@ export class HistoricalOrderImportService {
         }))
       ),
       this.upsertOrderPlatform(tenantId, dto.orderPlatformName ?? "FOOD_TRUCK"),
+      this.resolveDefaultPaymentInstitution(tenantId, dto),
     ]);
 
     const imported: ImportedOrderResult[] = [];
@@ -99,6 +121,26 @@ export class HistoricalOrderImportService {
       }
 
       const product = this.pickProduct(products, row, strategy, dto.fixedProductId);
+      const rowInstitution = row.paymentInstitutionId
+        ? {
+            id: row.paymentInstitutionId,
+            name:
+              row.paymentInstitutionName ??
+              paymentInstitutionLabel(row.paymentInstitution ?? null) ??
+              "",
+            paymentInstitution: row.paymentInstitution ?? null,
+          }
+        : await this.resolveRowPaymentInstitution(
+            tenantId,
+            row.paymentInstitution,
+            defaultInstitution
+          );
+      const paymentInstitution =
+        row.paymentInstitution ?? rowInstitution?.paymentInstitution ?? dto.paymentInstitution;
+      const paymentInstitutionId = rowInstitution?.id ?? null;
+      const paymentInstitutionName =
+        rowInstitution?.name ?? paymentInstitutionLabel(paymentInstitution ?? null);
+      const paymentMethod = row.paymentMethod ?? dto.paymentMethod ?? PaymentMethod.PIX_MANUAL;
       const order = await this.prisma.order.create({
         data: {
           tenantId,
@@ -107,8 +149,9 @@ export class HistoricalOrderImportService {
           customerName: "Cliente importado",
           customerPhone: "00000000000",
           fulfillmentMethod: FulfillmentMethod.PICKUP,
-          paymentMethod: row.paymentMethod ?? dto.paymentMethod ?? PaymentMethod.PIX_MANUAL,
-          paymentInstitution: row.paymentInstitution ?? dto.paymentInstitution,
+          paymentMethod,
+          paymentInstitution,
+          paymentInstitutionId,
           externalPaymentId: row.externalPaymentId,
           paymentGrossAmount: row.amount,
           paymentFeeAmount: row.feeAmount,
@@ -118,8 +161,9 @@ export class HistoricalOrderImportService {
           paymentReleaseSource: row.paymentReleaseSource,
           orderPlatformId: orderPlatform.id,
           notes: this.buildImportNote(row, product, strategy, layout, {
-            paymentInstitution: row.paymentInstitution ?? dto.paymentInstitution,
-            paymentMethod: row.paymentMethod ?? dto.paymentMethod ?? PaymentMethod.PIX_MANUAL,
+            paymentInstitution,
+            paymentInstitutionName,
+            paymentMethod,
           }),
           createdAt: row.date,
           updatedAt: row.date,
@@ -146,8 +190,10 @@ export class HistoricalOrderImportService {
         amount: row.amount.toFixed(2),
         productId: product.id,
         productName: product.name,
-        paymentInstitution: row.paymentInstitution ?? dto.paymentInstitution ?? null,
-        paymentMethod: row.paymentMethod ?? dto.paymentMethod ?? PaymentMethod.PIX_MANUAL,
+        paymentInstitution: paymentInstitution ?? null,
+        paymentInstitutionId,
+        paymentInstitutionName,
+        paymentMethod,
         externalPaymentId: row.externalPaymentId ?? null,
         grossAmount: row.amount.toFixed(2),
         feeAmount: row.feeAmount?.toFixed(2) ?? null,
@@ -242,7 +288,9 @@ export class HistoricalOrderImportService {
       }
 
       if (order.externalPaymentId) {
-        const row = rows.find((candidate) => candidate.externalPaymentId === order.externalPaymentId);
+        const row = rows.find(
+          (candidate) => candidate.externalPaymentId === order.externalPaymentId
+        );
 
         if (row) {
           keys.add(row.importKey);
@@ -276,7 +324,62 @@ export class HistoricalOrderImportService {
     });
   }
 
-  private parseCsv(csvText: string, layout: HistoricalOrderImportLayout): ParsedImportRow[] {
+  private async listPaymentInstitutionOptions(
+    tenantId: string
+  ): Promise<PaymentInstitutionOption[]> {
+    return this.prisma.paymentInstitutionConfiguration.findMany({
+      where: { tenantId, active: true },
+      select: { id: true, name: true, code: true, paymentInstitution: true },
+      orderBy: { name: "asc" },
+    });
+  }
+
+  private async resolveDefaultPaymentInstitution(
+    tenantId: string,
+    dto: ImportOrdersDto
+  ): Promise<ResolvedPaymentInstitution | null> {
+    if (dto.paymentInstitutionId) {
+      const institution = await this.prisma.paymentInstitutionConfiguration.findFirst({
+        where: { id: dto.paymentInstitutionId, tenantId, active: true },
+        select: { id: true, name: true, paymentInstitution: true },
+      });
+
+      if (!institution) {
+        throw new BadRequestException("Instituicao financeira padrao nao encontrada");
+      }
+
+      return institution;
+    }
+
+    if (!dto.paymentInstitution) {
+      return null;
+    }
+
+    return this.resolveRowPaymentInstitution(tenantId, dto.paymentInstitution, null);
+  }
+
+  private async resolveRowPaymentInstitution(
+    tenantId: string,
+    paymentInstitution: PaymentInstitution | undefined,
+    fallback: ResolvedPaymentInstitution | null
+  ): Promise<ResolvedPaymentInstitution | null> {
+    if (!paymentInstitution) {
+      return fallback;
+    }
+
+    const institution = await this.prisma.paymentInstitutionConfiguration.findFirst({
+      where: { tenantId, paymentInstitution },
+      select: { id: true, name: true, paymentInstitution: true },
+    });
+
+    return institution ?? fallback;
+  }
+
+  private parseCsv(
+    csvText: string,
+    layout: HistoricalOrderImportLayout,
+    institutionOptions: PaymentInstitutionOption[]
+  ): ParsedImportRow[] {
     const lines = csvText
       .split(/\r?\n/)
       .map((line) => line.trim())
@@ -290,7 +393,7 @@ export class HistoricalOrderImportService {
 
     return lines
       .slice(1)
-      .map((line, index) => this.parseLine(line, index + 2, header, layout))
+      .map((line, index) => this.parseLine(line, index + 2, header, layout, institutionOptions))
       .filter((row): row is ParsedImportRow => Boolean(row));
   }
 
@@ -298,7 +401,8 @@ export class HistoricalOrderImportService {
     line: string,
     rowNumber: number,
     header: Map<string, number>,
-    layout: HistoricalOrderImportLayout
+    layout: HistoricalOrderImportLayout,
+    institutionOptions: PaymentInstitutionOption[]
   ): ParsedImportRow | null {
     const columns = line.split(";");
 
@@ -310,13 +414,14 @@ export class HistoricalOrderImportService {
       return this.parsePagBankLine(columns, header, rowNumber);
     }
 
-    return this.parseSimpleLine(columns, header, rowNumber);
+    return this.parseSimpleLine(columns, header, rowNumber, institutionOptions);
   }
 
   private parseSimpleLine(
     columns: string[],
     header: Map<string, number>,
-    rowNumber: number
+    rowNumber: number,
+    institutionOptions: PaymentInstitutionOption[]
   ): ParsedImportRow | null {
     const dateText = this.column(columns, header, "data") ?? columns[0] ?? "";
     const amountText = this.column(columns, header, "valor") ?? columns[columns.length - 1] ?? "";
@@ -330,9 +435,12 @@ export class HistoricalOrderImportService {
       return null;
     }
 
-    const paymentInstitution = this.parsePaymentInstitution(
+    const paymentInstitutionText =
       this.column(columns, header, "instituicao") ??
-        this.column(columns, header, "instituicao de pagamento")
+      this.column(columns, header, "instituicao de pagamento");
+    const parsedInstitution = this.parsePaymentInstitution(
+      paymentInstitutionText,
+      institutionOptions
     );
     const paymentMethod = this.parsePaymentMethod(
       this.column(columns, header, "meio") ??
@@ -342,14 +450,16 @@ export class HistoricalOrderImportService {
     const date = this.parseDate(dateText, rowNumber);
     const effectiveDate = this.withImportTime(date, rowNumber);
     const paymentRelease = this.resolvePaymentRelease(effectiveDate, undefined, {
-      paymentInstitution,
+      paymentInstitution: parsedInstitution.paymentInstitution,
       paymentMethod,
     });
     const importKey = createHash("sha256")
       .update(
-        `${rowNumber}|${dateText}|${description}|${amount.toFixed(2)}|${paymentInstitution ?? ""}|${
-          paymentMethod ?? ""
-        }`
+        `${rowNumber}|${dateText}|${description}|${amount.toFixed(2)}|${
+          parsedInstitution.paymentInstitutionId ??
+          parsedInstitution.paymentInstitution ??
+          this.normalize(paymentInstitutionText ?? "")
+        }|${paymentMethod ?? ""}`
       )
       .digest("hex")
       .slice(0, 16);
@@ -359,7 +469,9 @@ export class HistoricalOrderImportService {
       date: effectiveDate,
       description: description.trim(),
       amount,
-      paymentInstitution,
+      paymentInstitutionId: parsedInstitution.paymentInstitutionId,
+      paymentInstitutionName: parsedInstitution.paymentInstitutionName,
+      paymentInstitution: parsedInstitution.paymentInstitution,
       paymentMethod,
       paymentReleaseExpectedAt: paymentRelease.expectedAt,
       paymentReleaseSource: paymentRelease.source,
@@ -388,7 +500,10 @@ export class HistoricalOrderImportService {
       this.requiredColumn(columns, header, "SALES_DISCOUNTS", rowNumber),
       rowNumber
     ).abs();
-    const net = this.parseRequiredDecimal(this.requiredColumn(columns, header, "NET", rowNumber), rowNumber);
+    const net = this.parseRequiredDecimal(
+      this.requiredColumn(columns, header, "NET", rowNumber),
+      rowNumber
+    );
     const methodDetail = this.column(columns, header, "PAYMENT_METHOD_DETAIL") ?? "";
     const brand = this.column(columns, header, "PAYMENT_METHOD") || undefined;
     const chargeMethod = this.column(columns, header, "CHARGE_METHOD") ?? "";
@@ -437,7 +552,12 @@ export class HistoricalOrderImportService {
     }
 
     const dateText = this.requiredColumn(columns, header, "Data da Transação", rowNumber);
-    const externalPaymentId = this.requiredColumn(columns, header, "Código da Transação", rowNumber);
+    const externalPaymentId = this.requiredColumn(
+      columns,
+      header,
+      "Código da Transação",
+      rowNumber
+    );
     const gross = this.parseRequiredDecimal(
       this.requiredColumn(columns, header, "Valor Bruto", rowNumber),
       rowNumber
@@ -510,7 +630,9 @@ export class HistoricalOrderImportService {
     const value = this.column(columns, header, name);
 
     if (!value) {
-      throw new BadRequestException(`Coluna obrigatoria ausente ou vazia: ${name} na linha ${rowNumber}`);
+      throw new BadRequestException(
+        `Coluna obrigatoria ausente ou vazia: ${name} na linha ${rowNumber}`
+      );
     }
 
     return value;
@@ -529,7 +651,9 @@ export class HistoricalOrderImportService {
 
   private parseDateTime(dateText: string, rowNumber: number): Date {
     const normalized = dateText.trim();
-    const withSlash = normalized.match(/^(\d{2})\/(\d{2})\/(\d{4})\s+(\d{2}):(\d{2})(?::(\d{2}))?$/);
+    const withSlash = normalized.match(
+      /^(\d{2})\/(\d{2})\/(\d{4})\s+(\d{2}):(\d{2})(?::(\d{2}))?$/
+    );
     const withDash = normalized.match(/^(\d{2})-(\d{2})-(\d{4})\s+(\d{2}):(\d{2})(?::(\d{2}))?$/);
     const match = withSlash ?? withDash;
 
@@ -637,30 +761,65 @@ export class HistoricalOrderImportService {
     ].some((term) => normalized.includes(term));
   }
 
-  private parsePaymentInstitution(value: string | undefined): PaymentInstitution | undefined {
+  private parsePaymentInstitution(
+    value: string | undefined,
+    institutionOptions: PaymentInstitutionOption[]
+  ): ParsedPaymentInstitution {
     const normalized = this.normalize(value ?? "");
 
     if (!normalized) {
-      return undefined;
+      return {};
     }
 
     if (normalized.includes("pagbank") || normalized.includes("pagseguro")) {
-      return PaymentInstitution.PAGBANK;
+      return this.resolveParsedInstitution(PaymentInstitution.PAGBANK, institutionOptions);
     }
 
     if (normalized.includes("mercado")) {
-      return PaymentInstitution.MERCADO_PAGO;
+      return this.resolveParsedInstitution(PaymentInstitution.MERCADO_PAGO, institutionOptions);
     }
 
     if (normalized.includes("dinheiro")) {
-      return PaymentInstitution.DINHEIRO;
+      return this.resolveParsedInstitution(PaymentInstitution.DINHEIRO, institutionOptions);
     }
 
     if (normalized.includes("caixa")) {
-      return PaymentInstitution.CAIXA_LOCAL;
+      return this.resolveParsedInstitution(PaymentInstitution.CAIXA_LOCAL, institutionOptions);
     }
 
-    throw new BadRequestException(`Instituicao de pagamento invalida: ${value}`);
+    const customInstitution = institutionOptions.find(
+      (institution) =>
+        this.normalize(institution.name) === normalized ||
+        this.normalize(institution.code) === normalized
+    );
+
+    if (customInstitution) {
+      return {
+        paymentInstitutionId: customInstitution.id,
+        paymentInstitutionName: customInstitution.name,
+        paymentInstitution: customInstitution.paymentInstitution ?? undefined,
+      };
+    }
+
+    throw new BadRequestException(
+      `Instituicao de pagamento invalida: ${value}. Cadastre a instituicao em Financeiro > Instituicoes ou selecione uma instituicao padrao.`
+    );
+  }
+
+  private resolveParsedInstitution(
+    paymentInstitution: PaymentInstitution,
+    institutionOptions: PaymentInstitutionOption[]
+  ): ParsedPaymentInstitution {
+    const configuredInstitution = institutionOptions.find(
+      (institution) => institution.paymentInstitution === paymentInstitution
+    );
+
+    return {
+      paymentInstitutionId: configuredInstitution?.id,
+      paymentInstitutionName:
+        configuredInstitution?.name ?? paymentInstitutionLabel(paymentInstitution) ?? undefined,
+      paymentInstitution,
+    };
   }
 
   private parsePaymentMethod(value: string | undefined): PaymentMethod | undefined {
@@ -775,6 +934,7 @@ export class HistoricalOrderImportService {
     layout: HistoricalOrderImportLayout,
     payment: {
       paymentInstitution?: PaymentInstitution;
+      paymentInstitutionName?: string | null;
       paymentMethod: PaymentMethod;
     }
   ): string {
@@ -791,10 +951,23 @@ export class HistoricalOrderImportService {
       `bandeira=${row.paymentBrand ?? "nao informada"}`,
       `liberacaoPrevista=${row.paymentReleaseExpectedAt?.toISOString() ?? "nao informada"}`,
       `origemLiberacao=${row.paymentReleaseSource ?? "nao informada"}`,
-      `instituicaoPagamento=${payment.paymentInstitution ?? "nao informada"}`,
+      `instituicaoPagamento=${payment.paymentInstitutionName ?? payment.paymentInstitution ?? "nao informada"}`,
       `meioPagamento=${payment.paymentMethod}`,
       `produtoReferencia=${product.name}`,
       `precoProduto=${product.price.toFixed(2)}`,
     ].join(" | ");
   }
+}
+
+function paymentInstitutionLabel(value: PaymentInstitution | null): string | null {
+  if (!value) {
+    return null;
+  }
+
+  return {
+    PAGBANK: "PagBank",
+    MERCADO_PAGO: "Mercado Pago",
+    DINHEIRO: "Dinheiro",
+    CAIXA_LOCAL: "Caixa Local",
+  }[value];
 }

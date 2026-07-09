@@ -502,6 +502,7 @@ export interface HistoricalOrderImportInput {
   fixedProductId?: string;
   orderPlatformName?: string;
   paymentInstitution?: PaymentInstitution;
+  paymentInstitutionId?: string;
   paymentMethod?: PaymentMethod;
 }
 
@@ -513,6 +514,8 @@ export interface HistoricalOrderImportItem {
   productId: string;
   productName: string;
   paymentInstitution: PaymentInstitution | null;
+  paymentInstitutionId: string | null;
+  paymentInstitutionName: string | null;
   paymentMethod: PaymentMethod;
   externalPaymentId: string | null;
   grossAmount: string;
@@ -1010,8 +1013,18 @@ export interface FinancialAccount {
   id: string;
   name: string;
   paymentInstitution: PaymentInstitution | null;
+  paymentInstitutionId: string | null;
+  paymentInstitutionName: string | null;
   openingBalance: string;
   openingBalanceAt: string;
+  active: boolean;
+}
+
+export interface PaymentInstitutionConfiguration {
+  id: string;
+  name: string;
+  code: string;
+  paymentInstitution: PaymentInstitution | null;
   active: boolean;
 }
 
@@ -1024,9 +1037,22 @@ export interface FinancialCategory {
 export interface FinancialAccountInput {
   name: string;
   paymentInstitution?: PaymentInstitution | null;
+  paymentInstitutionId?: string | null;
   openingBalance: number;
   openingBalanceAt: string;
   active?: boolean;
+}
+
+export interface PaymentInstitutionConfigurationInput {
+  name: string;
+  code?: string;
+  paymentInstitution?: PaymentInstitution | null;
+  active?: boolean;
+}
+
+export interface PaymentInstitutionFilters {
+  search?: string;
+  active?: string;
 }
 
 export interface FinancialCategoryInput {

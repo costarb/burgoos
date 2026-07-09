@@ -308,23 +308,23 @@ enum OperationalNotificationSeverity {
 }
 
 model Tenant {
-  id                          String                          @id @default(uuid()) @db.Uuid
+  id                          String                            @id @default(uuid()) @db.Uuid
   name                        String
-  slug                        String                          @unique
+  slug                        String                            @unique
   phone                       String
-  active                      Boolean                         @default(true)
-  isOpen                      Boolean                         @default(false) @map("is_open")
-  openMode                    StoreOpenMode                   @default(FORCE_CLOSED) @map("open_mode")
-  operatingHours              Json                            @default("{}") @map("operating_hours")
-  setupCompletedAt            DateTime?                       @map("setup_completed_at")
-  deactivatedAt               DateTime?                       @map("deactivated_at")
-  createdByPlatformUserId     String?                         @map("created_by_platform_user_id") @db.Uuid
-  defaultLayoutPresetKey      String                          @default("classic") @map("default_layout_preset_key")
-  config                      Json                            @default("{}")
-  createdAt                   DateTime                        @default(now()) @map("created_at")
-  updatedAt                   DateTime                        @updatedAt @map("updated_at")
-  createdByPlatformUser       PlatformUser?                   @relation(fields: [createdByPlatformUserId], references: [id], onDelete: SetNull)
-  defaultLayoutPreset         LayoutPreset                    @relation(fields: [defaultLayoutPresetKey], references: [key], onDelete: Restrict)
+  active                      Boolean                           @default(true)
+  isOpen                      Boolean                           @default(false) @map("is_open")
+  openMode                    StoreOpenMode                     @default(FORCE_CLOSED) @map("open_mode")
+  operatingHours              Json                              @default("{}") @map("operating_hours")
+  setupCompletedAt            DateTime?                         @map("setup_completed_at")
+  deactivatedAt               DateTime?                         @map("deactivated_at")
+  createdByPlatformUserId     String?                           @map("created_by_platform_user_id") @db.Uuid
+  defaultLayoutPresetKey      String                            @default("classic") @map("default_layout_preset_key")
+  config                      Json                              @default("{}")
+  createdAt                   DateTime                          @default(now()) @map("created_at")
+  updatedAt                   DateTime                          @updatedAt @map("updated_at")
+  createdByPlatformUser       PlatformUser?                     @relation(fields: [createdByPlatformUserId], references: [id], onDelete: SetNull)
+  defaultLayoutPreset         LayoutPreset                      @relation(fields: [defaultLayoutPresetKey], references: [key], onDelete: Restrict)
   users                       User[]
   visualConfigurations        StoreVisualConfiguration[]
   categories                  Category[]
@@ -343,6 +343,7 @@ model Tenant {
   orderProfitabilitySnapshots OrderProfitabilitySnapshot[]
   orderMaintenances           OrderMaintenance[]
   financialAccounts           FinancialAccount[]
+  paymentInstitutions         PaymentInstitutionConfiguration[]
   financialCategories         FinancialCategory[]
   payableRecurrences          PayableRecurrence[]
   payables                    Payable[]
@@ -709,33 +710,35 @@ model ProductExternalMapping {
 }
 
 model Order {
-  id                       String                       @id @default(uuid()) @db.Uuid
-  tenantId                 String                       @map("tenant_id") @db.Uuid
-  status                   OrderStatus                  @default(PENDING)
-  total                    Decimal                      @db.Decimal(10, 2)
-  customerName             String                       @map("customer_name")
-  customerPhone            String                       @map("customer_phone")
-  fulfillmentMethod        FulfillmentMethod            @map("fulfillment_method")
-  deliveryAddress          Json?                        @map("delivery_address")
-  paymentMethod            PaymentMethod                @map("payment_method")
-  paymentInstitution       PaymentInstitution?          @map("payment_institution")
-  externalPaymentId        String?                      @map("external_payment_id")
-  paymentGrossAmount       Decimal?                     @map("payment_gross_amount") @db.Decimal(10, 2)
-  paymentFeeAmount         Decimal?                     @map("payment_fee_amount") @db.Decimal(10, 2)
-  paymentNetAmount         Decimal?                     @map("payment_net_amount") @db.Decimal(10, 2)
-  paymentBrand             String?                      @map("payment_brand")
-  paymentReleaseExpectedAt DateTime?                    @map("payment_release_expected_at")
-  paymentReleaseSource     PaymentReleaseSource?        @map("payment_release_source")
-  orderPlatformId          String?                      @map("order_platform_id") @db.Uuid
+  id                       String                           @id @default(uuid()) @db.Uuid
+  tenantId                 String                           @map("tenant_id") @db.Uuid
+  status                   OrderStatus                      @default(PENDING)
+  total                    Decimal                          @db.Decimal(10, 2)
+  customerName             String                           @map("customer_name")
+  customerPhone            String                           @map("customer_phone")
+  fulfillmentMethod        FulfillmentMethod                @map("fulfillment_method")
+  deliveryAddress          Json?                            @map("delivery_address")
+  paymentMethod            PaymentMethod                    @map("payment_method")
+  paymentInstitution       PaymentInstitution?              @map("payment_institution")
+  paymentInstitutionId     String?                          @map("payment_institution_id") @db.Uuid
+  externalPaymentId        String?                          @map("external_payment_id")
+  paymentGrossAmount       Decimal?                         @map("payment_gross_amount") @db.Decimal(10, 2)
+  paymentFeeAmount         Decimal?                         @map("payment_fee_amount") @db.Decimal(10, 2)
+  paymentNetAmount         Decimal?                         @map("payment_net_amount") @db.Decimal(10, 2)
+  paymentBrand             String?                          @map("payment_brand")
+  paymentReleaseExpectedAt DateTime?                        @map("payment_release_expected_at")
+  paymentReleaseSource     PaymentReleaseSource?            @map("payment_release_source")
+  orderPlatformId          String?                          @map("order_platform_id") @db.Uuid
   notes                    String?
-  deletedAt                DateTime?                    @map("deleted_at")
-  deletedByUserId          String?                      @map("deleted_by_user_id") @db.Uuid
-  deletionReason           String?                      @map("deletion_reason")
-  createdAt                DateTime                     @default(now()) @map("created_at")
-  updatedAt                DateTime                     @updatedAt @map("updated_at")
-  tenant                   Tenant                       @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  deletedByUser            User?                        @relation("OrderDeletedBy", fields: [deletedByUserId], references: [id], onDelete: SetNull)
-  orderPlatform            OrderPlatform?               @relation(fields: [orderPlatformId], references: [id], onDelete: SetNull)
+  deletedAt                DateTime?                        @map("deleted_at")
+  deletedByUserId          String?                          @map("deleted_by_user_id") @db.Uuid
+  deletionReason           String?                          @map("deletion_reason")
+  createdAt                DateTime                         @default(now()) @map("created_at")
+  updatedAt                DateTime                         @updatedAt @map("updated_at")
+  tenant                   Tenant                           @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  deletedByUser            User?                            @relation("OrderDeletedBy", fields: [deletedByUserId], references: [id], onDelete: SetNull)
+  institution              PaymentInstitutionConfiguration? @relation(fields: [paymentInstitutionId], references: [id], onDelete: SetNull)
+  orderPlatform            OrderPlatform?                   @relation(fields: [orderPlatformId], references: [id], onDelete: SetNull)
   items                    OrderItem[]
   stockMovements           StockMovement[]
   profitabilitySnapshots   OrderProfitabilitySnapshot[]
@@ -745,6 +748,7 @@ model Order {
   @@index([tenantId, status])
   @@index([tenantId, createdAt])
   @@index([tenantId, externalPaymentId])
+  @@index([tenantId, paymentInstitutionId])
   @@index([tenantId, deletedAt])
   @@index([deletedByUserId])
   @@index([orderPlatformId])
@@ -850,24 +854,47 @@ model Supplier {
 }
 
 model FinancialAccount {
-  id                   String              @id @default(uuid()) @db.Uuid
-  tenantId             String              @map("tenant_id") @db.Uuid
+  id                   String                           @id @default(uuid()) @db.Uuid
+  tenantId             String                           @map("tenant_id") @db.Uuid
   name                 String
-  paymentInstitution   PaymentInstitution? @map("payment_institution")
-  openingBalance       Decimal             @default(0) @map("opening_balance") @db.Decimal(12, 2)
-  openingBalanceAt     DateTime            @map("opening_balance_at")
-  active               Boolean             @default(true)
-  createdAt            DateTime            @default(now()) @map("created_at")
-  updatedAt            DateTime            @updatedAt @map("updated_at")
-  tenant               Tenant              @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  paymentInstitution   PaymentInstitution?              @map("payment_institution")
+  paymentInstitutionId String?                          @map("payment_institution_id") @db.Uuid
+  openingBalance       Decimal                          @default(0) @map("opening_balance") @db.Decimal(12, 2)
+  openingBalanceAt     DateTime                         @map("opening_balance_at")
+  active               Boolean                          @default(true)
+  createdAt            DateTime                         @default(now()) @map("created_at")
+  updatedAt            DateTime                         @updatedAt @map("updated_at")
+  tenant               Tenant                           @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  institution          PaymentInstitutionConfiguration? @relation(fields: [paymentInstitutionId], references: [id], onDelete: SetNull)
   payablePayments      PayablePayment[]
-  cashMovements        CashMovement[]      @relation("CashMovementAccount")
-  transferDestinations CashMovement[]      @relation("CashMovementDestination")
+  cashMovements        CashMovement[]                   @relation("CashMovementAccount")
+  transferDestinations CashMovement[]                   @relation("CashMovementDestination")
 
   @@unique([tenantId, name])
   @@unique([tenantId, paymentInstitution])
   @@index([tenantId, active])
+  @@index([tenantId, paymentInstitutionId])
   @@map("financial_accounts")
+}
+
+model PaymentInstitutionConfiguration {
+  id                 String              @id @default(uuid()) @db.Uuid
+  tenantId           String              @map("tenant_id") @db.Uuid
+  name               String
+  code               String
+  paymentInstitution PaymentInstitution? @map("payment_institution")
+  active             Boolean             @default(true)
+  createdAt          DateTime            @default(now()) @map("created_at")
+  updatedAt          DateTime            @updatedAt @map("updated_at")
+  tenant             Tenant              @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  financialAccounts  FinancialAccount[]
+  orders             Order[]
+
+  @@unique([tenantId, name])
+  @@unique([tenantId, code])
+  @@unique([tenantId, paymentInstitution])
+  @@index([tenantId, active])
+  @@map("payment_institution_configurations")
 }
 
 model FinancialCategory {

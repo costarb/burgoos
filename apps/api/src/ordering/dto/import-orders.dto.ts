@@ -30,6 +30,10 @@ export class ImportOrdersDto {
   paymentInstitution?: PaymentInstitution;
 
   @IsOptional()
+  @IsUUID()
+  paymentInstitutionId?: string;
+
+  @IsOptional()
   @IsEnum(PaymentMethod)
   paymentMethod?: PaymentMethod;
 }

@@ -10,7 +10,11 @@ import { CashMovementDto } from "../dto/cash-flow.dto";
 import { ReasonDto } from "../dto/financial-operation.dto";
 import { CashMovementService } from "./cash-movement.service";
 import { CashFlowService } from "./cash-flow.service";
-import { FinancialAccountDto, FinancialCategoryDto } from "../dto/financial-account.dto";
+import {
+  FinancialAccountDto,
+  FinancialCategoryDto,
+  PaymentInstitutionConfigurationDto,
+} from "../dto/financial-account.dto";
 import { FinancialAccountService } from "./financial-account.service";
 
 @ApiTags("admin cash flow")
@@ -44,6 +48,38 @@ export class CashFlowController {
     @Body() dto: FinancialAccountDto
   ) {
     return this.financialAccountService.updateAccount(user.tenantId, id, dto);
+  }
+
+  @Get("institutions")
+  @RequirePermission("finance.view", "finance.manage")
+  listInstitutions(
+    @CurrentUser() user: AuthUser,
+    @Query("search") search?: string,
+    @Query("active") active?: string
+  ) {
+    return this.financialAccountService.listInstitutions(user.tenantId, {
+      search: search?.trim() || undefined,
+      active: active === undefined || active === "" ? undefined : active === "true",
+    });
+  }
+
+  @Post("institutions")
+  @RequirePermission("finance.manage")
+  createInstitution(
+    @CurrentUser() user: AuthUser,
+    @Body() dto: PaymentInstitutionConfigurationDto
+  ) {
+    return this.financialAccountService.createInstitution(user.tenantId, dto);
+  }
+
+  @Patch("institutions/:id")
+  @RequirePermission("finance.manage")
+  updateInstitution(
+    @CurrentUser() user: AuthUser,
+    @Param("id") id: string,
+    @Body() dto: PaymentInstitutionConfigurationDto
+  ) {
+    return this.financialAccountService.updateInstitution(user.tenantId, id, dto);
   }
 
   @Get("categories")

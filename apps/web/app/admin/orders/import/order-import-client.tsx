@@ -7,6 +7,7 @@ import type {
   HistoricalOrderImportResult,
   HistoricalOrderImportStrategy,
   PaymentInstitution,
+  PaymentInstitutionConfiguration,
   PaymentMethod,
 } from "@burgoos/types";
 import { useRouter } from "next/navigation";
@@ -17,13 +18,14 @@ import { importHistoricalOrders } from "../../../../lib/api";
 interface OrderImportClientProps {
   token: string;
   products: AdminProduct[];
+  institutions: PaymentInstitutionConfiguration[];
 }
 
-export function OrderImportClient({ token, products }: OrderImportClientProps) {
+export function OrderImportClient({ token, products, institutions }: OrderImportClientProps) {
   const router = useRouter();
   const [layout, setLayout] = useState<HistoricalOrderImportLayout>("SIMPLE");
   const [strategy, setStrategy] = useState<HistoricalOrderImportStrategy>("PRICE_WEIGHTED");
-  const [paymentInstitution, setPaymentInstitution] = useState<PaymentInstitution | "">("");
+  const [paymentInstitutionId, setPaymentInstitutionId] = useState("");
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod | "">("");
   const [isImporting, setIsImporting] = useState(false);
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
@@ -40,10 +42,11 @@ export function OrderImportClient({ token, products }: OrderImportClientProps) {
     const csvText = String(formData.get("csvText") ?? "");
     const fixedProductId = String(formData.get("fixedProductId") ?? "");
     const orderPlatformName = String(formData.get("orderPlatformName") ?? "FOOD_TRUCK");
-    const candidateRows = csvText
-      .split(/\r?\n/)
-      .map((line) => line.trim())
-      .filter(Boolean).length - 1;
+    const candidateRows =
+      csvText
+        .split(/\r?\n/)
+        .map((line) => line.trim())
+        .filter(Boolean).length - 1;
 
     setIsImporting(true);
     setStatusMessage(
@@ -59,7 +62,7 @@ export function OrderImportClient({ token, products }: OrderImportClientProps) {
         strategy,
         fixedProductId: strategy === "FIXED_PRODUCT" ? fixedProductId : undefined,
         orderPlatformName,
-        paymentInstitution: paymentInstitution || undefined,
+        paymentInstitutionId: paymentInstitutionId || undefined,
         paymentMethod: paymentMethod || undefined,
       });
 
@@ -85,7 +88,8 @@ export function OrderImportClient({ token, products }: OrderImportClientProps) {
             <h1 className="mt-1 text-3xl font-semibold">Importar vendas historicas</h1>
             <p className="mt-2 max-w-3xl text-slate-600">
               Importe o CSV simples ou o extrato original da instituicao. Para PagBank e Mercado
-              Pago, o sistema usa data, ID, valor bruto, taxa, liquido e meio de pagamento do arquivo.
+              Pago, o sistema usa data, ID, valor bruto, taxa, liquido e meio de pagamento do
+              arquivo.
             </p>
           </div>
           <a
@@ -102,96 +106,95 @@ export function OrderImportClient({ token, products }: OrderImportClientProps) {
         >
           <fieldset className="grid gap-4 disabled:opacity-70" disabled={isImporting}>
             <div className="grid gap-4 md:grid-cols-3">
-            <label className="grid gap-2 text-sm font-semibold text-slate-700">
-              Layout
-              <select
-                className="rounded-md border border-slate-200 px-3 py-2 text-sm font-normal"
-                value={layout}
-                onChange={(event) =>
-                  setLayout(event.currentTarget.value as HistoricalOrderImportLayout)
-                }
-              >
-                <option value="SIMPLE">Simples</option>
-                <option value="MERCADO_PAGO">Mercado Pago</option>
-                <option value="PAGBANK">PagBank</option>
-              </select>
-            </label>
-            <label className="grid gap-2 text-sm font-semibold text-slate-700">
-              Origem
-              <input
-                className="rounded-md border border-slate-200 px-3 py-2 text-sm font-normal"
-                defaultValue="FOOD_TRUCK"
-                maxLength={80}
-                name="orderPlatformName"
-              />
-            </label>
-            {layout === "SIMPLE" ? (
-              <>
-                <label className="grid gap-2 text-sm font-semibold text-slate-700">
-                  Instituicao padrao
-                  <select
-                    className="rounded-md border border-slate-200 px-3 py-2 text-sm font-normal"
-                    value={paymentInstitution}
-                    onChange={(event) =>
-                      setPaymentInstitution(event.currentTarget.value as PaymentInstitution | "")
-                    }
-                  >
-                    <option value="">Usar arquivo ou vazio</option>
-                    <option value="PAGBANK">PagBank</option>
-                    <option value="MERCADO_PAGO">Mercado Pago</option>
-                    <option value="DINHEIRO">Dinheiro</option>
-                    <option value="CAIXA_LOCAL">Caixa local</option>
-                  </select>
-                </label>
-                <label className="grid gap-2 text-sm font-semibold text-slate-700">
-                  Meio padrao
-                  <select
-                    className="rounded-md border border-slate-200 px-3 py-2 text-sm font-normal"
-                    value={paymentMethod}
-                    onChange={(event) =>
-                      setPaymentMethod(event.currentTarget.value as PaymentMethod | "")
-                    }
-                  >
-                    <option value="">Usar arquivo ou PIX atual</option>
-                    <option value="DEBIT_CARD">Debito</option>
-                    <option value="CREDIT_CARD">Credito</option>
-                    <option value="VOUCHER">Voucher</option>
-                    <option value="PIX">Pix</option>
-                    <option value="CASH">Dinheiro</option>
-                  </select>
-                </label>
-              </>
-            ) : null}
-            <label className="grid gap-2 text-sm font-semibold text-slate-700">
-              Atribuicao
-              <select
-                className="rounded-md border border-slate-200 px-3 py-2 text-sm font-normal"
-                name="strategy"
-                value={strategy}
-                onChange={(event) =>
-                  setStrategy(event.currentTarget.value as HistoricalOrderImportStrategy)
-                }
-              >
-                <option value="PRICE_WEIGHTED">Automatica por valor</option>
-                <option value="FIXED_PRODUCT">Produto fixo</option>
-              </select>
-            </label>
-            <label className="grid gap-2 text-sm font-semibold text-slate-700">
-              Produto fixo
-              <select
-                className="rounded-md border border-slate-200 px-3 py-2 text-sm font-normal disabled:bg-slate-100"
-                disabled={strategy !== "FIXED_PRODUCT"}
-                name="fixedProductId"
-                required={strategy === "FIXED_PRODUCT"}
-              >
-                <option value="">Selecione</option>
-                {products.map((product) => (
-                  <option key={product.id} value={product.id}>
-                    {product.name} - R$ {product.price}
-                  </option>
-                ))}
-              </select>
-            </label>
+              <label className="grid gap-2 text-sm font-semibold text-slate-700">
+                Layout
+                <select
+                  className="rounded-md border border-slate-200 px-3 py-2 text-sm font-normal"
+                  value={layout}
+                  onChange={(event) =>
+                    setLayout(event.currentTarget.value as HistoricalOrderImportLayout)
+                  }
+                >
+                  <option value="SIMPLE">Simples</option>
+                  <option value="MERCADO_PAGO">Mercado Pago</option>
+                  <option value="PAGBANK">PagBank</option>
+                </select>
+              </label>
+              <label className="grid gap-2 text-sm font-semibold text-slate-700">
+                Origem
+                <input
+                  className="rounded-md border border-slate-200 px-3 py-2 text-sm font-normal"
+                  defaultValue="FOOD_TRUCK"
+                  maxLength={80}
+                  name="orderPlatformName"
+                />
+              </label>
+              {layout === "SIMPLE" ? (
+                <>
+                  <label className="grid gap-2 text-sm font-semibold text-slate-700">
+                    Instituicao padrao
+                    <select
+                      className="rounded-md border border-slate-200 px-3 py-2 text-sm font-normal"
+                      value={paymentInstitutionId}
+                      onChange={(event) => setPaymentInstitutionId(event.currentTarget.value)}
+                    >
+                      <option value="">Usar arquivo ou vazio</option>
+                      {institutions.map((institution) => (
+                        <option key={institution.id} value={institution.id}>
+                          {institution.name}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  <label className="grid gap-2 text-sm font-semibold text-slate-700">
+                    Meio padrao
+                    <select
+                      className="rounded-md border border-slate-200 px-3 py-2 text-sm font-normal"
+                      value={paymentMethod}
+                      onChange={(event) =>
+                        setPaymentMethod(event.currentTarget.value as PaymentMethod | "")
+                      }
+                    >
+                      <option value="">Usar arquivo ou PIX atual</option>
+                      <option value="DEBIT_CARD">Debito</option>
+                      <option value="CREDIT_CARD">Credito</option>
+                      <option value="VOUCHER">Voucher</option>
+                      <option value="PIX">Pix</option>
+                      <option value="CASH">Dinheiro</option>
+                    </select>
+                  </label>
+                </>
+              ) : null}
+              <label className="grid gap-2 text-sm font-semibold text-slate-700">
+                Atribuicao
+                <select
+                  className="rounded-md border border-slate-200 px-3 py-2 text-sm font-normal"
+                  name="strategy"
+                  value={strategy}
+                  onChange={(event) =>
+                    setStrategy(event.currentTarget.value as HistoricalOrderImportStrategy)
+                  }
+                >
+                  <option value="PRICE_WEIGHTED">Automatica por valor</option>
+                  <option value="FIXED_PRODUCT">Produto fixo</option>
+                </select>
+              </label>
+              <label className="grid gap-2 text-sm font-semibold text-slate-700">
+                Produto fixo
+                <select
+                  className="rounded-md border border-slate-200 px-3 py-2 text-sm font-normal disabled:bg-slate-100"
+                  disabled={strategy !== "FIXED_PRODUCT"}
+                  name="fixedProductId"
+                  required={strategy === "FIXED_PRODUCT"}
+                >
+                  <option value="">Selecione</option>
+                  {products.map((product) => (
+                    <option key={product.id} value={product.id}>
+                      {product.name} - R$ {product.price}
+                    </option>
+                  ))}
+                </select>
+              </label>
             </div>
 
             <textarea
@@ -254,12 +257,15 @@ export function OrderImportClient({ token, products }: OrderImportClientProps) {
                   {result.imported.slice(0, 30).map((item) => (
                     <tr key={item.orderId}>
                       <td className="px-4 py-3">{item.rowNumber}</td>
-                      <td className="px-4 py-3">{new Date(item.date).toLocaleDateString("pt-BR")}</td>
+                      <td className="px-4 py-3">
+                        {new Date(item.date).toLocaleDateString("pt-BR")}
+                      </td>
                       <td className="px-4 py-3">R$ {item.amount}</td>
                       <td className="px-4 py-3">{item.productName}</td>
                       <td className="px-4 py-3">
-                        {paymentInstitutionLabel(item.paymentInstitution)} /{" "}
-                        {paymentMethodLabel(item.paymentMethod)}
+                        {item.paymentInstitutionName ??
+                          paymentInstitutionLabel(item.paymentInstitution)}{" "}
+                        / {paymentMethodLabel(item.paymentMethod)}
                       </td>
                       <td className="px-4 py-3">
                         {item.externalPaymentId ?? "-"}

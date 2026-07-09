@@ -137,6 +137,13 @@ export const adminNavigation: AdminNavigationGroup[] = [
         permissions: ["finance.view", "finance.manage"],
       },
       {
+        href: "/admin/finance/institutions",
+        label: "Instituicoes",
+        icon: WalletCards,
+        description: "Instituicoes financeiras",
+        permissions: ["finance.view", "finance.manage"],
+      },
+      {
         href: "/admin/reports/dre",
         label: "DRE",
         icon: FileChartColumn,

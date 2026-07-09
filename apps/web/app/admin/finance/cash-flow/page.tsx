@@ -1,4 +1,9 @@
-import { getCashPosition, getCashStatement, listCashMovements } from "../../../../lib/api";
+import {
+  getCashPosition,
+  getCashStatement,
+  listCashMovements,
+  listPaymentInstitutions,
+} from "../../../../lib/api";
 import { CashFlowClient } from "./cash-flow-client";
 
 export const dynamic = "force-dynamic";
@@ -11,15 +16,17 @@ export default async function CashFlowPage() {
     asOf: today,
     projectionEnd,
   });
-  const [movements, statement] = await Promise.all([
+  const [movements, statement, institutions] = await Promise.all([
     listCashMovements(token, { start: today, end: today }),
     getCashStatement(token, { start: statementStart, end: today }),
+    listPaymentInstitutions(token, { active: "true" }),
   ]);
 
   return (
     <CashFlowClient
       initialAccounts={accounts}
       initialCategories={categories}
+      initialInstitutions={institutions}
       initialMovements={movements}
       initialPosition={position}
       initialStatement={statement}

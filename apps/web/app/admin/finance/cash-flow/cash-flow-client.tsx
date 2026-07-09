@@ -9,6 +9,7 @@ import type {
   FinancialAccount,
   FinancialCategory,
   OperationState,
+  PaymentInstitutionConfiguration,
 } from "@burgoos/types";
 import { OperationFeedback } from "../../../../components/admin/operation-feedback";
 import {
@@ -26,6 +27,7 @@ interface CashFlowClientProps {
   initialPosition: CashPosition;
   initialAccounts: FinancialAccount[];
   initialCategories: FinancialCategory[];
+  initialInstitutions: PaymentInstitutionConfiguration[];
   initialMovements: CashMovement[];
   initialStatement: CashStatement;
 }
@@ -35,6 +37,7 @@ export function CashFlowClient({
   initialPosition,
   initialAccounts,
   initialCategories,
+  initialInstitutions,
   initialMovements,
   initialStatement,
 }: CashFlowClientProps) {
@@ -170,7 +173,11 @@ export function CashFlowClient({
         </div>
       </div>
 
-      <OperationFeedback className="mt-4" onDismiss={() => setOperation({ status: "idle" })} state={operation} />
+      <OperationFeedback
+        className="mt-4"
+        onDismiss={() => setOperation({ status: "idle" })}
+        state={operation}
+      />
 
       <section className="mt-6 grid gap-3 rounded-md border border-slate-200 bg-white p-4 shadow-sm md:grid-cols-[1fr_1fr_1fr_auto]">
         <input
@@ -181,13 +188,17 @@ export function CashFlowClient({
         />
         <input
           className="rounded-md border border-slate-200 px-3 py-2 text-sm"
-          onChange={(event) => setFilters((current) => ({ ...current, projectionEnd: event.target.value }))}
+          onChange={(event) =>
+            setFilters((current) => ({ ...current, projectionEnd: event.target.value }))
+          }
           type="date"
           value={filters.projectionEnd}
         />
         <select
           className="rounded-md border border-slate-200 px-3 py-2 text-sm"
-          onChange={(event) => setFilters((current) => ({ ...current, financialAccountId: event.target.value }))}
+          onChange={(event) =>
+            setFilters((current) => ({ ...current, financialAccountId: event.target.value }))
+          }
           value={filters.financialAccountId}
         >
           <option value="">Todas as contas</option>
@@ -223,10 +234,15 @@ export function CashFlowClient({
           <h2 className="text-lg font-semibold">Saldos por conta</h2>
           <div className="mt-3 space-y-2">
             {position.accounts.map((account) => (
-              <div className="flex items-center justify-between gap-3 rounded-md border border-slate-200 p-3" key={account.financialAccountId ?? "unallocated"}>
+              <div
+                className="flex items-center justify-between gap-3 rounded-md border border-slate-200 p-3"
+                key={account.financialAccountId ?? "unallocated"}
+              >
                 <div>
                   <p className="font-semibold">{account.financialAccountName}</p>
-                  <p className="text-xs text-slate-500">{account.unallocated ? "Sem mapeamento" : "Conta financeira"}</p>
+                  <p className="text-xs text-slate-500">
+                    {account.unallocated ? "Sem mapeamento" : "Conta financeira"}
+                  </p>
                 </div>
                 <p className="font-semibold">R$ {account.balance}</p>
               </div>
@@ -241,7 +257,10 @@ export function CashFlowClient({
               <p className="p-4 text-sm text-slate-500">Nenhum evento projetado no periodo.</p>
             ) : (
               position.projection.slice(0, 8).map((entry) => (
-                <div className="grid gap-2 border-b border-slate-100 p-3 last:border-b-0 md:grid-cols-[0.8fr_1.4fr_0.8fr_0.8fr]" key={`${entry.sourceType}-${entry.sourceId}`}>
+                <div
+                  className="grid gap-2 border-b border-slate-100 p-3 last:border-b-0 md:grid-cols-[0.8fr_1.4fr_0.8fr_0.8fr]"
+                  key={`${entry.sourceType}-${entry.sourceId}`}
+                >
                   <p className="text-sm">{formatDate(entry.occurredAt)}</p>
                   <p className="text-sm font-semibold">{entry.description}</p>
                   <p className="text-sm text-emerald-700">+ R$ {entry.inflowAmount}</p>
@@ -257,26 +276,37 @@ export function CashFlowClient({
         <div className="flex flex-wrap items-end justify-between gap-4">
           <div>
             <h2 className="text-lg font-semibold">Extrato de caixa</h2>
-            <p className="text-sm text-slate-600">Lancamentos realizados de credito e debito agrupados por data.</p>
+            <p className="text-sm text-slate-600">
+              Lancamentos realizados de credito e debito agrupados por data.
+            </p>
           </div>
         </div>
 
         <div className="mt-4 grid gap-3 md:grid-cols-[1fr_1fr_1fr_auto]">
           <input
             className="rounded-md border border-slate-200 px-3 py-2 text-sm"
-            onChange={(event) => setStatementFilters((current) => ({ ...current, start: event.target.value }))}
+            onChange={(event) =>
+              setStatementFilters((current) => ({ ...current, start: event.target.value }))
+            }
             type="date"
             value={statementFilters.start}
           />
           <input
             className="rounded-md border border-slate-200 px-3 py-2 text-sm"
-            onChange={(event) => setStatementFilters((current) => ({ ...current, end: event.target.value }))}
+            onChange={(event) =>
+              setStatementFilters((current) => ({ ...current, end: event.target.value }))
+            }
             type="date"
             value={statementFilters.end}
           />
           <select
             className="rounded-md border border-slate-200 px-3 py-2 text-sm"
-            onChange={(event) => setStatementFilters((current) => ({ ...current, financialAccountId: event.target.value }))}
+            onChange={(event) =>
+              setStatementFilters((current) => ({
+                ...current,
+                financialAccountId: event.target.value,
+              }))
+            }
             value={statementFilters.financialAccountId}
           >
             <option value="">Todas as contas</option>
@@ -299,7 +329,11 @@ export function CashFlowClient({
         <section className="mt-4 grid gap-3 md:grid-cols-4">
           <MetricCard label="Creditos" value={statement.totalCredit} />
           <MetricCard label="Debitos" tone="warning" value={statement.totalDebit} />
-          <MetricCard label="Liquido" tone={statement.netAmount.startsWith("-") ? "danger" : "neutral"} value={statement.netAmount} />
+          <MetricCard
+            label="Liquido"
+            tone={statement.netAmount.startsWith("-") ? "danger" : "neutral"}
+            value={statement.netAmount}
+          />
           <MetricCard label="Saldo final" value={statement.closingBalance} />
         </section>
 
@@ -322,12 +356,20 @@ export function CashFlowClient({
                       className="grid gap-2 p-3 text-sm md:grid-cols-[0.7fr_1.2fr_1fr_0.7fr]"
                       key={`${day.date}-${entry.sourceType}-${entry.sourceId}-${entry.entryType}`}
                     >
-                      <span className={entry.entryType === "CREDIT" ? "font-semibold text-emerald-700" : "font-semibold text-red-700"}>
+                      <span
+                        className={
+                          entry.entryType === "CREDIT"
+                            ? "font-semibold text-emerald-700"
+                            : "font-semibold text-red-700"
+                        }
+                      >
                         {entry.entryType === "CREDIT" ? "Credito" : "Debito"} R$ {entry.amount}
                       </span>
                       <span>{entry.description}</span>
                       <span className="text-slate-500">{entry.financialAccountName}</span>
-                      <span className="text-xs font-semibold uppercase text-slate-500">{sourceLabel(entry.sourceType)}</span>
+                      <span className="text-xs font-semibold uppercase text-slate-500">
+                        {sourceLabel(entry.sourceType)}
+                      </span>
                     </div>
                   ))}
                 </div>
@@ -354,18 +396,24 @@ export function CashFlowClient({
           {position.ledger.length === 0 ? (
             <p className="p-4 text-sm text-slate-500">Nenhum evento realizado ate a data.</p>
           ) : (
-            position.ledger.slice(-12).reverse().map((entry) => (
-              <div className="grid gap-2 border-b border-slate-100 p-3 last:border-b-0 md:grid-cols-[0.7fr_1.4fr_0.8fr_0.8fr_0.8fr]" key={`${entry.sourceType}-${entry.sourceId}`}>
-                <p className="text-sm">{formatDate(entry.occurredAt)}</p>
-                <div>
-                  <p className="text-sm font-semibold">{entry.description}</p>
-                  <p className="text-xs text-slate-500">{entry.financialAccountName}</p>
+            position.ledger
+              .slice(-12)
+              .reverse()
+              .map((entry) => (
+                <div
+                  className="grid gap-2 border-b border-slate-100 p-3 last:border-b-0 md:grid-cols-[0.7fr_1.4fr_0.8fr_0.8fr_0.8fr]"
+                  key={`${entry.sourceType}-${entry.sourceId}`}
+                >
+                  <p className="text-sm">{formatDate(entry.occurredAt)}</p>
+                  <div>
+                    <p className="text-sm font-semibold">{entry.description}</p>
+                    <p className="text-xs text-slate-500">{entry.financialAccountName}</p>
+                  </div>
+                  <p className="text-sm text-emerald-700">+ R$ {entry.inflowAmount}</p>
+                  <p className="text-sm text-red-700">- R$ {entry.outflowAmount}</p>
+                  <p className="text-sm font-semibold">R$ {entry.runningBalance}</p>
                 </div>
-                <p className="text-sm text-emerald-700">+ R$ {entry.inflowAmount}</p>
-                <p className="text-sm text-red-700">- R$ {entry.outflowAmount}</p>
-                <p className="text-sm font-semibold">R$ {entry.runningBalance}</p>
-              </div>
-            ))
+              ))
           )}
         </div>
       </section>
@@ -374,6 +422,7 @@ export function CashFlowClient({
         <FinancialAccountDialog
           initialAccounts={accounts}
           initialCategories={categories}
+          initialInstitutions={initialInstitutions}
           token={token}
         />
       </section>
@@ -381,7 +430,15 @@ export function CashFlowClient({
   );
 }
 
-function MetricCard({ label, value, tone = "neutral" }: { label: string; value: string; tone?: "neutral" | "warning" | "danger" }) {
+function MetricCard({
+  label,
+  value,
+  tone = "neutral",
+}: {
+  label: string;
+  value: string;
+  tone?: "neutral" | "warning" | "danger";
+}) {
   const classes = {
     neutral: "border-slate-200 bg-white",
     warning: "border-amber-200 bg-amber-50",
@@ -397,14 +454,18 @@ function MetricCard({ label, value, tone = "neutral" }: { label: string; value: 
 }
 
 function formatDate(value: string): string {
-  return new Intl.DateTimeFormat("pt-BR", { timeZone: "UTC" }).format(new Date(`${value}T00:00:00.000Z`));
+  return new Intl.DateTimeFormat("pt-BR", { timeZone: "UTC" }).format(
+    new Date(`${value}T00:00:00.000Z`)
+  );
 }
 
 function sourceLabel(sourceType: string): string {
-  return {
-    OPENING_BALANCE: "Saldo inicial",
-    ORDER_RECEIPT: "Pedido",
-    PAYABLE_PAYMENT: "Conta paga",
-    CASH_MOVEMENT: "Movimento",
-  }[sourceType] ?? sourceType;
+  return (
+    {
+      OPENING_BALANCE: "Saldo inicial",
+      ORDER_RECEIPT: "Pedido",
+      PAYABLE_PAYMENT: "Conta paga",
+      CASH_MOVEMENT: "Movimento",
+    }[sourceType] ?? sourceType
+  );
 }

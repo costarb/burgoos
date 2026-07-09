@@ -8,7 +8,7 @@ import type {
   FinancialCategory,
   FinancialCategoryInput,
   OperationState,
-  PaymentInstitution,
+  PaymentInstitutionConfiguration,
 } from "@burgoos/types";
 import { ConfirmationDialog } from "../../../../components/admin/confirmation-dialog";
 import { OperationFeedback } from "../../../../components/admin/operation-feedback";
@@ -17,6 +17,7 @@ import {
   createFinancialCategory,
   listFinancialAccounts,
   listFinancialCategories,
+  listPaymentInstitutions,
   updateFinancialAccount,
   updateFinancialCategory,
 } from "../../../../lib/api";
@@ -25,24 +26,18 @@ interface FinancialAccountDialogProps {
   token: string;
   initialAccounts: FinancialAccount[];
   initialCategories: FinancialCategory[];
+  initialInstitutions: PaymentInstitutionConfiguration[];
 }
-
-const paymentInstitutionLabels: Record<PaymentInstitution, string> = {
-  PAGBANK: "PagBank",
-  MERCADO_PAGO: "Mercado Pago",
-  DINHEIRO: "Dinheiro",
-  CAIXA_LOCAL: "Caixa Local",
-};
-
-const paymentInstitutions = Object.keys(paymentInstitutionLabels) as PaymentInstitution[];
 
 export function FinancialAccountDialog({
   token,
   initialAccounts,
   initialCategories,
+  initialInstitutions,
 }: FinancialAccountDialogProps) {
   const [accounts, setAccounts] = useState(initialAccounts);
   const [categories, setCategories] = useState(initialCategories);
+  const [institutions, setInstitutions] = useState(initialInstitutions);
   const [editingAccount, setEditingAccount] = useState<FinancialAccount | null>(null);
   const [editingCategory, setEditingCategory] = useState<FinancialCategory | null>(null);
   const [operation, setOperation] = useState<OperationState>({ status: "idle" });
@@ -67,12 +62,14 @@ export function FinancialAccountDialog({
   }
 
   async function refresh() {
-    const [nextAccounts, nextCategories] = await Promise.all([
+    const [nextAccounts, nextCategories, nextInstitutions] = await Promise.all([
       listFinancialAccounts(token),
       listFinancialCategories(token),
+      listPaymentInstitutions(token, { active: "true" }),
     ]);
     setAccounts(nextAccounts);
     setCategories(nextCategories);
+    setInstitutions(nextInstitutions);
   }
 
   async function submitAccount(event: FormEvent<HTMLFormElement>) {
@@ -80,17 +77,20 @@ export function FinancialAccountDialog({
     const formData = new FormData(event.currentTarget);
     const payload = accountPayload(formData);
 
-    await run(editingAccount ? "Salvando conta financeira." : "Criando conta financeira.", async () => {
-      if (editingAccount) {
-        await updateFinancialAccount(token, editingAccount.id, payload);
-        setEditingAccount(null);
-      } else {
-        await createFinancialAccount(token, payload);
-      }
+    await run(
+      editingAccount ? "Salvando conta financeira." : "Criando conta financeira.",
+      async () => {
+        if (editingAccount) {
+          await updateFinancialAccount(token, editingAccount.id, payload);
+          setEditingAccount(null);
+        } else {
+          await createFinancialAccount(token, payload);
+        }
 
-      await refresh();
-      event.currentTarget.reset();
-    });
+        await refresh();
+        event.currentTarget.reset();
+      }
+    );
   }
 
   async function submitCategory(event: FormEvent<HTMLFormElement>) {
@@ -98,17 +98,20 @@ export function FinancialAccountDialog({
     const formData = new FormData(event.currentTarget);
     const payload = categoryPayload(formData);
 
-    await run(editingCategory ? "Salvando categoria financeira." : "Criando categoria financeira.", async () => {
-      if (editingCategory) {
-        await updateFinancialCategory(token, editingCategory.id, payload);
-        setEditingCategory(null);
-      } else {
-        await createFinancialCategory(token, payload);
-      }
+    await run(
+      editingCategory ? "Salvando categoria financeira." : "Criando categoria financeira.",
+      async () => {
+        if (editingCategory) {
+          await updateFinancialCategory(token, editingCategory.id, payload);
+          setEditingCategory(null);
+        } else {
+          await createFinancialCategory(token, payload);
+        }
 
-      await refresh();
-      event.currentTarget.reset();
-    });
+        await refresh();
+        event.currentTarget.reset();
+      }
+    );
   }
 
   return (
@@ -117,10 +120,16 @@ export function FinancialAccountDialog({
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
             <h2 className="text-lg font-semibold">Contas financeiras</h2>
-            <p className="text-sm text-slate-500">Locais onde o dinheiro entra, sai ou fica alocado.</p>
+            <p className="text-sm text-slate-500">
+              Locais onde o dinheiro entra, sai ou fica alocado.
+            </p>
           </div>
           {editingAccount ? (
-            <button className="text-sm font-semibold text-slate-600" onClick={() => setEditingAccount(null)} type="button">
+            <button
+              className="text-sm font-semibold text-slate-600"
+              onClick={() => setEditingAccount(null)}
+              type="button"
+            >
               Cancelar edicao
             </button>
           ) : null}
@@ -138,14 +147,14 @@ export function FinancialAccountDialog({
           />
           <select
             className="rounded-md border border-slate-200 px-3 py-2 text-sm"
-            defaultValue={editingAccount?.paymentInstitution ?? ""}
+            defaultValue={editingAccount?.paymentInstitutionId ?? ""}
             key={editingAccount?.id ?? "new-account-institution"}
-            name="paymentInstitution"
+            name="paymentInstitutionId"
           >
             <option value="">Sem instituicao</option>
-            {paymentInstitutions.map((institution) => (
-              <option key={institution} value={institution}>
-                {paymentInstitutionLabels[institution]}
+            {institutions.map((institution) => (
+              <option key={institution.id} value={institution.id}>
+                {institution.name}
               </option>
             ))}
           </select>
@@ -191,13 +200,16 @@ export function FinancialAccountDialog({
             <p className="p-4 text-sm text-slate-500">Nenhuma conta financeira cadastrada.</p>
           ) : (
             accounts.map((account) => (
-              <div className="grid gap-2 border-b border-slate-100 p-3 last:border-b-0 md:grid-cols-[1fr_1fr_1fr_auto]" key={account.id}>
+              <div
+                className="grid gap-2 border-b border-slate-100 p-3 last:border-b-0 md:grid-cols-[1fr_1fr_1fr_auto]"
+                key={account.id}
+              >
                 <div>
                   <p className="font-semibold">{account.name}</p>
                   <p className="text-xs text-slate-500">{account.active ? "Ativa" : "Inativa"}</p>
                 </div>
                 <p className="text-sm text-slate-600">
-                  {account.paymentInstitution ? paymentInstitutionLabels[account.paymentInstitution] : "Sem instituicao"}
+                  {account.paymentInstitutionName ?? "Sem instituicao"}
                 </p>
                 <p className="text-sm font-semibold">R$ {account.openingBalance}</p>
                 <button
@@ -217,10 +229,16 @@ export function FinancialAccountDialog({
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
             <h2 className="text-lg font-semibold">Categorias financeiras</h2>
-            <p className="text-sm text-slate-500">Classificacao para contas a pagar e movimentos.</p>
+            <p className="text-sm text-slate-500">
+              Classificacao para contas a pagar e movimentos.
+            </p>
           </div>
           {editingCategory ? (
-            <button className="text-sm font-semibold text-slate-600" onClick={() => setEditingCategory(null)} type="button">
+            <button
+              className="text-sm font-semibold text-slate-600"
+              onClick={() => setEditingCategory(null)}
+              type="button"
+            >
               Cancelar edicao
             </button>
           ) : null}
@@ -261,7 +279,10 @@ export function FinancialAccountDialog({
             </p>
           ) : (
             categories.map((category) => (
-              <div className="flex items-center justify-between gap-3 rounded-md border border-slate-200 p-3" key={category.id}>
+              <div
+                className="flex items-center justify-between gap-3 rounded-md border border-slate-200 p-3"
+                key={category.id}
+              >
                 <div>
                   <p className="font-semibold">{category.name}</p>
                   <p className="text-xs text-slate-500">{category.active ? "Ativa" : "Inativa"}</p>
@@ -297,11 +318,12 @@ export function FinancialAccountDialog({
 }
 
 function accountPayload(formData: FormData): FinancialAccountInput {
-  const paymentInstitution = String(formData.get("paymentInstitution") ?? "") as PaymentInstitution | "";
+  const paymentInstitutionId = String(formData.get("paymentInstitutionId") ?? "");
 
   return {
     name: String(formData.get("name") ?? ""),
-    paymentInstitution: paymentInstitution || null,
+    paymentInstitution: null,
+    paymentInstitutionId: paymentInstitutionId || null,
     openingBalance: Number(formData.get("openingBalance") ?? 0),
     openingBalanceAt: String(formData.get("openingBalanceAt") ?? today()),
     active: formData.get("active") === "on",

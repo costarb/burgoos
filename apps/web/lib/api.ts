@@ -41,6 +41,9 @@ import type {
   PayableOptions,
   PayablePaymentInput,
   PayablesResponse,
+  PaymentInstitutionConfiguration,
+  PaymentInstitutionConfigurationInput,
+  PaymentInstitutionFilters,
   HistoricalOrderImportInput,
   HistoricalOrderImportResult,
   Ingredient,
@@ -1205,6 +1208,58 @@ export async function updateFinancialConfiguration(
 
 export async function listFinancialAccounts(token: string): Promise<FinancialAccount[]> {
   return fetchAdmin<FinancialAccount[]>(token, "/api/admin/financial/accounts");
+}
+
+export async function listPaymentInstitutions(
+  token: string,
+  filters: PaymentInstitutionFilters = {}
+): Promise<PaymentInstitutionConfiguration[]> {
+  const params = new URLSearchParams();
+
+  Object.entries(filters).forEach(([key, value]) => {
+    if (value) {
+      params.set(key, value);
+    }
+  });
+
+  const query = params.toString();
+  return fetchAdmin<PaymentInstitutionConfiguration[]>(
+    token,
+    `/api/admin/financial/institutions${query ? `?${query}` : ""}`
+  );
+}
+
+export async function getPaymentInstitutions(
+  filters: PaymentInstitutionFilters = {}
+): Promise<{ token: string; institutions: PaymentInstitutionConfiguration[] }> {
+  const token = await getAdminToken();
+  const institutions = await listPaymentInstitutions(token, filters);
+  return { token, institutions };
+}
+
+export async function createPaymentInstitution(
+  token: string,
+  payload: PaymentInstitutionConfigurationInput
+): Promise<PaymentInstitutionConfiguration> {
+  return fetchAdmin<PaymentInstitutionConfiguration>(token, "/api/admin/financial/institutions", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function updatePaymentInstitution(
+  token: string,
+  id: string,
+  payload: PaymentInstitutionConfigurationInput
+): Promise<PaymentInstitutionConfiguration> {
+  return fetchAdmin<PaymentInstitutionConfiguration>(
+    token,
+    `/api/admin/financial/institutions/${id}`,
+    {
+      method: "PATCH",
+      body: JSON.stringify(payload),
+    }
+  );
 }
 
 export async function createFinancialAccount(

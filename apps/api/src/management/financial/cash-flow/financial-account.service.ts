@@ -1,7 +1,11 @@
 import { BadRequestException, Injectable, NotFoundException } from "@nestjs/common";
-import { Prisma } from "@prisma/client";
+import { PaymentInstitution, Prisma } from "@prisma/client";
 import { PrismaService } from "../../../platform/database/prisma.service";
-import { FinancialAccountDto, FinancialCategoryDto } from "../dto/financial-account.dto";
+import {
+  FinancialAccountDto,
+  FinancialCategoryDto,
+  PaymentInstitutionConfigurationDto,
+} from "../dto/financial-account.dto";
 import { toDecimal, toMoneyString } from "../money";
 
 @Injectable()
@@ -11,6 +15,7 @@ export class FinancialAccountService {
   async listAccounts(tenantId: string) {
     const accounts = await this.prisma.financialAccount.findMany({
       where: { tenantId },
+      include: { institution: true },
       orderBy: [{ active: "desc" }, { name: "asc" }],
     });
 
@@ -18,6 +23,9 @@ export class FinancialAccountService {
       id: account.id,
       name: account.name,
       paymentInstitution: account.paymentInstitution,
+      paymentInstitutionId: account.paymentInstitutionId,
+      paymentInstitutionName:
+        account.institution?.name ?? paymentInstitutionLabel(account.paymentInstitution),
       openingBalance: toMoneyString(account.openingBalance),
       openingBalanceAt: toDateOnly(account.openingBalanceAt),
       active: account.active,
@@ -25,26 +33,23 @@ export class FinancialAccountService {
   }
 
   async createAccount(tenantId: string, dto: FinancialAccountDto) {
+    const institution = await this.resolveInstitution(tenantId, dto);
+
     try {
       const account = await this.prisma.financialAccount.create({
         data: {
           tenantId,
           name: dto.name.trim(),
-          paymentInstitution: dto.paymentInstitution ?? null,
+          paymentInstitution: institution?.paymentInstitution ?? dto.paymentInstitution ?? null,
+          paymentInstitutionId: institution?.id ?? null,
           openingBalance: toDecimal(dto.openingBalance),
           openingBalanceAt: parseDate(dto.openingBalanceAt),
           active: dto.active ?? true,
         },
+        include: { institution: true },
       });
 
-      return {
-        id: account.id,
-        name: account.name,
-        paymentInstitution: account.paymentInstitution,
-        openingBalance: toMoneyString(account.openingBalance),
-        openingBalanceAt: toDateOnly(account.openingBalanceAt),
-        active: account.active,
-      };
+      return this.toAccountResponse(account);
     } catch (error) {
       handleUniqueError(error, "Conta financeira ja cadastrada");
     }
@@ -52,29 +57,93 @@ export class FinancialAccountService {
 
   async updateAccount(tenantId: string, accountId: string, dto: FinancialAccountDto) {
     await this.ensureAccount(tenantId, accountId);
+    const institution = await this.resolveInstitution(tenantId, dto);
 
     try {
       const account = await this.prisma.financialAccount.update({
         where: { id: accountId },
         data: {
           name: dto.name.trim(),
-          paymentInstitution: dto.paymentInstitution ?? null,
+          paymentInstitution: institution?.paymentInstitution ?? dto.paymentInstitution ?? null,
+          paymentInstitutionId: institution?.id ?? null,
           openingBalance: toDecimal(dto.openingBalance),
           openingBalanceAt: parseDate(dto.openingBalanceAt),
           active: dto.active ?? true,
         },
+        include: { institution: true },
       });
 
-      return {
-        id: account.id,
-        name: account.name,
-        paymentInstitution: account.paymentInstitution,
-        openingBalance: toMoneyString(account.openingBalance),
-        openingBalanceAt: toDateOnly(account.openingBalanceAt),
-        active: account.active,
-      };
+      return this.toAccountResponse(account);
     } catch (error) {
       handleUniqueError(error, "Conta financeira ja cadastrada");
+    }
+  }
+
+  async listInstitutions(tenantId: string, filters: { search?: string; active?: boolean } = {}) {
+    await this.ensureDefaultInstitutions(tenantId);
+
+    const institutions = await this.prisma.paymentInstitutionConfiguration.findMany({
+      where: {
+        tenantId,
+        active: filters.active,
+        OR: filters.search
+          ? [
+              { name: { contains: filters.search, mode: "insensitive" } },
+              { code: { contains: filters.search, mode: "insensitive" } },
+            ]
+          : undefined,
+      },
+      orderBy: [{ active: "desc" }, { name: "asc" }],
+    });
+
+    return institutions.map((institution) => ({
+      id: institution.id,
+      name: institution.name,
+      code: institution.code,
+      paymentInstitution: institution.paymentInstitution,
+      active: institution.active,
+    }));
+  }
+
+  async createInstitution(tenantId: string, dto: PaymentInstitutionConfigurationDto) {
+    try {
+      const institution = await this.prisma.paymentInstitutionConfiguration.create({
+        data: {
+          tenantId,
+          name: dto.name.trim(),
+          code: this.normalizeInstitutionCode(dto.code?.trim() || dto.name),
+          paymentInstitution: dto.paymentInstitution ?? null,
+          active: dto.active ?? true,
+        },
+      });
+
+      return this.toInstitutionResponse(institution);
+    } catch (error) {
+      handleUniqueError(error, "Instituicao financeira ja cadastrada");
+    }
+  }
+
+  async updateInstitution(
+    tenantId: string,
+    institutionId: string,
+    dto: PaymentInstitutionConfigurationDto
+  ) {
+    await this.ensureInstitution(tenantId, institutionId);
+
+    try {
+      const institution = await this.prisma.paymentInstitutionConfiguration.update({
+        where: { id: institutionId },
+        data: {
+          name: dto.name.trim(),
+          code: this.normalizeInstitutionCode(dto.code?.trim() || dto.name),
+          paymentInstitution: dto.paymentInstitution ?? null,
+          active: dto.active ?? true,
+        },
+      });
+
+      return this.toInstitutionResponse(institution);
+    } catch (error) {
+      handleUniqueError(error, "Instituicao financeira ja cadastrada");
     }
   }
 
@@ -129,6 +198,77 @@ export class FinancialAccountService {
     }
   }
 
+  private async ensureInstitution(tenantId: string, institutionId: string) {
+    const institution = await this.prisma.paymentInstitutionConfiguration.findFirst({
+      where: { id: institutionId, tenantId },
+      select: { id: true },
+    });
+
+    if (!institution) {
+      throw new NotFoundException("Instituicao financeira nao encontrada");
+    }
+  }
+
+  private async resolveInstitution(tenantId: string, dto: FinancialAccountDto) {
+    if (!dto.paymentInstitutionId) {
+      return null;
+    }
+
+    const institution = await this.prisma.paymentInstitutionConfiguration.findFirst({
+      where: {
+        id: dto.paymentInstitutionId,
+        tenantId,
+        active: true,
+      },
+      select: {
+        id: true,
+        paymentInstitution: true,
+      },
+    });
+
+    if (!institution) {
+      throw new NotFoundException("Instituicao financeira nao encontrada");
+    }
+
+    return institution;
+  }
+
+  private async ensureDefaultInstitutions(tenantId: string) {
+    const defaults: Array<{ name: string; code: string; paymentInstitution: PaymentInstitution }> =
+      [
+        { name: "PagBank", code: "PAGBANK", paymentInstitution: PaymentInstitution.PAGBANK },
+        {
+          name: "Mercado Pago",
+          code: "MERCADO_PAGO",
+          paymentInstitution: PaymentInstitution.MERCADO_PAGO,
+        },
+        { name: "Dinheiro", code: "DINHEIRO", paymentInstitution: PaymentInstitution.DINHEIRO },
+        {
+          name: "Caixa Local",
+          code: "CAIXA_LOCAL",
+          paymentInstitution: PaymentInstitution.CAIXA_LOCAL,
+        },
+      ];
+
+    await Promise.all(
+      defaults.map((institution) =>
+        this.prisma.paymentInstitutionConfiguration.upsert({
+          where: {
+            tenantId_paymentInstitution: {
+              tenantId,
+              paymentInstitution: institution.paymentInstitution,
+            },
+          },
+          create: {
+            tenantId,
+            ...institution,
+          },
+          update: {},
+        })
+      )
+    );
+  }
+
   private async ensureCategory(tenantId: string, categoryId: string) {
     const category = await this.prisma.financialCategory.findFirst({
       where: { id: categoryId, tenantId },
@@ -138,6 +278,48 @@ export class FinancialAccountService {
     if (!category) {
       throw new NotFoundException("Categoria financeira nao encontrada");
     }
+  }
+
+  private normalizeInstitutionCode(value: string): string {
+    return value
+      .trim()
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .replace(/[^a-zA-Z0-9]+/g, "_")
+      .replace(/^_+|_+$/g, "")
+      .toUpperCase();
+  }
+
+  private toAccountResponse(
+    account: Prisma.FinancialAccountGetPayload<{ include: { institution: true } }>
+  ) {
+    return {
+      id: account.id,
+      name: account.name,
+      paymentInstitution: account.paymentInstitution,
+      paymentInstitutionId: account.paymentInstitutionId,
+      paymentInstitutionName:
+        account.institution?.name ?? paymentInstitutionLabel(account.paymentInstitution),
+      openingBalance: toMoneyString(account.openingBalance),
+      openingBalanceAt: toDateOnly(account.openingBalanceAt),
+      active: account.active,
+    };
+  }
+
+  private toInstitutionResponse(institution: {
+    id: string;
+    name: string;
+    code: string;
+    paymentInstitution: PaymentInstitution | null;
+    active: boolean;
+  }) {
+    return {
+      id: institution.id,
+      name: institution.name,
+      code: institution.code,
+      paymentInstitution: institution.paymentInstitution,
+      active: institution.active,
+    };
   }
 }
 
@@ -159,4 +341,17 @@ function toDateOnly(value: Date): string {
   const month = `${value.getMonth() + 1}`.padStart(2, "0");
   const day = `${value.getDate()}`.padStart(2, "0");
   return `${year}-${month}-${day}`;
+}
+
+function paymentInstitutionLabel(value: PaymentInstitution | null): string | null {
+  if (!value) {
+    return null;
+  }
+
+  return {
+    PAGBANK: "PagBank",
+    MERCADO_PAGO: "Mercado Pago",
+    DINHEIRO: "Dinheiro",
+    CAIXA_LOCAL: "Caixa Local",
+  }[value];
 }
