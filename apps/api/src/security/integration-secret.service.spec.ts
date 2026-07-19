@@ -20,4 +20,29 @@ describe("IntegrationSecretService", () => {
       nested: { authorization: "********", ok: 1 },
     });
   });
+
+  it("round-trips typed credential envelopes", () => {
+    const envelopes = [
+      { version: 1, kind: "PAGBANK_EDI", ediToken: "edi-token" } as const,
+      {
+        version: 1,
+        kind: "MERCADO_PAGO_OAUTH",
+        accessToken: "access-token",
+        refreshToken: "refresh-token",
+      } as const,
+      { version: 1, kind: "MERCADO_PAGO_FIXED", accessToken: "fixed-token" } as const,
+    ];
+
+    for (const envelope of envelopes) {
+      const encrypted = service.encryptEnvelope(envelope);
+      expect(encrypted).not.toContain("token");
+      expect(service.decryptEnvelope(encrypted)).toEqual(envelope);
+    }
+  });
+
+  it("rejects legacy or malformed data as a typed envelope", () => {
+    expect(() => service.decryptEnvelope(service.encrypt("edi-token"))).toThrow(
+      "Envelope de credencial invalido"
+    );
+  });
 });

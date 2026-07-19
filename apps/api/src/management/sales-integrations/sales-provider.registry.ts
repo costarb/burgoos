@@ -1,5 +1,9 @@
 import { ConflictException, Injectable, NotFoundException } from "@nestjs/common";
-import { SalesProvider, SalesProviderAdapter, SalesProviderCapability } from "./sales-provider.adapter";
+import {
+  SalesProvider,
+  SalesProviderAdapter,
+  SalesProviderCapability,
+} from "./sales-provider.adapter";
 
 @Injectable()
 export class SalesProviderRegistry {

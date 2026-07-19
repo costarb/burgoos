@@ -10,7 +10,9 @@ describe("ExternalSaleIdentityService", () => {
     const service = new ExternalSaleIdentityService({ externalSaleIdentity: { create } } as never);
 
     await expect(service.claim(key, "API")).resolves.toBe(true);
-    expect(create).toHaveBeenCalledWith({ data: { ...key, firstChannel: "API" } });
+    expect(create).toHaveBeenCalledWith({
+      data: { ...key, environment: "PRODUCTION", firstChannel: "API" },
+    });
   });
 
   it("turns the durable unique-key race into a duplicate result", async () => {
@@ -34,13 +36,22 @@ describe("ExternalSaleIdentityService", () => {
 
     await service.linkOrder(client as never, key, "movement", "order");
 
-    expect(client.externalSaleIdentity.update).toHaveBeenCalledWith(expect.objectContaining({
-      where: { tenantId_provider_externalSaleId: key },
-      data: expect.objectContaining({ orderId: "order" }),
-    }));
-    expect(client.externalSalesMovement.update).toHaveBeenCalledWith(expect.objectContaining({
-      where: { id: "movement" },
-      data: expect.objectContaining({ status: "IMPORTED", orderId: "order" }),
-    }));
+    expect(client.externalSaleIdentity.update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: {
+          tenantId_provider_environment_externalSaleId: {
+            ...key,
+            environment: "PRODUCTION",
+          },
+        },
+        data: expect.objectContaining({ orderId: "order" }),
+      })
+    );
+    expect(client.externalSalesMovement.update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { id: "movement" },
+        data: expect.objectContaining({ status: "IMPORTED", orderId: "order" }),
+      })
+    );
   });
 });

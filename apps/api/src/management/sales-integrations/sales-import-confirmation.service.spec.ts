@@ -25,7 +25,9 @@ const movement = {
   },
 };
 
-function setup(importNormalizedSale = vi.fn().mockResolvedValue({ imported: [{ orderId: "order" }] })) {
+function setup(
+  importNormalizedSale = vi.fn().mockResolvedValue({ imported: [{ orderId: "order" }] })
+) {
   const prisma = {
     salesImportRun: {
       findFirst: vi.fn().mockResolvedValue(run),
@@ -44,7 +46,16 @@ function setup(importNormalizedSale = vi.fn().mockResolvedValue({ imported: [{ o
     linkOrder: vi.fn().mockResolvedValue(undefined),
     release: vi.fn().mockResolvedValue(undefined),
   };
-  return { prisma, historical: { importNormalizedSale }, identities, service: new SalesImportConfirmationService(prisma as never, { importNormalizedSale } as never, identities as never) };
+  return {
+    prisma,
+    historical: { importNormalizedSale },
+    identities,
+    service: new SalesImportConfirmationService(
+      prisma as never,
+      { importNormalizedSale } as never,
+      identities as never
+    ),
+  };
 }
 
 describe("SalesImportConfirmationService", () => {
@@ -53,28 +64,52 @@ describe("SalesImportConfirmationService", () => {
 
     const result = await service.confirm("tenant", "run");
 
-    expect(prisma.salesImportRun.updateMany).toHaveBeenCalledWith(expect.objectContaining({
-      where: expect.objectContaining({ tenantId: "tenant", status: { in: ["PREVIEW_READY", "PARTIALLY_READY", "COMPLETED_WITH_ERRORS"] } }),
-    }));
-    expect(historical.importNormalizedSale).toHaveBeenCalledWith("tenant", movement.normalizedData, expect.any(Object));
+    expect(prisma.salesImportRun.updateMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({
+          tenantId: "tenant",
+          status: { in: ["PREVIEW_READY", "PARTIALLY_READY", "COMPLETED_WITH_ERRORS"] },
+        }),
+      })
+    );
+    expect(historical.importNormalizedSale).toHaveBeenCalledWith(
+      "tenant",
+      movement.normalizedData,
+      expect.any(Object)
+    );
     expect(identities.claim).toHaveBeenCalledWith(
       expect.objectContaining({ tenantId: "tenant", externalSaleId: "sale-1" }),
       "API"
     );
-    expect(result).toMatchObject({ status: "COMPLETED", counts: expect.objectContaining({ imported: 1, failed: 0 }) });
+    expect(result).toMatchObject({
+      status: "COMPLETED",
+      counts: expect.objectContaining({ imported: 1, failed: 0 }),
+    });
   });
 
   it("releases an unlinked identity and records a safe per-sale failure", async () => {
-    const { prisma, identities, service } = setup(vi.fn().mockRejectedValue(new Error("TOKEN-secret")));
+    const { prisma, identities, service } = setup(
+      vi.fn().mockRejectedValue(new Error("TOKEN-secret"))
+    );
 
     const result = await service.confirm("tenant", "run");
 
     expect(identities.release).toHaveBeenCalled();
-    expect(prisma.externalSalesMovement.update).toHaveBeenCalledWith(expect.objectContaining({
-      data: expect.objectContaining({ rejectionCode: "IMPORT_FAILED", rejectionMessage: "Falha ao criar pedido historico" }),
-    }));
-    expect(JSON.stringify(prisma.externalSalesMovement.update.mock.calls)).not.toContain("TOKEN-secret");
-    expect(result).toMatchObject({ status: "COMPLETED_WITH_ERRORS", counts: expect.objectContaining({ imported: 0, failed: 1 }) });
+    expect(prisma.externalSalesMovement.update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          rejectionCode: "IMPORT_FAILED",
+          rejectionMessage: "Falha ao criar pedido historico",
+        }),
+      })
+    );
+    expect(JSON.stringify(prisma.externalSalesMovement.update.mock.calls)).not.toContain(
+      "TOKEN-secret"
+    );
+    expect(result).toMatchObject({
+      status: "COMPLETED_WITH_ERRORS",
+      counts: expect.objectContaining({ imported: 0, failed: 1 }),
+    });
   });
 
   it("classifies a durable identity conflict as duplicate without creating an order", async () => {
@@ -88,7 +123,10 @@ describe("SalesImportConfirmationService", () => {
       where: { id: "movement" },
       data: { status: "DUPLICATE" },
     });
-    expect(result).toMatchObject({ status: "COMPLETED", counts: expect.objectContaining({ imported: 0, duplicate: 1 }) });
+    expect(result).toMatchObject({
+      status: "COMPLETED",
+      counts: expect.objectContaining({ imported: 0, duplicate: 1 }),
+    });
   });
 
   it("resumes an IMPORTING run after restart without trying to claim it again", async () => {
@@ -98,9 +136,16 @@ describe("SalesImportConfirmationService", () => {
     await service.confirm("tenant", "run", true);
 
     expect(prisma.salesImportRun.updateMany).not.toHaveBeenCalled();
-    expect(prisma.externalSalesMovement.findMany).toHaveBeenCalledWith(expect.objectContaining({
-      where: { tenantId: "tenant", runId: "run", status: { in: ["NEW", "FAILED"] }, kind: "SALE" },
-    }));
+    expect(prisma.externalSalesMovement.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: {
+          tenantId: "tenant",
+          runId: "run",
+          status: { in: ["NEW", "FAILED"] },
+          kind: "SALE",
+        },
+      })
+    );
   });
 
   it("retries failed movements while preserving the previous imported count", async () => {
@@ -113,26 +158,41 @@ describe("SalesImportConfirmationService", () => {
 
     const result = await service.confirm("tenant", "run");
 
-    expect(prisma.salesImportRun.updateMany).toHaveBeenCalledWith(expect.objectContaining({
-      where: expect.objectContaining({ status: { in: ["PREVIEW_READY", "PARTIALLY_READY", "COMPLETED_WITH_ERRORS"] } }),
-    }));
-    expect(result).toMatchObject({ status: "COMPLETED", counts: expect.objectContaining({ imported: 3, failed: 0 }) });
+    expect(prisma.salesImportRun.updateMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({
+          status: { in: ["PREVIEW_READY", "PARTIALLY_READY", "COMPLETED_WITH_ERRORS"] },
+        }),
+      })
+    );
+    expect(result).toMatchObject({
+      status: "COMPLETED",
+      counts: expect.objectContaining({ imported: 3, failed: 0 }),
+    });
   });
 
   it("keeps successful sales when another sale fails", async () => {
-    const importSale = vi.fn()
+    const importSale = vi
+      .fn()
       .mockResolvedValueOnce({ imported: [{ orderId: "order-1" }] })
       .mockRejectedValueOnce(new Error("invalid product"));
     const { prisma, identities, service } = setup(importSale);
     prisma.externalSalesMovement.findMany.mockResolvedValue([
       movement,
-      { ...movement, id: "movement-2", externalSaleId: "sale-2", normalizedData: { ...movement.normalizedData, externalSaleId: "sale-2" } },
+      {
+        ...movement,
+        id: "movement-2",
+        externalSaleId: "sale-2",
+        normalizedData: { ...movement.normalizedData, externalSaleId: "sale-2" },
+      },
     ]);
 
     const result = await service.confirm("tenant", "run");
 
     expect(importSale).toHaveBeenCalledTimes(2);
-    expect(identities.release).toHaveBeenCalledWith(expect.objectContaining({ externalSaleId: "sale-2" }));
+    expect(identities.release).toHaveBeenCalledWith(
+      expect.objectContaining({ externalSaleId: "sale-2" })
+    );
     expect(result).toMatchObject({
       status: "COMPLETED_WITH_ERRORS",
       counts: expect.objectContaining({ imported: 1, failed: 1 }),

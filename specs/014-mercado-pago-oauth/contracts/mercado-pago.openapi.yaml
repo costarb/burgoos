@@ -1,0 +1,231 @@
+openapi: 3.0.3
+info:
+  title: RRF5 OS Mercado Pago Sales Integration API
+  version: 1.0.0
+  description: Tenant-scoped OAuth or fixed-token connection, synchronization and public callback/webhook contracts.
+servers:
+  - url: /api
+paths:
+  /platform/integrations/mercado-pago/configuration:
+    get:
+      security: [{ bearerAuth: [] }]
+      summary: Read safe global Mercado Pago application configuration metadata
+      responses:
+        "200": { description: Configuration flags and public URLs without secrets }
+        "403": { description: SUPER_ADMIN access required }
+    put:
+      security: [{ bearerAuth: [] }]
+      summary: Create or partially replace write-only global Mercado Pago settings
+      responses:
+        "200": { description: Updated safe metadata without secrets }
+        "403": { description: SUPER_ADMIN access required }
+  /admin/sales-integrations/{integrationId}/mercado-pago/fixed-token:
+    post:
+      security: [{ bearerAuth: [] }]
+      summary: Select OAuth or submit a write-only fixed token
+      parameters: [{ $ref: "#/components/parameters/IntegrationId" }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [mode, accessToken]
+              properties:
+                mode: { type: string, enum: [FIXED_TOKEN] }
+                accessToken: { type: string, minLength: 1, writeOnly: true }
+      responses:
+        "200":
+          description: Validated connection metadata; token is never returned
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/MercadoPagoConnection" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { $ref: "#/components/responses/Conflict" }
+  /admin/sales-integrations/{integrationId}/mercado-pago/oauth/connect:
+    post:
+      security: [{ bearerAuth: [] }]
+      summary: Start OAuth and return the provider authorization URL
+      parameters: [{ $ref: "#/components/parameters/IntegrationId" }]
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                initialLoadDays: { type: integer, enum: [30, 60, 90], default: 30 }
+      responses:
+        "200":
+          description: Short-lived authorization URL
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [authorizationUrl, expiresAt]
+                properties:
+                  authorizationUrl: { type: string, format: uri }
+                  expiresAt: { type: string, format: date-time }
+        "404": { $ref: "#/components/responses/NotFound" }
+        "409": { $ref: "#/components/responses/Conflict" }
+  /admin/sales-integrations/{integrationId}/mercado-pago:
+    delete:
+      security: [{ bearerAuth: [] }]
+      summary: Disable the active connection while retaining history
+      parameters: [{ $ref: "#/components/parameters/IntegrationId" }]
+      responses:
+        "200":
+          description: Disconnected metadata
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/MercadoPagoConnection" }
+        "404": { $ref: "#/components/responses/NotFound" }
+  /admin/sales-integrations/{integrationId}/mercado-pago/sync:
+    post:
+      security: [{ bearerAuth: [] }]
+      summary: Start initial or manual paginated preview
+      parameters: [{ $ref: "#/components/parameters/IntegrationId" }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [startDate, endDate, strategy]
+              properties:
+                startDate: { type: string, format: date }
+                endDate: { type: string, format: date }
+                initialPeriodDays: { type: integer, enum: [30, 60, 90] }
+                strategy: { type: string, enum: [PRICE_WEIGHTED, FIXED_PRODUCT] }
+                fixedProductId: { type: string, format: uuid, nullable: true }
+      responses:
+        "202":
+          description: Existing SalesImportRun accepted
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/SalesImportRunReference" }
+        "409": { $ref: "#/components/responses/Conflict" }
+  /integrations/mercadopago/callback:
+    get:
+      summary: Public OAuth callback using one-time state
+      parameters:
+        - name: code
+          in: query
+          required: true
+          schema: { type: string }
+        - name: state
+          in: query
+          required: true
+          schema: { type: string }
+      responses:
+        "302": { description: Redirect to safe administrative result page }
+        "400": { description: Invalid, expired, consumed or failed authorization }
+  /webhooks/mercadopago:
+    post:
+      summary: Public signed notification receiver
+      parameters:
+        - name: x-signature
+          in: header
+          required: true
+          schema: { type: string }
+        - name: x-request-id
+          in: header
+          required: true
+          schema: { type: string }
+        - name: data.id
+          in: query
+          required: false
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/MercadoPagoNotification" }
+      responses:
+        "200": { description: Valid notification accepted or already known }
+        "401": { description: Invalid signature }
+components:
+  securitySchemes:
+    bearerAuth: { type: http, scheme: bearer, bearerFormat: JWT }
+  parameters:
+    IntegrationId:
+      name: integrationId
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
+  schemas:
+    MercadoPagoConnection:
+      type: object
+      required: [id, provider, environment, credentialMode, status, hasCredential]
+      properties:
+        id: { type: string, format: uuid }
+        provider: { type: string, enum: [MERCADO_PAGO] }
+        environment: { type: string, enum: [TEST, PRODUCTION] }
+        credentialMode: { type: string, enum: [OAUTH, FIXED_TOKEN] }
+        status:
+          {
+            type: string,
+            enum:
+              [
+                PENDING_AUTHORIZATION,
+                CONNECTED,
+                TOKEN_EXPIRING,
+                REFRESHING,
+                REAUTHORIZATION_REQUIRED,
+                ERROR,
+                DISCONNECTED,
+              ],
+          }
+        providerUserId: { type: string, nullable: true }
+        hasCredential: { type: boolean }
+        tokenExpiresAt: { type: string, format: date-time, nullable: true }
+        scopes: { type: array, items: { type: string } }
+        connectedAt: { type: string, format: date-time, nullable: true }
+        lastSyncAt: { type: string, format: date-time, nullable: true }
+        lastErrorCode: { type: string, nullable: true }
+        lastErrorMessage: { type: string, nullable: true }
+    MercadoPagoNotification:
+      type: object
+      required: [type, data]
+      properties:
+        id: { oneOf: [{ type: string }, { type: integer }] }
+        live_mode: { type: boolean }
+        type:
+          {
+            type: string,
+            enum: [payment, order, topic_claims_integration_wh, topic_chargebacks_wh],
+          }
+        action: { type: string }
+        user_id: { oneOf: [{ type: string }, { type: integer }] }
+        data:
+          type: object
+          required: [id]
+          properties:
+            id: { oneOf: [{ type: string }, { type: integer }] }
+    SalesImportRunReference:
+      type: object
+      required: [id, status]
+      properties:
+        id: { type: string, format: uuid }
+        status: { type: string, enum: [PENDING, FETCHING, PREVIEW_READY, PARTIALLY_READY, FAILED] }
+    ApiError:
+      type: object
+      required: [statusCode, code, message]
+      properties:
+        statusCode: { type: integer }
+        code: { type: string }
+        message: { type: string }
+  responses:
+    BadRequest:
+      description: Invalid credential or request
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/ApiError" }
+    NotFound:
+      description: Resource does not exist for authenticated tenant
+    Conflict:
+      description: Account already linked, operation in progress or invalid state
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/ApiError" }

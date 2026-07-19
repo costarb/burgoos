@@ -15,9 +15,19 @@ describe("SalesImportRunProcessor", () => {
         updateMany: vi.fn(),
       },
     };
-    const preview = { process: vi.fn().mockResolvedValue({ provider: "PAGBANK", status: "PREVIEW_READY", counts: {} }) };
-    const confirmation = { confirm: vi.fn().mockResolvedValue({ provider: "PAGBANK", status: "COMPLETED", counts: {} }) };
-    const processor = new SalesImportRunProcessor(prisma as never, preview as never, confirmation as never);
+    const preview = {
+      process: vi
+        .fn()
+        .mockResolvedValue({ provider: "PAGBANK", status: "PREVIEW_READY", counts: {} }),
+    };
+    const confirmation = {
+      confirm: vi.fn().mockResolvedValue({ provider: "PAGBANK", status: "COMPLETED", counts: {} }),
+    };
+    const processor = new SalesImportRunProcessor(
+      prisma as never,
+      preview as never,
+      confirmation as never
+    );
 
     await processor.onModuleInit();
     await flush();
@@ -35,16 +45,30 @@ describe("SalesImportRunProcessor", () => {
       },
     };
     const preview = { process: vi.fn().mockRejectedValue(new Error(leaked)) };
-    const processor = new SalesImportRunProcessor(prisma as never, preview as never, { confirm: vi.fn() } as never);
-    const logError = vi.spyOn((processor as unknown as { logger: { error: (message: string) => void } }).logger, "error").mockImplementation(() => undefined);
+    const processor = new SalesImportRunProcessor(
+      prisma as never,
+      preview as never,
+      { confirm: vi.fn() } as never
+    );
+    const logError = vi
+      .spyOn(
+        (processor as unknown as { logger: { error: (message: string) => void } }).logger,
+        "error"
+      )
+      .mockImplementation(() => undefined);
 
     processor.queuePreview("run", "tenant");
     await flush();
 
     expect(JSON.stringify(prisma.salesImportRun.updateMany.mock.calls)).not.toContain(leaked);
     expect(JSON.stringify(logError.mock.calls)).not.toContain(leaked);
-    expect(prisma.salesImportRun.updateMany).toHaveBeenCalledWith(expect.objectContaining({
-      data: expect.objectContaining({ errorCode: "PROCESSING_FAILED", errorMessage: "Falha interna durante o processamento" }),
-    }));
+    expect(prisma.salesImportRun.updateMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          errorCode: "PROCESSING_FAILED",
+          errorMessage: "Falha interna durante o processamento",
+        }),
+      })
+    );
   });
 });

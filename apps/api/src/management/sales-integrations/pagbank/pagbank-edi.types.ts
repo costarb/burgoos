@@ -28,5 +28,8 @@ export interface PagBankEdiResponse {
 export function isPagBankEdiResponse(value: unknown): value is PagBankEdiResponse {
   if (!value || typeof value !== "object") return false;
   const record = value as Record<string, unknown>;
-  return Array.isArray(record.detalhes) && Boolean(record.pagination && typeof record.pagination === "object");
+  return (
+    Array.isArray(record.detalhes) &&
+    Boolean(record.pagination && typeof record.pagination === "object")
+  );
 }

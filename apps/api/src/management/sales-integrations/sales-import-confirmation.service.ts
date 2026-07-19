@@ -16,7 +16,10 @@ export class SalesImportConfirmationService {
   ) {}
 
   async confirm(tenantId: string, runId: string, resume = false) {
-    const run = await this.prisma.salesImportRun.findFirst({ where: { id: runId, tenantId } });
+    const run = await this.prisma.salesImportRun.findFirst({
+      where: { id: runId, tenantId },
+      include: { integration: true },
+    });
     if (!run) throw new NotFoundException("Execucao nao encontrada");
     const terminal: SalesImportRunStatus[] = [SalesImportRunStatus.COMPLETED];
     if (terminal.includes(run.status)) return run;
@@ -55,7 +58,13 @@ export class SalesImportConfirmationService {
         failed += 1;
         continue;
       }
-      const identityKey = { tenantId, provider: run.provider, externalSaleId: movement.externalSaleId };
+      const identityKey = {
+        tenantId,
+        provider: run.provider,
+        environment: run.integration?.environment ?? ("PRODUCTION" as const),
+        integrationId: run.integrationId,
+        externalSaleId: movement.externalSaleId,
+      };
       if (!(await this.identities.claim(identityKey, run.channel))) {
         duplicate += 1;
         await this.prisma.externalSalesMovement.update({
@@ -69,7 +78,7 @@ export class SalesImportConfirmationService {
         const result = await this.historical.importNormalizedSale(tenantId, sale, {
           strategy: run.strategy as "PRICE_WEIGHTED" | "FIXED_PRODUCT",
           fixedProductId: run.fixedProductId ?? undefined,
-          orderPlatformName: "PAGBANK_EDI",
+          orderPlatformName: run.provider === "MERCADO_PAGO" ? "MERCADO_PAGO" : "PAGBANK_EDI",
           onOrderCreated: (client, orderId) =>
             this.identities.linkOrder(client, identityKey, movement.id, orderId),
         });
