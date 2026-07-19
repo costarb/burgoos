@@ -1,0 +1,410 @@
+openapi: 3.0.3
+info:
+  title: BurgoOS Sales Integrations Admin API
+  version: 1.0.0
+  description: Tenant-scoped contracts for configuring providers, previewing external sales and importing historical orders.
+servers:
+  - url: /api/admin
+security:
+  - bearerAuth: []
+paths:
+  /sales-integrations/providers:
+    get:
+      summary: List supported providers and capabilities
+      operationId: listSalesProviders
+      responses:
+        "200":
+          description: Provider catalog
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/SalesProviderCapability"
+  /sales-integrations:
+    get:
+      summary: List integrations for the authenticated tenant
+      operationId: listSalesIntegrations
+      responses:
+        "200":
+          description: Integrations without secret values
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/SalesIntegration"
+    post:
+      summary: Create a provider integration
+      operationId: createSalesIntegration
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpsertSalesIntegrationInput"
+      responses:
+        "201":
+          description: Created integration
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SalesIntegration"
+        "409":
+          $ref: "#/components/responses/Conflict"
+  /sales-integrations/{integrationId}:
+    parameters:
+      - $ref: "#/components/parameters/IntegrationId"
+    get:
+      summary: Get integration for the authenticated tenant
+      operationId: getSalesIntegration
+      responses:
+        "200":
+          description: Integration
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SalesIntegration"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    patch:
+      summary: Update non-secret integration settings
+      operationId: updateSalesIntegration
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpsertSalesIntegrationInput"
+      responses:
+        "200":
+          description: Updated integration
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SalesIntegration"
+  /sales-integrations/{integrationId}/credentials:
+    parameters:
+      - $ref: "#/components/parameters/IntegrationId"
+    put:
+      summary: Set or rotate a write-only credential
+      operationId: rotateSalesIntegrationCredential
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [token]
+              properties:
+                token:
+                  type: string
+                  minLength: 1
+                  writeOnly: true
+      responses:
+        "204":
+          description: Credential stored; value is never returned
+        "404":
+          $ref: "#/components/responses/NotFound"
+  /sales-integrations/{integrationId}/status:
+    parameters:
+      - $ref: "#/components/parameters/IntegrationId"
+    patch:
+      summary: Activate, pause or disable an integration
+      operationId: updateSalesIntegrationStatus
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [status]
+              properties:
+                status:
+                  type: string
+                  enum: [ACTIVE, PAUSED, DISABLED]
+      responses:
+        "200":
+          description: Updated integration
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SalesIntegration"
+        "409":
+          $ref: "#/components/responses/Conflict"
+  /sales-import-runs:
+    get:
+      summary: List tenant import runs
+      operationId: listSalesImportRuns
+      parameters:
+        - name: page
+          in: query
+          schema: { type: integer, minimum: 1, default: 1 }
+        - name: pageSize
+          in: query
+          schema: { type: integer, minimum: 1, maximum: 100, default: 20 }
+      responses:
+        "200":
+          description: Paginated history
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SalesImportRunPage"
+    post:
+      summary: Start an asynchronous preview run
+      operationId: createSalesImportRun
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateSalesImportRunInput"
+      responses:
+        "202":
+          description: Run accepted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SalesImportRun"
+        "409":
+          $ref: "#/components/responses/Conflict"
+  /sales-import-runs/{runId}:
+    parameters:
+      - $ref: "#/components/parameters/RunId"
+    get:
+      summary: Poll run status and preview summary
+      operationId: getSalesImportRun
+      responses:
+        "200":
+          description: Tenant-owned run
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SalesImportRunDetail"
+        "404":
+          $ref: "#/components/responses/NotFound"
+  /sales-import-runs/{runId}/movements:
+    parameters:
+      - $ref: "#/components/parameters/RunId"
+    get:
+      summary: List paginated preview movements
+      operationId: listSalesImportMovements
+      parameters:
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [NEW, DUPLICATE, REJECTED, IMPORTED, FAILED]
+        - name: page
+          in: query
+          schema: { type: integer, minimum: 1, default: 1 }
+        - name: pageSize
+          in: query
+          schema: { type: integer, minimum: 1, maximum: 100, default: 50 }
+      responses:
+        "200":
+          description: Preview items; raw payload is not exposed by default
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SalesMovementPage"
+  /sales-import-runs/{runId}/confirm:
+    parameters:
+      - $ref: "#/components/parameters/RunId"
+    post:
+      summary: Confirm import of the persisted preview
+      operationId: confirmSalesImportRun
+      responses:
+        "202":
+          description: Import accepted or already in progress
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SalesImportRun"
+        "409":
+          $ref: "#/components/responses/Conflict"
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  parameters:
+    IntegrationId:
+      name: integrationId
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
+    RunId:
+      name: runId
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
+  responses:
+    NotFound:
+      description: Resource does not exist for the authenticated tenant
+    Conflict:
+      description: State conflict, overlapping run or unmet activation/import precondition
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ApiError"
+  schemas:
+    SalesProviderCapability:
+      type: object
+      required: [provider, channels, maxPeriodDays, supportsPreview]
+      properties:
+        provider: { type: string, enum: [PAGBANK] }
+        channels:
+          type: array
+          items: { type: string, enum: [API, FILE, OTHER] }
+        maxPeriodDays: { type: integer, minimum: 1 }
+        supportsPreview: { type: boolean }
+        requiredSettings:
+          type: array
+          items: { type: string }
+    SalesIntegration:
+      type: object
+      required: [id, provider, channel, status, displayName, hasCredential, createdAt, updatedAt]
+      properties:
+        id: { type: string, format: uuid }
+        provider: { type: string, enum: [PAGBANK] }
+        channel: { type: string, enum: [API] }
+        status: { type: string, enum: [DRAFT, ACTIVE, PAUSED, REQUIRES_ATTENTION, DISABLED] }
+        displayName: { type: string }
+        externalMerchantId: { type: string, description: PagBank USER }
+        settings: { type: object, additionalProperties: true }
+        hasCredential: { type: boolean }
+        credentialFingerprint: { type: string, nullable: true }
+        lastValidationAt: { type: string, format: date-time, nullable: true }
+        lastErrorCode: { type: string, nullable: true }
+        lastErrorMessage: { type: string, nullable: true }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+    UpsertSalesIntegrationInput:
+      type: object
+      required: [provider, channel, displayName, externalMerchantId]
+      properties:
+        provider: { type: string, enum: [PAGBANK] }
+        channel: { type: string, enum: [API] }
+        displayName: { type: string, minLength: 1, maxLength: 100 }
+        externalMerchantId: { type: string, minLength: 1, maxLength: 100 }
+        settings: { type: object, additionalProperties: true }
+    CreateSalesImportRunInput:
+      type: object
+      required: [integrationId, startDate, endDate, strategy]
+      properties:
+        integrationId: { type: string, format: uuid }
+        startDate: { type: string, format: date }
+        endDate: { type: string, format: date }
+        strategy: { type: string, enum: [PRICE_WEIGHTED, FIXED_PRODUCT] }
+        fixedProductId: { type: string, format: uuid, nullable: true }
+    SalesImportRun:
+      type: object
+      required: [id, provider, channel, startDate, endDate, status, counts, createdAt]
+      properties:
+        id: { type: string, format: uuid }
+        provider: { type: string, enum: [PAGBANK] }
+        channel: { type: string, enum: [API] }
+        startDate: { type: string, format: date }
+        endDate: { type: string, format: date }
+        status:
+          type: string
+          enum:
+            [
+              PENDING,
+              FETCHING,
+              PREVIEW_READY,
+              PARTIALLY_READY,
+              IMPORTING,
+              COMPLETED,
+              COMPLETED_WITH_ERRORS,
+              FAILED,
+              CANCELLED,
+            ]
+        counts:
+          $ref: "#/components/schemas/RunCounts"
+        errorCode: { type: string, nullable: true }
+        errorMessage: { type: string, nullable: true }
+        createdAt: { type: string, format: date-time }
+        completedAt: { type: string, format: date-time, nullable: true }
+    SalesImportRunDetail:
+      allOf:
+        - $ref: "#/components/schemas/SalesImportRun"
+        - type: object
+          required: [days]
+          properties:
+            days:
+              type: array
+              items:
+                $ref: "#/components/schemas/SalesImportDay"
+    SalesImportDay:
+      type: object
+      required: [date, status, pagesFetched]
+      properties:
+        date: { type: string, format: date }
+        status:
+          type: string
+          enum: [PENDING, FETCHING, READY, BLOCKED_NOT_VALIDATED, BLOCKED_DATE, FAILED]
+        validated: { type: boolean, nullable: true }
+        pagesFetched: { type: integer, minimum: 0 }
+        totalPages: { type: integer, minimum: 0, nullable: true }
+        totalElements: { type: integer, minimum: 0, nullable: true }
+        errorCode: { type: string, nullable: true }
+        errorMessage: { type: string, nullable: true }
+    SalesMovement:
+      type: object
+      required: [id, kind, status, providerMovementId]
+      properties:
+        id: { type: string, format: uuid }
+        providerMovementId: { type: string }
+        externalSaleId: { type: string, nullable: true }
+        kind: { type: string, enum: [SALE, NON_SALE, UNKNOWN] }
+        status: { type: string, enum: [NEW, DUPLICATE, REJECTED, IMPORTING, IMPORTED, FAILED] }
+        occurredAt: { type: string, format: date-time, nullable: true }
+        grossAmount: { type: string, pattern: '^-?\d+\.\d{2}$', nullable: true }
+        netAmount: { type: string, pattern: '^-?\d+\.\d{2}$', nullable: true }
+        feeAmount: { type: string, pattern: '^-?\d+\.\d{2}$', nullable: true }
+        paymentMethod: { type: string, nullable: true }
+        installments: { type: integer, minimum: 1, nullable: true }
+        rejectionCode: { type: string, nullable: true }
+        rejectionMessage: { type: string, nullable: true }
+        orderId: { type: string, format: uuid, nullable: true }
+    RunCounts:
+      type: object
+      required: [found, new, duplicate, rejected, imported, failed, blockedDays]
+      properties:
+        found: { type: integer, minimum: 0 }
+        new: { type: integer, minimum: 0 }
+        duplicate: { type: integer, minimum: 0 }
+        rejected: { type: integer, minimum: 0 }
+        imported: { type: integer, minimum: 0 }
+        failed: { type: integer, minimum: 0 }
+        blockedDays: { type: integer, minimum: 0 }
+    SalesImportRunPage:
+      type: object
+      required: [items, page, pageSize, total]
+      properties:
+        items:
+          type: array
+          items: { $ref: "#/components/schemas/SalesImportRun" }
+        page: { type: integer }
+        pageSize: { type: integer }
+        total: { type: integer }
+    SalesMovementPage:
+      type: object
+      required: [items, page, pageSize, total]
+      properties:
+        items:
+          type: array
+          items: { $ref: "#/components/schemas/SalesMovement" }
+        page: { type: integer }
+        pageSize: { type: integer }
+        total: { type: integer }
+    ApiError:
+      type: object
+      required: [statusCode, code, message]
+      properties:
+        statusCode: { type: integer }
+        code: { type: string }
+        message: { type: string }

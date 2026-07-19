@@ -2,6 +2,6 @@
 
 For additional context about technologies to be used, project structure,
 shell commands, and other important information, read
-`specs/012-store-maintenance-contact/plan.md`
+`specs/013-pagbank-sales-integration/plan.md`
 
 <!-- SPECKIT END -->

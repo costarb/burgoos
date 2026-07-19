@@ -54,9 +54,10 @@ import { ManagementReportExportProvider } from "./exports/providers/management-r
 import { PayablesExportProvider } from "./exports/providers/payables-export.provider";
 import { NotificationsController } from "./notifications/notifications.controller";
 import { NotificationsService } from "./notifications/notifications.service";
+import { SalesIntegrationsModule } from "./sales-integrations/sales-integrations.module";
 
 @Module({
-  imports: [AuthModule, DatabaseModule, DeliveryIntegrationsModule],
+  imports: [AuthModule, DatabaseModule, DeliveryIntegrationsModule, SalesIntegrationsModule],
   controllers: [
     DailySummaryController,
     FinancialConfigurationController,

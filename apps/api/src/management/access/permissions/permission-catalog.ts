@@ -82,6 +82,22 @@ export const ACCESS_PERMISSIONS = [
     description: "Consultar historico de autenticacao e mudancas de acesso",
     sensitive: true,
   },
+  {
+    key: "integrations.sales.view",
+    area: "Integracoes",
+    screen: "Vendas externas",
+    action: "VIEW",
+    description: "Visualizar integracoes e importacoes de vendas externas",
+    sensitive: true,
+  },
+  {
+    key: "integrations.sales.manage",
+    area: "Integracoes",
+    screen: "Vendas externas",
+    action: "MANAGE",
+    description: "Configurar providers e importar vendas externas",
+    sensitive: true,
+  },
 ] satisfies AccessPermission[];
 
 export function groupAccessPermissions(

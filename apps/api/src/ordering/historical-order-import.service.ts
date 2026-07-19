@@ -80,6 +80,27 @@ interface SkippedOrderResult {
   reason: string;
 }
 
+export interface NormalizedHistoricalSaleImportOptions {
+  strategy?: HistoricalOrderImportStrategy;
+  fixedProductId?: string;
+  orderPlatformName?: string;
+  onOrderCreated?: (client: Prisma.TransactionClient, orderId: string) => Promise<void>;
+}
+
+export interface NormalizedHistoricalSale {
+  provider: "PAGBANK";
+  channel: "API" | "FILE" | "OTHER";
+  providerMovementId: string;
+  externalSaleId: string;
+  occurredAt: string;
+  grossAmount: number;
+  netAmount?: number;
+  feeAmount?: number;
+  paymentMethod: "PIX" | "PIX_MANUAL" | "DEBIT_CARD" | "CREDIT_CARD";
+  paymentBrand?: string;
+  expectedReleaseAt?: string;
+}
+
 @Injectable()
 export class HistoricalOrderImportService {
   constructor(
@@ -89,13 +110,68 @@ export class HistoricalOrderImportService {
   ) {}
 
   async importFromCsv(tenantId: string, dto: ImportOrdersDto) {
-    const strategy = dto.strategy ?? "PRICE_WEIGHTED";
     const layout = dto.layout ?? "SIMPLE";
     const institutionOptions = await this.listPaymentInstitutionOptions(tenantId);
     const rows = this.parseCsv(dto.csvText, layout, institutionOptions);
 
+    return this.importRows(tenantId, rows, dto, layout);
+  }
+
+  async importNormalizedSale(
+    tenantId: string,
+    sale: NormalizedHistoricalSale,
+    options: NormalizedHistoricalSaleImportOptions = {}
+  ) {
+    const amount = new Prisma.Decimal(sale.grossAmount);
+    const occurredAt = new Date(sale.occurredAt);
+    if (!sale.externalSaleId.trim() || !Number.isFinite(sale.grossAmount) || amount.lte(0)) {
+      throw new BadRequestException("Venda normalizada invalida");
+    }
+    if (Number.isNaN(occurredAt.getTime())) throw new BadRequestException("Data da venda normalizada invalida");
+    const paymentMethod = PaymentMethod[sale.paymentMethod];
+    if (!paymentMethod) throw new BadRequestException("Meio de pagamento normalizado invalido");
+    const paymentInstitution = sale.provider === "PAGBANK" ? PaymentInstitution.PAGBANK : undefined;
+    const release = this.resolvePaymentRelease(
+      occurredAt,
+      sale.expectedReleaseAt ? new Date(sale.expectedReleaseAt) : undefined,
+      { paymentInstitution, paymentMethod }
+    );
+    const row: ParsedImportRow = {
+      rowNumber: 1,
+      date: occurredAt,
+      description: `${sale.provider} ${sale.providerMovementId}`,
+      amount,
+      feeAmount: sale.feeAmount === undefined ? undefined : new Prisma.Decimal(sale.feeAmount),
+      netAmount: sale.netAmount === undefined ? undefined : new Prisma.Decimal(sale.netAmount),
+      paymentInstitution,
+      paymentMethod,
+      externalPaymentId: sale.externalSaleId,
+      paymentBrand: sale.paymentBrand,
+      paymentReleaseExpectedAt: release.expectedAt,
+      paymentReleaseSource: release.source,
+      importKey: this.externalImportKey(paymentInstitution ?? PaymentInstitution.CAIXA_LOCAL, sale.externalSaleId),
+    };
+    return this.importRows(tenantId, [row], {
+      strategy: options.strategy ?? "PRICE_WEIGHTED",
+      fixedProductId: options.fixedProductId,
+      orderPlatformName: options.orderPlatformName ?? `${sale.provider}_${sale.channel}`,
+      paymentInstitution,
+      paymentMethod,
+      onOrderCreated: options.onOrderCreated,
+    }, `${sale.provider}_${sale.channel}`);
+  }
+
+  private async importRows(
+    tenantId: string,
+    rows: ParsedImportRow[],
+    dto: Pick<ImportOrdersDto, "strategy" | "fixedProductId" | "orderPlatformName" | "paymentInstitutionId" | "paymentInstitution" | "paymentMethod"> &
+      Pick<NormalizedHistoricalSaleImportOptions, "onOrderCreated">,
+    layout: string
+  ) {
+    const strategy = dto.strategy ?? "PRICE_WEIGHTED";
+
     if (rows.length === 0) {
-      throw new BadRequestException("Nenhuma venda valida encontrada no CSV");
+      throw new BadRequestException("Nenhuma venda valida encontrada");
     }
 
     const [products, existingKeys, orderPlatform, defaultInstitution] = await Promise.all([
@@ -141,8 +217,26 @@ export class HistoricalOrderImportService {
       const paymentInstitutionName =
         rowInstitution?.name ?? paymentInstitutionLabel(paymentInstitution ?? null);
       const paymentMethod = row.paymentMethod ?? dto.paymentMethod ?? PaymentMethod.PIX_MANUAL;
-      const order = await this.prisma.order.create({
-        data: {
+      const csvIdentityKey =
+        layout === "PAGBANK" && row.externalPaymentId
+          ? { tenantId, provider: "PAGBANK" as const, externalSaleId: row.externalPaymentId }
+          : null;
+      if (csvIdentityKey) {
+        try {
+          await this.prisma.externalSaleIdentity.create({
+            data: { ...csvIdentityKey, firstChannel: "FILE" },
+          });
+        } catch (error) {
+          if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") {
+            skipped.push({ rowNumber: row.rowNumber, reason: "Venda externa ja importada" });
+            continue;
+          }
+          throw error;
+        }
+      }
+      const order = await this.prisma.$transaction(async (transaction) => {
+        const created = await transaction.order.create({
+          data: {
           tenantId,
           status: OrderStatus.DELIVERED,
           total: row.amount,
@@ -177,10 +271,29 @@ export class HistoricalOrderImportService {
               total: row.amount,
             },
           },
-        },
+          },
+        });
+        await this.orderProfitabilityService.createDeliveredOrderSnapshots(
+          tenantId,
+          created.id,
+          transaction
+        );
+        if (csvIdentityKey) {
+          await transaction.externalSaleIdentity.update({
+            where: { tenantId_provider_externalSaleId: csvIdentityKey },
+            data: { orderId: created.id, importedAt: new Date() },
+          });
+        }
+        await dto.onOrderCreated?.(transaction, created.id);
+        return created;
+      }).catch(async (error: unknown) => {
+        if (csvIdentityKey) {
+          await this.prisma.externalSaleIdentity.deleteMany({
+            where: { ...csvIdentityKey, orderId: null },
+          });
+        }
+        throw error;
       });
-
-      await this.orderProfitabilityService.createDeliveredOrderSnapshots(tenantId, order.id);
       existingKeys.add(row.importKey);
 
       imported.push({
@@ -336,7 +449,7 @@ export class HistoricalOrderImportService {
 
   private async resolveDefaultPaymentInstitution(
     tenantId: string,
-    dto: ImportOrdersDto
+    dto: Pick<ImportOrdersDto, "paymentInstitutionId" | "paymentInstitution">
   ): Promise<ResolvedPaymentInstitution | null> {
     if (dto.paymentInstitutionId) {
       const institution = await this.prisma.paymentInstitutionConfiguration.findFirst({
@@ -931,7 +1044,7 @@ export class HistoricalOrderImportService {
     row: ParsedImportRow,
     product: ProductCandidate,
     strategy: HistoricalOrderImportStrategy,
-    layout: HistoricalOrderImportLayout,
+    layout: string,
     payment: {
       paymentInstitution?: PaymentInstitution;
       paymentInstitutionName?: string | null;
@@ -958,6 +1071,7 @@ export class HistoricalOrderImportService {
     ].join(" | ");
   }
 }
+
 
 function paymentInstitutionLabel(value: PaymentInstitution | null): string | null {
   if (!value) {

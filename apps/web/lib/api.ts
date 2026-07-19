@@ -61,6 +61,10 @@ import type {
   PublicMenu,
   SalesReportFilters,
   SalesReportResponse,
+  SalesIntegrationView,
+  SalesImportRunView,
+  SalesMovementView,
+  SalesProviderCapability,
   StoreDetail,
   StoreSetupResult,
   StoreSummary,
@@ -1854,4 +1858,44 @@ export async function createStockMovement(
     method: "POST",
     body: JSON.stringify(payload),
   });
+}
+
+export function listSalesProviders(token: string): Promise<SalesProviderCapability[]> {
+  return fetchAdmin(token, "/api/admin/sales-integrations/providers");
+}
+
+export function listSalesIntegrations(token: string): Promise<SalesIntegrationView[]> {
+  return fetchAdmin(token, "/api/admin/sales-integrations");
+}
+
+export function createSalesIntegration(token: string, payload: { provider: "PAGBANK"; channel: "API"; displayName: string; externalMerchantId: string }): Promise<SalesIntegrationView> {
+  return fetchAdmin(token, "/api/admin/sales-integrations", { method: "POST", body: JSON.stringify(payload) });
+}
+
+export async function saveSalesCredential(token: string, integrationId: string, credential: string): Promise<void> {
+  await fetchAdmin(token, `/api/admin/sales-integrations/${integrationId}/credentials`, { method: "PUT", body: JSON.stringify({ token: credential }) });
+}
+
+export function setSalesIntegrationStatus(token: string, integrationId: string, status: "ACTIVE" | "PAUSED" | "DISABLED"): Promise<SalesIntegrationView> {
+  return fetchAdmin(token, `/api/admin/sales-integrations/${integrationId}/status`, { method: "PATCH", body: JSON.stringify({ status }) });
+}
+
+export function createSalesImportRun(token: string, payload: { integrationId: string; startDate: string; endDate: string; strategy: "PRICE_WEIGHTED" | "FIXED_PRODUCT"; fixedProductId?: string }): Promise<SalesImportRunView> {
+  return fetchAdmin(token, "/api/admin/sales-import-runs", { method: "POST", body: JSON.stringify(payload) });
+}
+
+export function getSalesImportRun(token: string, runId: string): Promise<SalesImportRunView> {
+  return fetchAdmin(token, `/api/admin/sales-import-runs/${runId}`);
+}
+
+export function confirmSalesImportRun(token: string, runId: string): Promise<SalesImportRunView> {
+  return fetchAdmin(token, `/api/admin/sales-import-runs/${runId}/confirm`, { method: "POST" });
+}
+
+export function listSalesImportRuns(token: string, page = 1): Promise<{ items: SalesImportRunView[]; page: number; pageSize: number; total: number }> {
+  return fetchAdmin(token, `/api/admin/sales-import-runs?page=${page}`);
+}
+
+export function listSalesImportMovements(token: string, runId: string, page = 1): Promise<{ items: SalesMovementView[]; page: number; pageSize: number; total: number }> {
+  return fetchAdmin(token, `/api/admin/sales-import-runs/${runId}/movements?page=${page}`);
 }
