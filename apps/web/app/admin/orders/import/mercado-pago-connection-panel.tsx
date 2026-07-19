@@ -30,6 +30,7 @@ export function MercadoPagoConnectionPanel({
   const [syncStatus, setSyncStatus] = useState<string | null>(null);
   const [syncRun, setSyncRun] = useState<SalesImportRunView | null>(null);
   const [movements, setMovements] = useState<SalesMovementView[]>([]);
+  const [movementTotal, setMovementTotal] = useState(0);
   useEffect(() => {
     if (integration?.credentialMode === "FIXED_TOKEN" || integration?.credentialMode === "OAUTH")
       setMode(integration.credentialMode);
@@ -107,8 +108,11 @@ export function MercadoPagoConnectionPanel({
         setSyncRun(run);
         setSyncStatus(run.status);
       }
-      if (["PREVIEW_READY", "PARTIALLY_READY"].includes(run.status))
-        setMovements((await listSalesImportMovements(token, run.id)).items);
+      if (["PREVIEW_READY", "PARTIALLY_READY"].includes(run.status)) {
+        const preview = await listSalesImportMovements(token, run.id, 1, 100);
+        setMovements(preview.items);
+        setMovementTotal(preview.total);
+      }
       setMessage(
         ["PREVIEW_READY", "PARTIALLY_READY"].includes(run.status)
           ? `Prévia pronta: ${run.counts.new} novas, ${run.counts.duplicate} duplicadas e ${run.counts.rejected} ignoradas.`
@@ -268,6 +272,10 @@ export function MercadoPagoConnectionPanel({
       ) : null}
       {movements.length > 0 ? (
         <div className="grid gap-3 overflow-x-auto">
+          <p className="text-sm text-slate-600">
+            Exibindo {movements.length} de {movementTotal} registros da prévia. A confirmação
+            importa todos os registros classificados como novos, não apenas os exibidos.
+          </p>
           <table className="w-full text-left text-sm">
             <thead>
               <tr>

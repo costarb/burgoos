@@ -40,6 +40,39 @@ describe("MercadoPagoClient payments", () => {
     expect(payments.map((item) => item.id)).toEqual([1, 2]);
     expect(String(fetchMock.mock.calls[0][0])).toContain("criteria=asc");
   });
+
+  it("advances by the page size actually returned by Mercado Pago", async () => {
+    const firstPage = Array.from({ length: 20 }, (_, index) => ({
+      ...mercadoPagoApprovedPaymentFixture,
+      id: index + 1,
+    }));
+    const secondPage = Array.from({ length: 5 }, (_, index) => ({
+      ...mercadoPagoApprovedPaymentFixture,
+      id: index + 21,
+    }));
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify({ paging: { total: 25 }, results: firstPage }), { status: 200 })
+      )
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify({ paging: { total: 25 }, results: secondPage }), {
+          status: 200,
+        })
+      );
+    vi.stubGlobal("fetch", fetchMock);
+    const client = new MercadoPagoClient({} as never);
+
+    const payments = await client.searchPayments({
+      accessToken: "secret",
+      startDate: "2026-07-01",
+      endDate: "2026-07-02",
+      limit: 50,
+    });
+
+    expect(payments).toHaveLength(25);
+    expect(new URL(String(fetchMock.mock.calls[1][0])).searchParams.get("offset")).toBe("20");
+  });
   it("rejects ranges of 365 days or more", async () => {
     const client = new MercadoPagoClient({ get: vi.fn() } as any);
     await expect(

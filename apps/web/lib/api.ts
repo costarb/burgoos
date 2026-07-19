@@ -2024,7 +2024,11 @@ export function listSalesImportRuns(
 export function listSalesImportMovements(
   token: string,
   runId: string,
-  page = 1
+  page = 1,
+  pageSize = 20
 ): Promise<{ items: SalesMovementView[]; page: number; pageSize: number; total: number }> {
-  return fetchAdmin(token, `/api/admin/sales-import-runs/${runId}/movements?page=${page}`);
+  return fetchAdmin(
+    token,
+    `/api/admin/sales-import-runs/${runId}/movements?page=${page}&pageSize=${pageSize}`
+  );
 }

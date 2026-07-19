@@ -70,7 +70,8 @@ export class MercadoPagoClient {
       throw new RangeError("Periodo Mercado Pago deve ser menor que 365 dias");
     const limit = Math.min(100, Math.max(1, input.limit ?? 50));
     const found = new Map<string, MercadoPagoPayment>();
-    for (let offset = 0; ; offset += limit) {
+    let offset = 0;
+    for (;;) {
       const url = new URL(`${this.baseUrl}/v1/payments/search`);
       const rangeField = input.rangeField ?? "date_created";
       url.search = new URLSearchParams({
@@ -89,6 +90,7 @@ export class MercadoPagoClient {
       };
       for (const payment of page.results) found.set(String(payment.id), payment);
       if (offset + page.results.length >= page.paging.total || page.results.length === 0) break;
+      offset += page.results.length;
     }
     const field = input.rangeField === "date_last_updated" ? "date_last_updated" : "date_created";
     return [...found.values()].sort(
