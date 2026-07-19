@@ -1,11 +1,32 @@
-export type SalesProvider = "PAGBANK";
+export type SalesProvider = "PAGBANK" | "MERCADO_PAGO";
 export type SalesInputChannel = "API" | "FILE" | "OTHER";
+export type SalesIntegrationEnvironment = "TEST" | "PRODUCTION";
+export type SalesCredentialMode = "PROVIDER_TOKEN" | "OAUTH" | "FIXED_TOKEN";
 export type SalesIntegrationStatus =
   | "DRAFT"
   | "ACTIVE"
   | "PAUSED"
   | "REQUIRES_ATTENTION"
-  | "DISABLED";
+  | "DISABLED"
+  | "PENDING_AUTHORIZATION"
+  | "TOKEN_EXPIRING"
+  | "REFRESHING"
+  | "REAUTHORIZATION_REQUIRED"
+  | "ERROR";
+export type MercadoPagoConnectionStatus =
+  | "PENDING_AUTHORIZATION"
+  | "CONNECTED"
+  | "TOKEN_EXPIRING"
+  | "REFRESHING"
+  | "REAUTHORIZATION_REQUIRED"
+  | "ERROR"
+  | "DISCONNECTED";
+export type SalesRunTrigger =
+  | "MANUAL"
+  | "INITIAL_LOAD"
+  | "WEBHOOK"
+  | "RECONCILIATION_SHORT"
+  | "RECONCILIATION_DAILY";
 export type SalesImportRunStatus =
   | "PENDING"
   | "FETCHING"
@@ -38,6 +59,9 @@ export interface SalesProviderCapability {
   maxPeriodDays: number;
   supportsPreview: boolean;
   requiredSettings: string[];
+  credentialModes?: SalesCredentialMode[];
+  supportsWebhooks?: boolean;
+  supportsReconciliation?: boolean;
 }
 
 export interface SalesIntegrationView {
@@ -45,11 +69,20 @@ export interface SalesIntegrationView {
   provider: SalesProvider;
   channel: SalesInputChannel;
   status: SalesIntegrationStatus;
+  publicStatus?: MercadoPagoConnectionStatus;
   displayName: string;
   externalMerchantId: string | null;
   settings: Record<string, unknown>;
   hasCredential: boolean;
   credentialFingerprint: string | null;
+  environment?: SalesIntegrationEnvironment;
+  credentialMode?: SalesCredentialMode;
+  providerUserId?: string | null;
+  tokenExpiresAt?: string | null;
+  scopes?: string[];
+  connectedAt?: string | null;
+  lastSyncAt?: string | null;
+  disconnectedAt?: string | null;
   lastValidationAt: string | null;
   lastErrorCode: string | null;
   lastErrorMessage: string | null;
@@ -85,12 +118,43 @@ export interface SalesImportRunView {
   startDate: string;
   endDate: string;
   status: SalesImportRunStatus;
+  trigger?: SalesRunTrigger;
   counts: SalesRunCounts;
   days?: SalesImportDayView[];
   errorCode: string | null;
   errorMessage: string | null;
   createdAt: string;
   completedAt: string | null;
+}
+
+export interface MercadoPagoConnectionView {
+  id: string;
+  provider: "MERCADO_PAGO";
+  environment: SalesIntegrationEnvironment;
+  credentialMode: "OAUTH" | "FIXED_TOKEN";
+  status: MercadoPagoConnectionStatus;
+  providerUserId: string | null;
+  hasCredential: boolean;
+  tokenExpiresAt: string | null;
+  scopes: string[];
+  connectedAt: string | null;
+  lastSyncAt: string | null;
+  disconnectedAt: string | null;
+  lastErrorCode: string | null;
+  lastErrorMessage: string | null;
+}
+
+export type MercadoPagoCredentialModeInput =
+  | { mode: "OAUTH" }
+  | { mode: "FIXED_TOKEN"; accessToken: string };
+
+export interface StartMercadoPagoOAuthInput {
+  initialLoadDays?: 30 | 60 | 90;
+}
+
+export interface StartMercadoPagoOAuthResult {
+  authorizationUrl: string;
+  expiresAt: string;
 }
 
 export interface SalesMovementView {

@@ -11,17 +11,21 @@ import { BrandingModule } from "./customer-experience/branding/branding.module";
 import { TenantModule } from "./platform/tenant/tenant.module";
 import { PlatformStoreModule } from "./platform/stores/platform-store.module";
 import { PlatformUserModule } from "./platform/users/platform-user.module";
+import { PlatformIntegrationsModule } from "./platform/integrations/platform-integrations.module";
+import { validateEnvironment } from "./config/env.validation";
 
 @Module({
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
+      validate: validateEnvironment,
     }),
     DatabaseModule,
     AuthModule,
     TenantModule,
     PlatformStoreModule,
     PlatformUserModule,
+    PlatformIntegrationsModule,
     BrandingModule,
     CatalogModule,
     OrderingModule,

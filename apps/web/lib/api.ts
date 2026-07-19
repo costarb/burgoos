@@ -524,6 +524,39 @@ export async function getPlatformAdminToken(): Promise<string> {
   return requireSessionAccessToken();
 }
 
+export interface MercadoPagoPlatformConfigurationView {
+  clientIdConfigured: boolean;
+  clientSecretConfigured: boolean;
+  webhookSecretConfigured: boolean;
+  redirectUri: string | null;
+  postCallbackUrl: string | null;
+  source: "DATABASE" | "ENVIRONMENT";
+  oauthReady: boolean;
+  webhookReady: boolean;
+}
+
+export function getMercadoPagoPlatformConfiguration(
+  token: string
+): Promise<MercadoPagoPlatformConfigurationView> {
+  return fetchPlatform(token, "/api/platform/integrations/mercado-pago/configuration");
+}
+
+export function updateMercadoPagoPlatformConfiguration(
+  token: string,
+  payload: {
+    clientId?: string;
+    clientSecret?: string;
+    webhookSecret?: string;
+    redirectUri?: string;
+    postCallbackUrl?: string;
+  }
+): Promise<MercadoPagoPlatformConfigurationView> {
+  return fetchPlatform(token, "/api/platform/integrations/mercado-pago/configuration", {
+    method: "PUT",
+    body: JSON.stringify(payload),
+  });
+}
+
 async function readSessionAccessToken(): Promise<string | null> {
   if (typeof window !== "undefined") {
     return readAuthSession()?.accessToken ?? null;
@@ -1868,20 +1901,109 @@ export function listSalesIntegrations(token: string): Promise<SalesIntegrationVi
   return fetchAdmin(token, "/api/admin/sales-integrations");
 }
 
-export function createSalesIntegration(token: string, payload: { provider: "PAGBANK"; channel: "API"; displayName: string; externalMerchantId: string }): Promise<SalesIntegrationView> {
-  return fetchAdmin(token, "/api/admin/sales-integrations", { method: "POST", body: JSON.stringify(payload) });
+export function createSalesIntegration(
+  token: string,
+  payload: {
+    provider: "PAGBANK" | "MERCADO_PAGO";
+    channel: "API";
+    displayName: string;
+    externalMerchantId?: string;
+    environment?: "TEST" | "PRODUCTION";
+    credentialMode?: "PROVIDER_TOKEN" | "OAUTH" | "FIXED_TOKEN";
+  }
+): Promise<SalesIntegrationView> {
+  return fetchAdmin(token, "/api/admin/sales-integrations", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
 }
 
-export async function saveSalesCredential(token: string, integrationId: string, credential: string): Promise<void> {
-  await fetchAdmin(token, `/api/admin/sales-integrations/${integrationId}/credentials`, { method: "PUT", body: JSON.stringify({ token: credential }) });
+export function startMercadoPagoOAuth(
+  token: string,
+  integrationId: string,
+  initialLoadDays: 30 | 60 | 90
+): Promise<{ authorizationUrl: string; expiresAt: string }> {
+  return fetchAdmin(
+    token,
+    `/api/admin/sales-integrations/${integrationId}/mercado-pago/oauth/connect`,
+    { method: "POST", body: JSON.stringify({ initialLoadDays }) }
+  );
 }
 
-export function setSalesIntegrationStatus(token: string, integrationId: string, status: "ACTIVE" | "PAUSED" | "DISABLED"): Promise<SalesIntegrationView> {
-  return fetchAdmin(token, `/api/admin/sales-integrations/${integrationId}/status`, { method: "PATCH", body: JSON.stringify({ status }) });
+export function connectMercadoPagoFixedToken(
+  token: string,
+  integrationId: string,
+  accessToken: string
+): Promise<SalesIntegrationView> {
+  return fetchAdmin(
+    token,
+    `/api/admin/sales-integrations/${integrationId}/mercado-pago/fixed-token`,
+    { method: "POST", body: JSON.stringify({ mode: "FIXED_TOKEN", accessToken }) }
+  );
 }
 
-export function createSalesImportRun(token: string, payload: { integrationId: string; startDate: string; endDate: string; strategy: "PRICE_WEIGHTED" | "FIXED_PRODUCT"; fixedProductId?: string }): Promise<SalesImportRunView> {
-  return fetchAdmin(token, "/api/admin/sales-import-runs", { method: "POST", body: JSON.stringify(payload) });
+export function disconnectMercadoPago(
+  token: string,
+  integrationId: string
+): Promise<SalesIntegrationView> {
+  return fetchAdmin(token, `/api/admin/sales-integrations/${integrationId}/mercado-pago`, {
+    method: "DELETE",
+  });
+}
+
+export function syncMercadoPago(
+  token: string,
+  integrationId: string,
+  payload: {
+    startDate: string;
+    endDate: string;
+    initialPeriodDays?: 30 | 60 | 90;
+    strategy: "PRICE_WEIGHTED" | "FIXED_PRODUCT";
+    fixedProductId?: string;
+  }
+): Promise<SalesImportRunView> {
+  return fetchAdmin(token, `/api/admin/sales-integrations/${integrationId}/mercado-pago/sync`, {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function saveSalesCredential(
+  token: string,
+  integrationId: string,
+  credential: string
+): Promise<void> {
+  await fetchAdmin(token, `/api/admin/sales-integrations/${integrationId}/credentials`, {
+    method: "PUT",
+    body: JSON.stringify({ token: credential }),
+  });
+}
+
+export function setSalesIntegrationStatus(
+  token: string,
+  integrationId: string,
+  status: "ACTIVE" | "PAUSED" | "DISABLED"
+): Promise<SalesIntegrationView> {
+  return fetchAdmin(token, `/api/admin/sales-integrations/${integrationId}/status`, {
+    method: "PATCH",
+    body: JSON.stringify({ status }),
+  });
+}
+
+export function createSalesImportRun(
+  token: string,
+  payload: {
+    integrationId: string;
+    startDate: string;
+    endDate: string;
+    strategy: "PRICE_WEIGHTED" | "FIXED_PRODUCT";
+    fixedProductId?: string;
+  }
+): Promise<SalesImportRunView> {
+  return fetchAdmin(token, "/api/admin/sales-import-runs", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
 }
 
 export function getSalesImportRun(token: string, runId: string): Promise<SalesImportRunView> {
@@ -1892,10 +2014,17 @@ export function confirmSalesImportRun(token: string, runId: string): Promise<Sal
   return fetchAdmin(token, `/api/admin/sales-import-runs/${runId}/confirm`, { method: "POST" });
 }
 
-export function listSalesImportRuns(token: string, page = 1): Promise<{ items: SalesImportRunView[]; page: number; pageSize: number; total: number }> {
+export function listSalesImportRuns(
+  token: string,
+  page = 1
+): Promise<{ items: SalesImportRunView[]; page: number; pageSize: number; total: number }> {
   return fetchAdmin(token, `/api/admin/sales-import-runs?page=${page}`);
 }
 
-export function listSalesImportMovements(token: string, runId: string, page = 1): Promise<{ items: SalesMovementView[]; page: number; pageSize: number; total: number }> {
+export function listSalesImportMovements(
+  token: string,
+  runId: string,
+  page = 1
+): Promise<{ items: SalesMovementView[]; page: number; pageSize: number; total: number }> {
   return fetchAdmin(token, `/api/admin/sales-import-runs/${runId}/movements?page=${page}`);
 }

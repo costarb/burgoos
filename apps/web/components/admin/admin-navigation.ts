@@ -257,6 +257,13 @@ export const secondaryNavigation: AdminNavigationItem[] = [
     platformAdminOnly: true,
   },
   {
+    href: "/platform/integrations",
+    label: "Integrações",
+    icon: Settings,
+    description: "Credenciais dos provedores",
+    platformAdminOnly: true,
+  },
+  {
     href: "/piloto",
     label: "Cardapio publico",
     icon: Tags,

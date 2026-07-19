@@ -23,7 +23,10 @@ describe("mapPagBankMovement", () => {
   });
 
   it("rejects unrecognized payment methods", () => {
-    const result = mapPagBankMovement({ ...PAGBANK_SALE_FIXTURES.credit, meio_pagamento: "UNKNOWN" });
+    const result = mapPagBankMovement({
+      ...PAGBANK_SALE_FIXTURES.credit,
+      meio_pagamento: "UNKNOWN",
+    });
     expect(result.rejectionCode).toBe("INVALID_SALE");
   });
 });
