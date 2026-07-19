@@ -275,6 +275,66 @@ enum DeliveryIntegrationAuditAction {
   DISPUTE_RECEIVED
 }
 
+enum SalesProvider {
+  PAGBANK
+}
+
+enum SalesInputChannel {
+  API
+  FILE
+  OTHER
+}
+
+enum SalesIntegrationStatus {
+  DRAFT
+  ACTIVE
+  PAUSED
+  REQUIRES_ATTENTION
+  DISABLED
+}
+
+enum SalesCredentialStatus {
+  ACTIVE
+  ROTATED
+  REVOKED
+}
+
+enum SalesImportRunStatus {
+  PENDING
+  FETCHING
+  PREVIEW_READY
+  PARTIALLY_READY
+  IMPORTING
+  COMPLETED
+  COMPLETED_WITH_ERRORS
+  FAILED
+  CANCELLED
+}
+
+enum SalesImportDayStatus {
+  PENDING
+  FETCHING
+  READY
+  BLOCKED_NOT_VALIDATED
+  BLOCKED_DATE
+  FAILED
+}
+
+enum ExternalMovementKind {
+  SALE
+  NON_SALE
+  UNKNOWN
+}
+
+enum ExternalMovementStatus {
+  NEW
+  DUPLICATE
+  REJECTED
+  IMPORTING
+  IMPORTED
+  FAILED
+}
+
 enum ExportContext {
   PAYABLES
   MANAGEMENT_REPORT
@@ -364,6 +424,12 @@ model Tenant {
   deliveryIntegrationAudits   DeliveryIntegrationAudit[]
   exportJobs                  ExportJob[]
   operationalNotifications    OperationalNotification[]
+  salesIntegrations           SalesIntegration[]
+  salesIntegrationCredentials SalesIntegrationCredential[]
+  salesImportRuns             SalesImportRun[]
+  salesImportDays             SalesImportDay[]
+  externalSalesMovements      ExternalSalesMovement[]
+  externalSaleIdentities      ExternalSaleIdentity[]
 
   @@index([createdByPlatformUserId])
   @@index([defaultLayoutPresetKey])
@@ -436,6 +502,10 @@ model User {
   deliveryIntegrationAudits     DeliveryIntegrationAudit[]      @relation("DeliveryIntegrationAuditActor")
   exportJobsRequested           ExportJob[]                     @relation("ExportJobRequestedBy")
   operationalNotifications      OperationalNotification[]       @relation("NotificationRecipient")
+  salesIntegrationsCreated      SalesIntegration[]              @relation("SalesIntegrationCreatedBy")
+  salesIntegrationsUpdated      SalesIntegration[]              @relation("SalesIntegrationUpdatedBy")
+  salesCredentialsCreated       SalesIntegrationCredential[]    @relation("SalesCredentialCreatedBy")
+  salesImportRunsRequested      SalesImportRun[]                @relation("SalesImportRunRequestedBy")
 
   @@index([tenantId])
   @@index([status])
@@ -744,6 +814,8 @@ model Order {
   profitabilitySnapshots   OrderProfitabilitySnapshot[]
   maintenances             OrderMaintenance[]
   platformOrderLink        PlatformOrderLink?
+  externalSaleIdentities   ExternalSaleIdentity[]
+  externalSalesMovements   ExternalSalesMovement[]
 
   @@index([tenantId, status])
   @@index([tenantId, createdAt])
@@ -753,6 +825,163 @@ model Order {
   @@index([deletedByUserId])
   @@index([orderPlatformId])
   @@map("orders")
+}
+
+model SalesIntegration {
+  id                 String                       @id @default(uuid()) @db.Uuid
+  tenantId           String                       @map("tenant_id") @db.Uuid
+  provider           SalesProvider
+  channel            SalesInputChannel            @default(API)
+  status             SalesIntegrationStatus       @default(DRAFT)
+  displayName        String                       @map("display_name")
+  externalMerchantId String?                      @map("external_merchant_id")
+  settings           Json                         @default("{}")
+  lastValidationAt   DateTime?                    @map("last_validation_at")
+  lastErrorCode      String?                      @map("last_error_code")
+  lastErrorMessage   String?                      @map("last_error_message")
+  createdByUserId    String?                      @map("created_by_user_id") @db.Uuid
+  updatedByUserId    String?                      @map("updated_by_user_id") @db.Uuid
+  createdAt          DateTime                     @default(now()) @map("created_at")
+  updatedAt          DateTime                     @updatedAt @map("updated_at")
+  tenant             Tenant                       @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  createdByUser      User?                        @relation("SalesIntegrationCreatedBy", fields: [createdByUserId], references: [id], onDelete: SetNull)
+  updatedByUser      User?                        @relation("SalesIntegrationUpdatedBy", fields: [updatedByUserId], references: [id], onDelete: SetNull)
+  credentials        SalesIntegrationCredential[]
+  runs               SalesImportRun[]
+  movements          ExternalSalesMovement[]
+
+  @@unique([tenantId, provider, channel])
+  @@index([tenantId, status])
+  @@map("sales_integrations")
+}
+
+model SalesIntegrationCredential {
+  id               String                @id @default(uuid()) @db.Uuid
+  tenantId         String                @map("tenant_id") @db.Uuid
+  integrationId    String                @map("integration_id") @db.Uuid
+  status           SalesCredentialStatus @default(ACTIVE)
+  credentialType   String                @map("credential_type")
+  secretCiphertext String                @map("secret_ciphertext")
+  fingerprint      String
+  createdByUserId  String?               @map("created_by_user_id") @db.Uuid
+  rotatedAt        DateTime?             @map("rotated_at")
+  createdAt        DateTime              @default(now()) @map("created_at")
+  tenant           Tenant                @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  integration      SalesIntegration      @relation(fields: [integrationId], references: [id], onDelete: Cascade)
+  createdByUser    User?                 @relation("SalesCredentialCreatedBy", fields: [createdByUserId], references: [id], onDelete: SetNull)
+
+  @@index([tenantId, integrationId, status])
+  @@map("sales_integration_credentials")
+}
+
+model SalesImportRun {
+  id                String                  @id @default(uuid()) @db.Uuid
+  tenantId          String                  @map("tenant_id") @db.Uuid
+  integrationId     String                  @map("integration_id") @db.Uuid
+  provider          SalesProvider
+  channel           SalesInputChannel
+  requestedByUserId String                  @map("requested_by_user_id") @db.Uuid
+  startDate         DateTime                @map("start_date") @db.Date
+  endDate           DateTime                @map("end_date") @db.Date
+  status            SalesImportRunStatus    @default(PENDING)
+  strategy          String
+  fixedProductId    String?                 @map("fixed_product_id") @db.Uuid
+  counts            Json                    @default("{}")
+  startedAt         DateTime?               @map("started_at")
+  completedAt       DateTime?               @map("completed_at")
+  errorCode         String?                 @map("error_code")
+  errorMessage      String?                 @map("error_message")
+  createdAt         DateTime                @default(now()) @map("created_at")
+  updatedAt         DateTime                @updatedAt @map("updated_at")
+  tenant            Tenant                  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  integration       SalesIntegration        @relation(fields: [integrationId], references: [id], onDelete: Cascade)
+  requestedByUser   User                    @relation("SalesImportRunRequestedBy", fields: [requestedByUserId], references: [id], onDelete: Restrict)
+  days              SalesImportDay[]
+  movements         ExternalSalesMovement[]
+
+  @@index([tenantId, createdAt])
+  @@index([tenantId, integrationId, status])
+  @@index([tenantId, provider, startDate, endDate])
+  @@map("sales_import_runs")
+}
+
+model SalesImportDay {
+  id            String                  @id @default(uuid()) @db.Uuid
+  tenantId      String                  @map("tenant_id") @db.Uuid
+  runId         String                  @map("run_id") @db.Uuid
+  movementDate  DateTime                @map("movement_date") @db.Date
+  status        SalesImportDayStatus    @default(PENDING)
+  validated     Boolean?
+  pagesFetched  Int                     @default(0) @map("pages_fetched")
+  totalPages    Int?                    @map("total_pages")
+  totalElements Int?                    @map("total_elements")
+  errorCode     String?                 @map("error_code")
+  errorMessage  String?                 @map("error_message")
+  startedAt     DateTime?               @map("started_at")
+  completedAt   DateTime?               @map("completed_at")
+  tenant        Tenant                  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  run           SalesImportRun          @relation(fields: [runId], references: [id], onDelete: Cascade)
+  movements     ExternalSalesMovement[]
+
+  @@unique([runId, movementDate])
+  @@index([tenantId, status])
+  @@map("sales_import_days")
+}
+
+model ExternalSalesMovement {
+  id                 String                 @id @default(uuid()) @db.Uuid
+  tenantId           String                 @map("tenant_id") @db.Uuid
+  runId              String                 @map("run_id") @db.Uuid
+  dayId              String                 @map("day_id") @db.Uuid
+  integrationId      String                 @map("integration_id") @db.Uuid
+  provider           SalesProvider
+  channel            SalesInputChannel
+  providerMovementId String                 @map("provider_movement_id")
+  externalSaleId     String?                @map("external_sale_id")
+  externalEventCode  String?                @map("external_event_code")
+  kind               ExternalMovementKind
+  status             ExternalMovementStatus @default(NEW)
+  occurredAt         DateTime?              @map("occurred_at")
+  grossAmount        Decimal?               @map("gross_amount") @db.Decimal(12, 2)
+  netAmount          Decimal?               @map("net_amount") @db.Decimal(12, 2)
+  feeAmount          Decimal?               @map("fee_amount") @db.Decimal(12, 2)
+  paymentMethod      PaymentMethod?         @map("payment_method")
+  installments       Int?
+  normalizedData     Json?                  @map("normalized_data")
+  rawPayload         Json                   @map("raw_payload")
+  rejectionCode      String?                @map("rejection_code")
+  rejectionMessage   String?                @map("rejection_message")
+  orderId            String?                @map("order_id") @db.Uuid
+  importedAt         DateTime?              @map("imported_at")
+  createdAt          DateTime               @default(now()) @map("created_at")
+  updatedAt          DateTime               @updatedAt @map("updated_at")
+  tenant             Tenant                 @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  run                SalesImportRun         @relation(fields: [runId], references: [id], onDelete: Cascade)
+  day                SalesImportDay         @relation(fields: [dayId], references: [id], onDelete: Cascade)
+  integration        SalesIntegration       @relation(fields: [integrationId], references: [id], onDelete: Cascade)
+  order              Order?                 @relation(fields: [orderId], references: [id], onDelete: SetNull)
+
+  @@unique([runId, providerMovementId])
+  @@index([tenantId, runId, status])
+  @@index([tenantId, provider, externalSaleId])
+  @@map("external_sales_movements")
+}
+
+model ExternalSaleIdentity {
+  id             String            @id @default(uuid()) @db.Uuid
+  tenantId       String            @map("tenant_id") @db.Uuid
+  provider       SalesProvider
+  externalSaleId String            @map("external_sale_id")
+  firstChannel   SalesInputChannel @map("first_channel")
+  orderId        String?           @map("order_id") @db.Uuid
+  firstSeenAt    DateTime          @default(now()) @map("first_seen_at")
+  importedAt     DateTime?         @map("imported_at")
+  tenant         Tenant            @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  order          Order?            @relation(fields: [orderId], references: [id], onDelete: SetNull)
+
+  @@unique([tenantId, provider, externalSaleId])
+  @@index([tenantId, orderId])
+  @@map("external_sale_identities")
 }
 
 model OrderMaintenance {

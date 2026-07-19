@@ -2,6 +2,7 @@ import { forwardRef, Module } from "@nestjs/common";
 import { OrderingModule } from "../../ordering/ordering.module";
 import { AuthModule } from "../../platform/auth/auth.module";
 import { DatabaseModule } from "../../platform/database/database.module";
+import { IntegrationSecretService } from "../../security/integration-secret.service";
 import { DeliveryIntegrationAuditService } from "./delivery-integration-audit.service";
 import { DeliveryIntegrationHealthService } from "./delivery-integration-health.service";
 import { DeliveryIntegrationsController } from "./delivery-integrations.controller";
@@ -28,6 +29,7 @@ import { IfoodStatusSyncService } from "./ifood/ifood-status-sync.service";
     IfoodDisputeService,
     IfoodEventPollerService,
     IfoodStatusSyncService,
+    IntegrationSecretService,
   ],
   exports: [
     DeliveryIntegrationsService,
