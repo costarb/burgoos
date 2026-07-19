@@ -127,7 +127,8 @@ export class HistoricalOrderImportService {
     if (!sale.externalSaleId.trim() || !Number.isFinite(sale.grossAmount) || amount.lte(0)) {
       throw new BadRequestException("Venda normalizada invalida");
     }
-    if (Number.isNaN(occurredAt.getTime())) throw new BadRequestException("Data da venda normalizada invalida");
+    if (Number.isNaN(occurredAt.getTime()))
+      throw new BadRequestException("Data da venda normalizada invalida");
     const paymentMethod = PaymentMethod[sale.paymentMethod];
     if (!paymentMethod) throw new BadRequestException("Meio de pagamento normalizado invalido");
     const paymentInstitution = sale.provider === "PAGBANK" ? PaymentInstitution.PAGBANK : undefined;
@@ -149,22 +150,38 @@ export class HistoricalOrderImportService {
       paymentBrand: sale.paymentBrand,
       paymentReleaseExpectedAt: release.expectedAt,
       paymentReleaseSource: release.source,
-      importKey: this.externalImportKey(paymentInstitution ?? PaymentInstitution.CAIXA_LOCAL, sale.externalSaleId),
+      importKey: this.externalImportKey(
+        paymentInstitution ?? PaymentInstitution.CAIXA_LOCAL,
+        sale.externalSaleId
+      ),
     };
-    return this.importRows(tenantId, [row], {
-      strategy: options.strategy ?? "PRICE_WEIGHTED",
-      fixedProductId: options.fixedProductId,
-      orderPlatformName: options.orderPlatformName ?? `${sale.provider}_${sale.channel}`,
-      paymentInstitution,
-      paymentMethod,
-      onOrderCreated: options.onOrderCreated,
-    }, `${sale.provider}_${sale.channel}`);
+    return this.importRows(
+      tenantId,
+      [row],
+      {
+        strategy: options.strategy ?? "PRICE_WEIGHTED",
+        fixedProductId: options.fixedProductId,
+        orderPlatformName: options.orderPlatformName ?? `${sale.provider}_${sale.channel}`,
+        paymentInstitution,
+        paymentMethod,
+        onOrderCreated: options.onOrderCreated,
+      },
+      `${sale.provider}_${sale.channel}`
+    );
   }
 
   private async importRows(
     tenantId: string,
     rows: ParsedImportRow[],
-    dto: Pick<ImportOrdersDto, "strategy" | "fixedProductId" | "orderPlatformName" | "paymentInstitutionId" | "paymentInstitution" | "paymentMethod"> &
+    dto: Pick<
+      ImportOrdersDto,
+      | "strategy"
+      | "fixedProductId"
+      | "orderPlatformName"
+      | "paymentInstitutionId"
+      | "paymentInstitution"
+      | "paymentMethod"
+    > &
       Pick<NormalizedHistoricalSaleImportOptions, "onOrderCreated">,
     layout: string
   ) {
@@ -234,66 +251,73 @@ export class HistoricalOrderImportService {
           throw error;
         }
       }
-      const order = await this.prisma.$transaction(async (transaction) => {
-        const created = await transaction.order.create({
-          data: {
-          tenantId,
-          status: OrderStatus.DELIVERED,
-          total: row.amount,
-          customerName: "Cliente importado",
-          customerPhone: "00000000000",
-          fulfillmentMethod: FulfillmentMethod.PICKUP,
-          paymentMethod,
-          paymentInstitution,
-          paymentInstitutionId,
-          externalPaymentId: row.externalPaymentId,
-          paymentGrossAmount: row.amount,
-          paymentFeeAmount: row.feeAmount,
-          paymentNetAmount: row.netAmount,
-          paymentBrand: row.paymentBrand,
-          paymentReleaseExpectedAt: row.paymentReleaseExpectedAt,
-          paymentReleaseSource: row.paymentReleaseSource,
-          orderPlatformId: orderPlatform.id,
-          notes: this.buildImportNote(row, product, strategy, layout, {
-            paymentInstitution,
-            paymentInstitutionName,
-            paymentMethod,
-          }),
-          createdAt: row.date,
-          updatedAt: row.date,
-          items: {
-            create: {
+      const order = await this.prisma
+        .$transaction(async (transaction) => {
+          const created = await transaction.order.create({
+            data: {
               tenantId,
-              productId: product.id,
-              productNameSnapshot: product.name,
-              quantity: 1,
-              unitPrice: row.amount,
+              status: OrderStatus.DELIVERED,
               total: row.amount,
+              customerName: "Cliente importado",
+              customerPhone: "00000000000",
+              fulfillmentMethod: FulfillmentMethod.PICKUP,
+              paymentMethod,
+              paymentInstitution,
+              paymentInstitutionId,
+              externalPaymentId: row.externalPaymentId,
+              paymentGrossAmount: row.amount,
+              paymentFeeAmount: row.feeAmount,
+              paymentNetAmount: row.netAmount,
+              paymentBrand: row.paymentBrand,
+              paymentReleaseExpectedAt: row.paymentReleaseExpectedAt,
+              paymentReleaseSource: row.paymentReleaseSource,
+              orderPlatformId: orderPlatform.id,
+              notes: this.buildImportNote(row, product, strategy, layout, {
+                paymentInstitution,
+                paymentInstitutionName,
+                paymentMethod,
+              }),
+              createdAt: row.date,
+              updatedAt: row.date,
+              items: {
+                create: {
+                  tenantId,
+                  productId: product.id,
+                  productNameSnapshot: product.name,
+                  quantity: 1,
+                  unitPrice: row.amount,
+                  total: row.amount,
+                },
+              },
             },
-          },
-          },
+          });
+          await this.orderProfitabilityService.createDeliveredOrderSnapshots(
+            tenantId,
+            created.id,
+            transaction
+          );
+          if (csvIdentityKey) {
+            await transaction.externalSaleIdentity.update({
+              where: {
+                tenantId_provider_environment_externalSaleId: {
+                  ...csvIdentityKey,
+                  environment: "PRODUCTION",
+                },
+              },
+              data: { orderId: created.id, importedAt: new Date() },
+            });
+          }
+          await dto.onOrderCreated?.(transaction, created.id);
+          return created;
+        })
+        .catch(async (error: unknown) => {
+          if (csvIdentityKey) {
+            await this.prisma.externalSaleIdentity.deleteMany({
+              where: { ...csvIdentityKey, orderId: null },
+            });
+          }
+          throw error;
         });
-        await this.orderProfitabilityService.createDeliveredOrderSnapshots(
-          tenantId,
-          created.id,
-          transaction
-        );
-        if (csvIdentityKey) {
-          await transaction.externalSaleIdentity.update({
-            where: { tenantId_provider_externalSaleId: csvIdentityKey },
-            data: { orderId: created.id, importedAt: new Date() },
-          });
-        }
-        await dto.onOrderCreated?.(transaction, created.id);
-        return created;
-      }).catch(async (error: unknown) => {
-        if (csvIdentityKey) {
-          await this.prisma.externalSaleIdentity.deleteMany({
-            where: { ...csvIdentityKey, orderId: null },
-          });
-        }
-        throw error;
-      });
       existingKeys.add(row.importKey);
 
       imported.push({
@@ -1071,7 +1095,6 @@ export class HistoricalOrderImportService {
     ].join(" | ");
   }
 }
-
 
 function paymentInstitutionLabel(value: PaymentInstitution | null): string | null {
   if (!value) {

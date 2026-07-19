@@ -2,6 +2,11 @@ import { Injectable, InternalServerErrorException } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 import { createCipheriv, createDecipheriv, createHash, randomBytes } from "crypto";
 
+export type IntegrationCredentialEnvelope =
+  | { version: 1; kind: "PAGBANK_EDI"; ediToken: string }
+  | { version: 1; kind: "MERCADO_PAGO_OAUTH"; accessToken: string; refreshToken: string }
+  | { version: 1; kind: "MERCADO_PAGO_FIXED"; accessToken: string };
+
 @Injectable()
 export class IntegrationSecretService {
   constructor(private readonly config: ConfigService) {}
@@ -21,6 +26,23 @@ export class IntegrationSecretService {
     return Buffer.concat([decipher.update(buffer.subarray(28)), decipher.final()]).toString("utf8");
   }
 
+  encryptEnvelope(envelope: IntegrationCredentialEnvelope): string {
+    return this.encrypt(JSON.stringify(envelope));
+  }
+
+  decryptEnvelope(cipherText: string): IntegrationCredentialEnvelope {
+    let parsed: unknown;
+    try {
+      parsed = JSON.parse(this.decrypt(cipherText));
+    } catch {
+      throw new InternalServerErrorException("Envelope de credencial invalido");
+    }
+    if (!isCredentialEnvelope(parsed)) {
+      throw new InternalServerErrorException("Envelope de credencial invalido");
+    }
+    return parsed;
+  }
+
   fingerprint(secret: string): string {
     return createHash("sha256").update(secret).digest("hex").slice(0, 16);
   }
@@ -31,7 +53,9 @@ export class IntegrationSecretService {
     return Object.fromEntries(
       Object.entries(value).map(([key, item]) => [
         key,
-        /secret|token|password|authorization/i.test(key) ? "********" : this.redact(item),
+        /secret|token|password|authorization|code|verifier|signature/i.test(key)
+          ? "********"
+          : this.redact(item),
       ])
     );
   }
@@ -44,7 +68,9 @@ export class IntegrationSecretService {
       const decoded = Buffer.from(configured, "base64");
       if (decoded.length === 32) return decoded;
       if (this.config.get<string>("NODE_ENV") === "production") {
-        throw new InternalServerErrorException("INTEGRATION_SECRET_KEY deve conter 32 bytes em base64");
+        throw new InternalServerErrorException(
+          "INTEGRATION_SECRET_KEY deve conter 32 bytes em base64"
+        );
       }
       return createHash("sha256").update(configured).digest();
     }
@@ -53,4 +79,17 @@ export class IntegrationSecretService {
     }
     return createHash("sha256").update("burgoos-local-delivery-integration-secret").digest();
   }
+}
+
+function isCredentialEnvelope(value: unknown): value is IntegrationCredentialEnvelope {
+  if (!value || typeof value !== "object") return false;
+  const record = value as Record<string, unknown>;
+  if (record.version !== 1 || typeof record.kind !== "string") return false;
+  if (record.kind === "PAGBANK_EDI") return typeof record.ediToken === "string";
+  if (record.kind === "MERCADO_PAGO_FIXED") return typeof record.accessToken === "string";
+  return (
+    record.kind === "MERCADO_PAGO_OAUTH" &&
+    typeof record.accessToken === "string" &&
+    typeof record.refreshToken === "string"
+  );
 }
