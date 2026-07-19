@@ -169,6 +169,22 @@ async function main(): Promise<void> {
       sensitive: true,
     },
     {
+      key: "integrations.sales.view",
+      area: "Integracoes",
+      screen: "Vendas externas",
+      action: AccessPermissionAction.VIEW,
+      description: "Visualizar integracoes e importacoes de vendas externas",
+      sensitive: true,
+    },
+    {
+      key: "integrations.sales.manage",
+      area: "Integracoes",
+      screen: "Vendas externas",
+      action: AccessPermissionAction.MANAGE,
+      description: "Configurar providers e importar vendas externas",
+      sensitive: true,
+    },
+    {
       key: "access.users.manage",
       area: "Acessos",
       screen: "Usuarios",
@@ -292,6 +308,8 @@ async function main(): Promise<void> {
       "access.audit.view",
       "integrations.delivery.view",
       "integrations.delivery.manage",
+      "integrations.sales.view",
+      "integrations.sales.manage",
     ],
   });
 

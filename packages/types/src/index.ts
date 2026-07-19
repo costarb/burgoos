@@ -108,6 +108,8 @@ export type PaymentMethod =
   | "VOUCHER"
   | "PIX";
 
+export * from "./sales-integrations";
+
 export type PaymentInstitution = "PAGBANK" | "MERCADO_PAGO" | "DINHEIRO" | "CAIXA_LOCAL";
 export type PaymentReleaseSource = "EXTRACT" | "D_PLUS_30_FALLBACK" | "IMMEDIATE";
 export type PaymentReleaseStatus = "RELEASED" | "PENDING_RELEASE";

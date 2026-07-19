@@ -1,11 +1,10 @@
 import { NotFoundException } from "@nestjs/common";
-import { ConfigService } from "@nestjs/config";
 import { describe, expect, it, vi } from "vitest";
 import { DeliveryIntegrationsService } from "./delivery-integrations.service";
 
 describe("DeliveryIntegrationsService", () => {
   const dependencies = {
-    config: { get: vi.fn() } as unknown as ConfigService,
+    secrets: { encrypt: vi.fn((value: string) => value), decrypt: vi.fn((value: string) => value) },
     ifoodAuth: { exchangeAuthorizationCode: vi.fn() },
     providerRegistry: {
       get: vi.fn(() => ({
@@ -47,7 +46,7 @@ describe("DeliveryIntegrationsService", () => {
       {
         deliveryIntegration: { findMany },
       } as never,
-      dependencies.config,
+      dependencies.secrets as never,
       dependencies.ifoodAuth as never,
       { get: vi.fn(() => ({ capabilities })) } as never,
       dependencies.audit as never
@@ -69,7 +68,7 @@ describe("DeliveryIntegrationsService", () => {
       {
         deliveryIntegration: { findFirst },
       } as never,
-      dependencies.config,
+      dependencies.secrets as never,
       dependencies.ifoodAuth as never,
       dependencies.providerRegistry as never,
       dependencies.audit as never
@@ -89,7 +88,7 @@ describe("DeliveryIntegrationsService", () => {
       {
         deliveryIntegration: { findFirst: vi.fn(async () => null) },
       } as never,
-      dependencies.config,
+      dependencies.secrets as never,
       dependencies.ifoodAuth as never,
       dependencies.providerRegistry as never,
       dependencies.audit as never
@@ -122,7 +121,7 @@ describe("DeliveryIntegrationsService", () => {
           })),
         },
       } as never,
-      dependencies.config,
+      dependencies.secrets as never,
       dependencies.ifoodAuth as never,
       {
         get: vi.fn(() => ({
@@ -133,9 +132,7 @@ describe("DeliveryIntegrationsService", () => {
       dependencies.audit as never
     );
 
-    vi.spyOn(service as never, "decryptSecret").mockReturnValue(
-      JSON.stringify({ accessToken: "token" }) as never
-    );
+    dependencies.secrets.decrypt.mockReturnValueOnce(JSON.stringify({ accessToken: "token" }));
 
     await service.validate("tenant-1", "user-1", "integration-1");
 
@@ -175,7 +172,7 @@ describe("DeliveryIntegrationsService", () => {
           })),
         },
       } as never,
-      dependencies.config,
+      dependencies.secrets as never,
       dependencies.ifoodAuth as never,
       { get: vi.fn(() => ({ capabilities })) } as never,
       dependencies.audit as never

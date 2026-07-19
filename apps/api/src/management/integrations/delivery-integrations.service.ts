@@ -5,8 +5,6 @@ import {
   NotFoundException,
   UnprocessableEntityException,
 } from "@nestjs/common";
-import { ConfigService } from "@nestjs/config";
-import { createCipheriv, createDecipheriv, createHash, randomBytes } from "crypto";
 import {
   DeliveryIntegrationAuditAction,
   DeliveryProvider,
@@ -14,6 +12,7 @@ import {
   Prisma,
 } from "@prisma/client";
 import { PrismaService } from "../../platform/database/prisma.service";
+import { IntegrationSecretService } from "../../security/integration-secret.service";
 import {
   DeliveryAuthorizationCodeDto,
   DeliveryCredentialDto,
@@ -28,7 +27,7 @@ import { DeliveryProviderRegistryService } from "./delivery-provider-registry.se
 export class DeliveryIntegrationsService {
   constructor(
     @Inject(PrismaService) private readonly prisma: PrismaService,
-    private readonly config: ConfigService,
+    private readonly integrationSecrets: IntegrationSecretService,
     @Inject(IfoodAuthService) private readonly ifoodAuth: IfoodAuthService,
     @Inject(DeliveryProviderRegistryService)
     private readonly providerRegistry: DeliveryProviderRegistryService,
@@ -196,7 +195,7 @@ export class DeliveryIntegrationsService {
           status: "ACTIVE",
           credentialType:
             authMode === "CENTRALIZED" ? "CENTRALIZED_CLIENT_CREDENTIALS" : "DISTRIBUTED_OAUTH",
-          secretCiphertext: this.encryptSecret(
+          secretCiphertext: this.integrationSecrets.encrypt(
             JSON.stringify({
               clientId: dto.clientId,
               clientSecret: dto.clientSecret,
@@ -277,7 +276,7 @@ export class DeliveryIntegrationsService {
       throw new ConflictException("Merchant iFood ausente");
     }
 
-    const secret = JSON.parse(this.decryptSecret(credential.secretCiphertext)) as {
+    const secret = JSON.parse(this.integrationSecrets.decrypt(credential.secretCiphertext)) as {
       accessToken?: string;
     };
 
@@ -410,7 +409,7 @@ export class DeliveryIntegrationsService {
       throw new ConflictException("Credenciais ativas ausentes");
     }
 
-    return JSON.parse(this.decryptSecret(credential.secretCiphertext)) as {
+    return JSON.parse(this.integrationSecrets.decrypt(credential.secretCiphertext)) as {
       clientId: string;
       clientSecret: string;
       accessToken: string;
@@ -525,38 +524,4 @@ export class DeliveryIntegrationsService {
       : "DISTRIBUTED";
   }
 
-  private encryptSecret(plainText: string): string {
-    const iv = randomBytes(12);
-    const cipher = createCipheriv("aes-256-gcm", this.secretKey(), iv);
-    const encrypted = Buffer.concat([cipher.update(plainText, "utf8"), cipher.final()]);
-    const tag = cipher.getAuthTag();
-
-    return Buffer.concat([iv, tag, encrypted]).toString("base64");
-  }
-
-  private decryptSecret(cipherText: string): string {
-    const buffer = Buffer.from(cipherText, "base64");
-    const iv = buffer.subarray(0, 12);
-    const tag = buffer.subarray(12, 28);
-    const encrypted = buffer.subarray(28);
-    const decipher = createDecipheriv("aes-256-gcm", this.secretKey(), iv);
-    decipher.setAuthTag(tag);
-
-    return Buffer.concat([decipher.update(encrypted), decipher.final()]).toString("utf8");
-  }
-
-  private secretKey(): Buffer {
-    const configured = this.config.get<string>("DELIVERY_INTEGRATION_SECRET_KEY");
-
-    if (configured) {
-      const decoded = Buffer.from(configured, "base64");
-      if (decoded.length === 32) {
-        return decoded;
-      }
-    }
-
-    return createHash("sha256")
-      .update(configured ?? "burgoos-local-delivery-integration-secret")
-      .digest();
-  }
 }

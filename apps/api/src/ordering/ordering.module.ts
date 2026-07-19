@@ -21,6 +21,6 @@ import { PublicOrderController } from "./public-order.controller";
     OrderMaintenanceService,
     ExternalOrderIngestionService,
   ],
-  exports: [ExternalOrderIngestionService],
+  exports: [ExternalOrderIngestionService, HistoricalOrderImportService],
 })
 export class OrderingModule {}

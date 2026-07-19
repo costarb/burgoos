@@ -14,6 +14,7 @@ import { useRouter } from "next/navigation";
 import { OperationFeedback } from "../../../../components/admin/operation-feedback";
 import type { AdminProduct } from "../../../../lib/api";
 import { importHistoricalOrders } from "../../../../lib/api";
+import { SalesIntegrationPanel } from "./sales-integration-panel";
 
 interface OrderImportClientProps {
   token: string;
@@ -99,6 +100,8 @@ export function OrderImportClient({ token, products, institutions }: OrderImport
             Voltar para pedidos
           </a>
         </div>
+
+        <SalesIntegrationPanel products={products} token={token} />
 
         <form
           className="mt-8 grid gap-4 rounded-md border border-slate-200 bg-white p-4 shadow-sm"
