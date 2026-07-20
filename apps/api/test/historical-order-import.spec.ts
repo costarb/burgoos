@@ -167,6 +167,7 @@ describe("historical order payment release import", () => {
       data: expect.objectContaining({
         paymentInstitution: "MERCADO_PAGO",
         paymentInstitutionId: "55555555-5555-4555-8555-555555555555",
+        createdAt: new Date("2026-07-18T22:50:48.000-04:00"),
       }),
     });
     expect(result.imported[0]).toMatchObject({
