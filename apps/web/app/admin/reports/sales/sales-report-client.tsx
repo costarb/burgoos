@@ -27,6 +27,7 @@ const paymentMethods = [
   ["CREDIT_CARD", "Credito"],
   ["VOUCHER", "Voucher"],
   ["PIX", "Pix"],
+  ["DIGITAL_WALLET", "Carteira digital"],
 ];
 
 const statuses = [

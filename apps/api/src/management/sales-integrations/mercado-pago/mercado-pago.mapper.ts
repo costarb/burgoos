@@ -62,7 +62,9 @@ export function mapMercadoPagoPayment(payment: MercadoPagoPayment): ProviderMove
 
 function mapMethod(type?: string, method?: string) {
   if (type === "credit_card") return "CREDIT_CARD" as const;
+  if (type === "prepaid_card") return "CREDIT_CARD" as const;
   if (type === "debit_card") return "DEBIT_CARD" as const;
+  if (type === "account_money") return "DIGITAL_WALLET" as const;
   if (type === "bank_transfer" && method === "pix") return "PIX" as const;
   if (method === "pix") return "PIX" as const;
   return null;

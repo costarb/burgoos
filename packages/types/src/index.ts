@@ -106,7 +106,8 @@ export type PaymentMethod =
   | "DEBIT_CARD"
   | "CREDIT_CARD"
   | "VOUCHER"
-  | "PIX";
+  | "PIX"
+  | "DIGITAL_WALLET";
 
 export * from "./sales-integrations";
 

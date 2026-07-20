@@ -40,7 +40,7 @@
 
 ## Busca de pagamentos
 
-**Decision**: Consultar `/v1/payments/search` com `sort=date_created`, `criteria=asc`, `range=date_created`, `begin_date`, `end_date`, `limit` e `offset`. Dividir internamente ranges se necessario, deduplicando por payment ID.
+**Decision**: Consultar `/v1/payments/search` com `sort=date_created`, `criteria=asc`, `range=money_release_date`, `begin_date`, `end_date`, `limit` e `offset`. A data de liberacao foi escolhida apos batimento com o CDV. Dividir internamente ranges se necessario, deduplicando por payment ID.
 
 **Rationale**: O endpoint retorna os ultimos 12 meses, exige ordenacao/criterio, aceita range menor que 365 dias e responde com `paging.total/limit/offset`. Ordem ascendente reduz risco de perder itens quando novos pagamentos entram durante uma carga.
 

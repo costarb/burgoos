@@ -94,7 +94,7 @@ packages/
 
 - Adicionar `MERCADO_PAGO`, `SalesCredentialMode` e `SalesIntegrationEnvironment`; manter `SalesInputChannel.API` para coleta. Webhook e reconciliacao sao origens de execucao, nao canais de identidade.
 - Usar `ACTIVE` e `DISABLED` apenas como estados internos legados; os contratos e a interface Mercado Pago mapeiam esses valores para `CONNECTED` e `DISCONNECTED`, respectivamente, mantendo os demais estados com os nomes da especificacao.
-- Evoluir `SalesProviderAdapter.fetchDay` para um contrato de `fetchRange`/paginas. O adapter PagBank implementa o novo contrato decompondo o periodo em dias; Mercado Pago usa `range=date_created`, datas, `limit` e `offset`.
+- Evoluir `SalesProviderAdapter.fetchDay` para um contrato de `fetchRange`/paginas. O adapter PagBank implementa o novo contrato decompondo o periodo em dias; Mercado Pago usa `range=money_release_date`, datas, `limit` e `offset`, conforme o batimento com o CDV.
 - Manter `SalesIntegrationCredential` versionada, mas armazenar um envelope cifrado tipado. OAuth contem access/refresh/expires/scopes; token fixo contem apenas access token e metadados de validacao. Somente fingerprint e datas ficam fora da cifra.
 - Persistir `OAuthAuthorizationAttempt` com hash do state, verifier cifrado, tenant, solicitante, periodo inicial de 30/60/90 dias, expiracao e consumo. O periodo padrao e 30 dias. O callback consome a tentativa atomicamente antes da troca e conclui/expira com estado explicito para impedir replay; depois da conexao integra, cria o run inicial com o periodo persistido.
 - Validar token fixo por chamada autenticada que devolva a identidade da conta; a UI envia o segredo uma vez. Troca de modo usa credencial candidata e so rotaciona a ativa depois de validacao completa.
