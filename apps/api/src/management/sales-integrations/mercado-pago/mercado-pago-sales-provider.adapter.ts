@@ -24,11 +24,13 @@ export class MercadoPagoSalesProviderAdapter implements SalesProviderAdapter {
     private readonly authenticated?: MercadoPagoAuthenticatedRequestService
   ) {}
   async fetchRange(input: ProviderRangeInput): Promise<ProviderRangeResult> {
-    const request = (accessToken: string) =>
+    const request = (accessToken: string, collectorId?: string) =>
       this.client.searchPayments({
         accessToken,
         startDate: input.startDate,
         endDate: input.endDate,
+        rangeField: "money_release_date",
+        collectorId,
       });
     const payments =
       this.authenticated && input.merchantId
@@ -40,7 +42,10 @@ export class MercadoPagoSalesProviderAdapter implements SalesProviderAdapter {
         : await request(input.credential);
     const grouped = new Map<string, ReturnType<typeof mapMercadoPagoPayment>[]>();
     for (const payment of payments) {
-      const date = (payment.date_created ?? input.startDate).slice(0, 10);
+      const date = (payment.money_release_date ?? payment.date_created ?? input.startDate).slice(
+        0,
+        10
+      );
       grouped.set(date, [...(grouped.get(date) ?? []), mapMercadoPagoPayment(payment)]);
     }
     const days = [];

@@ -44,9 +44,10 @@ export class MercadoPagoReconciliationService {
       const payments = await this.authenticated.execute({
         tenantId,
         integrationId,
-        request: (token) =>
+        request: (token, collectorId) =>
           this.client.searchPayments({
             accessToken: token,
+            collectorId,
             startDate: start.toISOString(),
             endDate: end.toISOString(),
             rangeField: "date_last_updated",

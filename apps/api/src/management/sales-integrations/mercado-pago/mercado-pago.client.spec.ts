@@ -36,9 +36,16 @@ describe("MercadoPagoClient payments", () => {
       startDate: "2026-07-01",
       endDate: "2026-07-02",
       limit: 2,
+      collectorId: "3358508664",
     });
     expect(payments.map((item) => item.id)).toEqual([1, 2]);
     expect(String(fetchMock.mock.calls[0][0])).toContain("criteria=asc");
+    const firstUrl = new URL(String(fetchMock.mock.calls[0][0]));
+    expect(firstUrl.searchParams.get("collector.id")).toBe("3358508664");
+    expect(firstUrl.searchParams.get("range")).toBe("money_release_date");
+    expect(firstUrl.searchParams.get("sort")).toBe("date_created");
+    expect(firstUrl.searchParams.get("begin_date")).toBe("2026-07-01T00:00:00.000-04:00");
+    expect(firstUrl.searchParams.get("end_date")).toBe("2026-07-02T23:59:59.999-04:00");
   });
 
   it("advances by the page size actually returned by Mercado Pago", async () => {

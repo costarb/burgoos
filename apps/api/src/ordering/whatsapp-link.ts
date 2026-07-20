@@ -19,12 +19,13 @@ const paymentLabels: Record<PaymentMethod, string> = {
   DEBIT_CARD: "Debito",
   CREDIT_CARD: "Credito",
   VOUCHER: "Voucher",
-  PIX: "PIX"
+  PIX: "PIX",
+  DIGITAL_WALLET: "Carteira digital",
 };
 
 const fulfillmentLabels: Record<FulfillmentMethod, string> = {
   DELIVERY: "Delivery",
-  PICKUP: "Retirada"
+  PICKUP: "Retirada",
 };
 
 export function buildWhatsAppOrderLink(input: BuildWhatsAppLinkInput): string {
@@ -38,11 +39,10 @@ export function buildWhatsAppOrderLink(input: BuildWhatsAppLinkInput): string {
     "",
     "Itens:",
     ...input.order.items.map(
-      (item) =>
-        `${item.quantity}x ${item.productNameSnapshot} - R$ ${item.total.toFixed(2)}`
+      (item) => `${item.quantity}x ${item.productNameSnapshot} - R$ ${item.total.toFixed(2)}`
     ),
     "",
-    `Total: R$ ${input.order.total.toFixed(2)}`
+    `Total: R$ ${input.order.total.toFixed(2)}`,
   ];
 
   if (input.notes) {

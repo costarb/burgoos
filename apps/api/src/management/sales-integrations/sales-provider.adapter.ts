@@ -18,7 +18,7 @@ export interface NormalizedHistoricalSale {
   grossAmount: number;
   netAmount?: number;
   feeAmount?: number;
-  paymentMethod: "PIX" | "PIX_MANUAL" | "DEBIT_CARD" | "CREDIT_CARD";
+  paymentMethod: "PIX" | "PIX_MANUAL" | "DEBIT_CARD" | "CREDIT_CARD" | "DIGITAL_WALLET";
   installments?: number;
   paymentBrand?: string;
   expectedReleaseAt?: string;

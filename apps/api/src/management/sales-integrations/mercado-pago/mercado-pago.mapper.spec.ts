@@ -26,4 +26,18 @@ describe("mapMercadoPagoPayment", () => {
       mapMercadoPagoPayment({ ...mercadoPagoApprovedPaymentFixture, status: "refunded" }).kind
     ).toBe("NON_SALE");
   });
+
+  it.each([
+    ["prepaid_card", "master", "CREDIT_CARD"],
+    ["account_money", "account_money", "DIGITAL_WALLET"],
+  ])("maps Mercado Pago payment type %s", (paymentType, paymentMethod, expected) => {
+    const movement = mapMercadoPagoPayment({
+      ...mercadoPagoApprovedPaymentFixture,
+      payment_type_id: paymentType,
+      payment_method_id: paymentMethod,
+    });
+
+    expect(movement.rejectionCode).toBeUndefined();
+    expect(movement.sale?.paymentMethod).toBe(expected);
+  });
 });
