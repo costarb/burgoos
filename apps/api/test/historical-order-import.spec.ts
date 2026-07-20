@@ -86,9 +86,11 @@ describe("historical order payment release import", () => {
         firstChannel: "FILE",
       }),
     });
-    expect(prismaMock.externalSaleIdentity.update).toHaveBeenCalledWith(expect.objectContaining({
-      data: expect.objectContaining({ orderId: "44444444-4444-4444-8444-444444444444" }),
-    }));
+    expect(prismaMock.externalSaleIdentity.update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({ orderId: "44444444-4444-4444-8444-444444444444" }),
+      })
+    );
   });
 
   it("preserves the SIMPLE layout through the shared import pipeline", async () => {
@@ -105,18 +107,22 @@ describe("historical order payment release import", () => {
 
   it("imports an API sale directly from the normalized contract", async () => {
     const onOrderCreated = vi.fn().mockResolvedValue(undefined);
-    const result = await service.importNormalizedSale(tenantId, {
-      provider: "PAGBANK",
-      channel: "API",
-      providerMovementId: "movement-1",
-      externalSaleId: "sale-1",
-      occurredAt: "2026-05-30T17:54:00.000Z",
-      grossAmount: 25,
-      feeAmount: 1,
-      netAmount: 24,
-      paymentMethod: "PIX",
-      paymentBrand: "PagBank",
-    }, { onOrderCreated });
+    const result = await service.importNormalizedSale(
+      tenantId,
+      {
+        provider: "PAGBANK",
+        channel: "API",
+        providerMovementId: "movement-1",
+        externalSaleId: "sale-1",
+        occurredAt: "2026-05-30T17:54:00.000Z",
+        grossAmount: 25,
+        feeAmount: 1,
+        netAmount: 24,
+        paymentMethod: "PIX",
+        paymentBrand: "PagBank",
+      },
+      { onOrderCreated }
+    );
 
     expect(result.importedCount).toBe(1);
     expect(prismaMock.order.create).toHaveBeenCalledWith({
@@ -135,16 +141,53 @@ describe("historical order payment release import", () => {
     );
   });
 
-  it("rejects an invalid normalized sale before touching persistence", async () => {
-    await expect(service.importNormalizedSale(tenantId, {
-      provider: "PAGBANK",
+  it("allocates a Mercado Pago API sale to the configured Mercado Pago account", async () => {
+    prismaMock.paymentInstitutionConfiguration.findFirst.mockResolvedValue({
+      id: "55555555-5555-4555-8555-555555555555",
+      name: "Mercado Pago",
+      paymentInstitution: "MERCADO_PAGO",
+    });
+
+    const result = await service.importNormalizedSale(tenantId, {
+      provider: "MERCADO_PAGO",
       channel: "API",
-      providerMovementId: "movement-1",
-      externalSaleId: "",
-      occurredAt: "invalid",
-      grossAmount: 0,
-      paymentMethod: "PIX",
-    })).rejects.toThrow(/normalizada invalida/);
+      providerMovementId: "movement-mp-1",
+      externalSaleId: "payment-mp-1",
+      occurredAt: "2026-07-18T22:50:48.000-04:00",
+      grossAmount: 68,
+      paymentMethod: "DIGITAL_WALLET",
+      paymentBrand: "account_money",
+    });
+
+    expect(prismaMock.paymentInstitutionConfiguration.findFirst).toHaveBeenCalledWith({
+      where: { tenantId, paymentInstitution: "MERCADO_PAGO" },
+      select: { id: true, name: true, paymentInstitution: true },
+    });
+    expect(prismaMock.order.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        paymentInstitution: "MERCADO_PAGO",
+        paymentInstitutionId: "55555555-5555-4555-8555-555555555555",
+      }),
+    });
+    expect(result.imported[0]).toMatchObject({
+      paymentInstitution: "MERCADO_PAGO",
+      paymentInstitutionId: "55555555-5555-4555-8555-555555555555",
+      paymentInstitutionName: "Mercado Pago",
+    });
+  });
+
+  it("rejects an invalid normalized sale before touching persistence", async () => {
+    await expect(
+      service.importNormalizedSale(tenantId, {
+        provider: "PAGBANK",
+        channel: "API",
+        providerMovementId: "movement-1",
+        externalSaleId: "",
+        occurredAt: "invalid",
+        grossAmount: 0,
+        paymentMethod: "PIX",
+      })
+    ).rejects.toThrow(/normalizada invalida/);
     expect(prismaMock.order.create).not.toHaveBeenCalled();
   });
 });

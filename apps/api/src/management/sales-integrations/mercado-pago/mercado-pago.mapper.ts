@@ -47,17 +47,28 @@ export function mapMercadoPagoPayment(payment: MercadoPagoPayment): ProviderMove
       providerMovementId: id,
       externalSaleId: id,
       externalEventCode: payment.status,
-      occurredAt: payment.date_created,
+      occurredAt: preserveProviderBusinessDateTime(payment.date_created),
       grossAmount: gross,
       feeAmount: fee,
       netAmount: payment.transaction_details?.net_received_amount ?? gross - fee,
       paymentMethod: method,
       installments: Math.max(1, payment.installments ?? 1),
       paymentBrand: payment.payment_method_id,
-      expectedReleaseAt: payment.money_release_date ?? undefined,
+      expectedReleaseAt: payment.money_release_date
+        ? preserveProviderBusinessDateTime(payment.money_release_date)
+        : undefined,
       raw,
     },
   };
+}
+
+function preserveProviderBusinessDateTime(value: string): string {
+  const match = /^(\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2})(?:\.(\d{1,3}))?(?:Z|[+-]\d{2}:\d{2})$/.exec(
+    value
+  );
+  if (!match) return value;
+  const milliseconds = (match[2] ?? "0").padEnd(3, "0");
+  return `${match[1]}.${milliseconds}Z`;
 }
 
 function mapMethod(type?: string, method?: string) {
