@@ -40,4 +40,19 @@ describe("mapMercadoPagoPayment", () => {
     expect(movement.rejectionCode).toBeUndefined();
     expect(movement.sale?.paymentMethod).toBe(expected);
   });
+
+  it("preserves Mercado Pago business dates without advancing them to the next UTC day", () => {
+    const movement = mapMercadoPagoPayment({
+      ...mercadoPagoApprovedPaymentFixture,
+      date_created: "2026-07-18T22:50:48.000-04:00",
+      money_release_date: "2026-07-18T23:11:38.000-04:00",
+    });
+
+    expect(movement.sale?.occurredAt).toBe("2026-07-18T22:50:48.000Z");
+    expect(movement.sale?.expectedReleaseAt).toBe("2026-07-18T23:11:38.000Z");
+    expect(movement.raw).toMatchObject({
+      date_created: "2026-07-18T22:50:48.000-04:00",
+      money_release_date: "2026-07-18T23:11:38.000-04:00",
+    });
+  });
 });
