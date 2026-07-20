@@ -88,7 +88,7 @@ export interface NormalizedHistoricalSaleImportOptions {
 }
 
 export interface NormalizedHistoricalSale {
-  provider: "PAGBANK";
+  provider: "PAGBANK" | "MERCADO_PAGO";
   channel: "API" | "FILE" | "OTHER";
   providerMovementId: string;
   externalSaleId: string;
@@ -131,7 +131,8 @@ export class HistoricalOrderImportService {
       throw new BadRequestException("Data da venda normalizada invalida");
     const paymentMethod = PaymentMethod[sale.paymentMethod];
     if (!paymentMethod) throw new BadRequestException("Meio de pagamento normalizado invalido");
-    const paymentInstitution = sale.provider === "PAGBANK" ? PaymentInstitution.PAGBANK : undefined;
+    const paymentInstitution =
+      sale.provider === "PAGBANK" ? PaymentInstitution.PAGBANK : PaymentInstitution.MERCADO_PAGO;
     const release = this.resolvePaymentRelease(
       occurredAt,
       sale.expectedReleaseAt ? new Date(sale.expectedReleaseAt) : undefined,
