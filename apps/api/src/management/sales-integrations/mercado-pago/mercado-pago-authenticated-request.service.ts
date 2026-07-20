@@ -14,11 +14,11 @@ export class MercadoPagoAuthenticatedRequestService {
   async execute<T>(input: {
     tenantId: string;
     integrationId: string;
-    request: (accessToken: string) => Promise<T>;
+    request: (accessToken: string, collectorId?: string) => Promise<T>;
   }): Promise<T> {
     const current = await this.integrations.getCredential(input.tenantId, input.integrationId);
     try {
-      return await input.request(current.token);
+      return await input.request(current.token, current.integration.providerUserId ?? undefined);
     } catch (error) {
       if (!isUnauthorized(error)) throw safeProviderError(error);
       if (current.integration.credentialMode !== "OAUTH") {
@@ -33,7 +33,7 @@ export class MercadoPagoAuthenticatedRequestService {
       if (!renewed) throw safeProviderError(error);
       const next = await this.integrations.getCredential(input.tenantId, input.integrationId);
       try {
-        return await input.request(next.token);
+        return await input.request(next.token, next.integration.providerUserId ?? undefined);
       } catch (retryError) {
         if (isUnauthorized(retryError))
           await this.requireReauthorization(

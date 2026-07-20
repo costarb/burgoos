@@ -128,6 +128,7 @@ enum PaymentMethod {
   CREDIT_CARD
   VOUCHER
   PIX
+  DIGITAL_WALLET
 }
 
 enum PaymentInstitution {

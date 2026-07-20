@@ -393,6 +393,7 @@ function paymentMethodLabel(key: string): string {
     CREDIT_CARD: "Credito",
     VOUCHER: "Voucher",
     PIX: "Pix",
+    DIGITAL_WALLET: "Carteira digital",
   };
   return labels[key] ?? key;
 }

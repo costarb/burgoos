@@ -53,14 +53,19 @@ export class MercadoPagoClient {
     startDate: string;
     endDate: string;
     limit?: number;
-    rangeField?: "date_created" | "date_last_updated";
+    rangeField?: "date_created" | "date_last_updated" | "money_release_date";
+    collectorId?: string;
+    timezoneOffset?: string;
   }): Promise<MercadoPagoPayment[]> {
-    const start = new Date(
-      input.startDate.includes("T") ? input.startDate : `${input.startDate}T00:00:00.000Z`
-    );
-    const end = new Date(
-      input.endDate.includes("T") ? input.endDate : `${input.endDate}T23:59:59.999Z`
-    );
+    const timezoneOffset = input.timezoneOffset ?? "-04:00";
+    const beginDate = input.startDate.includes("T")
+      ? input.startDate
+      : `${input.startDate}T00:00:00.000${timezoneOffset}`;
+    const endDate = input.endDate.includes("T")
+      ? input.endDate
+      : `${input.endDate}T23:59:59.999${timezoneOffset}`;
+    const start = new Date(beginDate);
+    const end = new Date(endDate);
     if (
       !Number.isFinite(start.getTime()) ||
       !Number.isFinite(end.getTime()) ||
@@ -73,16 +78,18 @@ export class MercadoPagoClient {
     let offset = 0;
     for (;;) {
       const url = new URL(`${this.baseUrl}/v1/payments/search`);
-      const rangeField = input.rangeField ?? "date_created";
-      url.search = new URLSearchParams({
-        sort: rangeField,
+      const rangeField = input.rangeField ?? "money_release_date";
+      const parameters: Record<string, string> = {
+        sort: "date_created",
         criteria: "asc",
         range: rangeField,
-        begin_date: start.toISOString(),
-        end_date: end.toISOString(),
+        begin_date: beginDate,
+        end_date: endDate,
         limit: String(limit),
         offset: String(offset),
-      }).toString();
+      };
+      if (input.collectorId) parameters["collector.id"] = input.collectorId;
+      url.search = new URLSearchParams(parameters).toString();
       const response = await this.fetchWithRetry(url, input.accessToken);
       const page = (await response.json()) as {
         paging: { total: number };
@@ -92,7 +99,7 @@ export class MercadoPagoClient {
       if (offset + page.results.length >= page.paging.total || page.results.length === 0) break;
       offset += page.results.length;
     }
-    const field = input.rangeField === "date_last_updated" ? "date_last_updated" : "date_created";
+    const field = input.rangeField ?? "money_release_date";
     return [...found.values()].sort(
       (a, b) => String(a[field] ?? "").localeCompare(String(b[field] ?? "")) || a.id - b.id
     );

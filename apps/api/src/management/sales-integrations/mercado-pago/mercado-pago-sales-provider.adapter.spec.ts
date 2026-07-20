@@ -9,7 +9,11 @@ describe("MercadoPagoSalesProviderAdapter", () => {
       searchPayments: vi
         .fn()
         .mockResolvedValue([
-          { ...mercadoPagoApprovedPaymentFixture, date_created: "2026-07-02T10:00:00Z" },
+          {
+            ...mercadoPagoApprovedPaymentFixture,
+            date_created: "2026-06-30T10:00:00Z",
+            money_release_date: "2026-07-02T10:00:00Z",
+          },
         ]),
     };
     const result = await new MercadoPagoSalesProviderAdapter(client).fetchRange({
@@ -19,6 +23,9 @@ describe("MercadoPagoSalesProviderAdapter", () => {
       credential: "token",
     });
     expect(client.searchPayments).toHaveBeenCalledTimes(1);
+    expect(client.searchPayments).toHaveBeenCalledWith(
+      expect.objectContaining({ rangeField: "money_release_date" })
+    );
     expect(result.days).toHaveLength(3);
     expect(result.days[1].movements).toHaveLength(1);
   });
