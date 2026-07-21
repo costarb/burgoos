@@ -14,9 +14,10 @@ export function mapMercadoPagoPayment(payment: MercadoPagoPayment): ProviderMove
       raw,
     };
   const method = mapMethod(payment.payment_type_id, payment.payment_method_id);
+  const businessDate = payment.money_release_date ?? payment.date_created;
   if (
     !method ||
-    !payment.date_created ||
+    !businessDate ||
     !Number.isFinite(payment.transaction_amount) ||
     payment.transaction_amount <= 0
   )
@@ -47,17 +48,24 @@ export function mapMercadoPagoPayment(payment: MercadoPagoPayment): ProviderMove
       providerMovementId: id,
       externalSaleId: id,
       externalEventCode: payment.status,
-      occurredAt: payment.date_created,
+      occurredAt: normalizeProviderDateTime(businessDate),
       grossAmount: gross,
       feeAmount: fee,
       netAmount: payment.transaction_details?.net_received_amount ?? gross - fee,
       paymentMethod: method,
       installments: Math.max(1, payment.installments ?? 1),
       paymentBrand: payment.payment_method_id,
-      expectedReleaseAt: payment.money_release_date ?? undefined,
+      expectedReleaseAt: payment.money_release_date
+        ? normalizeProviderDateTime(payment.money_release_date)
+        : undefined,
       raw,
     },
   };
+}
+
+function normalizeProviderDateTime(value: string): string {
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? value : date.toISOString();
 }
 
 function mapMethod(type?: string, method?: string) {

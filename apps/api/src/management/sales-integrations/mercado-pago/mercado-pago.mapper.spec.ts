@@ -41,18 +41,38 @@ describe("mapMercadoPagoPayment", () => {
     expect(movement.sale?.paymentMethod).toBe(expected);
   });
 
-  it("preserves Mercado Pago timestamps with their original provider offset", () => {
+  it("preserves the release instant and its provider offset", () => {
     const movement = mapMercadoPagoPayment({
       ...mercadoPagoApprovedPaymentFixture,
       date_created: "2026-07-18T22:50:48.000-04:00",
-      money_release_date: "2026-07-18T23:11:38.000-04:00",
+      money_release_date: "2026-07-20T20:04:47.000-04:00",
     });
 
-    expect(movement.sale?.occurredAt).toBe("2026-07-18T22:50:48.000-04:00");
-    expect(movement.sale?.expectedReleaseAt).toBe("2026-07-18T23:11:38.000-04:00");
+    expect(movement.sale?.occurredAt).toBe("2026-07-21T00:04:47.000Z");
+    expect(movement.sale?.expectedReleaseAt).toBe("2026-07-21T00:04:47.000Z");
     expect(movement.raw).toMatchObject({
       date_created: "2026-07-18T22:50:48.000-04:00",
-      money_release_date: "2026-07-18T23:11:38.000-04:00",
+      money_release_date: "2026-07-20T20:04:47.000-04:00",
     });
+  });
+
+  it("falls back to creation date when Mercado Pago does not provide a release date", () => {
+    const movement = mapMercadoPagoPayment({
+      ...mercadoPagoApprovedPaymentFixture,
+      date_created: "2026-07-18T19:51:07.000-04:00",
+      money_release_date: null,
+    });
+
+    expect(movement.sale?.occurredAt).toBe("2026-07-18T23:51:07.000Z");
+    expect(movement.sale?.expectedReleaseAt).toBeUndefined();
+  });
+
+  it("moves a late -04:00 release to the following Sao Paulo calendar day", () => {
+    const movement = mapMercadoPagoPayment({
+      ...mercadoPagoApprovedPaymentFixture,
+      money_release_date: "2026-07-18T23:00:11.000-04:00",
+    });
+
+    expect(movement.sale?.occurredAt).toBe("2026-07-19T03:00:11.000Z");
   });
 });

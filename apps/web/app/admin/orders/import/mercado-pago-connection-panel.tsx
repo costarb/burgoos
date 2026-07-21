@@ -280,6 +280,8 @@ export function MercadoPagoConnectionPanel({
             <thead>
               <tr>
                 <th>Pagamento</th>
+                <th>Data de criação</th>
+                <th>Data de liberação</th>
                 <th>Classificação</th>
                 <th>Método</th>
                 <th>Bruto</th>
@@ -291,6 +293,8 @@ export function MercadoPagoConnectionPanel({
               {movements.map((movement) => (
                 <tr key={movement.id} className="border-t">
                   <td>{movement.externalSaleId ?? movement.providerMovementId}</td>
+                  <td>{formatProviderDate(movement.providerCreatedAt)}</td>
+                  <td>{formatProviderDate(movement.providerReleaseAt)}</td>
                   <td>
                     {movement.status}
                     {movement.rejectionCode ? ` · ${movement.rejectionCode}` : ""}
@@ -326,4 +330,12 @@ function formatDate(value?: string | null): string {
   if (!value) return "Não disponível";
   const date = new Date(value);
   return Number.isFinite(date.getTime()) ? date.toLocaleString("pt-BR") : "Não disponível";
+}
+
+function formatProviderDate(value?: string | null): string {
+  if (!value) return "-";
+  const date = new Date(value);
+  return Number.isFinite(date.getTime())
+    ? date.toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo" })
+    : "-";
 }

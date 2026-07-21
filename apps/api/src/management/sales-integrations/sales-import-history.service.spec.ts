@@ -43,6 +43,11 @@ describe("SalesImportHistoryService", () => {
             rejectionCode: "IMPORT_FAILED",
             rejectionMessage: "Authorization Bearer secret-token",
             orderId: null,
+            rawPayload: {
+              date_created: "2026-07-18T22:59:58.000-04:00",
+              money_release_date: "2026-07-18T23:00:11.000-04:00",
+              authorization_code: "must-not-be-returned",
+            },
           },
         ],
         1,
@@ -57,6 +62,11 @@ describe("SalesImportHistoryService", () => {
       expect.objectContaining({ where: { tenantId: "tenant", runId: "run", status: "FAILED" } })
     );
     expect(JSON.stringify(result)).not.toContain("secret-token");
+    expect(JSON.stringify(result)).not.toContain("must-not-be-returned");
+    expect(result.items[0]).toMatchObject({
+      providerCreatedAt: "2026-07-18T22:59:58.000-04:00",
+      providerReleaseAt: "2026-07-18T23:00:11.000-04:00",
+    });
   });
   it("purges terminal raw runs older than 180 days without touching identities", async () => {
     const deleteMany = vi.fn().mockResolvedValue({ count: 2 });

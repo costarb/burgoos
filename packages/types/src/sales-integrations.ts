@@ -164,6 +164,8 @@ export interface SalesMovementView {
   kind: ExternalMovementKind;
   status: ExternalMovementStatus;
   occurredAt: string | null;
+  providerCreatedAt: string | null;
+  providerReleaseAt: string | null;
   grossAmount: string | null;
   netAmount: string | null;
   feeAmount: string | null;
