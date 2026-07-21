@@ -42,6 +42,8 @@
 
 **Decision**: Consultar `/v1/payments/search` com `sort=date_created`, `criteria=asc`, `range=money_release_date`, `begin_date`, `end_date`, `limit` e `offset`. A data de liberacao foi escolhida apos batimento com o CDV. Dividir internamente ranges se necessario, deduplicando por payment ID.
 
+Na importacao, `money_release_date` tambem define o instante comercial persistido no pedido e usado pelos filtros. O offset recebido do provider deve ser respeitado e a apresentacao deve ser convertida para `America/Sao_Paulo`; por exemplo, `2026-07-18T23:00:11-04:00` pertence a 19/07 em Sao Paulo. `date_created` permanece no payload/estado para auditoria e serve apenas como fallback quando a liberacao nao for informada. A previa exibe as duas datas sem expor o payload bruto.
+
 **Rationale**: O endpoint retorna os ultimos 12 meses, exige ordenacao/criterio, aceita range menor que 365 dias e responde com `paging.total/limit/offset`. Ordem ascendente reduz risco de perder itens quando novos pagamentos entram durante uma carga.
 
 **Alternatives considered**: Consulta sem range foi rejeitada por custo e instabilidade; offset descendente foi rejeitado por deslocamento de paginas com novas vendas; cursor nao e documentado nesse endpoint.
