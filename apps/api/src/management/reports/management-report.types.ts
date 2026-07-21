@@ -1,5 +1,5 @@
 import { BadRequestException } from "@nestjs/common";
-import { formatLocalDate, localDayEnd, localDayStart } from "./sales-report.types";
+import { businessMonthRange, localDayEnd, localDayStart } from "./sales-report.types";
 
 export interface ManagementReportQuery {
   start?: string;
@@ -17,8 +17,9 @@ export function parseManagementReportQuery(
   query: ManagementReportQuery
 ): ParsedManagementReportQuery {
   const now = new Date();
-  const start = query.start ?? formatLocalDate(new Date(now.getFullYear(), now.getMonth(), 1));
-  const end = query.end ?? formatLocalDate(new Date(now.getFullYear(), now.getMonth() + 1, 0));
+  const currentMonth = businessMonthRange(now);
+  const start = query.start ?? currentMonth.start;
+  const end = query.end ?? currentMonth.end;
   const periodStart = localDayStart(start);
   const periodEnd = localDayEnd(end);
 
