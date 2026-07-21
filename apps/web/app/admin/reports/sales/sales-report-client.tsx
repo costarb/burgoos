@@ -230,7 +230,9 @@ export function SalesReportClient({ report, orderPlatforms, token }: SalesReport
                 {analyticalItems.map((order) => (
                   <tr className="border-t border-slate-100" key={order.orderId}>
                     <td className="px-4 py-3">
-                      {new Date(order.createdAt).toLocaleString("pt-BR")}
+                      {new Date(order.createdAt).toLocaleString("pt-BR", {
+                        timeZone: "America/Sao_Paulo",
+                      })}
                     </td>
                     <td className="px-4 py-3">{order.status}</td>
                     <td className="px-4 py-3">{order.orderPlatformName ?? "Sem canal"}</td>
