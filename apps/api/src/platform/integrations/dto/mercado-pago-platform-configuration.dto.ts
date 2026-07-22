@@ -2,6 +2,11 @@ import { IsOptional, IsString, IsUrl, MaxLength, MinLength } from "class-validat
 
 export class UpdateMercadoPagoPlatformConfigurationDto {
   @IsOptional()
+  @IsUrl({ require_tld: false, protocols: ["http", "https"] })
+  @MaxLength(2000)
+  apiBaseUrl?: string;
+
+  @IsOptional()
   @IsString()
   @MinLength(1)
   @MaxLength(300)

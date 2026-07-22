@@ -28,6 +28,8 @@
 
 **Source**: https://www.mercadopago.com.br/developers/pt/reference/online-payments/checkout-pro/search-payments/get
 
+As URLs-base de consulta de PagBank e Mercado Pago sao configuraveis pelo `SUPER_ADMIN` em abas separadas da tela de integracoes da plataforma, com fallback para as URLs oficiais. Ambos permitem consulta manual de D+0 e bloqueiam somente datas futuras. Se o PagBank ainda nao disponibilizar a evidencia do dia corrente, a indisponibilidade e registrada no processamento para permitir uma nova tentativa.
+
 ## Renovacao OAuth
 
 **Decision**: Renovar conexoes OAuth a 15 dias do vencimento com claim exclusivo. Substituir access token, refresh token e validade em uma transacao. Um 401 permite uma renovacao e uma repeticao; depois requer reautorizacao.

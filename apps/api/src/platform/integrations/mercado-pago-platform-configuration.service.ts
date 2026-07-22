@@ -5,6 +5,7 @@ import { IntegrationSecretService } from "../../security/integration-secret.serv
 import { UpdateMercadoPagoPlatformConfigurationDto } from "./dto/mercado-pago-platform-configuration.dto";
 
 type MercadoPagoPlatformConfiguration = {
+  apiBaseUrl?: string;
   clientId?: string;
   clientSecret?: string;
   webhookSecret?: string;
@@ -29,6 +30,7 @@ export class MercadoPagoPlatformConfigurationService {
       clientIdConfigured: Boolean(values.clientId),
       clientSecretConfigured: Boolean(values.clientSecret),
       webhookSecretConfigured: Boolean(values.webhookSecret),
+      apiBaseUrl: values.apiBaseUrl ?? DEFAULTS.apiBaseUrl,
       redirectUri: values.redirectUri ?? null,
       postCallbackUrl: values.postCallbackUrl ?? null,
       source: stored ? "DATABASE" : "ENVIRONMENT",
@@ -57,7 +59,7 @@ export class MercadoPagoPlatformConfigurationService {
 
   async value(key: MercadoPagoConfigurationKey): Promise<string | undefined> {
     const stored = await this.stored();
-    return stored?.[key] ?? this.environment.get<string>(ENV_KEYS[key]);
+    return stored?.[key] ?? this.environment.get<string>(ENV_KEYS[key]) ?? DEFAULTS[key];
   }
 
   async required(key: MercadoPagoConfigurationKey): Promise<string> {
@@ -88,11 +90,16 @@ export class MercadoPagoPlatformConfigurationService {
 }
 
 const ENV_KEYS: Record<MercadoPagoConfigurationKey, string> = {
+  apiBaseUrl: "MERCADO_PAGO_API_BASE_URL",
   clientId: "MERCADO_PAGO_CLIENT_ID",
   clientSecret: "MERCADO_PAGO_CLIENT_SECRET",
   webhookSecret: "MERCADO_PAGO_WEBHOOK_SECRET",
   redirectUri: "MERCADO_PAGO_REDIRECT_URI",
   postCallbackUrl: "MERCADO_PAGO_POST_CALLBACK_URL",
+};
+
+const DEFAULTS: Partial<Record<MercadoPagoConfigurationKey, string>> = {
+  apiBaseUrl: "https://api.mercadopago.com",
 };
 
 function nonEmpty(

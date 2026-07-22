@@ -102,10 +102,9 @@ export class SalesImportPreviewService {
       typeof this.integrations.getCredential === "function"
         ? (await this.integrations.getCredential(tenantId, run.integrationId)).token
         : this.credentialToken(credential.secretCiphertext);
-    const yesterday = new Date();
-    yesterday.setUTCHours(0, 0, 0, 0);
-    yesterday.setUTCDate(yesterday.getUTCDate() - 1);
-    const effectiveEnd = run.endDate < yesterday ? run.endDate : yesterday;
+    const todayText = businessDate(new Date());
+    const today = new Date(`${todayText}T00:00:00.000Z`);
+    const effectiveEnd = run.endDate < today ? run.endDate : today;
     const prefetched =
       run.provider === "MERCADO_PAGO" && run.startDate <= effectiveEnd
         ? await adapter.fetchRange({
@@ -124,23 +123,23 @@ export class SalesImportPreviewService {
       cursor = new Date(cursor.getTime() + 86400000)
     ) {
       const date = cursor.toISOString().slice(0, 10);
-      const today = new Date().toISOString().slice(0, 10);
+      const blocked = isDateBlockedForProvider(run.provider, date, todayText);
       const day = await this.prisma.salesImportDay.upsert({
         where: { runId_movementDate: { runId, movementDate: cursor } },
         create: {
           tenantId,
           runId,
           movementDate: cursor,
-          status: date >= today ? "BLOCKED_DATE" : "FETCHING",
+          status: blocked ? "BLOCKED_DATE" : "FETCHING",
         },
         update: {
-          status: date >= today ? "BLOCKED_DATE" : "FETCHING",
+          status: blocked ? "BLOCKED_DATE" : "FETCHING",
           errorCode: null,
           errorMessage: null,
           completedAt: null,
         },
       });
-      if (date >= today) {
+      if (blocked) {
         counts.blockedDays += 1;
         continue;
       }
@@ -300,4 +299,21 @@ export class SalesImportPreviewService {
       return decrypted;
     }
   }
+}
+
+export function isDateBlockedForProvider(
+  _provider: "PAGBANK" | "MERCADO_PAGO",
+  date: string,
+  today: string
+): boolean {
+  return date > today;
+}
+
+function businessDate(date: Date): string {
+  return new Intl.DateTimeFormat("en-CA", {
+    timeZone: "America/Sao_Paulo",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(date);
 }

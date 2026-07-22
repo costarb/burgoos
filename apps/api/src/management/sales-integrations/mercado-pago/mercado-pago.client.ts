@@ -10,8 +10,6 @@ import { SalesProviderError } from "../sales-provider.adapter";
 
 @Injectable()
 export class MercadoPagoClient {
-  private readonly baseUrl = "https://api.mercadopago.com";
-
   constructor(private readonly configuration: MercadoPagoPlatformConfigurationService) {}
 
   async exchangeAuthorizationCode(input: {
@@ -38,7 +36,7 @@ export class MercadoPagoClient {
   }
 
   async validateAccessToken(accessToken: string): Promise<MercadoPagoAccountResponse> {
-    const response = await fetch(`${this.baseUrl}/users/me`, {
+    const response = await fetch(`${await this.baseUrl()}/users/me`, {
       headers: { Authorization: `Bearer ${accessToken}` },
     });
     if (response.status === 401 || response.status === 403)
@@ -77,7 +75,7 @@ export class MercadoPagoClient {
     const found = new Map<string, MercadoPagoPayment>();
     let offset = 0;
     for (;;) {
-      const url = new URL(`${this.baseUrl}/v1/payments/search`);
+      const url = new URL(`${await this.baseUrl()}/v1/payments/search`);
       const rangeField = input.rangeField ?? "money_release_date";
       const parameters: Record<string, string> = {
         sort: "date_created",
@@ -107,7 +105,7 @@ export class MercadoPagoClient {
 
   async getPayment(accessToken: string, paymentId: string): Promise<MercadoPagoPayment> {
     const response = await this.fetchWithRetry(
-      new URL(`${this.baseUrl}/v1/payments/${encodeURIComponent(paymentId)}`),
+      new URL(`${await this.baseUrl()}/v1/payments/${encodeURIComponent(paymentId)}`),
       accessToken
     );
     return response.json() as Promise<MercadoPagoPayment>;
@@ -137,7 +135,7 @@ export class MercadoPagoClient {
   }
 
   private async token(body: MercadoPagoOAuthTokenRequest): Promise<MercadoPagoOAuthTokenResponse> {
-    const response = await fetch(`${this.baseUrl}/oauth/token`, {
+    const response = await fetch(`${await this.baseUrl()}/oauth/token`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(body),
@@ -145,5 +143,13 @@ export class MercadoPagoClient {
     if (!response.ok)
       throw new BadGatewayException("Nao foi possivel concluir a autorizacao Mercado Pago");
     return response.json() as Promise<MercadoPagoOAuthTokenResponse>;
+  }
+
+  private async baseUrl(): Promise<string> {
+    const configured =
+      typeof this.configuration?.value === "function"
+        ? await this.configuration.value("apiBaseUrl")
+        : undefined;
+    return (configured ?? "https://api.mercadopago.com").replace(/\/$/, "");
   }
 }

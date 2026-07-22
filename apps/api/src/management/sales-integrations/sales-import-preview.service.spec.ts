@@ -1,7 +1,17 @@
 import { describe, expect, it, vi } from "vitest";
-import { SalesImportPreviewService } from "./sales-import-preview.service";
+import {
+  isDateBlockedForProvider,
+  SalesImportPreviewService,
+} from "./sales-import-preview.service";
 
 describe("SalesImportPreviewService", () => {
+  it("allows D+0 for every provider and blocks future dates", () => {
+    expect(isDateBlockedForProvider("MERCADO_PAGO", "2026-07-21", "2026-07-21")).toBe(false);
+    expect(isDateBlockedForProvider("MERCADO_PAGO", "2026-07-22", "2026-07-21")).toBe(true);
+    expect(isDateBlockedForProvider("PAGBANK", "2026-07-21", "2026-07-21")).toBe(false);
+    expect(isDateBlockedForProvider("PAGBANK", "2026-07-20", "2026-07-21")).toBe(false);
+    expect(isDateBlockedForProvider("PAGBANK", "2026-07-22", "2026-07-21")).toBe(true);
+  });
   const registry = { get: vi.fn(() => ({ capabilities: { maxPeriodDays: 31 } })) };
   const service = () =>
     new SalesImportPreviewService(
@@ -74,9 +84,8 @@ describe("SalesImportPreviewService", () => {
       })
     ).rejects.toThrow(/1 e 7/);
   });
-  it("persists validated snapshots and blocks incomplete and current days", async () => {
-    const today = new Date();
-    today.setUTCHours(0, 0, 0, 0);
+  it("persists validated snapshots, blocks incomplete days and processes D+0", async () => {
+    const today = businessToday();
     const dayBeforeYesterday = new Date(today.getTime() - 2 * 86400000);
     const yesterday = new Date(today.getTime() - 86400000);
     const run = {
@@ -140,6 +149,11 @@ describe("SalesImportPreviewService", () => {
           days: [
             { validated: false, pagesFetched: 1, totalPages: 1, totalElements: 0, movements: [] },
           ],
+        })
+        .mockResolvedValueOnce({
+          days: [
+            { validated: true, pagesFetched: 1, totalPages: 1, totalElements: 0, movements: [] },
+          ],
         }),
     };
     const secrets = {
@@ -160,12 +174,19 @@ describe("SalesImportPreviewService", () => {
 
     const result = await current.process("run", "tenant");
 
-    expect(adapter.fetchRange).toHaveBeenCalledTimes(2);
+    expect(adapter.fetchRange).toHaveBeenCalledTimes(3);
     expect(adapter.fetchRange).toHaveBeenNthCalledWith(
       2,
       expect.objectContaining({
         startDate: yesterday.toISOString().slice(0, 10),
         endDate: yesterday.toISOString().slice(0, 10),
+      })
+    );
+    expect(adapter.fetchRange).toHaveBeenNthCalledWith(
+      3,
+      expect.objectContaining({
+        startDate: today.toISOString().slice(0, 10),
+        endDate: today.toISOString().slice(0, 10),
       })
     );
     expect(createMovement).toHaveBeenCalledWith(
@@ -176,12 +197,11 @@ describe("SalesImportPreviewService", () => {
     expect(secrets.redact).toHaveBeenCalledWith({ token: "remove" });
     expect(result).toMatchObject({
       status: "PARTIALLY_READY",
-      counts: expect.objectContaining({ found: 1, new: 1, blockedDays: 2 }),
+      counts: expect.objectContaining({ found: 1, new: 1, blockedDays: 1 }),
     });
   });
   it("reconciles a 31,000-movement preview within the operational test budget", async () => {
-    const date = new Date(Date.now() - 86400000);
-    date.setUTCHours(0, 0, 0, 0);
+    const date = new Date(businessToday().getTime() - 86400000);
     const movements = Array.from({ length: 31000 }, (_, index) => ({
       providerMovementId: `movement-${index}`,
       externalSaleId: `sale-${index}`,
@@ -250,3 +270,13 @@ describe("SalesImportPreviewService", () => {
     expect(Date.now() - started).toBeLessThan(10000);
   }, 15000);
 });
+
+function businessToday(): Date {
+  const date = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "America/Sao_Paulo",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(new Date());
+  return new Date(`${date}T00:00:00.000Z`);
+}
