@@ -18,7 +18,11 @@ describe("MercadoPagoPlatformConfigurationService", () => {
       })
     );
     const view = await service.safeView();
-    expect(view).toMatchObject({ oauthReady: true, source: "ENVIRONMENT" });
+    expect(view).toMatchObject({
+      oauthReady: true,
+      source: "ENVIRONMENT",
+      apiBaseUrl: "https://api.mercadopago.com",
+    });
     expect(JSON.stringify(view)).not.toContain("secret");
   });
 

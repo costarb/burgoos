@@ -3,11 +3,21 @@ import { IntegrationSecretService } from "../../security/integration-secret.serv
 import { AuthModule } from "../auth/auth.module";
 import { MercadoPagoPlatformConfigurationController } from "./mercado-pago-platform-configuration.controller";
 import { MercadoPagoPlatformConfigurationService } from "./mercado-pago-platform-configuration.service";
+import { PagBankPlatformConfigurationController } from "./pagbank-platform-configuration.controller";
+import { PagBankPlatformConfigurationService } from "./pagbank-platform-configuration.service";
 
 @Module({
   imports: [AuthModule],
-  controllers: [MercadoPagoPlatformConfigurationController],
-  providers: [IntegrationSecretService, MercadoPagoPlatformConfigurationService],
-  exports: [IntegrationSecretService, MercadoPagoPlatformConfigurationService],
+  controllers: [MercadoPagoPlatformConfigurationController, PagBankPlatformConfigurationController],
+  providers: [
+    IntegrationSecretService,
+    MercadoPagoPlatformConfigurationService,
+    PagBankPlatformConfigurationService,
+  ],
+  exports: [
+    IntegrationSecretService,
+    MercadoPagoPlatformConfigurationService,
+    PagBankPlatformConfigurationService,
+  ],
 })
 export class PlatformIntegrationsModule {}

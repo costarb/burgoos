@@ -525,6 +525,7 @@ export async function getPlatformAdminToken(): Promise<string> {
 }
 
 export interface MercadoPagoPlatformConfigurationView {
+  apiBaseUrl: string;
   clientIdConfigured: boolean;
   clientSecretConfigured: boolean;
   webhookSecretConfigured: boolean;
@@ -545,6 +546,7 @@ export function updateMercadoPagoPlatformConfiguration(
   token: string,
   payload: {
     clientId?: string;
+    apiBaseUrl?: string;
     clientSecret?: string;
     webhookSecret?: string;
     redirectUri?: string;
@@ -552,6 +554,27 @@ export function updateMercadoPagoPlatformConfiguration(
   }
 ): Promise<MercadoPagoPlatformConfigurationView> {
   return fetchPlatform(token, "/api/platform/integrations/mercado-pago/configuration", {
+    method: "PUT",
+    body: JSON.stringify(payload),
+  });
+}
+
+export interface PagBankPlatformConfigurationView {
+  apiBaseUrl: string;
+  source: "DATABASE" | "ENVIRONMENT";
+}
+
+export function getPagBankPlatformConfiguration(
+  token: string
+): Promise<PagBankPlatformConfigurationView> {
+  return fetchPlatform(token, "/api/platform/integrations/pagbank/configuration");
+}
+
+export function updatePagBankPlatformConfiguration(
+  token: string,
+  payload: { apiBaseUrl?: string }
+): Promise<PagBankPlatformConfigurationView> {
+  return fetchPlatform(token, "/api/platform/integrations/pagbank/configuration", {
     method: "PUT",
     body: JSON.stringify(payload),
   });
