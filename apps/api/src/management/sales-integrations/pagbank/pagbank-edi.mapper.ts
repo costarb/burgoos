@@ -81,6 +81,7 @@ export function mapPagBankMovement(item: PagBankEdiMovement): ProviderMovement {
       paymentMethod: method as "PIX" | "PIX_MANUAL" | "DEBIT_CARD" | "CREDIT_CARD",
       installments: Math.max(1, Number(item.quantidade_parcelas ?? 1)),
       paymentBrand: item.arranjo_ur,
+      expectedReleaseAt: item.data_prevista_pagamento,
       raw: item,
     },
   };

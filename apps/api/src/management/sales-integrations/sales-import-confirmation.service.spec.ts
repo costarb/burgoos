@@ -39,6 +39,8 @@ function setup(
       findMany: vi.fn().mockResolvedValue([movement]),
       update: vi.fn().mockReturnValue({ operation: "movement-update" }),
     },
+    externalSaleIdentity: { findUnique: vi.fn() },
+    order: { update: vi.fn() },
     $transaction: vi.fn().mockResolvedValue([]),
   };
   const identities = {
@@ -141,7 +143,7 @@ describe("SalesImportConfirmationService", () => {
         where: {
           tenantId: "tenant",
           runId: "run",
-          status: { in: ["NEW", "FAILED"] },
+          status: { in: ["NEW", "FAILED", "DUPLICATE"] },
           kind: "SALE",
         },
       })
@@ -196,6 +198,39 @@ describe("SalesImportConfirmationService", () => {
     expect(result).toMatchObject({
       status: "COMPLETED_WITH_ERRORS",
       counts: expect.objectContaining({ imported: 1, failed: 1 }),
+    });
+  });
+
+  it("reconciles release information for an already imported PagBank sale", async () => {
+    const { prisma, historical, identities, service } = setup();
+    prisma.externalSalesMovement.findMany.mockResolvedValue([
+      {
+        ...movement,
+        status: "DUPLICATE",
+        normalizedData: {
+          ...movement.normalizedData,
+          grossAmount: 25,
+          feeAmount: 0.5,
+          netAmount: 24.5,
+          expectedReleaseAt: "2026-05-30",
+        },
+      },
+    ]);
+    prisma.externalSaleIdentity.findUnique.mockResolvedValue({ orderId: "existing-order" });
+
+    await service.confirm("tenant", "run");
+
+    expect(historical.importNormalizedSale).not.toHaveBeenCalled();
+    expect(identities.claim).not.toHaveBeenCalled();
+    expect(prisma.order.update).toHaveBeenCalledWith({
+      where: { id: "existing-order" },
+      data: expect.objectContaining({
+        paymentGrossAmount: 25,
+        paymentFeeAmount: 0.5,
+        paymentNetAmount: 24.5,
+        paymentReleaseExpectedAt: new Date("2026-05-30"),
+        paymentReleaseSource: "EXTRACT",
+      }),
     });
   });
 });
