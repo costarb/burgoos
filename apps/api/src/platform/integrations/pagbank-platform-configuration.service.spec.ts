@@ -12,6 +12,7 @@ describe("PagBankPlatformConfigurationService", () => {
     );
     await expect(service.safeView()).resolves.toEqual({
       apiBaseUrl: "https://edi.api.pagbank.com.br",
+      ediVersion: "v3.01",
       source: "ENVIRONMENT",
     });
   });
@@ -28,7 +29,9 @@ describe("PagBankPlatformConfigurationService", () => {
     };
     const secrets = {
       encrypt: vi.fn().mockReturnValue("saved"),
-      decrypt: vi.fn().mockReturnValue('{"apiBaseUrl":"https://pagbank.test"}'),
+      decrypt: vi
+        .fn()
+        .mockReturnValue('{"apiBaseUrl":"https://pagbank.test","ediVersion":"v3.01"}'),
     };
     const service = new PagBankPlatformConfigurationService(
       prisma as any,
@@ -36,8 +39,11 @@ describe("PagBankPlatformConfigurationService", () => {
       new ConfigService()
     );
     await expect(
-      service.update({ apiBaseUrl: "https://pagbank.test" }, "00000000-0000-0000-0000-000000000001")
-    ).resolves.toMatchObject({ apiBaseUrl: "https://pagbank.test" });
+      service.update(
+        { apiBaseUrl: "https://pagbank.test", ediVersion: "v3.01" },
+        "00000000-0000-0000-0000-000000000001"
+      )
+    ).resolves.toMatchObject({ apiBaseUrl: "https://pagbank.test", ediVersion: "v3.01" });
     expect(prisma.platformIntegrationConfiguration.upsert).toHaveBeenCalled();
   });
 });

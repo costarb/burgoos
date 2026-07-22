@@ -561,6 +561,7 @@ export function updateMercadoPagoPlatformConfiguration(
 
 export interface PagBankPlatformConfigurationView {
   apiBaseUrl: string;
+  ediVersion: string;
   source: "DATABASE" | "ENVIRONMENT";
 }
 
@@ -572,7 +573,7 @@ export function getPagBankPlatformConfiguration(
 
 export function updatePagBankPlatformConfiguration(
   token: string,
-  payload: { apiBaseUrl?: string }
+  payload: { apiBaseUrl?: string; ediVersion?: string }
 ): Promise<PagBankPlatformConfigurationView> {
   return fetchPlatform(token, "/api/platform/integrations/pagbank/configuration", {
     method: "PUT",
@@ -1937,6 +1938,24 @@ export function createSalesIntegration(
 ): Promise<SalesIntegrationView> {
   return fetchAdmin(token, "/api/admin/sales-integrations", {
     method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
+export function updateSalesIntegration(
+  token: string,
+  integrationId: string,
+  payload: {
+    provider: "PAGBANK" | "MERCADO_PAGO";
+    channel: "API";
+    displayName: string;
+    externalMerchantId?: string;
+    environment?: "TEST" | "PRODUCTION";
+    credentialMode?: "PROVIDER_TOKEN" | "OAUTH" | "FIXED_TOKEN";
+  }
+): Promise<SalesIntegrationView> {
+  return fetchAdmin(token, `/api/admin/sales-integrations/${integrationId}`, {
+    method: "PATCH",
     body: JSON.stringify(payload),
   });
 }

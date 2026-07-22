@@ -162,9 +162,11 @@ function PagBankConfigurationForm({
     event.preventDefault();
     setBusy(true);
     setMessage("");
-    const apiBaseUrl = String(new FormData(event.currentTarget).get("apiBaseUrl") ?? "").trim();
+    const formData = new FormData(event.currentTarget);
+    const apiBaseUrl = String(formData.get("apiBaseUrl") ?? "").trim();
+    const ediVersion = String(formData.get("ediVersion") ?? "").trim();
     try {
-      setValue(await updatePagBankPlatformConfiguration(token, { apiBaseUrl }));
+      setValue(await updatePagBankPlatformConfiguration(token, { apiBaseUrl, ediVersion }));
       setMessage("ConfiguraÃ§Ã£o PagBank atualizada sem reiniciar a aplicaÃ§Ã£o.");
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "Falha ao atualizar configuraÃ§Ã£o");
@@ -184,6 +186,7 @@ function PagBankConfigurationForm({
       </div>
       <form onSubmit={submit} className="grid gap-4 md:grid-cols-2">
         <Field name="apiBaseUrl" label="URL da API de consulta" value={value.apiBaseUrl} />
+        <Field name="ediVersion" label="VersÃƒÂ£o do EDI" value={value.ediVersion} />
         <div className="flex items-end">
           <button disabled={busy} className="rounded bg-ink px-4 py-2 font-semibold text-white">
             {busy ? "Salvando..." : "Salvar configuraÃ§Ã£o"}
