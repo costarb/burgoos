@@ -38,7 +38,11 @@ describe("Mercado Pago platform configuration", () => {
     const html = renderToStaticMarkup(
       <PlatformIntegrationsClient
         token="jwt"
-        pagBank={{ apiBaseUrl: "https://edi.api.pagbank.com.br", source: "ENVIRONMENT" }}
+        pagBank={{
+          apiBaseUrl: "https://edi.api.pagbank.com.br",
+          ediVersion: "v3.01",
+          source: "ENVIRONMENT",
+        }}
         mercadoPago={{
           apiBaseUrl: "https://api.mercadopago.com",
           clientIdConfigured: false,
@@ -56,5 +60,6 @@ describe("Mercado Pago platform configuration", () => {
     expect(html).toContain("Mercado Pago");
     expect(html).toContain("URL da API de consulta");
     expect(html).toContain("https://edi.api.pagbank.com.br");
+    expect(html).toContain("v3.01");
   });
 });

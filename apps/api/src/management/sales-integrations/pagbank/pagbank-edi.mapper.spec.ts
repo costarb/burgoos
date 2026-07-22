@@ -29,4 +29,17 @@ describe("mapPagBankMovement", () => {
     });
     expect(result.rejectionCode).toBe("INVALID_SALE");
   });
+
+  it.each(["8", "15"])(
+    "maps PagBank v3.01 debit code %s using the receivable arrangement",
+    (code) => {
+      const result = mapPagBankMovement({
+        ...PAGBANK_SALE_FIXTURES.debit,
+        meio_pagamento: code,
+        arranjo_ur: "DEBIT_MASTERCARD",
+      });
+      expect(result.sale?.paymentMethod).toBe("DEBIT_CARD");
+      expect(result.rejectionCode).toBeUndefined();
+    }
+  );
 });

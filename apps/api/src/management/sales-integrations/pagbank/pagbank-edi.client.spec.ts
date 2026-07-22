@@ -79,10 +79,35 @@ describe("PagBankEdiClient", () => {
     vi.stubGlobal("fetch", fetchMock);
     const client = new PagBankEdiClient({
       apiBaseUrl: vi.fn().mockResolvedValue("https://pagbank.test/"),
+      ediVersion: vi.fn().mockResolvedValue("v3.01"),
     } as never);
     await client.fetchDay({ date: "2026-07-21", merchantId: "user", credential: "token" });
     expect(String(fetchMock.mock.calls[0][0])).toContain(
-      "https://pagbank.test/movement/v3.00/transactional/2026-07-21"
+      "https://pagbank.test/movement/v3.01/transactional/2026-07-21"
     );
+  });
+
+  it("accepts a current-day response with movements as provisional data", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue(
+        new Response(
+          JSON.stringify({
+            ...PAGBANK_PAGE_1,
+            pagination: { ...PAGBANK_PAGE_1.pagination, totalPages: 1 },
+          }),
+          { status: 200, headers: { VALIDADO: "FALSE" } }
+        )
+      )
+    );
+    const today = new Intl.DateTimeFormat("en-CA", {
+      timeZone: "America/Sao_Paulo",
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+    }).format(new Date());
+    await expect(
+      new PagBankEdiClient().fetchDay({ date: today, merchantId: "user", credential: "token" })
+    ).resolves.toMatchObject({ validated: true });
   });
 });

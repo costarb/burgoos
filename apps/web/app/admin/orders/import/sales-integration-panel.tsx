@@ -11,6 +11,7 @@ import {
   listSalesProviders,
   saveSalesCredential,
   setSalesIntegrationStatus,
+  updateSalesIntegration,
 } from "../../../../lib/api";
 import type {
   SalesImportRunView,
@@ -116,12 +117,22 @@ export function SalesIntegrationPanel({
     const data = new FormData(event.currentTarget);
     try {
       let current = integration;
+      const externalMerchantId = String(data.get("merchantId")).trim();
       if (!current)
         current = await createSalesIntegration(token, {
           provider: "PAGBANK",
           channel: "API",
           displayName: "PagBank EDI",
-          externalMerchantId: String(data.get("merchantId")),
+          externalMerchantId,
+        });
+      else
+        current = await updateSalesIntegration(token, current.id, {
+          provider: "PAGBANK",
+          channel: "API",
+          displayName: current.displayName || "PagBank EDI",
+          externalMerchantId,
+          environment: current.environment,
+          credentialMode: "PROVIDER_TOKEN",
         });
       const credential = String(data.get("credential") ?? "");
       if (credential) await saveSalesCredential(token, current.id, credential);
