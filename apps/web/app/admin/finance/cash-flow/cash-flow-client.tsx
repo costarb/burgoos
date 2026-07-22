@@ -59,10 +59,15 @@ export function CashFlowClient({
     financialAccountId: initialStatement.financialAccountId ?? "",
   });
   const filtersRef = useRef(filters);
+  const statementFiltersRef = useRef(statementFilters);
 
   useEffect(() => {
     filtersRef.current = filters;
   }, [filters]);
+
+  useEffect(() => {
+    statementFiltersRef.current = statementFilters;
+  }, [statementFilters]);
 
   useEffect(() => {
     let cancelled = false;
@@ -73,7 +78,10 @@ export function CashFlowClient({
       }
 
       try {
-        const response = await getCashPosition(filtersRef.current);
+        const [response, nextStatement] = await Promise.all([
+          getCashPosition(filtersRef.current),
+          getCashStatement(token, statementFiltersRef.current),
+        ]);
         if (cancelled) {
           return;
         }
@@ -81,6 +89,7 @@ export function CashFlowClient({
         setPosition(response.position);
         setAccounts(response.accounts);
         setCategories(response.categories);
+        setStatement(nextStatement);
       } catch {
         if (!cancelled) {
           setOperation({
@@ -93,13 +102,15 @@ export function CashFlowClient({
 
     window.addEventListener("focus", refreshVisiblePosition);
     document.addEventListener("visibilitychange", refreshVisiblePosition);
+    const refreshInterval = window.setInterval(refreshVisiblePosition, 60_000);
 
     return () => {
       cancelled = true;
       window.removeEventListener("focus", refreshVisiblePosition);
       document.removeEventListener("visibilitychange", refreshVisiblePosition);
+      window.clearInterval(refreshInterval);
     };
-  }, []);
+  }, [token]);
 
   async function run(message: string, action: () => Promise<void>) {
     if (busy) return;
