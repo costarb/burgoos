@@ -9,9 +9,10 @@ import { CashFlowClient } from "./cash-flow-client";
 export const dynamic = "force-dynamic";
 
 export default async function CashFlowPage() {
-  const today = new Date().toISOString().slice(0, 10);
-  const statementStart = addDays(new Date(), -30).toISOString().slice(0, 10);
-  const projectionEnd = addDays(new Date(), 30).toISOString().slice(0, 10);
+  const now = new Date();
+  const today = toSaoPauloDate(now);
+  const statementStart = toSaoPauloDate(addDays(now, -30));
+  const projectionEnd = toSaoPauloDate(addDays(now, 30));
   const { token, position, accounts, categories } = await getCashPosition({
     asOf: today,
     projectionEnd,
@@ -39,4 +40,13 @@ function addDays(value: Date, days: number): Date {
   const next = new Date(value);
   next.setDate(next.getDate() + days);
   return next;
+}
+
+function toSaoPauloDate(value: Date): string {
+  return new Intl.DateTimeFormat("en-CA", {
+    timeZone: "America/Sao_Paulo",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(value);
 }
