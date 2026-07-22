@@ -4,11 +4,17 @@ import { PagBankEdiMovement } from "./pagbank-edi.types";
 
 const NON_SALE_EVENTS = new Set(["2", "3", "4", "5", "6", "7", "8", "9"]);
 
-function paymentMethod(code: string): PaymentMethod | null {
+function paymentMethod(code: string, arrangement?: string): PaymentMethod | null {
   const normalized = code.trim().toUpperCase();
+  const normalizedArrangement = String(arrangement ?? "")
+    .trim()
+    .toUpperCase();
+  if (normalizedArrangement.startsWith("DEBIT_")) return "DEBIT_CARD";
+  if (normalizedArrangement.startsWith("CREDIT_")) return "CREDIT_CARD";
+  if (normalizedArrangement.includes("PIX")) return "PIX";
   if (["11", "PIX"].includes(normalized)) return "PIX";
   if (["1", "2", "CREDIT", "CREDITO"].includes(normalized)) return "CREDIT_CARD";
-  if (["3", "DEBIT", "DEBITO"].includes(normalized)) return "DEBIT_CARD";
+  if (["3", "8", "15", "DEBIT", "DEBITO"].includes(normalized)) return "DEBIT_CARD";
   if (["BOLETO", "BOL"].includes(normalized)) return "PIX_MANUAL";
   return null;
 }
@@ -39,7 +45,7 @@ export function mapPagBankMovement(item: PagBankEdiMovement): ProviderMovement {
       rejectionMessage: "Evento EDI nao reconhecido",
     };
   }
-  const method = paymentMethod(String(item.meio_pagamento ?? item.arranjo_ur ?? ""));
+  const method = paymentMethod(String(item.meio_pagamento ?? ""), item.arranjo_ur);
   const gross = Number(item.valor_total_transacao);
   const date = String(item.data_inicial_transacao ?? item.data_venda_ajuste ?? "");
   const time = String(item.hora_inicial_transacao ?? item.hora_venda_ajuste ?? "00:00:00");

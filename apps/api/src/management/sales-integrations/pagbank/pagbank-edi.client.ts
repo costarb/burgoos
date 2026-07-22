@@ -26,8 +26,9 @@ export class PagBankEdiClient {
         const baseUrl = this.configuration
           ? await this.configuration.apiBaseUrl()
           : "https://edi.api.pagbank.com.br";
+        const ediVersion = this.configuration ? await this.configuration.ediVersion() : "v3.01";
         response = await fetch(
-          `${baseUrl.replace(/\/$/, "")}/movement/v3.00/transactional/${input.date}?pageNumber=${page}&pageSize=1000`,
+          `${baseUrl.replace(/\/$/, "")}/movement/${ediVersion}/transactional/${input.date}?pageNumber=${page}&pageSize=1000`,
           {
             headers: {
               Authorization: `Basic ${Buffer.from(`${input.merchantId}:${input.credential}`).toString("base64")}`,
@@ -63,19 +64,29 @@ export class PagBankEdiClient {
           "Resposta PagBank incompativel",
           false
         );
-      validated = response.headers.get("VALIDADO")?.toUpperCase() === "TRUE";
+      validated = validated || response.headers.get("VALIDADO")?.toUpperCase() === "TRUE";
       totalPages = Math.max(1, payload.pagination.totalPages);
       totalElements = payload.pagination.totalElements;
       movements.push(...payload.detalhes.map(mapPagBankMovement));
       page += 1;
     } while (page <= totalPages);
+    const provisionalCurrentDay = input.date === businessDate(new Date()) && movements.length > 0;
     return {
       date: input.date,
-      validated,
+      validated: validated || provisionalCurrentDay,
       pagesFetched: page - 1,
       totalPages,
       totalElements,
       movements,
     };
   }
+}
+
+function businessDate(date: Date): string {
+  return new Intl.DateTimeFormat("en-CA", {
+    timeZone: "America/Sao_Paulo",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(date);
 }
