@@ -60,12 +60,7 @@ export class SalesReportService {
         periodStart: query.start,
         periodEnd: query.end,
       },
-      daily: this.createDailySummaries(
-        orders,
-        query.periodStart,
-        query.periodEnd,
-        reportReferenceDate
-      ),
+      daily: this.createDailySummaries(orders, query.start, query.end, reportReferenceDate),
       byPaymentInstitution: this.createPaymentDimensionSummary(
         orders,
         totalGross,
@@ -116,8 +111,8 @@ export class SalesReportService {
 
   private createDailySummaries(
     orders: ReportOrder[],
-    periodStart: Date,
-    periodEnd: Date,
+    periodStart: string,
+    periodEnd: string,
     referenceDate: Date
   ) {
     const buckets = new Map<string, AggregateBucket>();
@@ -129,27 +124,11 @@ export class SalesReportService {
 
     const rows = [];
     let previous: AggregateBucket | null = null;
-    const cursor = new Date(
-      periodStart.getFullYear(),
-      periodStart.getMonth(),
-      periodStart.getDate(),
-      0,
-      0,
-      0,
-      0
-    );
-    const last = new Date(
-      periodEnd.getFullYear(),
-      periodEnd.getMonth(),
-      periodEnd.getDate(),
-      0,
-      0,
-      0,
-      0
-    );
+    const cursor = new Date(`${periodStart}T12:00:00.000Z`);
+    const last = new Date(`${periodEnd}T12:00:00.000Z`);
 
     while (cursor <= last) {
-      const date = formatLocalDate(cursor);
+      const date = cursor.toISOString().slice(0, 10);
       const bucket = buckets.get(date) ?? emptyBucket();
       rows.push({
         date,
@@ -162,7 +141,7 @@ export class SalesReportService {
           : null,
       });
       previous = bucket;
-      cursor.setDate(cursor.getDate() + 1);
+      cursor.setUTCDate(cursor.getUTCDate() + 1);
     }
 
     return rows;

@@ -47,17 +47,15 @@ describe("PagBankEdiClient", () => {
   it("blocks responses without an affirmative VALIDADO header", async () => {
     vi.stubGlobal(
       "fetch",
-      vi
-        .fn()
-        .mockResolvedValue(
-          new Response(
-            JSON.stringify({
-              ...PAGBANK_PAGE_1,
-              pagination: { ...PAGBANK_PAGE_1.pagination, totalPages: 1 },
-            }),
-            { status: 200 }
-          )
+      vi.fn().mockResolvedValue(
+        new Response(
+          JSON.stringify({
+            ...PAGBANK_PAGE_1,
+            pagination: { ...PAGBANK_PAGE_1.pagination, totalPages: 1 },
+          }),
+          { status: 200 }
         )
+      )
     );
     await expect(
       new PagBankEdiClient().fetchDay({
@@ -66,5 +64,25 @@ describe("PagBankEdiClient", () => {
         credential: "token",
       })
     ).resolves.toMatchObject({ validated: false });
+  });
+
+  it("uses the platform-configured API base URL", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          ...PAGBANK_PAGE_1,
+          pagination: { ...PAGBANK_PAGE_1.pagination, totalPages: 1 },
+        }),
+        { status: 200, headers: { VALIDADO: "TRUE" } }
+      )
+    );
+    vi.stubGlobal("fetch", fetchMock);
+    const client = new PagBankEdiClient({
+      apiBaseUrl: vi.fn().mockResolvedValue("https://pagbank.test/"),
+    } as never);
+    await client.fetchDay({ date: "2026-07-21", merchantId: "user", credential: "token" });
+    expect(String(fetchMock.mock.calls[0][0])).toContain(
+      "https://pagbank.test/movement/v3.00/transactional/2026-07-21"
+    );
   });
 });

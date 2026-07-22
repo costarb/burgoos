@@ -4,6 +4,13 @@ import { OrderStatus, PaymentInstitution, PaymentMethod } from "@prisma/client";
 const paymentInstitutions = Object.values(PaymentInstitution);
 const paymentMethods = Object.values(PaymentMethod);
 const orderStatuses = Object.values(OrderStatus);
+const BUSINESS_TIME_ZONE = "America/Sao_Paulo";
+const businessDateFormatter = new Intl.DateTimeFormat("en-CA", {
+  timeZone: BUSINESS_TIME_ZONE,
+  year: "numeric",
+  month: "2-digit",
+  day: "2-digit",
+});
 
 export interface SalesReportQuery {
   start?: string;
@@ -31,8 +38,9 @@ export interface ParsedSalesReportQuery {
 
 export function parseSalesReportQuery(query: SalesReportQuery): ParsedSalesReportQuery {
   const now = new Date();
-  const start = query.start ?? formatLocalDate(new Date(now.getFullYear(), now.getMonth(), 1));
-  const end = query.end ?? formatLocalDate(new Date(now.getFullYear(), now.getMonth() + 1, 0));
+  const currentMonth = businessMonthRange(now);
+  const start = query.start ?? currentMonth.start;
+  const end = query.end ?? currentMonth.end;
   const periodStart = localDayStart(start);
   const periodEnd = localDayEnd(end);
 
@@ -65,21 +73,74 @@ export function parseSalesReportQuery(query: SalesReportQuery): ParsedSalesRepor
   };
 }
 
+export function businessMonthRange(date: Date): { start: string; end: string } {
+  const [year, month] = formatLocalDate(date).split("-").map(Number);
+  return {
+    start: `${year}-${String(month).padStart(2, "0")}-01`,
+    end: new Date(Date.UTC(year, month, 0)).toISOString().slice(0, 10),
+  };
+}
+
 export function localDayStart(date: string): Date {
   const [year, month, day] = parseDateParts(date);
-  return new Date(year, month - 1, day, 0, 0, 0, 0);
+  return zonedDateTimeToUtc(year, month, day, 0, 0, 0, 0);
 }
 
 export function localDayEnd(date: string): Date {
   const [year, month, day] = parseDateParts(date);
-  return new Date(year, month - 1, day, 23, 59, 59, 999);
+  return zonedDateTimeToUtc(year, month, day, 23, 59, 59, 999);
 }
 
 export function formatLocalDate(date: Date): string {
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, "0");
-  const day = String(date.getDate()).padStart(2, "0");
-  return `${year}-${month}-${day}`;
+  return businessDateFormatter.format(date);
+}
+
+function zonedDateTimeToUtc(
+  year: number,
+  month: number,
+  day: number,
+  hour: number,
+  minute: number,
+  second: number,
+  millisecond: number
+): Date {
+  if (![year, month, day].every(Number.isFinite)) return new Date(Number.NaN);
+  const intendedUtc = Date.UTC(year, month - 1, day, hour, minute, second, millisecond);
+  let candidate = intendedUtc;
+  for (let attempt = 0; attempt < 2; attempt += 1) {
+    const parts = businessDateTimeParts(new Date(candidate));
+    const representedUtc = Date.UTC(
+      parts.year,
+      parts.month - 1,
+      parts.day,
+      parts.hour,
+      parts.minute,
+      parts.second,
+      millisecond
+    );
+    candidate += intendedUtc - representedUtc;
+  }
+  return new Date(candidate);
+}
+
+function businessDateTimeParts(date: Date) {
+  const formatter = new Intl.DateTimeFormat("en-US", {
+    timeZone: BUSINESS_TIME_ZONE,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+    hourCycle: "h23",
+  });
+  const values = Object.fromEntries(
+    formatter
+      .formatToParts(date)
+      .filter((part) => part.type !== "literal")
+      .map((part) => [part.type, Number(part.value)])
+  );
+  return values as Record<"year" | "month" | "day" | "hour" | "minute" | "second", number>;
 }
 
 function parseDateParts(date: string): [number, number, number] {

@@ -2,9 +2,12 @@ import { Injectable } from "@nestjs/common";
 import { ProviderDayResult, SalesProviderError } from "../sales-provider.adapter";
 import { mapPagBankMovement } from "./pagbank-edi.mapper";
 import { isPagBankEdiResponse } from "./pagbank-edi.types";
+import { PagBankPlatformConfigurationService } from "../../../platform/integrations/pagbank-platform-configuration.service";
 
 @Injectable()
 export class PagBankEdiClient {
+  constructor(private readonly configuration?: PagBankPlatformConfigurationService) {}
+
   async fetchDay(input: {
     date: string;
     merchantId: string;
@@ -20,8 +23,11 @@ export class PagBankEdiClient {
       const timeout = setTimeout(() => controller.abort(), 20_000);
       let response: Response;
       try {
+        const baseUrl = this.configuration
+          ? await this.configuration.apiBaseUrl()
+          : "https://edi.api.pagbank.com.br";
         response = await fetch(
-          `https://edi.api.pagbank.com.br/movement/v3.00/transactional/${input.date}?pageNumber=${page}&pageSize=1000`,
+          `${baseUrl.replace(/\/$/, "")}/movement/v3.00/transactional/${input.date}?pageNumber=${page}&pageSize=1000`,
           {
             headers: {
               Authorization: `Basic ${Buffer.from(`${input.merchantId}:${input.credential}`).toString("base64")}`,

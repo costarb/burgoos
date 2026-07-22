@@ -18,6 +18,8 @@ export function validateEnvironment(input: Environment): Environment {
 
   validateHttpUrl(env, "MERCADO_PAGO_REDIRECT_URI");
   validateHttpUrl(env, "MERCADO_PAGO_POST_CALLBACK_URL");
+  validateHttpUrl(env, "MERCADO_PAGO_API_BASE_URL");
+  validateHttpUrl(env, "PAGBANK_EDI_BASE_URL");
 
   return env;
 }

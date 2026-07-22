@@ -28,6 +28,8 @@
 
 **Source**: https://www.mercadopago.com.br/developers/pt/reference/online-payments/checkout-pro/search-payments/get
 
+As URLs-base de consulta de PagBank e Mercado Pago sao configuraveis pelo `SUPER_ADMIN` em abas separadas da tela de integracoes da plataforma, com fallback para as URLs oficiais. Ambos permitem consulta manual de D+0 e bloqueiam somente datas futuras. Se o PagBank ainda nao disponibilizar a evidencia do dia corrente, a indisponibilidade e registrada no processamento para permitir uma nova tentativa.
+
 ## Renovacao OAuth
 
 **Decision**: Renovar conexoes OAuth a 15 dias do vencimento com claim exclusivo. Substituir access token, refresh token e validade em uma transacao. Um 401 permite uma renovacao e uma repeticao; depois requer reautorizacao.
@@ -41,6 +43,8 @@
 ## Busca de pagamentos
 
 **Decision**: Consultar `/v1/payments/search` com `sort=date_created`, `criteria=asc`, `range=money_release_date`, `begin_date`, `end_date`, `limit` e `offset`. A data de liberacao foi escolhida apos batimento com o CDV. Dividir internamente ranges se necessario, deduplicando por payment ID.
+
+Na importacao, `money_release_date` tambem define o instante comercial persistido no pedido e usado pelos filtros. O offset recebido do provider deve ser respeitado e a apresentacao deve ser convertida para `America/Sao_Paulo`; por exemplo, `2026-07-18T23:00:11-04:00` pertence a 19/07 em Sao Paulo. `date_created` permanece no payload/estado para auditoria e serve apenas como fallback quando a liberacao nao for informada. A previa exibe as duas datas sem expor o payload bruto.
 
 **Rationale**: O endpoint retorna os ultimos 12 meses, exige ordenacao/criterio, aceita range menor que 365 dias e responde com `paging.total/limit/offset`. Ordem ascendente reduz risco de perder itens quando novos pagamentos entram durante uma carga.
 

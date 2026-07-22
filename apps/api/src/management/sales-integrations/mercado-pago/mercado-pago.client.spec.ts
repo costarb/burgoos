@@ -90,4 +90,24 @@ describe("MercadoPagoClient payments", () => {
       })
     ).rejects.toBeInstanceOf(RangeError);
   });
+
+  it("uses the platform-configured API base URL", async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValue(
+        new Response(JSON.stringify({ paging: { total: 0 }, results: [] }), { status: 200 })
+      );
+    vi.stubGlobal("fetch", fetchMock);
+    const client = new MercadoPagoClient({
+      value: vi.fn().mockResolvedValue("https://mercado-pago.test/"),
+    } as any);
+    await client.searchPayments({
+      accessToken: "secret",
+      startDate: "2026-07-21",
+      endDate: "2026-07-21",
+    });
+    expect(String(fetchMock.mock.calls[0][0])).toContain(
+      "https://mercado-pago.test/v1/payments/search"
+    );
+  });
 });
