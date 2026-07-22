@@ -176,6 +176,58 @@ describe("CashFlowService", () => {
     ]);
   });
 
+  it("preserves provider release dates that do not contain a time", async () => {
+    const prismaMock = {
+      financialAccount: {
+        findMany: vi.fn().mockResolvedValue([
+          {
+            id: "account-pagbank",
+            name: "PagBank",
+            paymentInstitution: null,
+            paymentInstitutionId: "institution-pagbank",
+            openingBalance: new Prisma.Decimal(0),
+            openingBalanceAt: new Date("2026-07-01T00:00:00.000Z"),
+          },
+        ]),
+      },
+      order: {
+        findMany: vi.fn().mockResolvedValue([
+          {
+            id: "order-pagbank",
+            status: "DELIVERED",
+            customerName: "Venda PagBank",
+            total: new Prisma.Decimal(100),
+            paymentInstitution: null,
+            paymentInstitutionId: "institution-pagbank",
+            paymentGrossAmount: new Prisma.Decimal(100),
+            paymentNetAmount: new Prisma.Decimal(97),
+            paymentReleaseExpectedAt: new Date("2026-07-21T00:00:00.000Z"),
+            createdAt: new Date("2026-07-22T01:00:00.000Z"),
+            deletedAt: null,
+          },
+        ]),
+      },
+      payable: { findMany: vi.fn().mockResolvedValue([]) },
+      payablePayment: { findMany: vi.fn().mockResolvedValue([]) },
+      cashMovement: { findMany: vi.fn().mockResolvedValue([]) },
+      financialAudit: { findMany: vi.fn() },
+    };
+
+    const service = new CashFlowService(prismaMock as never);
+    const statement = await service.getStatement(
+      "tenant-1",
+      new Date("2026-07-21T00:00:00.000Z"),
+      new Date("2026-07-21T23:59:59.999Z")
+    );
+
+    expect(statement.days).toEqual([
+      expect.objectContaining({
+        date: "2026-07-21",
+        creditAmount: "97.00",
+      }),
+    ]);
+  });
+
   it("keeps open payables due today in the cash projection until they are paid", async () => {
     const prismaMock = {
       financialAccount: {
