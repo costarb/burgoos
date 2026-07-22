@@ -1,5 +1,5 @@
 import { ConflictException, Injectable, NotFoundException } from "@nestjs/common";
-import { SalesImportRunStatus } from "@prisma/client";
+import { PaymentReleaseSource, SalesImportRunStatus } from "@prisma/client";
 import {
   HistoricalOrderImportService,
   NormalizedHistoricalSale,
@@ -44,7 +44,7 @@ export class SalesImportConfirmationService {
     }
 
     const movements = await this.prisma.externalSalesMovement.findMany({
-      where: { tenantId, runId, status: { in: ["NEW", "FAILED"] }, kind: "SALE" },
+      where: { tenantId, runId, status: { in: ["NEW", "FAILED", "DUPLICATE"] }, kind: "SALE" },
       orderBy: { occurredAt: "asc" },
     });
     const counts = run.counts as Record<string, number>;
@@ -65,6 +65,10 @@ export class SalesImportConfirmationService {
         integrationId: run.integrationId,
         externalSaleId: movement.externalSaleId,
       };
+      if (movement.status === "DUPLICATE") {
+        await this.reconcileExistingOrder(identityKey, sale);
+        continue;
+      }
       if (!(await this.identities.claim(identityKey, run.channel))) {
         duplicate += 1;
         await this.prisma.externalSalesMovement.update({
@@ -107,6 +111,45 @@ export class SalesImportConfirmationService {
         status: failed > 0 ? "COMPLETED_WITH_ERRORS" : "COMPLETED",
         counts: { ...counts, imported, failed, duplicate },
         completedAt: new Date(),
+      },
+    });
+  }
+
+  private async reconcileExistingOrder(
+    identityKey: {
+      tenantId: string;
+      provider: "PAGBANK" | "MERCADO_PAGO";
+      environment: "TEST" | "PRODUCTION";
+      integrationId: string;
+      externalSaleId: string;
+    },
+    sale: NormalizedHistoricalSale
+  ): Promise<void> {
+    const identity = await this.prisma.externalSaleIdentity.findUnique({
+      where: {
+        tenantId_provider_environment_externalSaleId: {
+          tenantId: identityKey.tenantId,
+          provider: identityKey.provider,
+          environment: identityKey.environment,
+          externalSaleId: identityKey.externalSaleId,
+        },
+      },
+      select: { orderId: true },
+    });
+    if (!identity?.orderId) return;
+    const releaseDate = sale.expectedReleaseAt ? new Date(sale.expectedReleaseAt) : null;
+    await this.prisma.order.update({
+      where: { id: identity.orderId },
+      data: {
+        paymentGrossAmount: sale.grossAmount,
+        ...(sale.feeAmount === undefined ? {} : { paymentFeeAmount: sale.feeAmount }),
+        ...(sale.netAmount === undefined ? {} : { paymentNetAmount: sale.netAmount }),
+        ...(releaseDate && Number.isFinite(releaseDate.getTime())
+          ? {
+              paymentReleaseExpectedAt: releaseDate,
+              paymentReleaseSource: PaymentReleaseSource.EXTRACT,
+            }
+          : {}),
       },
     });
   }

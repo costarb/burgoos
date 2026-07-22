@@ -42,4 +42,12 @@ describe("mapPagBankMovement", () => {
       expect(result.rejectionCode).toBeUndefined();
     }
   );
+
+  it("maps the provider release date for financial availability", () => {
+    const result = mapPagBankMovement({
+      ...PAGBANK_SALE_FIXTURES.debit,
+      data_prevista_pagamento: "2026-07-21",
+    });
+    expect(result.sale?.expectedReleaseAt).toBe("2026-07-21");
+  });
 });

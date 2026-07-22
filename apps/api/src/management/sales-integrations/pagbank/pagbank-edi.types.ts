@@ -11,6 +11,7 @@ export interface PagBankEdiMovement {
   codigo_venda?: string;
   valor_total_transacao?: number;
   valor_liquido_transacao?: number;
+  data_prevista_pagamento?: string;
   taxa_intermediacao?: number;
   tarifa_intermediacao?: number;
   meio_pagamento?: string | number;
