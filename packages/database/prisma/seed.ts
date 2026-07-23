@@ -77,6 +77,7 @@ async function main(): Promise<void> {
     create: {
       name: "Loja Piloto",
       slug: "piloto",
+      publicDomain: null,
       phone: "5500000000000",
       active: true,
       isOpen: true,
@@ -115,6 +116,7 @@ async function main(): Promise<void> {
     create: {
       name: "Filial Teste",
       slug: "filial-teste",
+      publicDomain: null,
       phone: "5500000000001",
       active: true,
       isOpen: false,

@@ -23,6 +23,7 @@ async function updateStoreAction(storeId: string, formData: FormData) {
   await updatePlatformStore(token, storeId, {
     name: String(formData.get("name") ?? ""),
     slug: String(formData.get("slug") ?? ""),
+    publicDomain: String(formData.get("publicDomain") ?? ""),
     phone: String(formData.get("phone") ?? ""),
     address: {
       street: String(formData.get("street") ?? ""),
@@ -74,6 +75,11 @@ export default async function StoreDetailPage({ params }: StoreDetailPageProps) 
         </a>
         <h1 className="mt-4 text-3xl font-semibold">{store.name}</h1>
         <p className="mt-2 text-slate-600">/{store.slug}</p>
+        {store.publicMenuUrl ? (
+          <a className="mt-1 block text-sm font-semibold text-blue-700" href={store.publicMenuUrl}>
+            {store.publicMenuUrl}
+          </a>
+        ) : null}
         <p className="mt-1 text-sm text-slate-600">
           {[address.city, address.state].filter(Boolean).join(" / ") || store.phone}
         </p>
@@ -127,6 +133,15 @@ export default async function StoreDetailPage({ params }: StoreDetailPageProps) 
               />
             </label>
           </div>
+          <label className="grid gap-1 text-sm font-medium">
+            Dominio publico
+            <input
+              className="rounded-md border border-slate-300 px-3 py-2"
+              defaultValue={store.publicDomain ?? ""}
+              name="publicDomain"
+              placeholder="dogaodomounjaro.com.br"
+            />
+          </label>
           <section className="grid gap-4 border-t border-slate-100 pt-4">
             <h3 className="font-semibold">Endereco publico</h3>
             <div className="grid gap-4 md:grid-cols-[2fr_120px_1fr]">

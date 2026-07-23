@@ -2,6 +2,6 @@
 
 For additional context about technologies to be used, project structure,
 shell commands, and other important information, read
-`specs/014-mercado-pago-oauth/plan.md`
+`specs/015-custom-domain-menu/plan.md`
 
 <!-- SPECKIT END -->

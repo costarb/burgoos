@@ -2,6 +2,7 @@ import { BadRequestException, Inject, Injectable, Logger, NotFoundException } fr
 import { DeliveryProvider, Prisma } from "@prisma/client";
 import { StoreBrandingService } from "../customer-experience/branding/store-branding.service";
 import { PrismaService } from "../platform/database/prisma.service";
+import { normalizeStoreDomain } from "../platform/stores/store-domain";
 import { CreateCategoryDto } from "./dto/create-category.dto";
 import { CreateProductDto } from "./dto/create-product.dto";
 import { UpdateCategoryDto } from "./dto/update-category.dto";
@@ -347,6 +348,31 @@ export class CatalogService {
         })),
       })),
     };
+  }
+
+  async getPublicMenuByDomain(
+    requestedDomain: string,
+    assetBaseUrl: string | null = null
+  ): Promise<PublicMenuResponse> {
+    let publicDomain: string;
+    try {
+      publicDomain = normalizeStoreDomain(requestedDomain);
+    } catch {
+      this.logger.warn("Public menu domain resolution rejected invalid domain");
+      throw new NotFoundException("Tenant not found");
+    }
+
+    const tenant = await this.prisma.tenant.findFirst({
+      where: { publicDomain, active: true },
+      select: { slug: true },
+    });
+
+    if (!tenant) {
+      this.logger.warn(`Public menu domain resolution failed domain=${publicDomain}`);
+      throw new NotFoundException("Tenant not found");
+    }
+
+    return this.getPublicMenu(tenant.slug, assetBaseUrl);
   }
 
   async getPublicProductImage(slug: string, productId: string): Promise<PublicImageAsset> {

@@ -6,6 +6,7 @@ import {
   IsEmail,
   IsOptional,
   IsString,
+  MaxLength,
   MinLength,
   ValidateNested,
 } from "class-validator";
@@ -77,6 +78,11 @@ export class CreateStoreDto {
   @IsString()
   slug!: string;
 
+  @IsOptional()
+  @IsString()
+  @MaxLength(253)
+  publicDomain?: string;
+
   @IsString()
   phone!: string;
 
@@ -119,6 +125,11 @@ export class UpdateStoreDto {
   @IsOptional()
   @IsString()
   slug?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(253)
+  publicDomain?: string | null;
 
   @IsOptional()
   @IsString()

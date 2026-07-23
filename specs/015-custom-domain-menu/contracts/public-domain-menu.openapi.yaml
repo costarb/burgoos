@@ -1,0 +1,90 @@
+openapi: 3.0.3
+info:
+  title: Public Domain Menu Contract
+  version: 1.0.0
+paths:
+  /api/public/domains/{domain}/menu:
+    get:
+      summary: Resolve an active store menu by its public domain
+      parameters:
+        - name: domain
+          in: path
+          required: true
+          schema:
+            type: string
+            maxLength: 253
+          example: dogaodomounjaro.com.br
+      responses:
+        "200":
+          description: Existing public menu contract for the resolved store
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PublicMenu"
+        "400":
+          description: Malformed domain
+        "404":
+          description: Domain is not associated with an active store
+          content:
+            application/json:
+              example:
+                statusCode: 404
+                message: Tenant not found
+  /api/platform/stores/{storeId}:
+    patch:
+      summary: Update store data including its optional public domain
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: storeId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                publicDomain:
+                  type: string
+                  nullable: true
+                  maxLength: 253
+                  example: dogaodomounjaro.com.br
+      responses:
+        "200":
+          description: Updated store detail including publicDomain and publicMenuUrl
+        "400":
+          description: Invalid domain format
+        "404":
+          description: Store not found
+        "409":
+          description: Canonical domain is already assigned to another store
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  schemas:
+    PublicMenu:
+      type: object
+      required: [tenant, categories]
+      properties:
+        tenant:
+          type: object
+          required: [name, slug, isOpen]
+          properties:
+            name:
+              type: string
+            slug:
+              type: string
+            isOpen:
+              type: boolean
+        categories:
+          type: array
+          items:
+            type: object

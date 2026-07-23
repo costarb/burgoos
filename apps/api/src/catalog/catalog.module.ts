@@ -5,10 +5,16 @@ import { CatalogService } from "./catalog.service";
 import { AdminCategoryController } from "./controllers/admin-category.controller";
 import { AdminProductController } from "./controllers/admin-product.controller";
 import { PublicMenuController } from "./controllers/public-menu.controller";
+import { PublicDomainMenuController } from "./controllers/public-domain-menu.controller";
 
 @Module({
   imports: [AuthModule, BrandingModule],
-  controllers: [AdminCategoryController, AdminProductController, PublicMenuController],
+  controllers: [
+    AdminCategoryController,
+    AdminProductController,
+    PublicMenuController,
+    PublicDomainMenuController,
+  ],
   providers: [CatalogService],
   exports: [CatalogService],
 })

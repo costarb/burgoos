@@ -15,6 +15,7 @@ describe("store onboarding", () => {
     id: "11111111-1111-4111-8111-111111111111",
     name: "Loja Centro",
     slug: "loja-centro",
+    publicDomain: null as string | null,
     phone: "5511999999999",
     active: true,
     isOpen: false,
@@ -112,15 +113,20 @@ describe("store onboarding", () => {
         };
       }
     );
-    prismaMock.tenant.findUnique.mockImplementation(({ where }: { where: { slug?: string } }) =>
-      where.slug === tenant.slug ? tenant : null
+    prismaMock.tenant.findUnique.mockImplementation(
+      ({ where }: { where: { slug?: string; publicDomain?: string; id?: string } }) => {
+        if (where.publicDomain) return where.publicDomain === tenant.publicDomain ? tenant : null;
+        if (where.id) return where.id === tenant.id ? tenant : null;
+        return where.slug === tenant.slug ? tenant : null;
+      }
     );
     prismaMock.tenant.create.mockResolvedValue(tenant);
-    prismaMock.tenant.update.mockResolvedValue({
+    prismaMock.tenant.update.mockImplementation(({ data }: { data: Record<string, unknown> }) => ({
       ...tenant,
-      active: false,
-      deactivatedAt: new Date(),
-    });
+      ...data,
+      users: [owner],
+      visualConfigurations: [],
+    }));
 
     prismaMock.user.findUnique.mockImplementation(({ where }: { where: { email: string } }) => {
       if (where.email === owner.email) {
@@ -223,6 +229,38 @@ describe("store onboarding", () => {
         },
       })
       .expect(400);
+  });
+
+  it("normalizes, returns and removes the public domain", async () => {
+    const configured = await request(app.getHttpServer())
+      .patch(`/api/platform/stores/${tenant.id}`)
+      .set("Authorization", `Bearer ${platformToken}`)
+      .send({ publicDomain: "WWW.Loja-Centro.com.br." })
+      .expect(200);
+
+    expect(prismaMock.tenant.update).toHaveBeenCalledWith(
+      expect.objectContaining({ data: expect.objectContaining({ publicDomain: "loja-centro.com.br" }) })
+    );
+    expect(configured.body).toMatchObject({
+      publicDomain: "loja-centro.com.br",
+      publicMenuUrl: "https://loja-centro.com.br/cardapio",
+    });
+
+    await request(app.getHttpServer())
+      .patch(`/api/platform/stores/${tenant.id}`)
+      .set("Authorization", `Bearer ${platformToken}`)
+      .send({ publicDomain: "" })
+      .expect(200);
+    expect(prismaMock.tenant.update).toHaveBeenLastCalledWith(
+      expect.objectContaining({ data: expect.objectContaining({ publicDomain: null }) })
+    );
+
+    prismaMock.tenant.findUnique.mockResolvedValueOnce({ ...tenant, id: "other-store" });
+    await request(app.getHttpServer())
+      .patch(`/api/platform/stores/${tenant.id}`)
+      .set("Authorization", `Bearer ${platformToken}`)
+      .send({ publicDomain: "dominio-em-uso.example.com" })
+      .expect(409);
   });
 
   it("allows owner login scoped to the created tenant", async () => {
