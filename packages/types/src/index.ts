@@ -197,6 +197,7 @@ export interface StoreSocialLinks {
 export interface CreateStoreInput {
   name: string;
   slug: string;
+  publicDomain?: string;
   phone: string;
   address?: StoreAddress;
   socialLinks?: StoreSocialLinks;
@@ -210,6 +211,7 @@ export interface CreateStoreInput {
 export interface UpdateStoreInput {
   name?: string;
   slug?: string;
+  publicDomain?: string | null;
   phone?: string;
   address?: StoreAddress;
   socialLinks?: StoreSocialLinks;
@@ -234,6 +236,8 @@ export interface StoreSummary {
   id: string;
   name: string;
   slug: string;
+  publicDomain?: string | null;
+  publicMenuUrl?: string | null;
   phone?: string;
   city?: string | null;
   state?: string | null;

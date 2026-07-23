@@ -319,6 +319,29 @@ export async function getPublicMenu(slug: string): Promise<PublicMenu | null> {
   return normalizedMenu;
 }
 
+export async function getPublicMenuByDomain(domain: string): Promise<PublicMenu | null> {
+  const normalizedDomain = domain.trim().toLowerCase().replace(/\.$/, "").replace(/^www\./, "");
+  const cacheKey = `domain:${normalizedDomain}`;
+  const path = `/api/public/domains/${encodeURIComponent(normalizedDomain)}/menu`;
+  const cached = readPublicMenuCache(cacheKey);
+
+  if (cached?.fresh) return cached.menu;
+
+  const response = await fetchPublicMenu(path);
+  if (response.status === 404) {
+    publicMenuCache.delete(cacheKey);
+    return null;
+  }
+  if (!response.ok) {
+    const body = await readErrorBody(response);
+    throw new Error(`[${response.status}] ${path}: ${body || "Failed to load public menu"}`);
+  }
+
+  const menu = normalizePublicMenuAssets((await response.json()) as PublicMenu);
+  publicMenuCache.set(cacheKey, { menu, updatedAt: Date.now() });
+  return menu;
+}
+
 async function fetchPublicMenu(path: string): Promise<Response> {
   let lastError: unknown;
 

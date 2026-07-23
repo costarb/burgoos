@@ -425,6 +425,7 @@ model Tenant {
   id                          String                            @id @default(uuid()) @db.Uuid
   name                        String
   slug                        String                            @unique
+  publicDomain                String?                           @unique @map("public_domain")
   phone                       String
   active                      Boolean                           @default(true)
   isOpen                      Boolean                           @default(false) @map("is_open")

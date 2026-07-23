@@ -11,12 +11,15 @@ import { PrismaService } from "../database/prisma.service";
 import { CreateStoreDto, UpdateStoreDto } from "./dto/store-onboarding.dto";
 import { calculateLaunchReadiness, LaunchReadiness } from "./launch-readiness";
 import { assertValidStoreSlug } from "./store-slug";
+import { normalizeStoreDomain } from "./store-domain";
 import { logStoreAuditEvent } from "./store-audit";
 
 interface StoreSummary {
   id: string;
   name: string;
   slug: string;
+  publicDomain?: string | null;
+  publicMenuUrl?: string | null;
   phone?: string;
   city?: string | null;
   state?: string | null;
@@ -84,6 +87,7 @@ export class PlatformStoreService {
           ? [
               { name: { contains: filters.search, mode: "insensitive" } },
               { slug: { contains: filters.search, mode: "insensitive" } },
+              { publicDomain: { contains: filters.search, mode: "insensitive" } },
               { phone: { contains: filters.search, mode: "insensitive" } },
             ]
           : undefined,
@@ -99,6 +103,8 @@ export class PlatformStoreService {
         id: store.id,
         name: store.name,
         slug: store.slug,
+        publicDomain: store.publicDomain,
+        publicMenuUrl: this.publicMenuUrl(store.publicDomain),
         phone: store.phone,
         city: profile.address?.city ?? null,
         state: profile.address?.state ?? null,
@@ -112,14 +118,17 @@ export class PlatformStoreService {
 
   async create(dto: CreateStoreDto, platformUserId: string): Promise<StoreSetupResult> {
     const slug = this.toValidSlug(dto.slug);
+    const publicDomain = dto.publicDomain ? this.toValidDomain(dto.publicDomain) : null;
 
     await this.assertSlugAvailable(slug);
+    if (publicDomain) await this.assertDomainAvailable(publicDomain);
     await this.assertOwnerEmailAvailable(dto.owner.email);
 
     const store = await this.prisma.tenant.create({
       data: {
         name: dto.name,
         slug,
+        publicDomain,
         phone: dto.phone,
         active: dto.active ?? true,
         isOpen: this.resolveIsOpen(dto.openMode, dto.isOpen ?? false),
@@ -147,7 +156,7 @@ export class PlatformStoreService {
       action: "STORE_CREATED",
       tenantId: store.id,
       platformUserId,
-      metadata: { slug },
+      metadata: { slug, publicDomain },
     });
 
     return {
@@ -155,6 +164,8 @@ export class PlatformStoreService {
         id: store.id,
         name: store.name,
         slug: store.slug,
+        publicDomain: store.publicDomain,
+        publicMenuUrl: this.publicMenuUrl(store.publicDomain),
         phone: store.phone,
         active: store.active,
         isOpen: store.isOpen,
@@ -229,6 +240,14 @@ export class PlatformStoreService {
       data.slug = slug;
     }
 
+    if (dto.publicDomain !== undefined) {
+      const publicDomain = dto.publicDomain?.trim()
+        ? this.toValidDomain(dto.publicDomain)
+        : null;
+      if (publicDomain) await this.assertDomainAvailable(publicDomain, storeId);
+      data.publicDomain = publicDomain;
+    }
+
     const store = await this.prisma.tenant.update({
       where: { id: storeId },
       data,
@@ -271,6 +290,8 @@ export class PlatformStoreService {
       id: store.id,
       name: store.name,
       slug: store.slug,
+      publicDomain: store.publicDomain,
+      publicMenuUrl: this.publicMenuUrl(store.publicDomain),
       phone: store.phone,
       city: profile.address?.city ?? null,
       state: profile.address?.state ?? null,
@@ -307,6 +328,25 @@ export class PlatformStoreService {
     if (existing && existing.id !== currentStoreId) {
       throw new ConflictException("Slug ja esta em uso");
     }
+  }
+
+  private toValidDomain(value: string): string {
+    try {
+      return normalizeStoreDomain(value);
+    } catch (error) {
+      throw new BadRequestException(error instanceof Error ? error.message : "Dominio invalido");
+    }
+  }
+
+  private async assertDomainAvailable(domain: string, currentStoreId?: string): Promise<void> {
+    const existing = await this.prisma.tenant.findUnique({ where: { publicDomain: domain } });
+    if (existing && existing.id !== currentStoreId) {
+      throw new ConflictException("Dominio ja esta em uso");
+    }
+  }
+
+  private publicMenuUrl(domain: string | null): string | null {
+    return domain ? `https://${domain}/cardapio` : null;
   }
 
   private async assertOwnerEmailAvailable(email: string): Promise<void> {

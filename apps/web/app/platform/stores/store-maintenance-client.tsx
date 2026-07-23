@@ -41,6 +41,7 @@ const emptyFilters: StoreFilters = {
 const emptyForm: StoreFormState = {
   name: "",
   slug: "",
+  publicDomain: "",
   phone: "",
   active: true,
   openMode: "FORCE_CLOSED",
@@ -265,7 +266,10 @@ export function StoreMaintenanceClient({
                   {[store.city, store.state].filter(Boolean).join(" / ") || "Sem cidade"}
                 </p>
               </div>
-              <p className="text-sm text-slate-600">/{store.slug}</p>
+              <div>
+                <p className="text-sm text-slate-600">/{store.slug}</p>
+                <p className="text-xs text-slate-500">{store.publicDomain ?? "Sem dominio"}</p>
+              </div>
               <p className="text-sm text-slate-600">{store.phone ?? "-"}</p>
               <StoreBadge tone={store.active ? "success" : "muted"}>
                 {store.active ? "Ativa" : "Inativa"}
@@ -362,6 +366,7 @@ function StoreEditorDialog({
     const basePayload = {
       name: form.name,
       slug: form.slug,
+      publicDomain: form.publicDomain.trim(),
       phone: form.phone,
       address: cleanAddress(form.address),
       socialLinks: cleanSocialLinks(form.socialLinks),
@@ -438,6 +443,28 @@ function StoreEditorDialog({
               required
               value={form.phone}
             />
+          </section>
+
+          <section className="grid gap-2 border-t border-slate-100 pt-4">
+            <TextField
+              label="Dominio publico"
+              onChange={(value) => setForm((current) => ({ ...current, publicDomain: value }))}
+              placeholder="dogaodomounjaro.com.br"
+              value={form.publicDomain}
+            />
+            <p className="text-xs text-slate-500">
+              Informe apenas o dominio. O cardapio ficara disponivel em /cardapio.
+            </p>
+            {form.publicDomain.trim() ? (
+              <a
+                className="text-sm font-semibold text-blue-700"
+                href={`https://${form.publicDomain.trim().replace(/^www\./i, "")}/cardapio`}
+                rel="noreferrer"
+                target="_blank"
+              >
+                Abrir https://{form.publicDomain.trim().replace(/^www\./i, "")}/cardapio
+              </a>
+            ) : null}
           </section>
 
           <section className="grid gap-4 border-t border-slate-100 pt-4">
@@ -595,6 +622,7 @@ function StoreEditorDialog({
 interface StoreFormState {
   name: string;
   slug: string;
+  publicDomain: string;
   phone: string;
   active: boolean;
   openMode: StoreOpenMode;
@@ -618,6 +646,7 @@ function toFormState(store?: StoreDetail): StoreFormState {
     ...emptyForm,
     name: store.name,
     slug: store.slug,
+    publicDomain: store.publicDomain ?? "",
     phone: store.phone,
     active: store.active,
     openMode: store.openMode,

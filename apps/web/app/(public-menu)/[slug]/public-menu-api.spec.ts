@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { getPublicMenu } from "../../../lib/api";
+import { getPublicMenu, getPublicMenuByDomain } from "../../../lib/api";
 
 const publicMenuPayload = {
   tenant: {
@@ -84,5 +84,20 @@ describe("getPublicMenu", () => {
     await expect(getPublicMenu("piloto-error")).rejects.toThrow(
       "[401] /api/public/tenants/piloto-error/menu"
     );
+  });
+
+  it("keeps domain caches isolated and canonicalizes www", async () => {
+    const fetchMock = vi.fn(async (url: string) =>
+      Response.json({
+        ...publicMenuPayload,
+        tenant: { ...publicMenuPayload.tenant, slug: url.includes("one.example") ? "one" : "two" },
+      })
+    );
+    vi.stubGlobal("fetch", fetchMock);
+
+    await expect(getPublicMenuByDomain("www.one.example.com")).resolves.toMatchObject({ tenant: { slug: "one" } });
+    await expect(getPublicMenuByDomain("two.example.com")).resolves.toMatchObject({ tenant: { slug: "two" } });
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(String(fetchMock.mock.calls[0]?.[0])).toContain("/api/public/domains/one.example.com/menu");
   });
 });

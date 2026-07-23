@@ -1,4 +1,12 @@
-const RESERVED_STORE_SLUGS = new Set(["admin", "api", "platform", "login", "pedido", "checkout"]);
+const RESERVED_STORE_SLUGS = new Set([
+  "admin",
+  "api",
+  "platform",
+  "login",
+  "pedido",
+  "checkout",
+  "cardapio",
+]);
 
 export function normalizeStoreSlug(value: string): string {
   return value
