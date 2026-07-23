@@ -19,11 +19,12 @@ interface CartLine {
 
 interface PublicMenuClientProps {
   menu: PublicMenu;
+  navigationBase?: string;
 }
 
 const cartStorageKey = "burgoos:cart";
 
-export function PublicMenuClient({ menu }: PublicMenuClientProps) {
+export function PublicMenuClient({ menu, navigationBase }: PublicMenuClientProps) {
   const branding = menu.tenant.branding;
   const primaryColor = branding?.primaryColor ?? "#C92A2A";
   const accentColor = branding?.accentColor ?? "#F59F00";
@@ -35,6 +36,7 @@ export function PublicMenuClient({ menu }: PublicMenuClientProps) {
   const socialLinks = publicSocialLinks(menu.tenant.socialLinks);
   const canOrder = menu.tenant.isOpen && orderingEnabled;
   const router = useRouter();
+  const menuBase = navigationBase ?? `/${menu.tenant.slug}`;
   const [cart, setCart] = useState<Record<string, CartLine>>({});
   const [customerName, setCustomerName] = useState("");
   const [customerPhone, setCustomerPhone] = useState("");
@@ -147,11 +149,7 @@ export function PublicMenuClient({ menu }: PublicMenuClientProps) {
 
       setCreatedOrder(order);
       setCart({});
-      router.push(
-        `/${menu.tenant.slug}/pedido/${order.id}?total=${order.total}&whatsappUrl=${encodeURIComponent(
-          order.whatsappUrl
-        )}`
-      );
+      router.push(orderConfirmationPath(menuBase, order));
     } catch (caughtError) {
       setError(caughtError instanceof Error ? caughtError.message : "Pedido recusado.");
     } finally {
@@ -417,6 +415,10 @@ export function PublicMenuClient({ menu }: PublicMenuClientProps) {
       </footer>
     </main>
   );
+}
+
+export function orderConfirmationPath(base: string, order: CreatedOrder): string {
+  return `${base}/pedido/${order.id}?total=${order.total}&whatsappUrl=${encodeURIComponent(order.whatsappUrl)}`;
 }
 
 function formatAddress(address: PublicMenu["tenant"]["address"]): string | null {
