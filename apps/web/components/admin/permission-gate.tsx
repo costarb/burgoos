@@ -12,7 +12,11 @@ interface PermissionGateProps {
 
 export function PermissionGate({ permission, children, fallback }: PermissionGateProps) {
   const session = readAuthSession();
-  const allowed = session?.user.isMaster || session?.permissions.includes(permission);
+  const allowed =
+    session?.user.isMaster ||
+    session?.user.role === "OWNER" ||
+    session?.user.role === "ADMIN" ||
+    session?.permissions.includes(permission);
 
   if (!allowed) {
     return fallback ?? <AccessDenied />;
