@@ -1,8 +1,9 @@
 import { Injectable } from "@nestjs/common";
-import { Prisma } from "@prisma/client";
+import { OrderSource, Prisma } from "@prisma/client";
 import { PrismaService } from "../platform/database/prisma.service";
 import { OrdersGateway } from "./orders.gateway";
 import { ExternalOrderDraft, ExternalOrderItemDraft } from "./external-order.types";
+import { nextOrderPublicCode } from "./order-public-code";
 
 @Injectable()
 export class ExternalOrderIngestionService {
@@ -39,10 +40,13 @@ export class ExternalOrderIngestionService {
     const products = await Promise.all(
       input.order.items.map((item) => this.ensureExternalProduct(input.tenantId, item))
     );
+    const publicCode = await nextOrderPublicCode(this.prisma, input.tenantId);
 
     const createdOrder = await this.prisma.order.create({
       data: {
         tenantId: input.tenantId,
+        source: OrderSource.IFOOD,
+        publicCode,
         status: "PENDING",
         total: new Prisma.Decimal(input.order.total),
         customerName: input.order.customerName,
@@ -86,6 +90,8 @@ export class ExternalOrderIngestionService {
 
     this.ordersGateway.emitOrderCreated(input.tenantId, {
       id: createdOrder.id,
+      source: createdOrder.source,
+      publicCode: createdOrder.publicCode,
       status: createdOrder.status,
       total: createdOrder.total.toFixed(2),
       customerName: createdOrder.customerName,

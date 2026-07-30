@@ -6,6 +6,8 @@ import { AdminCategoryController } from "./controllers/admin-category.controller
 import { AdminProductController } from "./controllers/admin-product.controller";
 import { PublicMenuController } from "./controllers/public-menu.controller";
 import { PublicDomainMenuController } from "./controllers/public-domain-menu.controller";
+import { AdminProductComplementController } from "./controllers/admin-product-complement.controller";
+import { ProductComplementService } from "./product-complement.service";
 
 @Module({
   imports: [AuthModule, BrandingModule],
@@ -14,8 +16,9 @@ import { PublicDomainMenuController } from "./controllers/public-domain-menu.con
     AdminProductController,
     PublicMenuController,
     PublicDomainMenuController,
+    AdminProductComplementController,
   ],
-  providers: [CatalogService],
-  exports: [CatalogService],
+  providers: [CatalogService, ProductComplementService],
+  exports: [CatalogService, ProductComplementService],
 })
 export class CatalogModule {}

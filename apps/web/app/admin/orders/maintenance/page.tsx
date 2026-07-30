@@ -14,6 +14,7 @@ interface MaintenancePageProps {
 const statusLabels: Record<OrderStatus, string> = {
   PENDING: "Novo",
   PREPARING: "Preparando",
+  READY: "Pronto",
   SHIPPED: "Saiu",
   DELIVERED: "Entregue",
   CANCELLED: "Cancelado",

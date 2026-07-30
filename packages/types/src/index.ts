@@ -1,8 +1,16 @@
-export type OrderStatus = "PENDING" | "PREPARING" | "SHIPPED" | "DELIVERED" | "CANCELLED";
+export type OrderStatus =
+  | "PENDING"
+  | "PREPARING"
+  | "READY"
+  | "SHIPPED"
+  | "DELIVERED"
+  | "CANCELLED";
 
 export * from "./delivery-integrations";
 export * from "./exports";
 export * from "./notifications";
+export * from "./payments";
+export * from "./pos";
 
 export type AccessUserStatus = "INVITED" | "ACTIVE" | "INACTIVE" | "LOCKED";
 export type AccessProfileStatus = "ACTIVE" | "INACTIVE";
@@ -379,6 +387,17 @@ export interface AdminOrderItem {
   quantity: number;
   unitPrice: string;
   total: string;
+  notes?: string | null;
+  modifications?: AdminOrderItemModification[];
+}
+
+export interface AdminOrderItemModification {
+  id: string;
+  type: "REMOVE_INGREDIENT" | "ADD_COMPLEMENT";
+  nameSnapshot: string;
+  quantity: number;
+  unitPriceDelta: string;
+  totalPriceDelta: string;
 }
 
 export interface AdminOrderStockWarning {
@@ -403,6 +422,9 @@ export interface PlatformSyncAttemptSummary {
 
 export interface AdminOrder {
   id: string;
+  source?: "LEGACY" | "COUNTER" | "PUBLIC_MENU" | "IFOOD" | "IMPORT" | "API";
+  publicCode?: string | null;
+  version?: number;
   status: OrderStatus;
   total: string;
   customerName: string;

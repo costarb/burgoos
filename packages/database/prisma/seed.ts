@@ -11,6 +11,10 @@ import {
   UserRole,
 } from "@prisma/client";
 import { hash } from "bcryptjs";
+import {
+  ATTENDANT_PERMISSION_KEYS,
+  ATTENDANT_PROFILE_NAME,
+} from "../../../apps/api/src/management/access/profiles/attendant-profile";
 
 const prisma = new PrismaClient();
 
@@ -226,6 +230,110 @@ async function main(): Promise<void> {
       description: "Configurar, validar, ativar e pausar integracoes de delivery",
       sensitive: true,
     },
+    {
+      key: "pos.capture",
+      area: "Operacao",
+      screen: "Capturar pedido",
+      action: AccessPermissionAction.CREATE,
+      description: "Criar pedidos presenciais no balcao",
+      sensitive: false,
+    },
+    {
+      key: "pos.override-price",
+      area: "Operacao",
+      screen: "Capturar pedido",
+      action: AccessPermissionAction.APPROVE,
+      description: "Alterar o preco calculado de itens mediante justificativa",
+      sensitive: true,
+    },
+    {
+      key: "tabs.view",
+      area: "Operacao",
+      screen: "Comandas",
+      action: AccessPermissionAction.VIEW,
+      description: "Visualizar comandas e seus saldos",
+      sensitive: false,
+    },
+    {
+      key: "tabs.manage",
+      area: "Operacao",
+      screen: "Comandas",
+      action: AccessPermissionAction.MANAGE,
+      description: "Abrir, fechar, reabrir e transferir comandas",
+      sensitive: false,
+    },
+    {
+      key: "kds.view",
+      area: "Operacao",
+      screen: "KDS",
+      action: AccessPermissionAction.VIEW,
+      description: "Visualizar a fila de producao",
+      sensitive: false,
+    },
+    {
+      key: "kds.manage",
+      area: "Operacao",
+      screen: "KDS",
+      action: AccessPermissionAction.MANAGE,
+      description: "Atualizar o andamento de producao dos pedidos",
+      sensitive: false,
+    },
+    {
+      key: "payments.charge",
+      area: "Pagamentos",
+      screen: "Cobranca",
+      action: AccessPermissionAction.CREATE,
+      description: "Iniciar cobrancas em instituicoes habilitadas",
+      sensitive: true,
+    },
+    {
+      key: "payments.confirm-manual",
+      area: "Pagamentos",
+      screen: "Cobranca",
+      action: AccessPermissionAction.APPROVE,
+      description: "Confirmar pagamentos manuais",
+      sensitive: true,
+    },
+    {
+      key: "payments.cancel",
+      area: "Pagamentos",
+      screen: "Cobranca",
+      action: AccessPermissionAction.DELETE,
+      description: "Cancelar tentativas ou confirmacoes elegiveis",
+      sensitive: true,
+    },
+    {
+      key: "payments.refund",
+      area: "Pagamentos",
+      screen: "Cobranca",
+      action: AccessPermissionAction.APPROVE,
+      description: "Solicitar estorno de pagamentos",
+      sensitive: true,
+    },
+    {
+      key: "payments.reconcile",
+      area: "Pagamentos",
+      screen: "Excecoes",
+      action: AccessPermissionAction.MANAGE,
+      description: "Reconciliar resultados inconclusivos ou divergentes",
+      sensitive: true,
+    },
+    {
+      key: "payment-terminals.manage",
+      area: "Pagamentos",
+      screen: "Maquininhas",
+      action: AccessPermissionAction.MANAGE,
+      description: "Sincronizar e habilitar maquininhas da loja",
+      sensitive: true,
+    },
+    {
+      key: "payment-exceptions.view",
+      area: "Pagamentos",
+      screen: "Excecoes",
+      action: AccessPermissionAction.VIEW,
+      description: "Visualizar excecoes e divergencias de pagamento",
+      sensitive: true,
+    },
   ];
 
   for (const permission of accessPermissions) {
@@ -321,6 +429,14 @@ async function main(): Promise<void> {
     description: "Acompanha e atualiza a operacao diaria.",
     scope: AccessProfileScope.STORE,
     permissionKeys: ["orders.view", "orders.manage"],
+  });
+
+  await ensureProfile({
+    tenantId: tenant.id,
+    name: ATTENDANT_PROFILE_NAME,
+    description: "Captura pedidos, opera comandas e KDS e realiza cobrancas autorizadas.",
+    scope: AccessProfileScope.STORE,
+    permissionKeys: [...ATTENDANT_PERMISSION_KEYS],
   });
 
   const masterUser = await prisma.user.findUniqueOrThrow({
