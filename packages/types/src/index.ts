@@ -13,6 +13,7 @@ export * from "./payments";
 export * from "./pos";
 
 export type AccessUserStatus = "INVITED" | "ACTIVE" | "INACTIVE" | "LOCKED";
+export type StoreUserRole = "OWNER" | "ADMIN" | "OPERATOR";
 export type AccessProfileStatus = "ACTIVE" | "INACTIVE";
 export type AccessProfileScope = "GLOBAL" | "STORE";
 export type AccessPermissionAction = "VIEW" | "CREATE" | "UPDATE" | "DELETE" | "APPROVE" | "MANAGE";
@@ -73,6 +74,7 @@ export interface AccessUserSummary {
   name: string;
   email: string;
   status: AccessUserStatus;
+  role?: StoreUserRole;
   isMaster: boolean;
   isPlatformAdmin?: boolean;
   platformRole?: PlatformUserRole;

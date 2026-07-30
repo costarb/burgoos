@@ -308,7 +308,12 @@ export function findNavigationItem(pathname: string): AdminNavigationItem | unde
 export function canAccessNavigationItem(
   item: AdminNavigationItem,
   session: {
-    user: { isMaster?: boolean; isPlatformAdmin?: boolean; platformRole?: string };
+    user: {
+      role?: string;
+      isMaster?: boolean;
+      isPlatformAdmin?: boolean;
+      platformRole?: string;
+    };
     permissions?: string[];
   } | null
 ): boolean {
@@ -324,7 +329,11 @@ export function canAccessNavigationItem(
     return !item.permissions?.length && !item.masterOnly;
   }
 
-  if (session.user.isMaster) {
+  if (
+    session.user.isMaster ||
+    session.user.role === "OWNER" ||
+    session.user.role === "ADMIN"
+  ) {
     return true;
   }
 
@@ -342,7 +351,12 @@ export function canAccessNavigationItem(
 export function filterNavigationBySession(
   groups: AdminNavigationGroup[],
   session: {
-    user: { isMaster?: boolean; isPlatformAdmin?: boolean; platformRole?: string };
+    user: {
+      role?: string;
+      isMaster?: boolean;
+      isPlatformAdmin?: boolean;
+      platformRole?: string;
+    };
     permissions?: string[];
   } | null
 ): AdminNavigationGroup[] {
