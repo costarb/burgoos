@@ -41,7 +41,7 @@ export function StoreSwitcher() {
     const updatedSession = (await response.json()) as AuthSession;
     writeAuthSession(updatedSession);
     setSession(updatedSession);
-    window.location.reload();
+    invalidateStoreScopedState(window, updatedSession.activeStoreId ?? null);
   }
 
   return (
@@ -60,4 +60,14 @@ export function StoreSwitcher() {
       </select>
     </label>
   );
+}
+
+export function invalidateStoreScopedState(
+  target: Pick<Window, "dispatchEvent"> & { location: { reload(): void } },
+  storeId: string | null,
+) {
+  target.dispatchEvent(new CustomEvent("burgoos:store-changed", {
+    detail: { storeId },
+  }));
+  target.location.reload();
 }

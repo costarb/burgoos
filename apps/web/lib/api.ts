@@ -83,6 +83,36 @@ import type {
   ManagementReportFilters,
   ManagementReportResponse,
 } from "@burgoos/types";
+import type {
+  CreateCounterOrderInput,
+  CreateServiceTabInput,
+  PosCatalog,
+  PosOrder,
+  KdsOrder,
+  OperationalAssignee,
+  OperationalAssignment,
+  ClaimOperationalAssignmentInput,
+  TransferOperationalAssignmentInput,
+  ServiceTabDetail,
+  ServiceTabStatus,
+  ServiceTabSummary,
+  ServiceTabTransitionInput,
+  UpdateCounterOrderInput,
+  UpdateKdsOrderStatusInput,
+  UpdateServiceTabInput,
+  PaymentTerminal,
+  PaymentCharge,
+  CreatePaymentChargeInput,
+  ManualPaymentOption,
+  ConfirmManualPaymentInput,
+  CancelManualPaymentInput,
+  PendingPaymentOrder,
+  PublicOrderQueue,
+  PaymentException,
+  PaymentExceptionDetail,
+  ResolvePaymentExceptionInput,
+  ShiftCloseSummary,
+} from "@burgoos/types";
 import { clearAuthSession, readAuthSession } from "./auth-client";
 
 const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? "http://127.0.0.1:3001";
@@ -232,6 +262,31 @@ export interface DeliveryAuthorizationCodeResponse {
   expiresIn: number | null;
 }
 
+export type ApiConflictCode = "VERSION_CONFLICT" | "IDEMPOTENCY_CONFLICT";
+
+export class AdminApiError extends Error {
+  constructor(
+    public readonly status: number,
+    public readonly path: string,
+    message: string,
+    public readonly code?: string,
+  ) {
+    super(message);
+    this.name = "AdminApiError";
+  }
+}
+
+export function isApiConflict(
+  error: unknown,
+  code?: ApiConflictCode,
+): error is AdminApiError {
+  return (
+    error instanceof AdminApiError &&
+    error.status === 409 &&
+    (code === undefined || error.code === code)
+  );
+}
+
 async function fetchAdmin<T>(token: string, path: string, init?: RequestInit): Promise<T> {
   const response = await fetch(`${apiUrl}${path}`, {
     ...init,
@@ -247,6 +302,7 @@ async function fetchAdmin<T>(token: string, path: string, init?: RequestInit): P
     const error = (await response.json().catch(() => null)) as {
       message?: string | string[];
       error?: string;
+      code?: string;
     } | null;
     const message = Array.isArray(error?.message)
       ? error.message.join("; ")
@@ -263,7 +319,7 @@ async function fetchAdmin<T>(token: string, path: string, init?: RequestInit): P
       await redirectToLogin();
     }
 
-    throw new Error(`[${response.status}] ${path}: ${message}`);
+    throw new AdminApiError(response.status, path, message, error?.code);
   }
 
   const body = await response.text();
@@ -340,6 +396,32 @@ export async function getPublicMenuByDomain(domain: string): Promise<PublicMenu 
   const menu = normalizePublicMenuAssets((await response.json()) as PublicMenu);
   publicMenuCache.set(cacheKey, { menu, updatedAt: Date.now() });
   return menu;
+}
+
+export function getPublicOrderQueue(slug: string): Promise<PublicOrderQueue | null> {
+  return fetchPublicOrderQueue(`/api/public/tenants/${encodeURIComponent(slug)}/order-queue`);
+}
+
+export function getPublicOrderQueueByDomain(
+  domain: string,
+): Promise<PublicOrderQueue | null> {
+  const normalized = domain.trim().toLowerCase().replace(/:\d+$/, "").replace(/\.$/, "")
+    .replace(/^www\./, "");
+  return fetchPublicOrderQueue(
+    `/api/public/domains/${encodeURIComponent(normalized)}/order-queue`,
+  );
+}
+
+async function fetchPublicOrderQueue(path: string): Promise<PublicOrderQueue | null> {
+  const response = await fetch(`${apiUrl}${path}`, {
+    headers: { Accept: "application/json" },
+    cache: "no-store",
+  });
+  if (response.status === 404) return null;
+  if (!response.ok) {
+    throw new Error(`[${response.status}] ${path}: Failed to load public order queue`);
+  }
+  return response.json() as Promise<PublicOrderQueue>;
 }
 
 async function fetchPublicMenu(path: string): Promise<Response> {
@@ -1021,6 +1103,285 @@ export async function getAdminCatalog(): Promise<{
     products,
     technicalSheets,
   };
+}
+
+export async function getPosCatalog(): Promise<PosCatalog> {
+  const token = await requireSessionAccessToken();
+  return fetchAdmin<PosCatalog>(token, "/api/admin/pos/catalog");
+}
+
+export async function createCounterOrder(
+  input: CreateCounterOrderInput,
+  idempotencyKey: string,
+): Promise<PosOrder> {
+  const token = await requireSessionAccessToken();
+  return fetchAdmin<PosOrder>(token, "/api/admin/pos/orders", {
+    method: "POST",
+    headers: { "Idempotency-Key": idempotencyKey },
+    body: JSON.stringify(input),
+  });
+}
+
+export async function getCounterOrder(orderId: string): Promise<PosOrder> {
+  const token = await requireSessionAccessToken();
+  return fetchAdmin<PosOrder>(token, `/api/admin/pos/orders/${orderId}`);
+}
+
+export async function getPendingPaymentOrders(): Promise<PendingPaymentOrder[]> {
+  const token = await requireSessionAccessToken();
+  return fetchAdmin<PendingPaymentOrder[]>(token, "/api/admin/pos/orders/pending-payment");
+}
+
+export async function updateCounterOrder(
+  orderId: string,
+  input: UpdateCounterOrderInput,
+): Promise<PosOrder> {
+  const token = await requireSessionAccessToken();
+  return fetchAdmin<PosOrder>(token, `/api/admin/pos/orders/${orderId}`, {
+    method: "PATCH",
+    body: JSON.stringify(input),
+  });
+}
+
+export async function getKdsOrders(): Promise<KdsOrder[]> {
+  const token = await requireSessionAccessToken();
+  return fetchAdmin<KdsOrder[]>(token, "/api/admin/kds/orders");
+}
+
+export async function updateKdsOrderStatus(
+  orderId: string,
+  input: UpdateKdsOrderStatusInput,
+): Promise<KdsOrder> {
+  const token = await requireSessionAccessToken();
+  return fetchAdmin<KdsOrder>(token, `/api/admin/kds/orders/${orderId}/status`, {
+    method: "PATCH",
+    body: JSON.stringify(input),
+  });
+}
+
+export interface OperationalAssignmentResult {
+  target: "order" | "tab";
+  targetId: string;
+  version: number;
+  assignment: OperationalAssignment;
+}
+
+export async function getOperationalAssignees(): Promise<OperationalAssignee[]> {
+  const token = await requireSessionAccessToken();
+  return fetchAdmin<OperationalAssignee[]>(token, "/api/admin/operational-assignments/assignees");
+}
+
+export async function claimOperationalAssignment(
+  target: "orders" | "tabs",
+  targetId: string,
+  input: ClaimOperationalAssignmentInput,
+): Promise<OperationalAssignmentResult> {
+  const token = await requireSessionAccessToken();
+  return fetchAdmin<OperationalAssignmentResult>(
+    token,
+    `/api/admin/operational-assignments/${target}/${targetId}/claim`,
+    { method: "POST", body: JSON.stringify(input) },
+  );
+}
+
+export async function transferOperationalAssignment(
+  target: "orders" | "tabs",
+  targetId: string,
+  input: TransferOperationalAssignmentInput,
+): Promise<OperationalAssignmentResult> {
+  const token = await requireSessionAccessToken();
+  return fetchAdmin<OperationalAssignmentResult>(
+    token,
+    `/api/admin/operational-assignments/${target}/${targetId}/transfer`,
+    { method: "POST", body: JSON.stringify(input) },
+  );
+}
+
+export async function getServiceTabs(status?: ServiceTabStatus): Promise<ServiceTabSummary[]> {
+  const token = await requireSessionAccessToken();
+  const query = status ? `?status=${status}` : "";
+  return fetchAdmin<ServiceTabSummary[]>(token, `/api/admin/tabs${query}`);
+}
+
+export async function getServiceTab(tabId: string): Promise<ServiceTabDetail> {
+  const token = await requireSessionAccessToken();
+  return fetchAdmin<ServiceTabDetail>(token, `/api/admin/tabs/${tabId}`);
+}
+
+export async function openServiceTab(
+  input: CreateServiceTabInput,
+  idempotencyKey: string,
+): Promise<ServiceTabDetail> {
+  const token = await requireSessionAccessToken();
+  return fetchAdmin<ServiceTabDetail>(token, "/api/admin/tabs", {
+    method: "POST",
+    headers: { "Idempotency-Key": idempotencyKey },
+    body: JSON.stringify(input),
+  });
+}
+
+export async function updateServiceTab(
+  tabId: string,
+  input: UpdateServiceTabInput,
+): Promise<ServiceTabDetail> {
+  const token = await requireSessionAccessToken();
+  return fetchAdmin<ServiceTabDetail>(token, `/api/admin/tabs/${tabId}`, {
+    method: "PATCH",
+    body: JSON.stringify(input),
+  });
+}
+
+export async function checkoutServiceTab(
+  tabId: string,
+  input: ServiceTabTransitionInput,
+): Promise<ServiceTabDetail> {
+  const token = await requireSessionAccessToken();
+  return fetchAdmin<ServiceTabDetail>(token, `/api/admin/tabs/${tabId}/checkout`, {
+    method: "POST",
+    body: JSON.stringify(input),
+  });
+}
+
+export async function reopenServiceTab(
+  tabId: string,
+  input: ServiceTabTransitionInput,
+): Promise<ServiceTabDetail> {
+  const token = await requireSessionAccessToken();
+  return fetchAdmin<ServiceTabDetail>(token, `/api/admin/tabs/${tabId}/reopen`, {
+    method: "POST",
+    body: JSON.stringify(input),
+  });
+}
+
+export async function getPaymentTerminals(): Promise<PaymentTerminal[]> {
+  const token = await requireSessionAccessToken();
+  return fetchAdmin<PaymentTerminal[]>(token, "/api/admin/payment-terminals");
+}
+
+export async function syncPaymentTerminals(): Promise<PaymentTerminal[]> {
+  const token = await requireSessionAccessToken();
+  return fetchAdmin<PaymentTerminal[]>(token, "/api/admin/payment-terminals/sync", {
+    method: "POST",
+  });
+}
+
+export async function setPaymentTerminalEnabled(
+  terminalId: string,
+  enabled: boolean,
+): Promise<PaymentTerminal> {
+  const token = await requireSessionAccessToken();
+  return fetchAdmin<PaymentTerminal>(token, `/api/admin/payment-terminals/${terminalId}/enabled`, {
+    method: "PATCH",
+    body: JSON.stringify({ enabled }),
+  });
+}
+
+export async function createPaymentCharge(
+  input: CreatePaymentChargeInput,
+  idempotencyKey: string,
+): Promise<PaymentCharge> {
+  const token = await requireSessionAccessToken();
+  return fetchAdmin<PaymentCharge>(token, "/api/admin/payment-charges", {
+    method: "POST",
+    headers: { "Idempotency-Key": idempotencyKey },
+    body: JSON.stringify(input),
+  });
+}
+
+export async function getPaymentCharge(chargeId: string): Promise<PaymentCharge> {
+  const token = await requireSessionAccessToken();
+  return fetchAdmin<PaymentCharge>(token, `/api/admin/payment-charges/${chargeId}`);
+}
+
+export async function getActivePaymentCharge(
+  targetType: "ORDER" | "SERVICE_TAB",
+  targetId: string,
+): Promise<PaymentCharge | null> {
+  const token = await requireSessionAccessToken();
+  const query = new URLSearchParams({ targetType, targetId });
+  return fetchAdmin<PaymentCharge | null>(
+    token,
+    `/api/admin/payment-charges/active?${query.toString()}`,
+  );
+}
+
+export async function refreshPaymentCharge(chargeId: string): Promise<PaymentCharge> {
+  const token = await requireSessionAccessToken();
+  return fetchAdmin<PaymentCharge>(token, `/api/admin/payment-charges/${chargeId}/refresh`, {
+    method: "POST",
+  });
+}
+
+export async function cancelPaymentCharge(chargeId: string): Promise<PaymentCharge> {
+  const token = await requireSessionAccessToken();
+  return fetchAdmin<PaymentCharge>(token, `/api/admin/payment-charges/${chargeId}/cancel`, {
+    method: "POST",
+    headers: { "Idempotency-Key": crypto.randomUUID() },
+  });
+}
+
+export async function getPaymentExceptions(
+  status?: "OPEN" | "RESOLVED" | "DISMISSED",
+): Promise<PaymentException[]> {
+  const token = await requireSessionAccessToken();
+  const query = status ? `?status=${encodeURIComponent(status)}` : "";
+  return fetchAdmin<PaymentException[]>(token, `/api/admin/payment-exceptions${query}`);
+}
+
+export async function getPaymentException(id: string): Promise<PaymentExceptionDetail> {
+  const token = await requireSessionAccessToken();
+  return fetchAdmin<PaymentExceptionDetail>(token, `/api/admin/payment-exceptions/${id}`);
+}
+
+export async function finishPaymentException(
+  id: string,
+  action: "resolve" | "dismiss",
+  input: ResolvePaymentExceptionInput,
+): Promise<PaymentException> {
+  const token = await requireSessionAccessToken();
+  return fetchAdmin<PaymentException>(
+    token,
+    `/api/admin/payment-exceptions/${id}/${action}`,
+    {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(input),
+    },
+  );
+}
+
+export async function getShiftCloseSummary(): Promise<ShiftCloseSummary> {
+  const token = await requireSessionAccessToken();
+  return fetchAdmin<ShiftCloseSummary>(token, "/api/admin/shift-close/summary");
+}
+
+export async function getManualPaymentOptions(): Promise<ManualPaymentOption[]> {
+  const token = await requireSessionAccessToken();
+  return fetchAdmin<ManualPaymentOption[]>(token, "/api/admin/manual-payments/options");
+}
+
+export async function confirmManualPayment(
+  input: ConfirmManualPaymentInput,
+  idempotencyKey: string,
+): Promise<PaymentCharge> {
+  const token = await requireSessionAccessToken();
+  return fetchAdmin<PaymentCharge>(token, "/api/admin/manual-payments", {
+    method: "POST",
+    headers: { "Idempotency-Key": idempotencyKey },
+    body: JSON.stringify(input),
+  });
+}
+
+export async function cancelManualPayment(
+  chargeId: string,
+  input: CancelManualPaymentInput,
+): Promise<PaymentCharge> {
+  const token = await requireSessionAccessToken();
+  return fetchAdmin<PaymentCharge>(
+    token,
+    `/api/admin/manual-payments/${chargeId}/cancel`,
+    { method: "POST", body: JSON.stringify(input) },
+  );
 }
 
 export async function getAdminOrderQueue(): Promise<{

@@ -13,6 +13,9 @@ import { PlatformStoreModule } from "./platform/stores/platform-store.module";
 import { PlatformUserModule } from "./platform/users/platform-user.module";
 import { PlatformIntegrationsModule } from "./platform/integrations/platform-integrations.module";
 import { validateEnvironment } from "./config/env.validation";
+import { PaymentsModule } from "./payments/payments.module";
+import { IdempotencyModule } from "./common/idempotency/idempotency.module";
+import { OrderQueueModule } from "./customer-experience/order-queue/order-queue.module";
 
 @Module({
   imports: [
@@ -21,14 +24,17 @@ import { validateEnvironment } from "./config/env.validation";
       validate: validateEnvironment,
     }),
     DatabaseModule,
+    IdempotencyModule,
     AuthModule,
     TenantModule,
     PlatformStoreModule,
     PlatformUserModule,
     PlatformIntegrationsModule,
     BrandingModule,
+    OrderQueueModule,
     CatalogModule,
     OrderingModule,
+    PaymentsModule,
     OperationsModule,
     ManagementModule,
   ],

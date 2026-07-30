@@ -77,7 +77,13 @@ import { MercadoPagoReconciliationScheduler } from "./mercado-pago/mercado-pago-
     SalesImportRetentionService,
     SalesImportRunProcessor,
   ],
-  exports: [SalesIntegrationService, IntegrationAuditService, SalesIntegrationOperationLockService],
+  exports: [
+    SalesIntegrationService,
+    IntegrationAuditService,
+    SalesIntegrationOperationLockService,
+    MercadoPagoAuthenticatedRequestService,
+    MercadoPagoWebhookSignatureService,
+  ],
 })
 export class SalesIntegrationsModule implements OnModuleInit {
   constructor(

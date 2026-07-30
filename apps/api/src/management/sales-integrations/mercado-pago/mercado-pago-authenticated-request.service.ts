@@ -1,4 +1,4 @@
-import { Injectable } from "@nestjs/common";
+import { HttpException, HttpStatus, Injectable } from "@nestjs/common";
 import { PrismaService } from "../../../platform/database/prisma.service";
 import { SalesIntegrationService } from "../sales-integration.service";
 import { MercadoPagoRefreshService } from "./mercado-pago-refresh.service";
@@ -46,6 +46,36 @@ export class MercadoPagoAuthenticatedRequestService {
     }
   }
 
+  async executeForTenant<T>(input: {
+    tenantId: string;
+    request: (
+      accessToken: string,
+      context: { integrationId: string; collectorId?: string },
+    ) => Promise<T>;
+  }): Promise<T> {
+    const integration = await this.prisma.salesIntegration.findFirst({
+      where: {
+        tenantId: input.tenantId,
+        provider: "MERCADO_PAGO",
+        status: { in: ["ACTIVE", "TOKEN_EXPIRING"] },
+      },
+      select: { id: true },
+      orderBy: { updatedAt: "desc" },
+    });
+    if (!integration) {
+      throw new Error("Conexao Mercado Pago ativa nao encontrada para esta loja");
+    }
+    return this.execute({
+      tenantId: input.tenantId,
+      integrationId: integration.id,
+      request: (accessToken, collectorId) =>
+        input.request(accessToken, {
+          integrationId: integration.id,
+          collectorId,
+        }),
+    });
+  }
+
   private async requireReauthorization(tenantId: string, integrationId: string, code: string) {
     await this.prisma.salesIntegration.updateMany({
       where: { id: integrationId, tenantId },
@@ -74,11 +104,20 @@ function isUnauthorized(error: unknown): boolean {
   );
 }
 function safeProviderError(error: unknown): Error {
-  const safe = new Error(
-    isUnauthorized(error)
+  const provider = error && typeof error === "object"
+    ? error as { code?: string; status?: number; retryable?: boolean }
+    : {};
+  const unauthorized = isUnauthorized(error);
+  const status = unauthorized
+    ? HttpStatus.UNAUTHORIZED
+    : provider.status === 429 || provider.retryable
+      ? HttpStatus.SERVICE_UNAVAILABLE
+      : HttpStatus.BAD_GATEWAY;
+  return new HttpException({
+    statusCode: status,
+    message: unauthorized
       ? "Mercado Pago recusou a autorizacao"
-      : "Falha na comunicacao com Mercado Pago"
-  );
-  if (isUnauthorized(error)) Object.assign(safe, { code: "AUTHENTICATION", status: 401 });
-  return safe;
+      : "Mercado Pago recusou ou nao conseguiu processar a solicitacao",
+    code: provider.code ?? "MERCADO_PAGO_COMMUNICATION",
+  }, status);
 }

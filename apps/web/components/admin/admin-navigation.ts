@@ -57,6 +57,20 @@ export const adminNavigation: AdminNavigationGroup[] = [
     label: "Operacao",
     items: [
       {
+        href: "/admin/pos",
+        label: "Novo pedido",
+        icon: ShoppingBag,
+        description: "Captura e cobranca no balcao",
+        permissions: ["pos.capture"],
+      },
+      {
+        href: "/admin/tabs",
+        label: "Comandas",
+        icon: Tags,
+        description: "Consumos e pagamentos em aberto",
+        permissions: ["tabs.view", "tabs.manage"],
+      },
+      {
         href: "/admin/orders",
         label: "Pedidos",
         icon: ClipboardList,
@@ -76,6 +90,18 @@ export const adminNavigation: AdminNavigationGroup[] = [
         icon: Boxes,
         description: "Saldos estimados",
         permissions: ["orders.view", "catalog.manage"],
+      },
+    ],
+  },
+  {
+    label: "Supervisao",
+    items: [
+      {
+        href: "/admin/payment-exceptions",
+        label: "Excecoes de pagamento",
+        icon: ShieldCheck,
+        description: "Divergencias e conciliacao",
+        permissions: ["payment-exceptions.view"],
       },
     ],
   },

@@ -2,6 +2,7 @@ import { BadRequestException, Inject, Injectable } from "@nestjs/common";
 import {
   FulfillmentMethod,
   OrderStatus,
+  OrderSource,
   PaymentInstitution,
   PaymentMethod,
   PaymentReleaseSource,
@@ -15,6 +16,7 @@ import {
   HistoricalOrderImportStrategy,
   ImportOrdersDto,
 } from "./dto/import-orders.dto";
+import { nextOrderPublicCode } from "./order-public-code";
 
 interface ParsedImportRow {
   rowNumber: number;
@@ -252,11 +254,14 @@ export class HistoricalOrderImportService {
           throw error;
         }
       }
+      const publicCode = await nextOrderPublicCode(this.prisma, tenantId, row.date);
       const order = await this.prisma
         .$transaction(async (transaction) => {
           const created = await transaction.order.create({
             data: {
               tenantId,
+              source: layout.endsWith("_API") ? OrderSource.API : OrderSource.IMPORT,
+              publicCode,
               status: OrderStatus.DELIVERED,
               total: row.amount,
               customerName: "Cliente importado",
