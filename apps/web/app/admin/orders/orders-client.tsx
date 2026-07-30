@@ -1,42 +1,43 @@
 "use client";
 
 import React from "react";
-import { useEffect, useMemo, useState } from "react";
-import { io } from "socket.io-client";
-import type { AdminOrder, OrderStatus, PaymentInstitution, PaymentMethod } from "@burgoos/types";
+import { useMemo, useState } from "react";
+import type {
+  AdminOrder,
+  KdsOrder,
+  OrderStatus,
+  PaymentInstitution,
+  PaymentMethod,
+} from "@burgoos/types";
 import {
   confirmPlatformOrder,
   getPlatformCancellationReasons,
   refusePlatformOrder,
-  updateAdminOrderStatus,
+  updateKdsOrderStatus,
 } from "../../../lib/api";
 import { OperationFeedback } from "../../../components/admin/operation-feedback";
 import { OrderMaintenanceDialog } from "./order-maintenance-dialog";
+import { useKdsOrders } from "./use-kds-orders";
+import { AssignmentControl } from "./assignment-control";
+import { PaymentCheckoutDialog } from "../pos/payment-checkout-dialog";
 
-interface OrdersClientProps {
+export interface OrdersClientProps {
   apiUrl: string;
   tenantId: string;
   token: string;
-  initialActiveOrders: AdminOrder[];
+  initialActiveOrders: KdsOrder[];
   initialHistoryOrders: AdminOrder[];
 }
 
-const activeStatuses: OrderStatus[] = ["PENDING", "PREPARING", "SHIPPED"];
+const activeStatuses: OrderStatus[] = ["PENDING", "PREPARING", "READY", "SHIPPED"];
 
 const statusLabels: Record<OrderStatus, string> = {
   PENDING: "Novo",
   PREPARING: "Preparando",
+  READY: "Pronto",
   SHIPPED: "Saiu",
   DELIVERED: "Entregue",
   CANCELLED: "Cancelado",
-};
-
-const nextStatuses: Record<OrderStatus, OrderStatus[]> = {
-  PENDING: ["PREPARING", "CANCELLED"],
-  PREPARING: ["SHIPPED", "DELIVERED", "CANCELLED"],
-  SHIPPED: ["DELIVERED", "CANCELLED"],
-  DELIVERED: [],
-  CANCELLED: [],
 };
 
 export function OrdersClient({
@@ -46,7 +47,17 @@ export function OrdersClient({
   initialActiveOrders,
   initialHistoryOrders,
 }: OrdersClientProps) {
-  const [activeOrders, setActiveOrders] = useState(initialActiveOrders);
+  const {
+    orders: activeOrders,
+    setOrders: setActiveOrders,
+    connected,
+    refresh,
+  } = useKdsOrders({
+    apiUrl,
+    tenantId,
+    token,
+    initialOrders: initialActiveOrders,
+  });
   const [historyOrders, setHistoryOrders] = useState(initialHistoryOrders);
   const [error, setError] = useState<string | null>(null);
   const [operationMessage, setOperationMessage] = useState<string | null>(null);
@@ -59,27 +70,8 @@ export function OrdersClient({
   const [cancellationReasons, setCancellationReasons] = useState<
     Record<string, Array<{ id: string; description: string }>>
   >({});
-  const [connected, setConnected] = useState(false);
   const [maintenanceOrder, setMaintenanceOrder] = useState<AdminOrder | null>(null);
-
-  useEffect(() => {
-    const socket = io(apiUrl, {
-      auth: {
-        tenantId,
-      },
-    });
-
-    socket.on("connect", () => setConnected(true));
-    socket.on("disconnect", () => setConnected(false));
-    socket.on("order-created", (order: AdminOrder) => {
-      setActiveOrders((current) => [order, ...current.filter((item) => item.id !== order.id)]);
-      playOrderAlert();
-    });
-
-    return () => {
-      socket.disconnect();
-    };
-  }, [apiUrl, tenantId]);
+  const [checkoutOrder, setCheckoutOrder] = useState<KdsOrder | null>(null);
 
   const groupedOrders = useMemo(
     () =>
@@ -90,13 +82,16 @@ export function OrdersClient({
     [activeOrders]
   );
 
-  async function changeStatus(order: AdminOrder, status: OrderStatus): Promise<void> {
+  async function changeStatus(order: KdsOrder, status: OrderStatus): Promise<void> {
     setError(null);
     setOperationMessage(null);
     setChangingOrderId(order.id);
 
     try {
-      const updatedOrder = await updateAdminOrderStatus(token, order.id, status);
+      const updatedOrder = await updateKdsOrderStatus(order.id, {
+        status,
+        expectedVersion: order.version,
+      });
       setOperationMessage(
         `Pedido de ${order.customerName} atualizado para ${statusLabels[status]}.`
       );
@@ -123,11 +118,9 @@ export function OrdersClient({
     setPlatformActionOrderId(order.id);
 
     try {
-      const updatedOrder = await confirmPlatformOrder(token, order.id);
+      await confirmPlatformOrder(token, order.id);
       setOperationMessage(`Pedido iFood de ${order.customerName} aceito.`);
-      setActiveOrders((current) =>
-        current.map((item) => (item.id === order.id ? updatedOrder : item))
-      );
+      await refresh();
     } catch (caughtError) {
       setError(caughtError instanceof Error ? caughtError.message : "Falha ao aceitar pedido.");
     } finally {
@@ -178,13 +171,11 @@ export function OrdersClient({
   }
 
   function replaceOrder(updatedOrder: AdminOrder): void {
-    setActiveOrders((current) =>
-      current.map((item) => (item.id === updatedOrder.id ? updatedOrder : item))
-    );
     setHistoryOrders((current) =>
       current.map((item) => (item.id === updatedOrder.id ? updatedOrder : item))
     );
     setMaintenanceOrder(null);
+    void refresh();
   }
 
   function removeOrder(orderId: string): void {
@@ -238,7 +229,7 @@ export function OrdersClient({
         }}
       />
 
-      <section className="mt-6 grid gap-4 lg:grid-cols-3">
+      <section className="mt-6 grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         {groupedOrders.map((group) => (
           <div key={group.status}>
             <h2 className="font-semibold">{statusLabels[group.status]}</h2>
@@ -250,11 +241,30 @@ export function OrdersClient({
               ) : (
                 group.orders.map((order) => (
                   <article
-                    className="rounded-md border border-slate-200 bg-white p-4 shadow-sm"
+                    className={`rounded-md border bg-white p-4 shadow-sm ${
+                      order.overdue ? "border-red-400 ring-2 ring-red-100" : "border-slate-200"
+                    }`}
                     key={order.id}
                   >
                     <div className="flex items-start justify-between gap-3">
                       <div>
+                        <div className="mb-2 flex flex-wrap gap-1">
+                          <span className="rounded bg-slate-900 px-2 py-1 text-[10px] font-bold uppercase text-white">
+                            {sourceLabel(order.source)}
+                          </span>
+                          <span className="rounded bg-slate-100 px-2 py-1 text-[10px] font-bold">
+                            #{order.publicCode}
+                          </span>
+                          <span
+                            className={`rounded px-2 py-1 text-[10px] font-bold ${
+                              order.overdue
+                                ? "bg-red-100 text-red-800"
+                                : "bg-emerald-50 text-emerald-800"
+                            }`}
+                          >
+                            {formatAge(order.ageSeconds)}
+                          </span>
+                        </div>
                         <p className="font-semibold">{order.customerName}</p>
                         <p className="text-sm text-slate-600">{order.customerPhone}</p>
                         <p className="mt-1 text-xs text-slate-500">{paymentSummary(order)}</p>
@@ -286,10 +296,56 @@ export function OrdersClient({
                     <ul className="mt-3 space-y-1 text-sm text-slate-700">
                       {order.items.map((item) => (
                         <li key={item.id}>
-                          {item.quantity}x {item.productNameSnapshot}
+                          <p>
+                            {item.quantity}x {item.productNameSnapshot}
+                          </p>
+                          {item.modifications && item.modifications.length > 0 ? (
+                            <ul className="mt-1 space-y-1 border-l-2 border-amber-400 pl-3 text-xs font-semibold text-slate-800">
+                              {item.modifications.map((modification) => (
+                                <li key={modification.id}>
+                                  {modification.type === "REMOVE_INGREDIENT"
+                                    ? `Sem ${modification.nameSnapshot}`
+                                    : `Adicionar ${formatModificationQuantity(
+                                        modification.quantity
+                                      )}x ${modification.nameSnapshot}`}
+                                </li>
+                              ))}
+                            </ul>
+                          ) : null}
+                          {item.notes ? (
+                            <p className="mt-1 rounded bg-blue-50 px-2 py-1 text-xs font-semibold text-blue-900">
+                              Obs. do item: {item.notes}
+                            </p>
+                          ) : null}
                         </li>
                       ))}
                     </ul>
+                    {order.notes ? (
+                      <div className="mt-3 rounded-md border border-blue-200 bg-blue-50 p-3 text-xs text-blue-950">
+                        <p className="font-semibold">Observações do pedido</p>
+                        <p className="mt-1 whitespace-pre-wrap">{order.notes}</p>
+                      </div>
+                    ) : null}
+                    <AssignmentControl
+                      assignment={order.assignment}
+                      onChanged={(result) =>
+                        setActiveOrders((current) =>
+                          current.map((candidate) =>
+                            candidate.id === order.id
+                              ? {
+                                  ...candidate,
+                                  assignedUserId: result.assignment.userId,
+                                  assignment: result.assignment,
+                                  version: result.version,
+                                }
+                              : candidate,
+                          ),
+                        )
+                      }
+                      target="orders"
+                      targetId={order.id}
+                      version={order.version}
+                    />
                     {order.stockWarnings && order.stockWarnings.length > 0 ? (
                       <div className="mt-3 rounded-md border border-amber-200 bg-amber-50 p-3 text-xs text-amber-900">
                         <p className="font-semibold">Atenção no estoque</p>
@@ -362,14 +418,40 @@ export function OrdersClient({
                       </div>
                     ) : null}
                     <div className="mt-4 flex flex-wrap gap-2">
-                      <button
-                        className="rounded-md border border-slate-300 px-3 py-2 text-xs font-semibold"
-                        disabled={changingOrderId !== null}
-                        onClick={() => setMaintenanceOrder(order)}
-                        type="button"
-                      >
-                        Alterar
-                      </button>
+                      {order.serviceTabId ? (
+                        <a
+                          className="rounded-md border border-blue-300 px-3 py-2 text-xs font-semibold text-blue-800"
+                          href="/admin/tabs"
+                        >
+                          Cobrar na comanda
+                        </a>
+                      ) : (
+                        <button
+                          className="rounded-md bg-blue-800 px-3 py-2 text-xs font-semibold text-white"
+                          onClick={() => setCheckoutOrder(order)}
+                          type="button"
+                        >
+                          Cobrar
+                        </button>
+                      )}
+                      {order.source === "COUNTER" &&
+                      (order.status === "PENDING" || order.status === "PREPARING") ? (
+                        <a
+                          className="rounded-md border border-slate-300 px-3 py-2 text-xs font-semibold"
+                          href={`/admin/pos?orderId=${order.id}`}
+                        >
+                          Alterar no PDV
+                        </a>
+                      ) : (
+                        <button
+                          className="rounded-md border border-slate-300 px-3 py-2 text-xs font-semibold"
+                          disabled={changingOrderId !== null}
+                          onClick={() => setMaintenanceOrder(order)}
+                          type="button"
+                        >
+                          ManutenÃ§Ã£o
+                        </button>
+                      )}
                       {isPendingPlatformOrder(order) ? (
                         <>
                           <button
@@ -404,7 +486,7 @@ export function OrdersClient({
                           )}
                         </>
                       ) : (
-                        nextStatuses[order.status].map((status) => (
+                        order.nextStatuses.map((status) => (
                           <button
                             className="rounded-md bg-ink px-3 py-2 text-xs font-semibold text-white disabled:cursor-not-allowed disabled:opacity-60"
                             disabled={changingOrderId !== null}
@@ -434,6 +516,16 @@ export function OrdersClient({
           token={token}
         />
       ) : null}
+      {checkoutOrder ? (
+        <PaymentCheckoutDialog
+          amount={checkoutOrder.total}
+          assignment={checkoutOrder.assignment}
+          onClose={() => setCheckoutOrder(null)}
+          targetId={checkoutOrder.id}
+          targetType="ORDER"
+          title={`Cobrar pedido #${checkoutOrder.publicCode}`}
+        />
+      ) : null}
     </div>
   );
 }
@@ -442,6 +534,10 @@ function paymentSummary(order: AdminOrder): string {
   return `${paymentInstitutionLabel(order.paymentInstitution ?? null)} / ${paymentMethodLabel(
     order.paymentMethod
   )}`;
+}
+
+function formatModificationQuantity(quantity: number): string {
+  return Number.isInteger(quantity) ? quantity.toFixed(0) : quantity.toString();
 }
 
 function paymentInstitutionLabel(value: PaymentInstitution | null): string {
@@ -491,18 +587,22 @@ function confirmationStateLabel(value: NonNullable<AdminOrder["platformConfirmat
   return labels[value];
 }
 
-function playOrderAlert(): void {
-  const AudioContextConstructor = window.AudioContext;
-  const audioContext = new AudioContextConstructor();
-  const oscillator = audioContext.createOscillator();
-  const gain = audioContext.createGain();
+function sourceLabel(source: KdsOrder["source"]): string {
+  const labels: Record<KdsOrder["source"], string> = {
+    COUNTER: "Balcão",
+    PUBLIC_MENU: "Cardápio",
+    IFOOD: "iFood",
+    IMPORT: "Importação",
+    API: "API",
+    LEGACY: "Legado",
+  };
+  return labels[source];
+}
 
-  oscillator.type = "sine";
-  oscillator.frequency.value = 880;
-  gain.gain.value = 0.08;
-
-  oscillator.connect(gain);
-  gain.connect(audioContext.destination);
-  oscillator.start();
-  oscillator.stop(audioContext.currentTime + 0.18);
+function formatAge(seconds: number): string {
+  const minutes = Math.floor(seconds / 60);
+  if (minutes < 1) return "agora";
+  if (minutes < 60) return `${minutes} min`;
+  const hours = Math.floor(minutes / 60);
+  return `${hours}h ${minutes % 60}min`;
 }

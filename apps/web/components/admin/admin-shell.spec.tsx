@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import {
   adminNavigation,
   canAccessNavigationItem,
@@ -6,6 +6,7 @@ import {
   findNavigationItem,
   secondaryNavigation,
 } from "./admin-navigation";
+import { invalidateStoreScopedState } from "./store-switcher";
 
 const operatorSession = {
   user: { isMaster: false },
@@ -25,6 +26,21 @@ const masterSession = {
 const platformSession = {
   user: { isPlatformAdmin: true, platformRole: "SUPER_ADMIN" },
   permissions: [],
+};
+
+const attendantSession = {
+  user: { isMaster: false },
+  permissions: [
+    "pos.capture",
+    "tabs.view",
+    "tabs.manage",
+    "orders.view",
+    "orders.manage",
+    "kds.view",
+    "kds.manage",
+    "payments.charge",
+    "payments.confirm-manual",
+  ],
 };
 
 describe("admin navigation permissions", () => {
@@ -77,5 +93,38 @@ describe("admin navigation permissions", () => {
     expect(orders).toBeDefined();
     expect(canAccessNavigationItem(users!, operatorSession)).toBe(false);
     expect(canAccessNavigationItem(orders!, operatorSession)).toBe(true);
+  });
+
+  it("shows only operational capture, tabs and orders to attendants", () => {
+    const groups = filterNavigationBySession(adminNavigation, attendantSession);
+    const labels = groups.flatMap((group) => group.items.map((item) => item.label));
+
+    expect(labels).toEqual(expect.arrayContaining(["Novo pedido", "Comandas", "Pedidos"]));
+    expect(labels).not.toEqual(expect.arrayContaining([
+      "Catalogo",
+      "Caixa",
+      "Usuarios",
+      "Excecoes de pagamento",
+    ]));
+    expect(canAccessNavigationItem(findNavigationItem("/admin/pos")!, attendantSession)).toBe(true);
+    expect(canAccessNavigationItem(
+      findNavigationItem("/admin/payment-exceptions")!,
+      attendantSession,
+    )).toBe(false);
+  });
+
+  it("invalidates all store-scoped operational state after switching stores", () => {
+    const dispatchEvent = vi.fn();
+    const reload = vi.fn();
+
+    invalidateStoreScopedState({
+      dispatchEvent,
+      location: { reload },
+    } as never, "store-b");
+
+    const event = dispatchEvent.mock.calls[0]?.[0] as CustomEvent;
+    expect(event.type).toBe("burgoos:store-changed");
+    expect(event.detail).toEqual({ storeId: "store-b" });
+    expect(reload).toHaveBeenCalledOnce();
   });
 });

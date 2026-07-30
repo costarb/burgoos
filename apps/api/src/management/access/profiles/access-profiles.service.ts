@@ -15,6 +15,7 @@ import {
   AccessProfileUpdateDto,
 } from "../dto/access-profile.dto";
 import { ACCESS_PERMISSIONS } from "../permissions/permission-catalog";
+import { assertCanDelegatePermissions } from "../users/user-access-rules";
 
 @Injectable()
 export class AccessProfilesService {
@@ -56,6 +57,7 @@ export class AccessProfilesService {
 
   async create(actor: AuthUser, dto: AccessProfileDto) {
     this.assertCanManageProfileScope(actor, dto.scope, dto.storeId ?? null);
+    assertCanDelegatePermissions(actor, dto.permissionKeys);
     await this.ensurePermissionCatalog(dto.permissionKeys);
     await this.ensureUniqueName(dto.name, dto.storeId ?? null);
 
@@ -97,6 +99,7 @@ export class AccessProfilesService {
     this.assertCanManageProfileScope(actor, current.scope, current.tenantId);
 
     if (dto.permissionKeys) {
+      assertCanDelegatePermissions(actor, dto.permissionKeys);
       await this.ensurePermissionCatalog(dto.permissionKeys);
     }
 
@@ -157,6 +160,7 @@ export class AccessProfilesService {
     await this.ensureUniqueName(name, targetTenantId);
 
     const permissionKeys = current.permissions.map((grant) => grant.permission.key);
+    assertCanDelegatePermissions(actor, permissionKeys);
 
     return this.prisma.$transaction(async (tx) => {
       const profile = await tx.accessProfile.create({

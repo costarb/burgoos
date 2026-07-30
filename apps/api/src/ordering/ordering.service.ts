@@ -6,7 +6,13 @@ import {
   Logger,
   NotFoundException,
 } from "@nestjs/common";
-import { FulfillmentMethod, OrderStatus, Prisma, VisualConfigurationStatus } from "@prisma/client";
+import {
+  FulfillmentMethod,
+  OrderSource,
+  OrderStatus,
+  Prisma,
+  VisualConfigurationStatus,
+} from "@prisma/client";
 import { IfoodStatusSyncService } from "../management/integrations/ifood/ifood-status-sync.service";
 import { OrderProfitabilityService } from "../management/reports/order-profitability.service";
 import { InventoryService, OrderStockWarning } from "../operations/inventory/inventory.service";
@@ -15,6 +21,7 @@ import { CreateOrderDto } from "./dto/create-order.dto";
 import { calculateOrderTotals, PricedOrderItem } from "./order-calculator";
 import { canTransitionOrderStatus } from "./order-status";
 import { OrdersGateway } from "./orders.gateway";
+import { nextOrderPublicCode } from "./order-public-code";
 import { buildWhatsAppOrderLink } from "./whatsapp-link";
 
 @Injectable()
@@ -130,10 +137,13 @@ export class OrderingService {
     });
 
     const calculated = calculateOrderTotals(pricedItems);
+    const publicCode = await nextOrderPublicCode(this.prisma, tenant.id);
 
     const order = await this.prisma.order.create({
       data: {
         tenantId: tenant.id,
+        source: OrderSource.PUBLIC_MENU,
+        publicCode,
         total: calculated.total,
         customerName: dto.customerName,
         customerPhone: dto.customerPhone,
@@ -154,7 +164,7 @@ export class OrderingService {
         },
       },
       include: {
-        items: true,
+        items: { include: { modifications: true } },
         platformOrderLink: {
           include: {
             syncAttempts: {
@@ -229,7 +239,7 @@ export class OrderingService {
         createdAt: "desc",
       },
       include: {
-        items: true,
+        items: { include: { modifications: true } },
         platformOrderLink: {
           include: {
             syncAttempts: {
@@ -255,7 +265,8 @@ export class OrderingService {
     tenantId: string,
     orderId: string,
     status: OrderStatus,
-    actorUserId?: string
+    actorUserId?: string,
+    expectedVersion?: number,
   ) {
     const order = await this.prisma.order.findFirst({
       where: {
@@ -264,7 +275,7 @@ export class OrderingService {
         deletedAt: null,
       },
       include: {
-        items: true,
+        items: { include: { modifications: true } },
         platformOrderLink: {
           include: {
             syncAttempts: {
@@ -280,32 +291,59 @@ export class OrderingService {
       throw new NotFoundException("Order not found");
     }
 
-    if (!canTransitionOrderStatus(order.status, status)) {
+    if (expectedVersion !== undefined && order.version !== expectedVersion) {
+      throw new ConflictException("Pedido foi alterado por outro operador. Recarregue a tela");
+    }
+
+    if (!canTransitionOrderStatus(order.status, status, order.fulfillmentMethod)) {
       this.logger.warn(
         `Invalid order transition tenantId=${tenantId} orderId=${orderId} from=${order.status} to=${status}`
       );
       throw new ConflictException("Invalid order status transition");
     }
 
-    const updatedOrder = await this.prisma.order.update({
-      where: {
-        id: orderId,
-      },
-      data: {
-        status,
-      },
-      include: {
-        items: true,
-        platformOrderLink: {
-          include: {
-            syncAttempts: {
-              orderBy: { createdAt: "desc" },
-              take: 1,
+    const changedAt = new Date();
+    const statusData = {
+      status,
+      version: { increment: 1 },
+      ...(status === OrderStatus.PREPARING && !order.productionStartedAt
+        ? { productionStartedAt: changedAt }
+        : {}),
+      ...(status === OrderStatus.READY ? { readyAt: changedAt } : {}),
+      ...(status === OrderStatus.DELIVERED || status === OrderStatus.CANCELLED
+        ? { completedAt: changedAt }
+        : {}),
+    };
+
+    let updatedOrder;
+    if (expectedVersion === undefined) {
+      updatedOrder = await this.prisma.order.update({
+        where: {
+          id: orderId,
+        },
+        data: statusData,
+        include: {
+          items: { include: { modifications: true } },
+          platformOrderLink: {
+            include: {
+              syncAttempts: {
+                orderBy: { createdAt: "desc" },
+                take: 1,
+              },
             },
           },
         },
-      },
-    });
+      });
+    } else {
+      const claimed = await this.prisma.order.updateMany({
+        where: { id: orderId, tenantId, version: expectedVersion, deletedAt: null },
+        data: statusData,
+      });
+      if (claimed.count !== 1) {
+        throw new ConflictException("Pedido foi alterado por outro operador. Recarregue a tela");
+      }
+      updatedOrder = order;
+    }
 
     if (order.platformOrderLink?.provider === "IFOOD") {
       await this.ifoodStatusSyncService.syncInternalStatus({
@@ -332,7 +370,7 @@ export class OrderingService {
       ? await orderDelegate.findUnique({
           where: { id: orderId },
           include: {
-            items: true,
+            items: { include: { modifications: true } },
             platformOrderLink: {
               include: {
                 syncAttempts: {
@@ -348,17 +386,22 @@ export class OrderingService {
     this.logger.log(
       `Order status changed tenantId=${tenantId} orderId=${orderId} status=${status}`
     );
-    return this.toOrderResponse(
+    const response = this.toOrderResponse(
       responseOrder ?? updatedOrder,
       status === OrderStatus.CANCELLED || status === OrderStatus.DELIVERED
         ? []
         : await this.inventoryService.getOrderStockWarnings(responseOrder ?? updatedOrder)
     );
+    this.ordersGateway.emitOrderUpdated(tenantId, response);
+    return response;
   }
 
   private toOrderResponse(
     order: {
       id: string;
+      source: string;
+      publicCode: string | null;
+      version: number;
       status: OrderStatus;
       total: Prisma.Decimal;
       customerName: string;
@@ -400,12 +443,23 @@ export class OrderingService {
         quantity: number;
         unitPrice: Prisma.Decimal;
         total: Prisma.Decimal;
+        modifications: Array<{
+          id: string;
+          type: "REMOVE_INGREDIENT" | "ADD_COMPLEMENT";
+          nameSnapshot: string;
+          quantity: Prisma.Decimal;
+          unitPriceDelta: Prisma.Decimal;
+          totalPriceDelta: Prisma.Decimal;
+        }>;
       }>;
     },
     stockWarnings: OrderStockWarning[] = []
   ) {
     return {
       id: order.id,
+      source: order.source,
+      publicCode: order.publicCode,
+      version: order.version,
       status: order.status,
       total: order.total.toFixed(2),
       customerName: order.customerName,
@@ -445,6 +499,14 @@ export class OrderingService {
         quantity: item.quantity,
         unitPrice: item.unitPrice.toFixed(2),
         total: item.total.toFixed(2),
+        modifications: item.modifications.map((modification) => ({
+          id: modification.id,
+          type: modification.type,
+          nameSnapshot: modification.nameSnapshot,
+          quantity: modification.quantity.toNumber(),
+          unitPriceDelta: modification.unitPriceDelta.toFixed(2),
+          totalPriceDelta: modification.totalPriceDelta.toFixed(2),
+        })),
       })),
       stockWarnings,
     };

@@ -1,0 +1,723 @@
+openapi: 3.0.3
+info:
+  title: BurgoOS POS, Tabs, KDS and Payments
+  version: 0.1.0
+  description: Contracts for counter order capture, service tabs, KDS, payment charges and public queue.
+servers:
+  - url: /api
+security:
+  - bearerAuth: []
+tags:
+  - name: POS
+  - name: Tabs
+  - name: KDS
+  - name: Payments
+  - name: Public Queue
+paths:
+  /admin/pos/catalog:
+    get:
+      tags: [POS]
+      summary: Returns the active operational catalog with removable ingredients and complements.
+      responses:
+        "200":
+          description: Operational catalog scoped to the active store.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PosCatalog"
+  /admin/pos/orders:
+    post:
+      tags: [POS]
+      summary: Creates an idempotent counter order, optionally attached to a tab.
+      parameters:
+        - $ref: "#/components/parameters/IdempotencyKey"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateCounterOrder"
+      responses:
+        "201":
+          description: Order created.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Order"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "422":
+          $ref: "#/components/responses/ValidationError"
+  /admin/tabs:
+    get:
+      tags: [Tabs]
+      summary: Lists active service tabs.
+      parameters:
+        - in: query
+          name: status
+          schema:
+            type: string
+            enum: [OPEN, CHECKOUT_PENDING, PAID, CANCELLED]
+      responses:
+        "200":
+          description: Scoped tab list.
+    post:
+      tags: [Tabs]
+      summary: Opens a service tab.
+      parameters:
+        - $ref: "#/components/parameters/IdempotencyKey"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [number]
+              properties:
+                number:
+                  type: string
+                  maxLength: 40
+                displayName:
+                  type: string
+                  maxLength: 80
+                notes:
+                  type: string
+                  maxLength: 500
+      responses:
+        "201":
+          description: Tab opened.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ServiceTab"
+        "409":
+          $ref: "#/components/responses/Conflict"
+  /admin/tabs/{tabId}:
+    get:
+      tags: [Tabs]
+      summary: Returns tab, orders, charges and derived balance.
+      parameters:
+        - $ref: "#/components/parameters/TabId"
+      responses:
+        "200":
+          description: Tab detail.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ServiceTabDetail"
+        "404":
+          $ref: "#/components/responses/NotFound"
+  /admin/tabs/{tabId}/checkout:
+    post:
+      tags: [Tabs]
+      summary: Moves an open tab to checkout pending.
+      parameters:
+        - $ref: "#/components/parameters/TabId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ExpectedVersion"
+      responses:
+        "200":
+          description: Checkout started.
+        "409":
+          $ref: "#/components/responses/Conflict"
+  /admin/tabs/{tabId}/reopen:
+    post:
+      tags: [Tabs]
+      summary: Reopens checkout pending tab with authorization and reason.
+      parameters:
+        - $ref: "#/components/parameters/TabId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: "#/components/schemas/ExpectedVersion"
+                - type: object
+                  required: [reason]
+                  properties:
+                    reason:
+                      type: string
+                      minLength: 3
+                      maxLength: 300
+      responses:
+        "200":
+          description: Tab reopened.
+  /admin/kds/orders:
+    get:
+      tags: [KDS]
+      summary: Returns active KDS snapshot ordered by operational priority.
+      responses:
+        "200":
+          description: Tenant-scoped KDS snapshot.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/KdsOrder"
+  /admin/kds/orders/{orderId}/status:
+    patch:
+      tags: [KDS]
+      summary: Applies a validated production transition.
+      parameters:
+        - $ref: "#/components/parameters/OrderId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [status, expectedVersion]
+              properties:
+                status:
+                  $ref: "#/components/schemas/OrderStatus"
+                expectedVersion:
+                  type: integer
+                  minimum: 0
+                reason:
+                  type: string
+                  maxLength: 300
+      responses:
+        "200":
+          description: Updated order.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Order"
+        "409":
+          $ref: "#/components/responses/Conflict"
+  /admin/payment-terminals:
+    get:
+      tags: [Payments]
+      summary: Lists locally enabled and provider-discovered terminals.
+      responses:
+        "200":
+          description: Terminals without credentials.
+  /admin/payment-terminals/sync:
+    post:
+      tags: [Payments]
+      summary: Synchronizes Mercado Pago terminals using the active store connection.
+      responses:
+        "200":
+          description: Sanitized terminals.
+        "409":
+          $ref: "#/components/responses/Conflict"
+  /admin/payment-charges:
+    post:
+      tags: [Payments]
+      summary: Creates an automatic Mercado Pago Point charge attempt.
+      parameters:
+        - $ref: "#/components/parameters/IdempotencyKey"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateCharge"
+      responses:
+        "201":
+          description: Charge created or manually confirmed.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PaymentCharge"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "422":
+          $ref: "#/components/responses/ValidationError"
+  /admin/payment-charges/active:
+    get:
+      tags: [Payments]
+      summary: Returns the latest charge for an order or service tab.
+      parameters:
+        - in: query
+          name: targetType
+          required: true
+          schema:
+            type: string
+            enum: [ORDER, SERVICE_TAB]
+        - in: query
+          name: targetId
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Latest charge or null.
+  /admin/payment-charges/{chargeId}:
+    get:
+      tags: [Payments]
+      summary: Returns a sanitized charge and its current result.
+      parameters:
+        - $ref: "#/components/parameters/ChargeId"
+      responses:
+        "200":
+          description: Charge detail.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PaymentCharge"
+  /admin/payment-charges/{chargeId}/refresh:
+    post:
+      tags: [Payments]
+      summary: Reconciles one external charge with the provider.
+      parameters:
+        - $ref: "#/components/parameters/ChargeId"
+      responses:
+        "200":
+          description: Refreshed charge.
+  /admin/payment-charges/{chargeId}/cancel:
+    post:
+      tags: [Payments]
+      summary: Cancels an eligible charge attempt.
+      parameters:
+        - $ref: "#/components/parameters/ChargeId"
+      responses:
+        "200":
+          description: Cancelled or already terminal charge.
+        "409":
+          $ref: "#/components/responses/Conflict"
+  /admin/manual-payments/options:
+    get:
+      tags: [Payments]
+      summary: Lists enabled institutions and methods for manual settlement.
+      responses:
+        "200":
+          description: Sanitized manual payment options.
+  /admin/manual-payments:
+    post:
+      tags: [Payments]
+      summary: Confirms an idempotent full-balance manual payment.
+      parameters:
+        - $ref: "#/components/parameters/IdempotencyKey"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateCharge"
+      responses:
+        "201":
+          description: Manual payment confirmed and allocated.
+        "409":
+          $ref: "#/components/responses/Conflict"
+  /admin/payment-exceptions:
+    get:
+      tags: [Payments]
+      summary: Lists tenant payment exceptions by status.
+      parameters:
+        - in: query
+          name: status
+          schema:
+            type: string
+            enum: [OPEN, RESOLVED, DISMISSED]
+      responses:
+        "200":
+          description: Payment exceptions without secrets.
+  /admin/shift-close/summary:
+    get:
+      tags: [Tabs, Payments]
+      summary: Summarizes open tabs, active orders and financial anomalies.
+      responses:
+        "200":
+          description: Shift-close readiness projection.
+  /webhooks/mercadopago/orders:
+    post:
+      tags: [Payments]
+      summary: Receives Mercado Pago Orders notifications.
+      security: []
+      parameters:
+        - in: header
+          name: x-signature
+          required: true
+          schema:
+            type: string
+        - in: header
+          name: x-request-id
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: true
+      responses:
+        "200":
+          description: Valid event durably accepted.
+        "401":
+          description: Invalid signature.
+  /public/tenants/{slug}/order-queue:
+    get:
+      tags: [Public Queue]
+      summary: Returns a sanitized public queue for one active tenant.
+      security: []
+      parameters:
+        - in: path
+          name: slug
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Public queue projection.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PublicQueue"
+        "404":
+          $ref: "#/components/responses/NotFound"
+  /public/domains/{domain}/order-queue:
+    get:
+      tags: [Public Queue]
+      summary: Returns a sanitized public queue resolved by custom domain.
+      security: []
+      parameters:
+        - in: path
+          name: domain
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Public queue projection.
+        "404":
+          $ref: "#/components/responses/NotFound"
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  parameters:
+    IdempotencyKey:
+      in: header
+      name: Idempotency-Key
+      required: true
+      schema:
+        type: string
+        minLength: 16
+        maxLength: 120
+    TabId:
+      in: path
+      name: tabId
+      required: true
+      schema:
+        type: string
+        format: uuid
+    OrderId:
+      in: path
+      name: orderId
+      required: true
+      schema:
+        type: string
+        format: uuid
+    ChargeId:
+      in: path
+      name: chargeId
+      required: true
+      schema:
+        type: string
+        format: uuid
+  schemas:
+    Money:
+      type: string
+      pattern: '^\d+\.\d{2}$'
+      example: "24.00"
+    OrderStatus:
+      type: string
+      enum: [PENDING, PREPARING, READY, SHIPPED, DELIVERED, CANCELLED]
+    OrderSource:
+      type: string
+      enum: [LEGACY, COUNTER, PUBLIC_MENU, IFOOD, IMPORT, API]
+    ExpectedVersion:
+      type: object
+      required: [expectedVersion]
+      properties:
+        expectedVersion:
+          type: integer
+          minimum: 0
+    PosCatalog:
+      type: object
+      required: [categories]
+      properties:
+        categories:
+          type: array
+          items:
+            type: object
+            additionalProperties: true
+    ItemModificationInput:
+      type: object
+      required: [type, referenceId, quantity]
+      properties:
+        type:
+          type: string
+          enum: [REMOVE_INGREDIENT, ADD_COMPLEMENT]
+        referenceId:
+          type: string
+          format: uuid
+        quantity:
+          type: number
+          exclusiveMinimum: 0
+    CounterOrderItemInput:
+      type: object
+      required: [productId, quantity]
+      properties:
+        productId:
+          type: string
+          format: uuid
+        quantity:
+          type: integer
+          minimum: 1
+        modifications:
+          type: array
+          items:
+            $ref: "#/components/schemas/ItemModificationInput"
+        chargedUnitPrice:
+          $ref: "#/components/schemas/Money"
+        priceOverrideReason:
+          type: string
+          maxLength: 300
+        notes:
+          type: string
+          maxLength: 300
+    CreateCounterOrder:
+      type: object
+      required: [fulfillmentMethod, items]
+      properties:
+        serviceTabId:
+          type: string
+          format: uuid
+        customerName:
+          type: string
+          maxLength: 120
+        customerPhone:
+          type: string
+          maxLength: 40
+        fulfillmentMethod:
+          type: string
+          enum: [PICKUP, DELIVERY]
+        notes:
+          type: string
+          maxLength: 500
+        releaseToKds:
+          type: boolean
+          default: true
+        items:
+          type: array
+          minItems: 1
+          items:
+            $ref: "#/components/schemas/CounterOrderItemInput"
+    Order:
+      type: object
+      required: [id, publicCode, source, status, total, version, items]
+      properties:
+        id:
+          type: string
+          format: uuid
+        publicCode:
+          type: string
+        serviceTabId:
+          type: string
+          format: uuid
+          nullable: true
+        source:
+          $ref: "#/components/schemas/OrderSource"
+        status:
+          $ref: "#/components/schemas/OrderStatus"
+        paymentStatus:
+          type: string
+          enum: [UNPAID, PARTIALLY_PAID, PAID, REFUNDED, EXCEPTION]
+        total:
+          $ref: "#/components/schemas/Money"
+        version:
+          type: integer
+        items:
+          type: array
+          items:
+            type: object
+            additionalProperties: true
+    ServiceTab:
+      type: object
+      required: [id, number, publicCode, status, grossTotal, paidAmount, openBalance, version]
+      properties:
+        id:
+          type: string
+          format: uuid
+        number:
+          type: string
+        displayName:
+          type: string
+          nullable: true
+        publicCode:
+          type: string
+        status:
+          type: string
+          enum: [OPEN, CHECKOUT_PENDING, PAID, CANCELLED]
+        grossTotal:
+          $ref: "#/components/schemas/Money"
+        paidAmount:
+          $ref: "#/components/schemas/Money"
+        openBalance:
+          $ref: "#/components/schemas/Money"
+        version:
+          type: integer
+    ServiceTabDetail:
+      allOf:
+        - $ref: "#/components/schemas/ServiceTab"
+        - type: object
+          required: [orders, charges]
+          properties:
+            orders:
+              type: array
+              items:
+                $ref: "#/components/schemas/Order"
+            charges:
+              type: array
+              items:
+                $ref: "#/components/schemas/PaymentCharge"
+    KdsOrder:
+      allOf:
+        - $ref: "#/components/schemas/Order"
+        - type: object
+          required: [ageSeconds, nextStatuses]
+          properties:
+            ageSeconds:
+              type: integer
+            overdue:
+              type: boolean
+            nextStatuses:
+              type: array
+              items:
+                $ref: "#/components/schemas/OrderStatus"
+    CreateCharge:
+      type: object
+      required: [targetType, targetId, institution, method, mode, amount]
+      properties:
+        targetType:
+          type: string
+          enum: [ORDER, SERVICE_TAB]
+        targetId:
+          type: string
+          format: uuid
+        institution:
+          type: string
+          enum: [MERCADO_PAGO, PAGBANK, CAIXA_LOCAL]
+        method:
+          type: string
+          enum: [CASH, PIX_MANUAL, DEBIT_CARD, CREDIT_CARD, VOUCHER, PIX, DIGITAL_WALLET]
+        mode:
+          type: string
+          enum: [AUTOMATIC, MANUAL]
+        amount:
+          $ref: "#/components/schemas/Money"
+        terminalId:
+          type: string
+          format: uuid
+        cashReceivedAmount:
+          $ref: "#/components/schemas/Money"
+        manualReference:
+          type: string
+          maxLength: 120
+    PaymentCharge:
+      type: object
+      required: [id, targetType, targetId, institution, method, mode, status, amount, createdAt]
+      properties:
+        id:
+          type: string
+          format: uuid
+        targetType:
+          type: string
+          enum: [ORDER, SERVICE_TAB]
+        targetId:
+          type: string
+          format: uuid
+        institution:
+          type: string
+        method:
+          type: string
+        mode:
+          type: string
+        status:
+          type: string
+          enum: [CREATED, WAITING_CUSTOMER, PROCESSING, APPROVED, DECLINED, CANCELLED, EXPIRED, FAILED, UNKNOWN, PARTIALLY_REFUNDED, REFUNDED]
+        amount:
+          $ref: "#/components/schemas/Money"
+        cashChangeAmount:
+          $ref: "#/components/schemas/Money"
+        providerStatus:
+          type: string
+          nullable: true
+        providerStatusDetail:
+          type: string
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+    PublicQueue:
+      type: object
+      required: [generatedAt, active, completed]
+      properties:
+        generatedAt:
+          type: string
+          format: date-time
+        active:
+          type: array
+          items:
+            $ref: "#/components/schemas/PublicQueueItem"
+        completed:
+          type: array
+          items:
+            $ref: "#/components/schemas/PublicQueueItem"
+    PublicQueueItem:
+      type: object
+      required: [publicCode, status, enteredAt]
+      properties:
+        publicCode:
+          type: string
+        displayName:
+          type: string
+          nullable: true
+        status:
+          type: string
+          enum: [PENDING, PREPARING, READY, DELIVERED]
+        enteredAt:
+          type: string
+          format: date-time
+    Error:
+      type: object
+      required: [statusCode, message]
+      properties:
+        statusCode:
+          type: integer
+        message:
+          type: string
+        code:
+          type: string
+  responses:
+    Conflict:
+      description: Version, state, active charge or idempotency conflict.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+    ValidationError:
+      description: Catalog, amount, personalization or business validation failed.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+    NotFound:
+      description: Resource not found in the active tenant.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"

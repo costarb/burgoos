@@ -16,7 +16,7 @@ export class MercadoPagoWebhookSignatureService {
     timestamp: Date;
   }> {
     const parts = Object.fromEntries(
-      input.xSignature.split(",").map((part) => part.trim().split("=", 2))
+      (input.xSignature ?? "").split(",").map((part) => part.trim().split("=", 2))
     ) as Record<string, string>;
     if (!parts.ts || !parts.v1 || !/^\d+$/.test(parts.ts) || !input.xRequestId || !input.dataId)
       throw new UnauthorizedException("Assinatura Mercado Pago invalida");

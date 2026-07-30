@@ -2,7 +2,11 @@ import { ConflictException, ForbiddenException } from "@nestjs/common";
 import { AccessUserStatus, UserRole } from "@prisma/client";
 import { describe, expect, it, vi } from "vitest";
 import { AuthUser } from "../../../platform/auth/auth.types";
-import { assertCanRemoveMaster, assertMasterAccess } from "./user-access-rules";
+import {
+  assertCanDelegatePermissions,
+  assertCanRemoveMaster,
+  assertMasterAccess,
+} from "./user-access-rules";
 
 const regularUser: AuthUser = {
   id: "user-1",
@@ -52,5 +56,24 @@ describe("user access master rules", () => {
       assertCanRemoveMaster({ id: "master-1", isMaster: true }, {}, countActiveMasters)
     ).resolves.toBeUndefined();
     expect(countActiveMasters).not.toHaveBeenCalled();
+  });
+
+  it("allows store managers to delegate regular operational permissions", () => {
+    expect(() => assertCanDelegatePermissions(regularUser, [
+      "pos.capture",
+      "kds.manage",
+      "payments.charge",
+    ])).not.toThrow();
+  });
+
+  it("restricts cancellation, refund and terminal management delegation", () => {
+    expect(() => assertCanDelegatePermissions(regularUser, [
+      "payments.cancel",
+      "payment-terminals.manage",
+    ])).toThrow(ForbiddenException);
+    expect(() => assertCanDelegatePermissions(
+      { ...regularUser, isMaster: true },
+      ["payments.refund"],
+    )).not.toThrow();
   });
 });
