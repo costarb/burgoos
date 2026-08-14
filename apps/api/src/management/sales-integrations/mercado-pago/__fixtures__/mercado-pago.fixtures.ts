@@ -19,6 +19,7 @@ export const mercadoPagoOAuthFixture: MercadoPagoOAuthTokenResponse = {
 
 export const mercadoPagoApprovedPaymentFixture: MercadoPagoPayment = {
   id: 987_654_321,
+  operation_type: "regular_payment",
   status: "approved",
   status_detail: "accredited",
   date_created: "2026-07-18T12:00:00.000Z",
