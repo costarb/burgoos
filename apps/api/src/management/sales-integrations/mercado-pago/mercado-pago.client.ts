@@ -81,6 +81,7 @@ export class MercadoPagoClient {
         sort: "date_created",
         criteria: "asc",
         range: rangeField,
+        status: "approved",
         begin_date: beginDate,
         end_date: endDate,
         limit: String(limit),

@@ -44,6 +44,7 @@ describe("MercadoPagoClient payments", () => {
     expect(firstUrl.searchParams.get("collector.id")).toBe("3358508664");
     expect(firstUrl.searchParams.get("range")).toBe("money_release_date");
     expect(firstUrl.searchParams.get("sort")).toBe("date_created");
+    expect(firstUrl.searchParams.get("status")).toBe("approved");
     expect(firstUrl.searchParams.get("begin_date")).toBe("2026-07-01T00:00:00.000-04:00");
     expect(firstUrl.searchParams.get("end_date")).toBe("2026-07-02T23:59:59.999-04:00");
   });

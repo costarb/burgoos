@@ -41,8 +41,9 @@ export class SalesReportService {
     const where = this.buildWhere(tenantId, query);
     const reportReferenceDate = new Date();
     const aggregateWhere = this.buildAggregateWhere(tenantId, query);
-    const [summaryRows, dailyRows, institutionRows, methodRows, channelRows, orders, total] = await Promise.all([
-      this.aggregate(Prisma.sql`SELECT
+    const [summaryRows, dailyRows, institutionRows, methodRows, channelRows, orders, total] =
+      await Promise.all([
+        this.aggregate(Prisma.sql`SELECT
         COUNT(*)::bigint AS "orderCount",
         COALESCE(SUM(COALESCE(o.payment_gross_amount, o.total)), 0) AS "grossRevenue",
         COALESCE(SUM(COALESCE(o.payment_net_amount, o.payment_gross_amount, o.total)), 0) AS "acquiredNetRevenue",
@@ -52,8 +53,8 @@ export class SalesReportService {
         COUNT(*) FILTER (WHERE o.payment_release_expected_at > ${reportReferenceDate})::bigint AS "pendingOrderCount",
         MIN(CASE WHEN o.payment_release_expected_at > ${reportReferenceDate} THEN o.payment_release_expected_at END) AS "nextExpectedReleaseDate"
         FROM orders o WHERE ${aggregateWhere}`),
-      this.aggregate(Prisma.sql`SELECT
-        TO_CHAR(o.created_at AT TIME ZONE 'America/Sao_Paulo', 'YYYY-MM-DD') AS "dimensionKey",
+        this.aggregate(Prisma.sql`SELECT
+        TO_CHAR((o.created_at AT TIME ZONE 'UTC') AT TIME ZONE 'America/Sao_Paulo', 'YYYY-MM-DD') AS "dimensionKey",
         COUNT(*)::bigint AS "orderCount",
         COALESCE(SUM(COALESCE(o.payment_gross_amount, o.total)), 0) AS "grossRevenue",
         COALESCE(SUM(COALESCE(o.payment_net_amount, o.payment_gross_amount, o.total)), 0) AS "acquiredNetRevenue",
@@ -61,9 +62,17 @@ export class SalesReportService {
         COALESCE(SUM(CASE WHEN o.payment_release_expected_at > ${reportReferenceDate} THEN COALESCE(o.payment_net_amount, o.payment_gross_amount, o.total) ELSE 0 END), 0) AS "receivableNetAmount",
         COALESCE(SUM(o.payment_fee_amount), 0) AS "paymentFeeAmount"
         FROM orders o WHERE ${aggregateWhere} GROUP BY 1 ORDER BY 1`),
-      this.dimensionAggregate(aggregateWhere, Prisma.sql`COALESCE(o.payment_institution::text, 'NOT_INFORMED')`, reportReferenceDate),
-      this.dimensionAggregate(aggregateWhere, Prisma.sql`o.payment_method::text`, reportReferenceDate),
-      this.aggregate(Prisma.sql`SELECT
+        this.dimensionAggregate(
+          aggregateWhere,
+          Prisma.sql`COALESCE(o.payment_institution::text, 'NOT_INFORMED')`,
+          reportReferenceDate
+        ),
+        this.dimensionAggregate(
+          aggregateWhere,
+          Prisma.sql`o.payment_method::text`,
+          reportReferenceDate
+        ),
+        this.aggregate(Prisma.sql`SELECT
         o.order_platform_id::text AS "dimensionKey", COALESCE(p.name, 'Sem canal') AS "dimensionLabel",
         COUNT(*)::bigint AS "orderCount",
         COALESCE(SUM(COALESCE(o.payment_gross_amount, o.total)), 0) AS "grossRevenue",
@@ -73,20 +82,20 @@ export class SalesReportService {
         COALESCE(SUM(o.payment_fee_amount), 0) AS "paymentFeeAmount"
         FROM orders o LEFT JOIN order_platforms p ON p.id = o.order_platform_id
         WHERE ${aggregateWhere} GROUP BY o.order_platform_id, p.name ORDER BY "grossRevenue" DESC`),
-      this.prisma.order.findMany({
-        where,
-        include: {
-          items: true,
-          orderPlatform: true,
-        },
-        orderBy: {
-          createdAt: "asc",
-        },
-        skip: (query.page - 1) * query.pageSize,
-        take: query.pageSize,
-      }),
-      this.prisma.order.count({ where }),
-    ]);
+        this.prisma.order.findMany({
+          where,
+          include: {
+            items: true,
+            orderPlatform: true,
+          },
+          orderBy: {
+            createdAt: "asc",
+          },
+          skip: (query.page - 1) * query.pageSize,
+          take: query.pageSize,
+        }),
+        this.prisma.order.count({ where }),
+      ]);
 
     const summary = this.rowToBucket(summaryRows[0]);
     const totalGross = summary.grossRevenue;
@@ -108,15 +117,11 @@ export class SalesReportService {
         periodEnd: query.end,
       },
       daily: this.createDailySummaries(dailyRows, query.start, query.end),
-      byPaymentInstitution: this.formatDimensionRows(
-        institutionRows,
-        totalGross,
-        (key) => paymentInstitutionLabel(key),
+      byPaymentInstitution: this.formatDimensionRows(institutionRows, totalGross, (key) =>
+        paymentInstitutionLabel(key)
       ),
-      byPaymentMethod: this.formatDimensionRows(
-        methodRows,
-        totalGross,
-        (key) => paymentMethodLabel(key),
+      byPaymentMethod: this.formatDimensionRows(methodRows, totalGross, (key) =>
+        paymentMethodLabel(key)
       ),
       byChannel: channelRows.map((row) => ({
         orderPlatformId: row.dimensionKey,
@@ -161,11 +166,14 @@ export class SalesReportService {
       Prisma.sql`o.deleted_at IS NULL`,
       Prisma.sql`o.created_at >= ${query.periodStart}`,
       Prisma.sql`o.created_at <= ${query.periodEnd}`,
-      Prisma.sql`o.status::text = ${(query.status ?? OrderStatus.DELIVERED)}`,
+      Prisma.sql`o.status::text = ${query.status ?? OrderStatus.DELIVERED}`,
     ];
-    if (query.paymentInstitution) clauses.push(Prisma.sql`o.payment_institution::text = ${query.paymentInstitution}`);
-    if (query.paymentMethod) clauses.push(Prisma.sql`o.payment_method::text = ${query.paymentMethod}`);
-    if (query.orderPlatformId) clauses.push(Prisma.sql`o.order_platform_id = ${query.orderPlatformId}::uuid`);
+    if (query.paymentInstitution)
+      clauses.push(Prisma.sql`o.payment_institution::text = ${query.paymentInstitution}`);
+    if (query.paymentMethod)
+      clauses.push(Prisma.sql`o.payment_method::text = ${query.paymentMethod}`);
+    if (query.orderPlatformId)
+      clauses.push(Prisma.sql`o.order_platform_id = ${query.orderPlatformId}::uuid`);
     return Prisma.join(clauses, " AND ");
   }
 
@@ -176,7 +184,7 @@ export class SalesReportService {
   private dimensionAggregate(
     where: Prisma.Sql,
     dimension: Prisma.Sql,
-    referenceDate: Date,
+    referenceDate: Date
   ): Promise<AggregateRow[]> {
     return this.aggregate(Prisma.sql`SELECT
       ${dimension} AS "dimensionKey",
@@ -192,7 +200,7 @@ export class SalesReportService {
   private createDailySummaries(
     aggregateRows: AggregateRow[],
     periodStart: string,
-    periodEnd: string,
+    periodEnd: string
   ) {
     const buckets = new Map(aggregateRows.map((row) => [row.dimensionKey!, this.rowToBucket(row)]));
 
@@ -224,7 +232,7 @@ export class SalesReportService {
   private formatDimensionRows(
     rows: AggregateRow[],
     totalGross: Prisma.Decimal,
-    labelResolver: (key: string) => string,
+    labelResolver: (key: string) => string
   ) {
     return rows.map((row) => {
       const key = row.dimensionKey ?? "NOT_INFORMED";

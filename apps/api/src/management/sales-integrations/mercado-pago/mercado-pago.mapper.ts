@@ -1,9 +1,26 @@
 import { ProviderMovement } from "../sales-provider.adapter";
 import { MercadoPagoPayment } from "./mercado-pago.types";
 
+const SALE_OPERATION_TYPES = new Set(["regular_payment", "pos_payment", "recurring_payment"]);
+
 export function mapMercadoPagoPayment(payment: MercadoPagoPayment): ProviderMovement {
   const id = String(payment.id);
   const raw = redactPayment(payment);
+  if (
+    !payment.operation_type ||
+    !SALE_OPERATION_TYPES.has(payment.operation_type) ||
+    isSameOwnerTransfer(payment)
+  )
+    return {
+      providerMovementId: id,
+      externalSaleId: id,
+      externalEventCode: payment.status,
+      kind: "NON_SALE",
+      sale: null,
+      raw,
+      rejectionCode: "NON_SALE_OPERATION",
+      rejectionMessage: "Movimento Mercado Pago sem origem em venda reconhecida",
+    };
   if (payment.status !== "approved")
     return {
       providerMovementId: id,
@@ -61,6 +78,13 @@ export function mapMercadoPagoPayment(payment: MercadoPagoPayment): ProviderMove
       raw,
     },
   };
+}
+
+function isSameOwnerTransfer(payment: MercadoPagoPayment): boolean {
+  return (
+    payment.additional_info?.bank_info?.is_same_bank_account_owner === true ||
+    payment.point_of_interaction?.transaction_data?.bank_info?.is_same_bank_account_owner === true
+  );
 }
 
 function normalizeProviderDateTime(value: string): string {

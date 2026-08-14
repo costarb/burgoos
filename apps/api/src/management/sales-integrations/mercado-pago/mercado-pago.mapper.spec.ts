@@ -27,6 +27,86 @@ describe("mapMercadoPagoPayment", () => {
     ).toBe("NON_SALE");
   });
 
+  it.each(["money_transfer", "account_fund", "investment", "withdrawal"])(
+    "classifies approved financial operation %s as a non-sale",
+    (operationType) => {
+      const movement = mapMercadoPagoPayment({
+        ...mercadoPagoApprovedPaymentFixture,
+        operation_type: operationType,
+      });
+
+      expect(movement).toMatchObject({
+        kind: "NON_SALE",
+        sale: null,
+        rejectionCode: "NON_SALE_OPERATION",
+      });
+      expect(movement.raw).toMatchObject({ operation_type: operationType });
+    }
+  );
+
+  it.each([undefined, "future_payment_type"])(
+    "fails closed when operation type is %s",
+    (operationType) => {
+      const movement = mapMercadoPagoPayment({
+        ...mercadoPagoApprovedPaymentFixture,
+        operation_type: operationType,
+      });
+
+      expect(movement.kind).toBe("NON_SALE");
+      expect(movement.sale).toBeNull();
+      expect(movement.rejectionCode).toBe("NON_SALE_OPERATION");
+    }
+  );
+
+  it.each(["regular_payment", "pos_payment", "recurring_payment"])(
+    "accepts commercial operation %s",
+    (operationType) => {
+      const movement = mapMercadoPagoPayment({
+        ...mercadoPagoApprovedPaymentFixture,
+        operation_type: operationType,
+      });
+
+      expect(movement.kind).toBe("SALE");
+      expect(movement.sale).not.toBeNull();
+      expect(movement.rejectionCode).toBeUndefined();
+    }
+  );
+
+  it.each([
+    {
+      additional_info: { bank_info: { is_same_bank_account_owner: true } },
+    },
+    {
+      point_of_interaction: {
+        type: "PSP_TRANSFER",
+        transaction_data: { bank_info: { is_same_bank_account_owner: true } },
+      },
+    },
+  ])("rejects a regular payment transferred between accounts of the same owner", (fields) => {
+    const movement = mapMercadoPagoPayment({
+      ...mercadoPagoApprovedPaymentFixture,
+      operation_type: "regular_payment",
+      ...fields,
+    });
+
+    expect(movement).toMatchObject({
+      kind: "NON_SALE",
+      sale: null,
+      rejectionCode: "NON_SALE_OPERATION",
+    });
+  });
+
+  it("keeps a PIX sale when Mercado Pago explicitly says the payer is another owner", () => {
+    const movement = mapMercadoPagoPayment({
+      ...mercadoPagoApprovedPaymentFixture,
+      operation_type: "regular_payment",
+      additional_info: { bank_info: { is_same_bank_account_owner: false } },
+    });
+
+    expect(movement.kind).toBe("SALE");
+    expect(movement.sale?.paymentMethod).toBe("PIX");
+  });
+
   it.each([
     ["prepaid_card", "master", "CREDIT_CARD"],
     ["account_money", "account_money", "DIGITAL_WALLET"],

@@ -63,4 +63,55 @@ describe("MercadoPagoWebhookService", () => {
     await service.process("n");
     expect(prisma.providerNotification.findUniqueOrThrow).not.toHaveBeenCalled();
   });
+
+  it("finishes a financial-operation webhook as processed without exposing a sale", async () => {
+    const notification = {
+      id: "n",
+      providerUserId: "123456789",
+      environment: "PRODUCTION",
+      resourceType: "PAYMENT",
+      providerResourceId: "987654321",
+      attempts: 1,
+    };
+    const prisma: any = {
+      providerNotification: {
+        updateMany: vi.fn().mockResolvedValue({ count: 1 }),
+        findUniqueOrThrow: vi.fn().mockResolvedValue(notification),
+        update: vi.fn().mockReturnValue("notification-update"),
+      },
+      salesIntegration: {
+        findFirst: vi.fn().mockResolvedValue({ id: "integration", tenantId: "tenant" }),
+        update: vi.fn().mockReturnValue("integration-update"),
+      },
+      $transaction: vi.fn().mockResolvedValue([]),
+    };
+    const authenticated: any = { execute: vi.fn(async ({ request }) => request("account-token")) };
+    const states: any = { upsertFromMovement: vi.fn().mockResolvedValue("state") };
+    const service = new MercadoPagoWebhookService(
+      prisma,
+      { redact: vi.fn() } as any,
+      authenticated,
+      {
+        getPayment: vi.fn().mockResolvedValue({
+          ...mercadoPagoApprovedPaymentFixture,
+          operation_type: "money_transfer",
+        }),
+      } as any,
+      states,
+      { record: vi.fn() } as any
+    );
+
+    await service.process("n", true);
+
+    expect(states.upsertFromMovement).toHaveBeenCalledWith(
+      expect.objectContaining({
+        movement: expect.objectContaining({
+          kind: "NON_SALE",
+          sale: null,
+          rejectionCode: "NON_SALE_OPERATION",
+        }),
+      })
+    );
+    expect(prisma.$transaction).toHaveBeenCalledTimes(1);
+  });
 });
