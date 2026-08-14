@@ -4,6 +4,13 @@ import { readFile, rm } from "node:fs/promises";
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ExportJobWorker } from "./export-job.worker";
+import { LocalAssetStorageService } from "../../common/storage/local-asset-storage.service";
+
+const testAssetStorage = new LocalAssetStorageService({
+  get: vi.fn((key: string) =>
+    key === "ASSET_LOCAL_ROOT" ? join(process.cwd(), "tmp", "exports") : undefined
+  ),
+} as never);
 
 describe("ExportJobWorker", () => {
   beforeEach(() => {
@@ -17,6 +24,42 @@ describe("ExportJobWorker", () => {
       maxRetries: 3,
       recursive: true,
       retryDelay: 50,
+    });
+  });
+
+  it("registers the durable handler and recovers pending exports in bounded pages", async () => {
+    const update = vi.fn().mockResolvedValue({});
+    const prisma = {
+      exportJob: {
+        findMany: vi.fn().mockResolvedValueOnce([
+          { id: "export-1", tenantId: "tenant-1", fingerprint: "fingerprint-1" },
+        ]),
+        update,
+      },
+    };
+    const enqueue = vi.fn().mockResolvedValue({ id: "background-1", targetId: "export-1" });
+    const register = vi.fn();
+    const worker = new ExportJobWorker(
+      prisma as never,
+      {} as never,
+      {} as never,
+      { enqueue } as never,
+      { register } as never,
+      { get: vi.fn().mockReturnValue("true") } as never,
+    );
+
+    await worker.onModuleInit();
+
+    expect(register).toHaveBeenCalledWith(expect.objectContaining({ type: "EXPORT" }));
+    expect(prisma.exportJob.findMany).toHaveBeenCalledWith(expect.objectContaining({ take: 25 }));
+    expect(enqueue).toHaveBeenCalledWith(expect.objectContaining({
+      type: "EXPORT",
+      targetId: "export-1",
+      dedupeKey: "fingerprint-1",
+    }));
+    expect(update).toHaveBeenCalledWith({
+      where: { id: "export-1" },
+      data: { backgroundJobId: "background-1" },
     });
   });
 
@@ -34,8 +77,8 @@ describe("ExportJobWorker", () => {
       const prisma = createPrismaMock(exportJob({ format }));
       const notifications = { create: vi.fn().mockResolvedValue(null) };
       const registry = {
-        get: vi.fn().mockReturnValue({
-          build: vi.fn().mockResolvedValue({
+        get: vi.fn().mockReturnValue(
+          providerFor({
             title: "Contas a pagar",
             columns: [
               { key: "description", label: "Conta" },
@@ -43,12 +86,16 @@ describe("ExportJobWorker", () => {
             ],
             rows: [{ description: "Compra de insumos", expectedAmount: "120.00" }],
           }),
-        }),
+        ),
       };
       const worker = new ExportJobWorker(
         prisma as never,
         registry as never,
-        notifications as never
+        notifications as never,
+        undefined,
+        undefined,
+        undefined,
+        testAssetStorage,
       );
 
       await worker.process("export-1");
@@ -89,10 +136,14 @@ describe("ExportJobWorker", () => {
     const notifications = { create: vi.fn().mockResolvedValue(null) };
     const registry = {
       get: vi.fn().mockReturnValue({
-        build: vi.fn().mockRejectedValue(new Error("database stack trace")),
+        describe: vi.fn().mockRejectedValue(new Error("database stack trace")),
+        readBatch: vi.fn(),
       }),
     };
-    const worker = new ExportJobWorker(prisma as never, registry as never, notifications as never);
+    const worker = new ExportJobWorker(
+      prisma as never, registry as never, notifications as never,
+      undefined, undefined, undefined, testAssetStorage,
+    );
 
     await worker.process("export-1");
 
@@ -115,8 +166,8 @@ describe("ExportJobWorker", () => {
     const prisma = createPrismaMock(exportJob({ format: ExportFormat.PDF }));
     const notifications = { create: vi.fn().mockResolvedValue(null) };
     const registry = {
-      get: vi.fn().mockReturnValue({
-        build: vi.fn().mockResolvedValue({
+      get: vi.fn().mockReturnValue(
+        providerFor({
           title: "Contas a pagar",
           columns: [
             { key: "description", label: "Conta" },
@@ -131,9 +182,12 @@ describe("ExportJobWorker", () => {
             },
           ],
         }),
-      }),
+      ),
     };
-    const worker = new ExportJobWorker(prisma as never, registry as never, notifications as never);
+    const worker = new ExportJobWorker(
+      prisma as never, registry as never, notifications as never,
+      undefined, undefined, undefined, testAssetStorage,
+    );
 
     await worker.process("export-1");
 
@@ -159,17 +213,20 @@ describe("ExportJobWorker", () => {
     );
     const notifications = { create: vi.fn().mockResolvedValue(null) };
     const registry = {
-      get: vi.fn().mockReturnValue({
-        build: vi.fn().mockResolvedValue({
+      get: vi.fn().mockReturnValue(
+        providerFor({
           title: "Relatorio gerencial 2026-06-01 a 2026-06-30",
           layout: "MANAGEMENT_REPORT",
           metadata: { report: managementReportFixture() },
           columns: [],
           rows: [],
         }),
-      }),
+      ),
     };
-    const worker = new ExportJobWorker(prisma as never, registry as never, notifications as never);
+    const worker = new ExportJobWorker(
+      prisma as never, registry as never, notifications as never,
+      undefined, undefined, undefined, testAssetStorage,
+    );
 
     await worker.process("export-1");
 
@@ -197,6 +254,68 @@ describe("ExportJobWorker", () => {
     expect(pdfContent).toContain(`<${pdfHex("Mercado Pago")}> Tj`);
     expect(pdfContent).not.toContain("Secao | Indicador | Valor");
   });
+
+  it("reads CSV rows in cursor batches using the configured batch size", async () => {
+    const prisma = createPrismaMock(exportJob());
+    const readBatch = vi.fn()
+      .mockResolvedValueOnce({ rows: [{ value: "one" }], nextCursor: "cursor-1" })
+      .mockResolvedValueOnce({ rows: [{ value: "two" }], nextCursor: null });
+    const registry = {
+      get: vi.fn().mockReturnValue({
+        describe: vi.fn().mockResolvedValue({
+          title: "Cursor export",
+          columns: [{ key: "value", label: "Value" }],
+          totalRows: 2,
+        }),
+        readBatch,
+      }),
+    };
+    const worker = new ExportJobWorker(
+      prisma as never,
+      registry as never,
+      { create: vi.fn().mockResolvedValue(null) } as never,
+      undefined,
+      undefined,
+      { get: vi.fn().mockReturnValue(1) } as never,
+      testAssetStorage,
+    );
+
+    await worker.process("export-1");
+
+    expect(readBatch).toHaveBeenNthCalledWith(1, expect.anything(), null, 1);
+    expect(readBatch).toHaveBeenNthCalledWith(2, expect.anything(), "cursor-1", 1);
+  });
+
+  it.each([
+    [ExportFormat.PDF, 1_001],
+    [ExportFormat.XLSX, 50_001],
+  ])("rejects %s exports above the row limit before reading rows", async (format, totalRows) => {
+    const prisma = createPrismaMock(exportJob({ format }));
+    const readBatch = vi.fn();
+    const registry = {
+      get: vi.fn().mockReturnValue({
+        describe: vi.fn().mockResolvedValue({ title: "Large", columns: [], totalRows }),
+        readBatch,
+      }),
+    };
+    const worker = new ExportJobWorker(
+      prisma as never,
+      registry as never,
+      { create: vi.fn().mockResolvedValue(null) } as never,
+      undefined,
+      undefined,
+      undefined,
+      testAssetStorage,
+    );
+
+    await worker.process("export-1");
+
+    expect(readBatch).not.toHaveBeenCalled();
+    expect(prisma.exportJob.update).toHaveBeenLastCalledWith({
+      where: { id: "export-1" },
+      data: expect.objectContaining({ status: ExportJobStatus.FAILED }),
+    });
+  });
 });
 
 function pdfHex(value: string): string {
@@ -209,6 +328,25 @@ function createPrismaMock(job: ReturnType<typeof exportJob>) {
       findUnique: vi.fn().mockResolvedValue(job),
       update: vi.fn().mockResolvedValue(job),
     },
+  };
+}
+
+function providerFor(dataset: {
+  title: string;
+  columns: Array<{ key: string; label: string }>;
+  rows: Array<Record<string, string | number | null>>;
+  layout?: "MANAGEMENT_REPORT";
+  metadata?: Record<string, unknown>;
+}) {
+  return {
+    describe: vi.fn().mockResolvedValue({
+      title: dataset.title,
+      columns: dataset.columns,
+      layout: dataset.layout,
+      metadata: dataset.metadata,
+      totalRows: dataset.rows.length,
+    }),
+    readBatch: vi.fn().mockResolvedValue({ rows: dataset.rows, nextCursor: null }),
   };
 }
 

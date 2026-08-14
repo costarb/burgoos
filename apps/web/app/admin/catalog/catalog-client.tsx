@@ -20,6 +20,7 @@ import {
   updateAdminCategory,
   updateAdminProduct,
 } from "../../../lib/api";
+import { uploadImageAsset } from "../../../lib/image-upload";
 
 interface CatalogClientProps {
   token: string;
@@ -547,6 +548,7 @@ export function CatalogClient({
             onClose={() => setDialog(null)}
             onSubmit={submitProduct}
             product={dialog.mode === "edit" ? dialog.product : null}
+            token={token}
           />
         ) : null}
         {categoryDialog ? (
@@ -687,6 +689,7 @@ function ProductEditorDialog({
   busy,
   onClose,
   onSubmit,
+  token,
 }: {
   mode: "create" | "edit";
   product?: AdminProduct | null;
@@ -694,6 +697,7 @@ function ProductEditorDialog({
   busy: boolean;
   onClose: () => void;
   onSubmit: (payload: AdminProductInput) => Promise<void>;
+  token: string;
 }) {
   const [categoryId, setCategoryId] = useState(product?.categoryId ?? categories[0]?.id ?? "");
   const [name, setName] = useState(product?.name ?? "");
@@ -719,13 +723,11 @@ function ProductEditorDialog({
       return;
     }
 
-    if (!file.type.startsWith("image/")) {
-      setFileError("Arquivo de imagem invalido.");
-      return;
+    try {
+      setImageUrl(await uploadImageAsset(token, file, "PRODUCT_IMAGE"));
+    } catch (error) {
+      setFileError(error instanceof Error ? error.message : "Nao foi possivel enviar a imagem.");
     }
-
-    const dataUrl = await readFileAsDataUrl(file);
-    setImageUrl(dataUrl);
   }
 
   async function submit(event: FormEvent<HTMLFormElement>) {
@@ -852,7 +854,7 @@ function ProductEditorDialog({
             />
           </label>
           <label className="block text-sm">
-            URL ou base64
+            URL ou chave da imagem
             <textarea
               className="mt-1 min-h-24 w-full rounded-md border border-slate-200 px-3 py-2 text-xs"
               onChange={(event) => setImageUrl(event.target.value)}
@@ -942,13 +944,4 @@ function StatusBadge({ active }: { active: boolean }) {
       {active ? "Ativo" : "Inativo"}
     </span>
   );
-}
-
-function readFileAsDataUrl(file: File): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => resolve(String(reader.result ?? ""));
-    reader.onerror = () => reject(new Error("Nao foi possivel carregar a imagem."));
-    reader.readAsDataURL(file);
-  });
 }

@@ -9,6 +9,23 @@ const platformId = "22222222-2222-4222-8222-222222222222";
 describe("sales report service", () => {
   it("aggregates money, net fallback, zero-sale days and dimensions", async () => {
     const prismaMock = {
+      $queryRaw: vi.fn()
+        .mockResolvedValueOnce([aggregateRow({ orderCount: 2, gross: "50.00", net: "48.50", released: "28.50", receivable: "20.00", fee: "1.50", pendingOrderCount: 1, nextExpectedReleaseDate: new Date("2099-08-01T18:00:00.000Z") })])
+        .mockResolvedValueOnce([
+          aggregateRow({ key: "2026-05-30", gross: "30.00", net: "28.50", released: "28.50", fee: "1.50" }),
+          aggregateRow({ key: "2026-06-01", gross: "20.00", net: "20.00", receivable: "20.00" }),
+        ])
+        .mockResolvedValueOnce([
+          aggregateRow({ key: "MERCADO_PAGO", gross: "30.00", net: "28.50", released: "28.50", fee: "1.50" }),
+          aggregateRow({ key: "CAIXA_LOCAL", gross: "20.00", net: "20.00", receivable: "20.00" }),
+        ])
+        .mockResolvedValueOnce([
+          aggregateRow({ key: "CREDIT_CARD", gross: "30.00", net: "28.50", released: "28.50", fee: "1.50" }),
+          aggregateRow({ key: "CASH", gross: "20.00", net: "20.00", receivable: "20.00" }),
+        ])
+        .mockResolvedValueOnce([
+          { ...aggregateRow({ key: platformId, gross: "50.00", net: "48.50", released: "28.50", receivable: "20.00", fee: "1.50", orderCount: 2 }), dimensionLabel: "FOOD_TRUCK" },
+        ]),
       order: {
         findMany: vi.fn().mockResolvedValue([
           order({
@@ -32,7 +49,7 @@ describe("sales report service", () => {
             paymentInstitution: PaymentInstitution.CAIXA_LOCAL,
             paymentMethod: PaymentMethod.CASH,
             externalPaymentId: null,
-            paymentReleaseExpectedAt: new Date("2026-08-01T18:00:00.000Z"),
+            paymentReleaseExpectedAt: new Date("2099-08-01T18:00:00.000Z"),
           }),
         ]),
         count: vi.fn().mockResolvedValue(2),
@@ -98,8 +115,12 @@ describe("sales report service", () => {
     expect(report.receivables).toEqual({
       pendingOrderCount: 1,
       receivableNetAmount: "20.00",
-      nextExpectedReleaseDate: "2026-08-01",
+      nextExpectedReleaseDate: "2099-08-01",
     });
+    expect(prismaMock.order.findMany).toHaveBeenCalledWith(expect.objectContaining({
+      skip: 0,
+      take: 50,
+    }));
   });
 
   it("builds default delivered filter and validates enum values", () => {
@@ -174,4 +195,38 @@ function order(overrides: {
 
 function decimal(value: string): Prisma.Decimal {
   return new Prisma.Decimal(value);
+}
+
+function aggregateRow({
+  key,
+  orderCount = 1,
+  gross = "0",
+  net = "0",
+  released = "0",
+  receivable = "0",
+  fee = "0",
+  pendingOrderCount,
+  nextExpectedReleaseDate,
+}: {
+  key?: string;
+  orderCount?: number;
+  gross?: string;
+  net?: string;
+  released?: string;
+  receivable?: string;
+  fee?: string;
+  pendingOrderCount?: number;
+  nextExpectedReleaseDate?: Date;
+}) {
+  return {
+    dimensionKey: key,
+    orderCount: BigInt(orderCount),
+    grossRevenue: decimal(gross),
+    acquiredNetRevenue: decimal(net),
+    releasedNetRevenue: decimal(released),
+    receivableNetAmount: decimal(receivable),
+    paymentFeeAmount: decimal(fee),
+    pendingOrderCount: pendingOrderCount === undefined ? undefined : BigInt(pendingOrderCount),
+    nextExpectedReleaseDate,
+  };
 }

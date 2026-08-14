@@ -20,7 +20,7 @@ export class PublicMenuController {
     @Res() response: Response
   ) {
     const asset = await this.catalogService.getPublicProductImage(slug, productId);
-    sendImageAsset(response, asset.value);
+    sendImageAsset(response, asset);
   }
 
   @Get(":slug/branding/:asset")
@@ -34,7 +34,7 @@ export class PublicMenuController {
     }
 
     const image = await this.catalogService.getPublicBrandingImage(slug, asset);
-    sendImageAsset(response, image.value);
+    sendImageAsset(response, image);
   }
 }
 
@@ -55,7 +55,19 @@ function isBrandingAsset(value: string): value is "logo" | "header" | "body" | "
   return ["logo", "header", "body", "footer"].includes(value);
 }
 
-function sendImageAsset(response: Response, value: string): void {
+function sendImageAsset(
+  response: Response,
+  asset: { value?: string; body?: NodeJS.ReadableStream; contentType?: string; contentLength?: number },
+): void {
+  if (asset.body) {
+    response.setHeader("Content-Type", asset.contentType ?? "application/octet-stream");
+    if (asset.contentLength !== undefined) response.setHeader("Content-Length", asset.contentLength);
+    response.setHeader("Cache-Control", "public, max-age=31536000, immutable");
+    asset.body.pipe(response);
+    return;
+  }
+  const value = asset.value;
+  if (!value) throw new BadRequestException("Invalid image asset");
   if (isHttpUrl(value)) {
     response.setHeader("Cache-Control", "public, max-age=3600");
     response.redirect(302, value);

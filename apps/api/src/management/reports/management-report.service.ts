@@ -2,21 +2,8 @@ import { Inject, Injectable } from "@nestjs/common";
 import { Prisma } from "@prisma/client";
 import { AccountsPayableService } from "../financial/accounts-payable/accounts-payable.service";
 import { CashFlowService } from "../financial/cash-flow/cash-flow.service";
-import { toMoneyString } from "../financial/money";
 import { ParsedManagementReportQuery } from "./management-report.types";
 import { SalesReportService } from "./sales-report.service";
-
-interface ManagementExpenseCategorySummary {
-  categoryId: string | null;
-  categoryName: string;
-  expected: string;
-  paid: string;
-  open: string;
-  overdue: string;
-  shareOfExpected: number;
-}
-
-type PayableListItem = Awaited<ReturnType<AccountsPayableService["list"]>>["items"][number];
 
 @Injectable()
 export class ManagementReportService {
@@ -28,24 +15,38 @@ export class ManagementReportService {
   ) {}
 
   async getReport(tenantId: string, query: ParsedManagementReportQuery) {
-    const [cashStatement, cashPosition, salesReport, payables] = await Promise.all([
+    const [cashStatement, cashPosition] = await Promise.all([
       this.cashFlowService.getStatement(tenantId, query.periodStart, query.periodEnd),
       this.cashFlowService.getPosition(tenantId, query.periodEnd, query.periodEnd),
-      this.salesReportService.getReport(tenantId, {
+    ]);
+    const salesReport = await this.salesReportService.getReport(tenantId, {
         start: query.start,
         end: query.end,
         periodStart: query.periodStart,
         periodEnd: query.periodEnd,
         page: 1,
         pageSize: 50,
-      }),
+      });
+    const [payables, payableCategories] = await Promise.all([
       this.accountsPayableService.list(tenantId, {
+        start: query.start,
+        end: query.end,
+        page: 1,
+        pageSize: 1,
+      }),
+      this.accountsPayableService.summarizeByCategory(tenantId, {
         start: query.start,
         end: query.end,
       }),
     ]);
 
-    const payablesByCategory = groupPayablesByCategory(payables.items);
+    const totalExpected = new Prisma.Decimal(payables.summary.totalExpected);
+    const payablesByCategory = payableCategories.map((category) => ({
+      ...category,
+      shareOfExpected: totalExpected.isZero()
+        ? 0
+        : new Prisma.Decimal(category.expected).div(totalExpected).toDecimalPlaces(4).toNumber(),
+    }));
 
     return {
       period: {
@@ -129,61 +130,6 @@ export class ManagementReportService {
       },
     };
   }
-}
-
-function groupPayablesByCategory(items: PayableListItem[]): ManagementExpenseCategorySummary[] {
-  const activeItems = items.filter((item) => item.status !== "CANCELLED");
-  const totalExpected = activeItems.reduce(
-    (total, item) => total.plus(item.expectedAmount),
-    new Prisma.Decimal(0)
-  );
-  const buckets = new Map<
-    string,
-    {
-      categoryId: string | null;
-      categoryName: string;
-      expected: Prisma.Decimal;
-      paid: Prisma.Decimal;
-      open: Prisma.Decimal;
-      overdue: Prisma.Decimal;
-    }
-  >();
-
-  activeItems.forEach((item) => {
-    const key = item.categoryId ?? "NO_CATEGORY";
-    const bucket = buckets.get(key) ?? {
-      categoryId: item.categoryId ?? null,
-      categoryName: item.categoryName || "Sem categoria",
-      expected: new Prisma.Decimal(0),
-      paid: new Prisma.Decimal(0),
-      open: new Prisma.Decimal(0),
-      overdue: new Prisma.Decimal(0),
-    };
-
-    bucket.expected = bucket.expected.plus(item.expectedAmount);
-    bucket.paid = bucket.paid.plus(item.paidAmount);
-    bucket.open = bucket.open.plus(item.remainingAmount);
-
-    if (item.status === "OVERDUE") {
-      bucket.overdue = bucket.overdue.plus(item.remainingAmount);
-    }
-
-    buckets.set(key, bucket);
-  });
-
-  return [...buckets.values()]
-    .map((bucket) => ({
-      categoryId: bucket.categoryId,
-      categoryName: bucket.categoryName,
-      expected: toMoneyString(bucket.expected),
-      paid: toMoneyString(bucket.paid),
-      open: toMoneyString(bucket.open),
-      overdue: toMoneyString(bucket.overdue),
-      shareOfExpected: totalExpected.isZero()
-        ? 0
-        : bucket.expected.div(totalExpected).toDecimalPlaces(4).toNumber(),
-    }))
-    .sort((left, right) => Number(right.expected) - Number(left.expected));
 }
 
 function buildNarrative({

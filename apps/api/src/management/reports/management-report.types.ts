@@ -1,5 +1,5 @@
 import { BadRequestException } from "@nestjs/common";
-import { businessMonthRange, localDayEnd, localDayStart } from "./sales-report.types";
+import { assertInteractivePeriod, localDayEnd, localDayStart, rollingReportRange } from "./sales-report.types";
 
 export interface ManagementReportQuery {
   start?: string;
@@ -17,9 +17,9 @@ export function parseManagementReportQuery(
   query: ManagementReportQuery
 ): ParsedManagementReportQuery {
   const now = new Date();
-  const currentMonth = businessMonthRange(now);
-  const start = query.start ?? currentMonth.start;
-  const end = query.end ?? currentMonth.end;
+  const defaultRange = rollingReportRange(now);
+  const start = query.start ?? defaultRange.start;
+  const end = query.end ?? defaultRange.end;
   const periodStart = localDayStart(start);
   const periodEnd = localDayEnd(end);
 
@@ -30,6 +30,8 @@ export function parseManagementReportQuery(
   if (periodStart > periodEnd) {
     throw new BadRequestException("Data inicial deve ser anterior ou igual a data final");
   }
+
+  assertInteractivePeriod(periodStart, periodEnd);
 
   return { start, end, periodStart, periodEnd };
 }

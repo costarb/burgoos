@@ -1,5 +1,5 @@
 import { Injectable } from "@nestjs/common";
-import { ChargeStatus, Prisma } from "@prisma/client";
+import { ChargeStatus } from "@prisma/client";
 import { PrismaService } from "../../platform/database/prisma.service";
 import { MappedPointOrder } from "../mercado-pago-point/mercado-pago-point.mapper";
 

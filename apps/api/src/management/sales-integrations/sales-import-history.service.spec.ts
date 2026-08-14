@@ -70,10 +70,17 @@ describe("SalesImportHistoryService", () => {
   });
   it("purges terminal raw runs older than 180 days without touching identities", async () => {
     const deleteMany = vi.fn().mockResolvedValue({ count: 2 });
-    const service = new SalesImportRetentionService({ salesImportRun: { deleteMany } } as never);
+    const service = new SalesImportRetentionService({
+      salesImportRun: {
+        findMany: vi.fn().mockResolvedValueOnce([{ id: "run-1" }, { id: "run-2" }]).mockResolvedValueOnce([]),
+        deleteMany,
+      },
+      oAuthAuthorizationAttempt: { findMany: vi.fn().mockResolvedValue([]), deleteMany: vi.fn() },
+      providerNotification: { findMany: vi.fn().mockResolvedValue([]), deleteMany: vi.fn() },
+    } as never, undefined, undefined, { get: vi.fn((key) => key === "RETENTION_BATCH_SIZE" ? 2 : 5_000) } as never);
     await expect(service.purgeExpired(new Date("2026-07-18T00:00:00.000Z"))).resolves.toBe(2);
     expect(deleteMany).toHaveBeenCalledWith({
-      where: expect.objectContaining({ createdAt: { lt: new Date("2026-01-19T00:00:00.000Z") } }),
+      where: { id: { in: ["run-1", "run-2"] } },
     });
   });
 });

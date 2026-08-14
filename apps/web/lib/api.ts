@@ -30,6 +30,8 @@ import type {
   FinancialAuditRecord,
   ExportJob,
   ExportJobRequest,
+  ImageUploadIntent,
+  ImageUploadIntentRequest,
   CashLedgerEntry,
   CashMovement,
   CashMovementInput,
@@ -78,7 +80,9 @@ import type {
   UpdateStoreInput,
   UpdatePlatformUserInput,
   VisualConfiguration,
-  NotificationCenterState,
+  NotificationPage,
+  NotificationPageQuery,
+  NotificationSummaryResponse,
   OperationalNotification,
   ManagementReportFilters,
   ManagementReportResponse,
@@ -398,24 +402,36 @@ export async function getPublicMenuByDomain(domain: string): Promise<PublicMenu 
   return menu;
 }
 
-export function getPublicOrderQueue(slug: string): Promise<PublicOrderQueue | null> {
-  return fetchPublicOrderQueue(`/api/public/tenants/${encodeURIComponent(slug)}/order-queue`);
+export function getPublicOrderQueue(
+  slug: string,
+  signal?: AbortSignal,
+): Promise<PublicOrderQueue | null> {
+  return fetchPublicOrderQueue(
+    `/api/public/tenants/${encodeURIComponent(slug)}/order-queue`,
+    signal,
+  );
 }
 
 export function getPublicOrderQueueByDomain(
   domain: string,
+  signal?: AbortSignal,
 ): Promise<PublicOrderQueue | null> {
   const normalized = domain.trim().toLowerCase().replace(/:\d+$/, "").replace(/\.$/, "")
     .replace(/^www\./, "");
   return fetchPublicOrderQueue(
     `/api/public/domains/${encodeURIComponent(normalized)}/order-queue`,
+    signal,
   );
 }
 
-async function fetchPublicOrderQueue(path: string): Promise<PublicOrderQueue | null> {
+async function fetchPublicOrderQueue(
+  path: string,
+  signal?: AbortSignal,
+): Promise<PublicOrderQueue | null> {
   const response = await fetch(`${apiUrl}${path}`, {
     headers: { Accept: "application/json" },
     cache: "no-store",
+    signal,
   });
   if (response.status === 404) return null;
   if (!response.ok) {
@@ -1143,9 +1159,9 @@ export async function updateCounterOrder(
   });
 }
 
-export async function getKdsOrders(): Promise<KdsOrder[]> {
+export async function getKdsOrders(signal?: AbortSignal): Promise<KdsOrder[]> {
   const token = await requireSessionAccessToken();
-  return fetchAdmin<KdsOrder[]>(token, "/api/admin/kds/orders");
+  return fetchAdmin<KdsOrder[]>(token, "/api/admin/kds/orders", { signal });
 }
 
 export async function updateKdsOrderStatus(
@@ -1305,10 +1321,14 @@ export async function getActivePaymentCharge(
   );
 }
 
-export async function refreshPaymentCharge(chargeId: string): Promise<PaymentCharge> {
+export async function refreshPaymentCharge(
+  chargeId: string,
+  signal?: AbortSignal,
+): Promise<PaymentCharge> {
   const token = await requireSessionAccessToken();
   return fetchAdmin<PaymentCharge>(token, `/api/admin/payment-charges/${chargeId}/refresh`, {
     method: "POST",
+    signal,
   });
 }
 
@@ -1982,10 +2002,27 @@ export async function getExportJob(token: string, exportId: string): Promise<Exp
   return fetchAdmin<ExportJob>(token, `/api/admin/exports/${exportId}`);
 }
 
+export function createImageUploadIntent(
+  token: string,
+  payload: ImageUploadIntentRequest,
+): Promise<ImageUploadIntent> {
+  return fetchAdmin<ImageUploadIntent>(token, "/api/admin/assets/upload-intents", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
+export function confirmImageUpload(token: string, assetKey: string): Promise<{ assetKey: string }> {
+  return fetchAdmin(token, `/api/admin/assets/upload-intents/${encodeURIComponent(assetKey)}/confirm`, {
+    method: "POST",
+  });
+}
+
 export async function getNotifications(
   token: string,
-  params: { status?: string; limit?: number } = {}
-): Promise<NotificationCenterState> {
+  params: NotificationPageQuery = {},
+  signal?: AbortSignal,
+): Promise<NotificationPage> {
   const query = new URLSearchParams();
 
   Object.entries(params).forEach(([key, value]) => {
@@ -1994,10 +2031,46 @@ export async function getNotifications(
     }
   });
 
-  return fetchAdmin<NotificationCenterState>(
+  return fetchAdmin<NotificationPage>(
     token,
-    `/api/admin/notifications${query.toString() ? `?${query.toString()}` : ""}`
+    `/api/admin/notifications${query.toString() ? `?${query.toString()}` : ""}`,
+    { signal },
   );
+}
+
+export async function getNotificationSummary(
+  token: string,
+  etag?: string,
+  signal?: AbortSignal,
+): Promise<NotificationSummaryResponse> {
+  const response = await fetch(`${apiUrl}/api/admin/notifications/summary`, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+      ...(etag ? { "If-None-Match": etag } : {}),
+    },
+    cache: "no-store",
+    signal,
+  });
+  const nextEtag = response.headers.get("etag") ?? etag ?? "";
+  if (response.status === 304) {
+    return { data: null, etag: nextEtag, notModified: true };
+  }
+  if (!response.ok) {
+    if (response.status === 401) {
+      await clearStoredAuthSession();
+      await redirectToLogin();
+    }
+    throw new AdminApiError(
+      response.status,
+      "/api/admin/notifications/summary",
+      "Falha ao consultar notificacoes",
+    );
+  }
+  return {
+    data: await response.json(),
+    etag: nextEtag,
+    notModified: false,
+  };
 }
 
 export async function markNotificationRead(

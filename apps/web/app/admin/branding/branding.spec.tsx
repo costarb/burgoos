@@ -1,6 +1,7 @@
 import { renderToStaticMarkup } from "react-dom/server";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import BrandingPage from "./page";
+import { validateImageFile } from "../../../lib/image-upload";
 
 vi.mock("../../../lib/api", () => ({
   getAdminToken: vi.fn(async () => "owner-token"),
@@ -52,7 +53,7 @@ describe("branding settings page", () => {
 
     expect(html).toContain("Identidade visual");
     expect(html).toContain('name="logoUrl"');
-    expect(html).toContain('name="logoUpload"');
+    expect(html).toContain("Upload direto");
     expect(html).toContain('name="headerImageUrl"');
     expect(html).toContain('name="bodyImageUrl"');
     expect(html).toContain('name="footerImageUrl"');
@@ -66,5 +67,12 @@ describe("branding settings page", () => {
     expect(html).toContain("Publicacao");
     expect(html).toContain("Restaurar anterior");
     expect(html).toContain("Salvar rascunho");
+  });
+
+  it("rejects oversized branding images before reading their contents", () => {
+    const arrayBuffer = vi.fn();
+    const file = { size: 2 * 1024 * 1024 + 1, type: "image/webp", arrayBuffer };
+    expect(() => validateImageFile(file)).toThrow("2 MiB");
+    expect(arrayBuffer).not.toHaveBeenCalled();
   });
 });

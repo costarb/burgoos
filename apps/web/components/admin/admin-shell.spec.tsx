@@ -23,6 +23,11 @@ const masterSession = {
   permissions: [],
 };
 
+const storeAdminSession = {
+  user: { role: "ADMIN", isMaster: false },
+  permissions: [],
+};
+
 const platformSession = {
   user: { isPlatformAdmin: true, platformRole: "SUPER_ADMIN" },
   permissions: [],
@@ -93,6 +98,21 @@ describe("admin navigation permissions", () => {
     expect(orders).toBeDefined();
     expect(canAccessNavigationItem(users!, operatorSession)).toBe(false);
     expect(canAccessNavigationItem(orders!, operatorSession)).toBe(true);
+  });
+
+  it("allows store administrators to access every store route", () => {
+    const groups = filterNavigationBySession(adminNavigation, storeAdminSession);
+    const paths = groups.flatMap((group) => group.items.map((item) => item.href));
+
+    expect(paths).toEqual(
+      expect.arrayContaining([
+        "/admin/pos",
+        "/admin/tabs",
+        "/admin/orders",
+        "/admin/payment-exceptions",
+      ])
+    );
+    expect(canAccessNavigationItem(findNavigationItem("/admin/pos")!, storeAdminSession)).toBe(true);
   });
 
   it("shows only operational capture, tabs and orders to attendants", () => {

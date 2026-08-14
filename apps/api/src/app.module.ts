@@ -16,6 +16,10 @@ import { validateEnvironment } from "./config/env.validation";
 import { PaymentsModule } from "./payments/payments.module";
 import { IdempotencyModule } from "./common/idempotency/idempotency.module";
 import { OrderQueueModule } from "./customer-experience/order-queue/order-queue.module";
+import { BackgroundJobsModule } from "./common/background-jobs/background-jobs.module";
+import { ObservabilityModule } from "./common/observability/observability.module";
+import { StorageModule } from "./common/storage/storage.module";
+import { RuntimeRoleService } from "./config/runtime-role.service";
 
 @Module({
   imports: [
@@ -24,6 +28,9 @@ import { OrderQueueModule } from "./customer-experience/order-queue/order-queue.
       validate: validateEnvironment,
     }),
     DatabaseModule,
+    ObservabilityModule,
+    StorageModule,
+    BackgroundJobsModule,
     IdempotencyModule,
     AuthModule,
     TenantModule,
@@ -39,5 +46,6 @@ import { OrderQueueModule } from "./customer-experience/order-queue/order-queue.
     ManagementModule,
   ],
   controllers: [HealthController],
+  providers: [RuntimeRoleService],
 })
 export class AppModule {}

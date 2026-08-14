@@ -14,9 +14,10 @@ import { IfoodDeliveryTrackingService } from "./ifood/ifood-delivery-tracking.se
 import { IfoodDisputeService } from "./ifood/ifood-dispute.service";
 import { IfoodEventPollerService } from "./ifood/ifood-event-poller.service";
 import { IfoodStatusSyncService } from "./ifood/ifood-status-sync.service";
+import { BackgroundJobsModule } from "../../common/background-jobs/background-jobs.module";
 
 @Module({
-  imports: [AuthModule, DatabaseModule, forwardRef(() => OrderingModule)],
+  imports: [AuthModule, DatabaseModule, BackgroundJobsModule, forwardRef(() => OrderingModule)],
   controllers: [DeliveryIntegrationsController],
   providers: [
     DeliveryIntegrationsService,

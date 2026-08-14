@@ -5,6 +5,7 @@ const paymentInstitutions = Object.values(PaymentInstitution);
 const paymentMethods = Object.values(PaymentMethod);
 const orderStatuses = Object.values(OrderStatus);
 const BUSINESS_TIME_ZONE = "America/Sao_Paulo";
+export const MAX_INTERACTIVE_REPORT_DAYS = 92;
 const businessDateFormatter = new Intl.DateTimeFormat("en-CA", {
   timeZone: BUSINESS_TIME_ZONE,
   year: "numeric",
@@ -38,9 +39,9 @@ export interface ParsedSalesReportQuery {
 
 export function parseSalesReportQuery(query: SalesReportQuery): ParsedSalesReportQuery {
   const now = new Date();
-  const currentMonth = businessMonthRange(now);
-  const start = query.start ?? currentMonth.start;
-  const end = query.end ?? currentMonth.end;
+  const defaultRange = rollingReportRange(now);
+  const start = query.start ?? defaultRange.start;
+  const end = query.end ?? defaultRange.end;
   const periodStart = localDayStart(start);
   const periodEnd = localDayEnd(end);
 
@@ -51,6 +52,8 @@ export function parseSalesReportQuery(query: SalesReportQuery): ParsedSalesRepor
   if (periodStart > periodEnd) {
     throw new BadRequestException("Data inicial deve ser anterior ou igual a data final");
   }
+
+  assertInteractivePeriod(periodStart, periodEnd);
 
   const page = parsePositiveInteger(query.page, 1, "page");
   const pageSize = Math.min(parsePositiveInteger(query.pageSize, 50, "pageSize"), 100);
@@ -71,6 +74,22 @@ export function parseSalesReportQuery(query: SalesReportQuery): ParsedSalesRepor
     page,
     pageSize,
   };
+}
+
+export function assertInteractivePeriod(periodStart: Date, periodEnd: Date): void {
+  const inclusiveDays = Math.floor((periodEnd.getTime() - periodStart.getTime()) / 86_400_000) + 1;
+  if (inclusiveDays > MAX_INTERACTIVE_REPORT_DAYS) {
+    throw new BadRequestException(
+      `Relatorios interativos aceitam no maximo ${MAX_INTERACTIVE_REPORT_DAYS} dias. Solicite uma exportacao para periodos maiores.`,
+    );
+  }
+}
+
+export function rollingReportRange(date: Date, days = 31): { start: string; end: string } {
+  const end = formatLocalDate(date);
+  const startDate = new Date(`${end}T12:00:00.000Z`);
+  startDate.setUTCDate(startDate.getUTCDate() - (days - 1));
+  return { start: startDate.toISOString().slice(0, 10), end };
 }
 
 export function businessMonthRange(date: Date): { start: string; end: string } {

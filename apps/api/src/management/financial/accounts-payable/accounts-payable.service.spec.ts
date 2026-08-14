@@ -115,7 +115,23 @@ describe("AccountsPayableService", () => {
 });
 
 function createPrismaMock(payables: ReturnType<typeof payable>[]) {
+  const items = payables.map((item) => {
+    const paid = item.payments.filter((payment) => !payment.reversedAt)
+      .reduce((sum, payment) => sum.plus(payment.amount), new Prisma.Decimal(0));
+    return { item, paid };
+  });
+  const active = items.filter(({ item }) => !item.cancelledAt);
+  const overdue = active.filter(({ item, paid }) => item.dueDate < new Date() && paid.lessThan(item.expectedAmount));
   return {
+    $queryRaw: vi.fn().mockResolvedValue([{
+      total: BigInt(payables.length),
+      totalExpected: active.reduce((sum, { item }) => sum.plus(item.expectedAmount), new Prisma.Decimal(0)),
+      totalPaid: active.reduce((sum, { paid }) => sum.plus(paid), new Prisma.Decimal(0)),
+      totalRemaining: active.reduce((sum, { item, paid }) => sum.plus(item.expectedAmount.minus(paid)), new Prisma.Decimal(0)),
+      overdueAmount: overdue.reduce((sum, { item, paid }) => sum.plus(item.expectedAmount.minus(paid)), new Prisma.Decimal(0)),
+      openCount: BigInt(active.filter(({ item, paid }) => paid.lessThan(item.expectedAmount)).length),
+      overdueCount: BigInt(overdue.length),
+    }]),
     payable: {
       findMany: vi.fn().mockResolvedValue(payables),
     },
