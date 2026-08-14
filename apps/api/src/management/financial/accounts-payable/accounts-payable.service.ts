@@ -25,6 +25,25 @@ const payableInclude = {
 
 type PayableWithDetails = Prisma.PayableGetPayload<{ include: typeof payableInclude }>;
 
+interface PayableSummaryRow {
+  total: bigint | number;
+  totalExpected: Prisma.Decimal;
+  totalPaid: Prisma.Decimal;
+  totalRemaining: Prisma.Decimal;
+  overdueAmount: Prisma.Decimal;
+  openCount: bigint | number;
+  overdueCount: bigint | number;
+}
+
+export interface PayableCategoryAggregate {
+  categoryId: string | null;
+  categoryName: string;
+  expected: string;
+  paid: string;
+  open: string;
+  overdue: string;
+}
+
 @Injectable()
 export class AccountsPayableService {
   constructor(
@@ -33,21 +52,73 @@ export class AccountsPayableService {
   ) {}
 
   async list(tenantId: string, query: PayablesQueryDto) {
-    const payables = await this.prisma.payable.findMany({
-      where: this.buildWhere(tenantId, query),
+    const where = this.buildWhere(tenantId, query);
+    const page = query.page ?? 1;
+    const pageSize = query.pageSize ?? 50;
+    const statusIds = query.status
+      ? await this.queryStatusPageIds(tenantId, query, page, pageSize)
+      : null;
+    const [payables, summaryRows] = await Promise.all([
+      this.prisma.payable.findMany({
+      where: statusIds ? { ...where, id: { in: statusIds } } : where,
       include: payableInclude,
       orderBy: [{ dueDate: "asc" }, { createdAt: "asc" }],
-    });
+      skip: statusIds ? undefined : (page - 1) * pageSize,
+      take: statusIds ? undefined : pageSize,
+    }),
+      this.querySummary(tenantId, query),
+    ]);
 
-    const items = payables.map((payable) => this.toResponse(payable));
+    const normalizedStatus = query.status?.toUpperCase();
+    const items = payables
+      .map((payable) => this.toResponse(payable))
+      .filter((item) => !normalizedStatus || item.status === normalizedStatus);
+    const summary = summaryRows[0] ?? emptySummaryRow();
+    return {
+      items,
+      summary: {
+        totalExpected: toMoneyString(summary.totalExpected),
+        totalPaid: toMoneyString(summary.totalPaid),
+        totalRemaining: toMoneyString(summary.totalRemaining),
+        overdueAmount: toMoneyString(summary.overdueAmount),
+        openCount: Number(summary.openCount),
+        overdueCount: Number(summary.overdueCount),
+      },
+      page,
+      pageSize,
+      total: Number(summary.total),
+    };
+  }
 
-    if (query.status) {
-      const normalizedStatus = query.status.toUpperCase();
-      const filteredItems = items.filter((item) => item.status === normalizedStatus);
-      return { items: filteredItems, summary: this.buildSummary(filteredItems) };
-    }
-
-    return { items, summary: this.buildSummary(items) };
+  async summarizeByCategory(
+    tenantId: string,
+    query: Pick<PayablesQueryDto, "start" | "end">,
+  ): Promise<PayableCategoryAggregate[]> {
+    const rows = await this.prisma.$queryRaw<Array<{
+      categoryId: string | null;
+      categoryName: string;
+      expected: Prisma.Decimal;
+      paid: Prisma.Decimal;
+      open: Prisma.Decimal;
+      overdue: Prisma.Decimal;
+    }>>(Prisma.sql`SELECT p.category_id::text AS "categoryId", c.name AS "categoryName",
+      COALESCE(SUM(p.expected_amount), 0) AS expected,
+      COALESCE(SUM(COALESCE(pp.paid, 0)), 0) AS paid,
+      COALESCE(SUM(p.expected_amount - COALESCE(pp.paid, 0)), 0) AS open,
+      COALESCE(SUM(CASE WHEN p.due_date < CURRENT_DATE THEN p.expected_amount - COALESCE(pp.paid, 0) ELSE 0 END), 0) AS overdue
+      FROM payables p JOIN financial_categories c ON c.id = p.category_id
+      LEFT JOIN (SELECT payable_id, SUM(amount) FILTER (WHERE reversed_at IS NULL) AS paid FROM payable_payments GROUP BY payable_id) pp ON pp.payable_id = p.id
+      WHERE p.tenant_id = ${tenantId}::uuid AND p.cancelled_at IS NULL
+      ${query.start ? Prisma.sql`AND p.due_date >= ${parseDate(query.start)}` : Prisma.empty}
+      ${query.end ? Prisma.sql`AND p.due_date <= ${endOfDay(parseDate(query.end))}` : Prisma.empty}
+      GROUP BY p.category_id, c.name ORDER BY expected DESC`);
+    return rows.map((row) => ({
+      ...row,
+      expected: toMoneyString(row.expected),
+      paid: toMoneyString(row.paid),
+      open: toMoneyString(row.open),
+      overdue: toMoneyString(row.overdue),
+    }));
   }
 
   async getOptions(tenantId: string) {
@@ -384,6 +455,66 @@ export class AccountsPayableService {
     };
   }
 
+  private querySummary(tenantId: string, query: PayablesQueryDto): Promise<PayableSummaryRow[]> {
+    const status = query.status?.toUpperCase();
+    const statusPredicate = status
+      ? Prisma.sql`AND status = ${status}`
+      : Prisma.empty;
+    return this.prisma.$queryRaw<PayableSummaryRow[]>(Prisma.sql`WITH payable_values AS (
+      SELECT p.expected_amount,
+        COALESCE(pp.paid, 0) AS paid,
+        p.expected_amount - COALESCE(pp.paid, 0) AS remaining,
+        CASE
+          WHEN p.cancelled_at IS NOT NULL THEN 'CANCELLED'
+          WHEN COALESCE(pp.paid, 0) >= p.expected_amount THEN 'PAID'
+          WHEN p.due_date < CURRENT_DATE THEN 'OVERDUE'
+          WHEN COALESCE(pp.paid, 0) > 0 THEN 'PARTIALLY_PAID'
+          ELSE 'OPEN'
+        END AS status
+      FROM payables p
+      LEFT JOIN (SELECT payable_id, SUM(amount) FILTER (WHERE reversed_at IS NULL) AS paid FROM payable_payments GROUP BY payable_id) pp ON pp.payable_id = p.id
+      WHERE p.tenant_id = ${tenantId}::uuid
+      ${query.categoryId ? Prisma.sql`AND p.category_id = ${query.categoryId}::uuid` : Prisma.empty}
+      ${query.supplierId ? Prisma.sql`AND p.supplier_id = ${query.supplierId}::uuid` : Prisma.empty}
+      ${query.start ? Prisma.sql`AND p.due_date >= ${parseDate(query.start)}` : Prisma.empty}
+      ${query.end ? Prisma.sql`AND p.due_date <= ${endOfDay(parseDate(query.end))}` : Prisma.empty}
+      ${query.competenceMonth ? competenceSql(query.competenceMonth) : Prisma.empty}
+    ) SELECT COUNT(*)::bigint AS total,
+      COALESCE(SUM(expected_amount) FILTER (WHERE status <> 'CANCELLED'), 0) AS "totalExpected",
+      COALESCE(SUM(paid) FILTER (WHERE status <> 'CANCELLED'), 0) AS "totalPaid",
+      COALESCE(SUM(remaining) FILTER (WHERE status <> 'CANCELLED'), 0) AS "totalRemaining",
+      COALESCE(SUM(remaining) FILTER (WHERE status = 'OVERDUE'), 0) AS "overdueAmount",
+      COUNT(*) FILTER (WHERE status IN ('OPEN', 'PARTIALLY_PAID', 'OVERDUE'))::bigint AS "openCount",
+      COUNT(*) FILTER (WHERE status = 'OVERDUE')::bigint AS "overdueCount"
+      FROM payable_values WHERE TRUE ${statusPredicate}`);
+  }
+
+  private async queryStatusPageIds(
+    tenantId: string,
+    query: PayablesQueryDto,
+    page: number,
+    pageSize: number,
+  ): Promise<string[]> {
+    const rows = await this.prisma.$queryRaw<Array<{ id: string }>>(Prisma.sql`SELECT id FROM (
+      SELECT p.id, p.due_date, p.created_at, CASE
+        WHEN p.cancelled_at IS NOT NULL THEN 'CANCELLED'
+        WHEN COALESCE(pp.paid, 0) >= p.expected_amount THEN 'PAID'
+        WHEN p.due_date < CURRENT_DATE THEN 'OVERDUE'
+        WHEN COALESCE(pp.paid, 0) > 0 THEN 'PARTIALLY_PAID'
+        ELSE 'OPEN' END AS status
+      FROM payables p
+      LEFT JOIN (SELECT payable_id, SUM(amount) FILTER (WHERE reversed_at IS NULL) AS paid FROM payable_payments GROUP BY payable_id) pp ON pp.payable_id = p.id
+      WHERE p.tenant_id = ${tenantId}::uuid
+      ${query.categoryId ? Prisma.sql`AND p.category_id = ${query.categoryId}::uuid` : Prisma.empty}
+      ${query.supplierId ? Prisma.sql`AND p.supplier_id = ${query.supplierId}::uuid` : Prisma.empty}
+      ${query.start ? Prisma.sql`AND p.due_date >= ${parseDate(query.start)}` : Prisma.empty}
+      ${query.end ? Prisma.sql`AND p.due_date <= ${endOfDay(parseDate(query.end))}` : Prisma.empty}
+      ${query.competenceMonth ? competenceSql(query.competenceMonth) : Prisma.empty}
+    ) filtered WHERE status = ${query.status!.toUpperCase()}
+    ORDER BY due_date, created_at OFFSET ${(page - 1) * pageSize} LIMIT ${pageSize}`);
+    return rows.map((row) => row.id);
+  }
+
   private async findPayable(
     tenantId: string,
     payableId: string,
@@ -489,54 +620,33 @@ export class AccountsPayableService {
   }
 
   private buildSummary(items: ReturnType<AccountsPayableService["toResponse"]>[]) {
-    const summary = items.reduce(
-      (accumulator, item) => {
-        if (item.status === "CANCELLED") {
-          return accumulator;
-        }
-
-        const expectedAmount = toDecimal(item.expectedAmount);
-        const paidAmount = toDecimal(item.paidAmount);
-        const remainingAmount = toDecimal(item.remainingAmount);
-
-        accumulator.totalExpected = accumulator.totalExpected.plus(expectedAmount);
-        accumulator.totalPaid = accumulator.totalPaid.plus(paidAmount);
-        accumulator.totalRemaining = accumulator.totalRemaining.plus(remainingAmount);
-
-        if (item.status === "OVERDUE") {
-          accumulator.overdueAmount = accumulator.overdueAmount.plus(remainingAmount);
-          accumulator.overdueCount += 1;
-        }
-
-        if (
-          item.status === "OPEN" ||
-          item.status === "PARTIALLY_PAID" ||
-          item.status === "OVERDUE"
-        ) {
-          accumulator.openCount += 1;
-        }
-
-        return accumulator;
-      },
-      {
-        totalExpected: new Prisma.Decimal(0),
-        totalPaid: new Prisma.Decimal(0),
-        totalRemaining: new Prisma.Decimal(0),
-        overdueAmount: new Prisma.Decimal(0),
-        openCount: 0,
-        overdueCount: 0,
-      }
-    );
-
+    const active = items.filter((item) => item.status !== "CANCELLED");
+    const sum = (field: "expectedAmount" | "paidAmount" | "remainingAmount") =>
+      active.reduce((total, item) => total.plus(item[field]), new Prisma.Decimal(0));
+    const overdue = active.filter((item) => item.status === "OVERDUE");
     return {
-      totalExpected: toMoneyString(summary.totalExpected),
-      totalPaid: toMoneyString(summary.totalPaid),
-      totalRemaining: toMoneyString(summary.totalRemaining),
-      overdueAmount: toMoneyString(summary.overdueAmount),
-      openCount: summary.openCount,
-      overdueCount: summary.overdueCount,
+      totalExpected: toMoneyString(sum("expectedAmount")),
+      totalPaid: toMoneyString(sum("paidAmount")),
+      totalRemaining: toMoneyString(sum("remainingAmount")),
+      overdueAmount: toMoneyString(
+        overdue.reduce((total, item) => total.plus(item.remainingAmount), new Prisma.Decimal(0)),
+      ),
+      openCount: active.filter((item) => ["OPEN", "PARTIALLY_PAID", "OVERDUE"].includes(item.status)).length,
+      overdueCount: overdue.length,
     };
   }
+}
+
+function emptySummaryRow(): PayableSummaryRow {
+  return {
+    total: 0,
+    totalExpected: new Prisma.Decimal(0),
+    totalPaid: new Prisma.Decimal(0),
+    totalRemaining: new Prisma.Decimal(0),
+    overdueAmount: new Prisma.Decimal(0),
+    openCount: 0,
+    overdueCount: 0,
+  };
 }
 
 function parseDate(value: string): Date {
@@ -554,6 +664,11 @@ function parseMonthRange(value: string): { start: Date; end: Date } {
     start: new Date(year, month - 1, 1),
     end: new Date(year, month, 1),
   };
+}
+
+function competenceSql(value: string): Prisma.Sql {
+  const range = parseMonthRange(value);
+  return Prisma.sql`AND p.competence_date >= ${range.start} AND p.competence_date < ${range.end}`;
 }
 
 function endOfDay(value: Date): Date {

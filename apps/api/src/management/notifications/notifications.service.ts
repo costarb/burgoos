@@ -5,6 +5,7 @@ import {
   Prisma,
 } from "@prisma/client";
 import { PrismaService } from "../../platform/database/prisma.service";
+import { createHash } from "node:crypto";
 
 interface CreateNotificationInput {
   tenantId: string;
@@ -27,36 +28,62 @@ export class NotificationsService {
   async list(
     tenantId: string,
     recipientUserId: string,
-    query: { status?: OperationalNotificationStatus; limit?: number } = {}
+    query: { status?: OperationalNotificationStatus; limit?: number; cursor?: string; since?: string } = {}
   ) {
     const where: Prisma.OperationalNotificationWhereInput = {
       tenantId,
       recipientUserId,
       archivedAt: null,
       status: query.status,
+      ...(query.since
+        ? {
+            OR: [
+              { createdAt: { gt: new Date(query.since) } },
+              { readAt: { gt: new Date(query.since) } },
+            ],
+          }
+        : {}),
     };
-    const limit = Math.min(Math.max(query.limit ?? 20, 1), 100);
+    const limit = Math.min(Math.max(query.limit ?? 20, 1), 50);
 
-    const [items, unreadCount] = await Promise.all([
+    const [items, summary] = await Promise.all([
       this.prisma.operationalNotification.findMany({
         where,
         orderBy: { createdAt: "desc" },
-        take: limit,
+        take: limit + 1,
+        ...(query.cursor ? { cursor: { id: query.cursor }, skip: 1 } : {}),
       }),
-      this.prisma.operationalNotification.count({
-        where: {
-          tenantId,
-          recipientUserId,
-          archivedAt: null,
-          status: OperationalNotificationStatus.UNREAD,
-        },
-      }),
+      this.summary(tenantId, recipientUserId),
     ]);
+    const pageItems = items.slice(0, limit);
 
     return {
-      unreadCount,
-      items: items.map((notification) => this.toResponse(notification)),
+      unreadCount: summary.unreadCount,
+      items: pageItems.map((notification) => this.toResponse(notification)),
+      nextCursor: items.length > limit ? pageItems.at(-1)?.id ?? null : null,
+      version: summary.version,
     };
+  }
+
+  async summary(tenantId: string, recipientUserId: string) {
+    const scope = { tenantId, recipientUserId };
+    const [unreadCount, latestCreated, latestRead] = await Promise.all([
+      this.prisma.operationalNotification.count({
+        where: { ...scope, archivedAt: null, status: OperationalNotificationStatus.UNREAD },
+      }),
+      this.prisma.operationalNotification.findFirst({
+        where: scope,
+        select: { createdAt: true },
+        orderBy: { createdAt: "desc" },
+      }),
+      this.prisma.operationalNotification.findFirst({
+        where: { ...scope, readAt: { not: null } },
+        select: { readAt: true },
+        orderBy: { readAt: "desc" },
+      }),
+    ]);
+    const version = latestVersion(latestCreated?.createdAt, latestRead?.readAt);
+    return { unreadCount, version, etag: notificationEtag(unreadCount, version) };
   }
 
   async markRead(tenantId: string, recipientUserId: string, notificationId: string) {
@@ -132,6 +159,16 @@ export class NotificationsService {
       readAt: notification.readAt?.toISOString() ?? null,
     };
   }
+}
+
+function latestVersion(...dates: Array<Date | null | undefined>): string {
+  const timestamp = Math.max(0, ...dates.map((date) => date?.getTime() ?? 0));
+  return new Date(timestamp).toISOString();
+}
+
+function notificationEtag(unreadCount: number, version: string): string {
+  const digest = createHash("sha256").update(`${unreadCount}:${version}`).digest("base64url");
+  return `"${digest}"`;
 }
 
 function normalizeActionUrl(value?: string | null, exportJobId?: string | null): string | null {

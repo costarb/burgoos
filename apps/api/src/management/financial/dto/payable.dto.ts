@@ -10,6 +10,7 @@ import {
   Matches,
   MaxLength,
   Min,
+  Max,
   ValidateNested,
 } from "class-validator";
 import { Type } from "class-transformer";
@@ -92,6 +93,19 @@ export class PayablePaymentDto {
 }
 
 export class PayablesQueryDto {
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  page?: number;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  @Max(100)
+  pageSize?: number;
+
   @IsOptional()
   @IsDateString()
   start?: string;

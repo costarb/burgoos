@@ -116,7 +116,7 @@ export class MercadoPagoConnectionService {
           { integrationId: attempt.integrationId, ...dates, strategy: "PRICE_WEIGHTED" },
           "INITIAL_LOAD"
         );
-        this.processor.queuePreview(run.id, attempt.tenantId);
+        await this.processor.queuePreview(run.id, attempt.tenantId);
         return {
           integrationId: attempt.integrationId,
           initialLoadDays: attempt.initialLoadDays,

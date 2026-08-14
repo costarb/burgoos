@@ -2,7 +2,7 @@ import { Inject, Injectable } from "@nestjs/common";
 import { ExportContext, Prisma } from "@prisma/client";
 import { AccountsPayableService } from "../../financial/accounts-payable/accounts-payable.service";
 import { PayablesQueryDto } from "../../financial/dto/payable.dto";
-import { ExportDataset, ExportProvider, ExportProviderJob } from "../export-provider.registry";
+import { ExportDescriptor, ExportProvider, ExportProviderJob, ExportRowBatch } from "../export-provider.registry";
 
 const payablesColumns = [
   { key: "description", label: "Conta" },
@@ -24,15 +24,32 @@ export class PayablesExportProvider implements ExportProvider {
     @Inject(AccountsPayableService) private readonly accountsPayableService: AccountsPayableService
   ) {}
 
-  async build(job: ExportProviderJob): Promise<ExportDataset> {
+  async describe(job: ExportProviderJob): Promise<ExportDescriptor> {
     const response = await this.accountsPayableService.list(
       job.tenantId,
-      normalizePayablesFilters(job.filtersSnapshot)
+      { ...normalizePayablesFilters(job.filtersSnapshot), page: 1, pageSize: 1 },
     );
 
     return {
       title: "Contas a pagar",
       columns: payablesColumns,
+      totalRows: response.total ?? response.items.length,
+    };
+  }
+
+  async readBatch(
+    job: ExportProviderJob,
+    cursor: string | null,
+    limit: number,
+  ): Promise<ExportRowBatch> {
+    const page = cursor ? Number(cursor) : 1;
+    if (!Number.isInteger(page) || page < 1) throw new Error("Cursor de exportacao invalido");
+    const response = await this.accountsPayableService.list(job.tenantId, {
+      ...normalizePayablesFilters(job.filtersSnapshot),
+      page,
+      pageSize: limit,
+    });
+    return {
       rows: response.items.map((payable) => ({
         description: payable.description,
         categoryName: payable.categoryName,
@@ -44,6 +61,7 @@ export class PayablesExportProvider implements ExportProvider {
         remainingAmount: payable.remainingAmount,
         status: payable.status,
       })),
+      nextCursor: page * limit < (response.total ?? 0) ? String(page + 1) : null,
     };
   }
 }

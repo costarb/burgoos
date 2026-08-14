@@ -1,4 +1,5 @@
-import { Controller, Get, Inject, Param, Post, Query, UseGuards } from "@nestjs/common";
+import { Controller, Get, Headers, Inject, Param, Post, Query, Res, UseGuards } from "@nestjs/common";
+import type { Response } from "express";
 import {
   ApiBearerAuth,
   ApiNotFoundResponse,
@@ -36,6 +37,24 @@ export class NotificationsController {
     }
 
     return this.notificationsService.list(user.tenantId, user.id, normalizedQuery);
+  }
+
+  @Get("summary")
+  @RequirePermission("finance.view", "finance.manage")
+  @ApiOperation({ summary: "Get minimal notification count and version" })
+  @ApiOkResponse({ description: "Minimal notification summary with ETag." })
+  async summary(
+    @CurrentUser() user: AuthUser,
+    @Headers("if-none-match") ifNoneMatch: string | undefined,
+    @Res({ passthrough: true }) response: Response,
+  ) {
+    const summary = await this.notificationsService.summary(user.tenantId, user.id);
+    response.setHeader("ETag", summary.etag);
+    if (ifNoneMatch === summary.etag) {
+      response.status(304);
+      return;
+    }
+    return { unreadCount: summary.unreadCount, version: summary.version };
   }
 
   @Post(":notificationId/read")

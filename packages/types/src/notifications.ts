@@ -21,3 +21,26 @@ export interface NotificationCenterState {
   unreadCount: number;
   items: OperationalNotification[];
 }
+
+export interface NotificationSummary {
+  unreadCount: number;
+  version: string;
+}
+
+export interface NotificationSummaryResponse {
+  data: NotificationSummary | null;
+  etag: string;
+  notModified: boolean;
+}
+
+export interface NotificationPage extends NotificationCenterState {
+  nextCursor: string | null;
+  version: string;
+}
+
+export interface NotificationPageQuery {
+  status?: OperationalNotificationStatus;
+  limit?: number;
+  cursor?: string;
+  since?: string;
+}

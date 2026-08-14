@@ -14,13 +14,18 @@
     "lint": "npm run lint --workspaces --if-present",
     "typecheck": "npm run typecheck --workspaces --if-present",
     "test": "npm run test --workspaces --if-present",
+    "memory:soak": "node scripts/memory-load/run-memory-soak.mjs",
+    "memory:seed": "node scripts/memory-load/seed-representative.mjs",
+    "memory:cycles": "node scripts/memory-load/run-representative-cycles.mjs",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "db:up": "docker compose up -d postgres",
     "db:down": "docker compose down",
     "db:migrate": "prisma migrate dev --schema packages/database/prisma/schema.prisma",
     "db:generate": "prisma generate --schema packages/database/prisma/schema.prisma",
-    "db:seed": "ts-node packages/database/prisma/seed.ts"
+    "db:seed": "ts-node packages/database/prisma/seed.ts",
+    "local:up": "powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/start-local.ps1",
+    "local:down": "powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/stop-local.ps1"
   },
   "devDependencies": {
     "@eslint/js": "^9.0.0",

@@ -55,9 +55,11 @@ import { PayablesExportProvider } from "./exports/providers/payables-export.prov
 import { NotificationsController } from "./notifications/notifications.controller";
 import { NotificationsService } from "./notifications/notifications.service";
 import { SalesIntegrationsModule } from "./sales-integrations/sales-integrations.module";
+import { BackgroundJobsModule } from "../common/background-jobs/background-jobs.module";
+import { StorageModule } from "../common/storage/storage.module";
 
 @Module({
-  imports: [AuthModule, DatabaseModule, DeliveryIntegrationsModule, SalesIntegrationsModule],
+  imports: [AuthModule, DatabaseModule, BackgroundJobsModule, StorageModule, DeliveryIntegrationsModule, SalesIntegrationsModule],
   controllers: [
     DailySummaryController,
     FinancialConfigurationController,

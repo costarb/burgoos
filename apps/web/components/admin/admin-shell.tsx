@@ -6,9 +6,9 @@ import { useState } from "react";
 import { ChevronRight, Menu, PanelLeftClose, PanelLeftOpen, X } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { useEffect } from "react";
 import type { AuthSession } from "@burgoos/types";
-import { readAuthSession, refreshAuthSessionIfNeeded } from "../../lib/auth-client";
+import { refreshAuthSessionIfNeeded } from "../../lib/auth-client";
+import { useAdaptivePolling } from "../../lib/adaptive-polling";
 import { AccessDenied } from "./access-denied";
 import {
   adminNavigation,
@@ -33,54 +33,20 @@ export function AdminShell({ children }: { children: ReactNode }) {
   const secondary = secondaryNavigation.filter((item) => canAccessNavigationItem(item, session));
   const currentAllowed = current ? canAccessNavigationItem(current, session) : true;
 
-  useEffect(() => {
-    let active = true;
-    let refreshInProgress = false;
-
-    async function syncSession() {
-      if (refreshInProgress) {
+  useAdaptivePolling({
+    visibleIntervalMs: 5 * 60 * 1000,
+    hiddenIntervalMs: 15 * 60 * 1000,
+    task: async (signal) => {
+      const refreshedSession = await refreshAuthSessionIfNeeded();
+      if (signal.aborted) return;
+      if (!refreshedSession) {
+        router.replace("/login");
         return;
       }
-
-      refreshInProgress = true;
-
-      try {
-        const refreshedSession = await refreshAuthSessionIfNeeded();
-
-        if (!active) {
-          return;
-        }
-
-        if (!refreshedSession) {
-          router.replace("/login");
-          return;
-        }
-
-        setSession(refreshedSession);
-        setSessionChecked(true);
-      } finally {
-        refreshInProgress = false;
-      }
-    }
-
-    void syncSession();
-
-    const interval = window.setInterval(syncSession, 5 * 60 * 1000);
-
-    function refreshVisibleSession() {
-      if (document.visibilityState === "visible") {
-        void syncSession();
-      }
-    }
-
-    document.addEventListener("visibilitychange", refreshVisibleSession);
-
-    return () => {
-      active = false;
-      window.clearInterval(interval);
-      document.removeEventListener("visibilitychange", refreshVisibleSession);
-    };
-  }, [router]);
+      setSession(refreshedSession);
+      setSessionChecked(true);
+    },
+  });
 
   if (!sessionChecked) {
     return (

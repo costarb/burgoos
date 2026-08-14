@@ -3,7 +3,7 @@ import { createRoot, Root } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { NotificationCenterState } from "@burgoos/types";
 import { getNotifications, markNotificationRead } from "../../../lib/api";
-import { NotificationsClient } from "./notifications-client";
+import { mergeNotifications, NotificationsClient } from "./notifications-client";
 
 vi.mock("../../../lib/api", () => ({
   getNotifications: vi.fn(),
@@ -26,7 +26,7 @@ describe("NotificationsClient", () => {
     root = createRoot(container);
     getNotificationsMock.mockReset();
     markNotificationReadMock.mockReset();
-    getNotificationsMock.mockResolvedValue(state());
+    getNotificationsMock.mockResolvedValue(page());
     markNotificationReadMock.mockResolvedValue({
       ...notification(),
       status: "READ",
@@ -76,19 +76,39 @@ describe("NotificationsClient", () => {
           actionUrl: "/api/admin/exports/export-2/download",
         }),
       ],
+      nextCursor: null,
+      version: "2026-06-30T12:05:00.000Z",
     });
 
     await renderClient({ unreadCount: 0, items: [] });
     expect(container.textContent).toContain("Nenhuma notificacao encontrada.");
 
     await act(async () => {
-      vi.advanceTimersByTime(5000);
+      vi.advanceTimersByTime(30000);
       await Promise.resolve();
     });
 
-    expect(getNotificationsMock).toHaveBeenCalledWith("token", { limit: 50 });
+    expect(getNotificationsMock).toHaveBeenCalledWith(
+      "token",
+      { limit: 50, since: undefined },
+      expect.any(AbortSignal),
+    );
     expect(container.textContent).toContain("2");
     expect(container.textContent).toContain("Exportacao PDF concluida");
+  });
+
+  it("merges incremental updates by id and keeps at most 50 items", async () => {
+    const changed = Array.from({ length: 51 }, (_, index) => notification({
+        id: `notification-${index}`,
+        title: `Notificacao ${index}`,
+        createdAt: new Date(Date.UTC(2026, 5, 30, 12, 0, index)).toISOString(),
+      }));
+
+    const merged = mergeNotifications([notification()], changed);
+
+    expect(merged).toHaveLength(50);
+    expect(merged[0].title).toBe("Notificacao 50");
+    expect(merged.some(({ title }) => title === "Notificacao 0")).toBe(false);
   });
 
   async function renderClient(initialState: NotificationCenterState) {
@@ -117,6 +137,14 @@ function state(): NotificationCenterState {
   return {
     unreadCount: 1,
     items: [notification()],
+  };
+}
+
+function page() {
+  return {
+    ...state(),
+    nextCursor: null,
+    version: "2026-06-30T12:00:00.000Z",
   };
 }
 

@@ -18,7 +18,7 @@ describe("NotificationsService", () => {
         status: undefined,
       },
       orderBy: { createdAt: "desc" },
-      take: 100,
+      take: 51,
     });
     expect(prisma.operationalNotification.count).toHaveBeenCalledWith({
       where: {
@@ -29,6 +29,7 @@ describe("NotificationsService", () => {
       },
     });
     expect(response.unreadCount).toBe(1);
+    expect(response.version).toBe("2026-06-30T12:00:00.000Z");
     expect(response.items[0]).toEqual(
       expect.objectContaining({
         id: "notification-1",
@@ -36,6 +37,61 @@ describe("NotificationsService", () => {
         createdAt: "2026-06-30T12:00:00.000Z",
       })
     );
+  });
+
+  it("returns a bounded tenant/user delta and an opaque next cursor", async () => {
+    const items = Array.from({ length: 3 }, (_, index) => notification({
+      id: `notification-${index + 1}`,
+      createdAt: new Date(`2026-06-30T12:00:0${index}.000Z`),
+    }));
+    const prisma = createPrismaMock();
+    prisma.operationalNotification.findMany.mockResolvedValue(items);
+    const service = new NotificationsService(prisma as never);
+
+    const response = await service.list("tenant-1", "user-1", {
+      limit: 2,
+      cursor: "11111111-1111-4111-8111-111111111111",
+      since: "2026-06-30T11:00:00.000Z",
+    });
+
+    expect(prisma.operationalNotification.findMany).toHaveBeenCalledWith({
+      where: expect.objectContaining({
+        tenantId: "tenant-1",
+        recipientUserId: "user-1",
+        OR: [
+          { createdAt: { gt: new Date("2026-06-30T11:00:00.000Z") } },
+          { readAt: { gt: new Date("2026-06-30T11:00:00.000Z") } },
+        ],
+      }),
+      orderBy: { createdAt: "desc" },
+      take: 3,
+      cursor: { id: "11111111-1111-4111-8111-111111111111" },
+      skip: 1,
+    });
+    expect(response.items).toHaveLength(2);
+    expect(response.nextCursor).toBe("notification-2");
+  });
+
+  it("builds the summary version and ETag only from the scoped recipient", async () => {
+    const prisma = createPrismaMock();
+    prisma.operationalNotification.findFirst
+      .mockResolvedValueOnce({ createdAt: new Date("2026-06-30T12:00:00.000Z") })
+      .mockResolvedValueOnce({ readAt: new Date("2026-06-30T12:05:00.000Z") });
+    const service = new NotificationsService(prisma as never);
+
+    const summary = await service.summary("tenant-1", "user-1");
+
+    expect(prisma.operationalNotification.count).toHaveBeenCalledWith({
+      where: expect.objectContaining({ tenantId: "tenant-1", recipientUserId: "user-1" }),
+    });
+    expect(prisma.operationalNotification.findFirst).toHaveBeenNthCalledWith(1, expect.objectContaining({
+      where: { tenantId: "tenant-1", recipientUserId: "user-1" },
+    }));
+    expect(summary).toEqual({
+      unreadCount: 1,
+      version: "2026-06-30T12:05:00.000Z",
+      etag: expect.stringMatching(/^"[A-Za-z0-9_-]+"$/),
+    });
   });
 
   it("marks unread notifications as read using tenant and recipient scope", async () => {

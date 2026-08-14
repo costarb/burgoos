@@ -24,9 +24,19 @@ export interface ExportDataset {
   metadata?: Record<string, unknown>;
 }
 
+export interface ExportDescriptor extends Omit<ExportDataset, "rows"> {
+  totalRows: number;
+}
+
+export interface ExportRowBatch {
+  rows: ExportDataset["rows"];
+  nextCursor: string | null;
+}
+
 export interface ExportProvider {
   context: ExportContext;
-  build(job: ExportProviderJob): Promise<ExportDataset>;
+  describe(job: ExportProviderJob): Promise<ExportDescriptor>;
+  readBatch(job: ExportProviderJob, cursor: string | null, limit: number): Promise<ExportRowBatch>;
 }
 
 @Injectable()

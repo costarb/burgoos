@@ -8,9 +8,10 @@ import { PublicMenuController } from "./controllers/public-menu.controller";
 import { PublicDomainMenuController } from "./controllers/public-domain-menu.controller";
 import { AdminProductComplementController } from "./controllers/admin-product-complement.controller";
 import { ProductComplementService } from "./product-complement.service";
+import { StorageModule } from "../common/storage/storage.module";
 
 @Module({
-  imports: [AuthModule, BrandingModule],
+  imports: [AuthModule, BrandingModule, StorageModule],
   controllers: [
     AdminCategoryController,
     AdminProductController,

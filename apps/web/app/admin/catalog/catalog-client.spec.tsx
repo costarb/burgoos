@@ -4,12 +4,20 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it, vi } from "vitest";
 import type { AdminCategory, AdminProduct } from "../../../lib/api";
 import { CatalogClient } from "./catalog-client";
+import { validateImageFile } from "../../../lib/image-upload";
 
 vi.mock("next/navigation", () => ({
   useRouter: () => ({ refresh: vi.fn() }),
 }));
 
 describe("CatalogClient", () => {
+  it("rejects oversized image metadata without reading file contents", () => {
+    const arrayBuffer = vi.fn();
+    const file = { size: 2 * 1024 * 1024 + 1, type: "image/png", arrayBuffer };
+    expect(() => validateImageFile(file)).toThrow("2 MiB");
+    expect(arrayBuffer).not.toHaveBeenCalled();
+  });
+
   it("renders product consultation, external codes and edit action", () => {
     const html = renderToStaticMarkup(
       <CatalogClient

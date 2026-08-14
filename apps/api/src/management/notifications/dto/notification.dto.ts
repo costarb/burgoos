@@ -1,5 +1,5 @@
 import { OperationalNotificationStatus } from "@prisma/client";
-import { IsEnum, IsInt, IsOptional, Max, Min } from "class-validator";
+import { IsDateString, IsEnum, IsInt, IsOptional, IsUUID, Max, Min } from "class-validator";
 import { Type } from "class-transformer";
 
 export class NotificationsQueryDto {
@@ -11,6 +11,14 @@ export class NotificationsQueryDto {
   @Type(() => Number)
   @IsInt()
   @Min(1)
-  @Max(100)
+  @Max(50)
   limit?: number;
+
+  @IsOptional()
+  @IsUUID()
+  cursor?: string;
+
+  @IsOptional()
+  @IsDateString()
+  since?: string;
 }

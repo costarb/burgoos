@@ -16,7 +16,7 @@ function buildService(charge: Record<string, unknown>) {
     },
     $transaction: vi.fn((callback) => callback(tx)),
   };
-  return { service: new PaymentExceptionService(prisma as never), created };
+  return { service: new PaymentExceptionService(prisma as never), created, chargeCount: prisma.paymentCharge.count };
 }
 
 const base = {
@@ -34,8 +34,8 @@ const base = {
 
 describe("PaymentExceptionService", () => {
   it("opens a possible duplicate approval exception", async () => {
-    const { service, created } = buildService(base);
-    (service as any).prisma.paymentCharge.count.mockResolvedValue(1);
+    const { service, created, chargeCount } = buildService(base);
+    chargeCount.mockResolvedValue(1);
     await service.detect("charge-1");
     expect(created).toEqual([expect.objectContaining({ type: PaymentExceptionType.POSSIBLE_DUPLICATE })]);
   });

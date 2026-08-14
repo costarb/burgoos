@@ -64,6 +64,9 @@ export class ExportJobController {
     const file = await this.exportJobService.getDownload(user.tenantId, user.id, exportId);
     response.setHeader("Content-Type", file.mimeType);
     response.setHeader("Content-Disposition", `attachment; filename="${file.fileName}"`);
-    return response.sendFile(file.absolutePath);
+    if (file.contentLength !== undefined) {
+      response.setHeader("Content-Length", file.contentLength);
+    }
+    file.body.pipe(response);
   }
 }
