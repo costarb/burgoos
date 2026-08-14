@@ -39,6 +39,7 @@ export interface MercadoPagoPaging {
 
 export interface MercadoPagoPayment {
   id: number;
+  operation_type?: string;
   status: string;
   status_detail?: string;
   date_created?: string;
@@ -57,6 +58,17 @@ export interface MercadoPagoPayment {
     total_paid_amount?: number;
   };
   fee_details?: Array<{ type?: string; amount?: number }>;
+  additional_info?: {
+    bank_info?: { is_same_bank_account_owner?: boolean };
+  };
+  point_of_interaction?: {
+    type?: string;
+    sub_type?: string;
+    business_info?: { unit?: string; branch?: string; sub_unit?: string };
+    transaction_data?: {
+      bank_info?: { is_same_bank_account_owner?: boolean };
+    };
+  };
   metadata?: Record<string, unknown>;
 }
 
