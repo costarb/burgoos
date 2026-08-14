@@ -18,6 +18,7 @@ describe("sales report integration", () => {
   const prismaMock = {
     user: { findUnique: vi.fn() },
     order: { findMany: vi.fn(), count: vi.fn() },
+    $queryRaw: vi.fn(),
     $connect: vi.fn(),
     $disconnect: vi.fn(),
   };
@@ -83,6 +84,8 @@ describe("sales report integration", () => {
       orderBy: {
         createdAt: "asc",
       },
+      skip: 0,
+      take: 50,
     });
     expect(prismaMock.order.count).toHaveBeenCalledWith({
       where: expect.objectContaining({ tenantId, orderPlatformId: platformId }),
@@ -179,6 +182,20 @@ describe("sales report integration", () => {
       },
     ]);
     prismaMock.order.count.mockResolvedValue(1);
+    const aggregate = {
+      orderCount: 1n,
+      grossRevenue: decimal("46.00"),
+      acquiredNetRevenue: decimal("45.66"),
+      releasedNetRevenue: decimal("0"),
+      receivableNetAmount: decimal("45.66"),
+      paymentFeeAmount: decimal("0.34"),
+    };
+    prismaMock.$queryRaw
+      .mockResolvedValueOnce([{ ...aggregate, pendingOrderCount: 1n, nextExpectedReleaseDate: new Date("2026-06-29T21:00:00.000Z") }])
+      .mockResolvedValueOnce([{ ...aggregate, dimensionKey: "2026-05-30" }])
+      .mockResolvedValueOnce([{ ...aggregate, dimensionKey: "MERCADO_PAGO" }])
+      .mockResolvedValueOnce([{ ...aggregate, dimensionKey: "CREDIT_CARD" }])
+      .mockResolvedValueOnce([{ ...aggregate, dimensionKey: platformId, dimensionLabel: "FOOD_TRUCK" }]);
   }
 
   function decimal(value: string): Prisma.Decimal {

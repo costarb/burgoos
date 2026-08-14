@@ -3,6 +3,7 @@ import type { OperationState } from "@burgoos/types";
 import { revalidatePath } from "next/cache";
 import { OperationForm } from "../../../components/admin/operation-form";
 import { SubmitButton } from "../../../components/admin/submit-button";
+import { DirectImageAssetField } from "../../../components/admin/direct-image-asset-field";
 import {
   getAdminToken,
   getBrandingHistory,
@@ -25,10 +26,10 @@ async function saveDraftAction(
     const token = await getAdminToken();
 
     await saveBrandingDraft(token, {
-      logoUrl: await readImageAsset(formData, "logoUrl", "logoUpload"),
-      headerImageUrl: await readImageAsset(formData, "headerImageUrl", "headerImageUpload"),
-      bodyImageUrl: await readImageAsset(formData, "bodyImageUrl", "bodyImageUpload"),
-      footerImageUrl: await readImageAsset(formData, "footerImageUrl", "footerImageUpload"),
+      logoUrl: readImageAsset(formData, "logoUrl"),
+      headerImageUrl: readImageAsset(formData, "headerImageUrl"),
+      bodyImageUrl: readImageAsset(formData, "bodyImageUrl"),
+      footerImageUrl: readImageAsset(formData, "footerImageUrl"),
       primaryColor: String(formData.get("primaryColor") ?? "#C92A2A"),
       accentColor: String(formData.get("accentColor") ?? "#F59F00"),
       neutralTheme: String(formData.get("neutralTheme") ?? "LIGHT") as "LIGHT",
@@ -98,22 +99,7 @@ async function restoreFormAction(
   return restoreAction();
 }
 
-async function readImageAsset(
-  formData: FormData,
-  textFieldName: string,
-  fileFieldName: string
-): Promise<string | null> {
-  const uploaded = formData.get(fileFieldName);
-
-  if (uploaded instanceof File && uploaded.size > 0) {
-    if (!uploaded.type.startsWith("image/")) {
-      throw new Error("Arquivo de imagem invalido.");
-    }
-
-    const base64 = Buffer.from(await uploaded.arrayBuffer()).toString("base64");
-    return `data:${uploaded.type};base64,${base64}`;
-  }
-
+function readImageAsset(formData: FormData, textFieldName: string): string | null {
   const textValue = String(formData.get(textFieldName) ?? "").trim();
   return textValue || null;
 }
@@ -137,29 +123,33 @@ export default async function BrandingPage() {
           >
             <fieldset className="grid gap-4 rounded-md border border-slate-200 p-4">
               <legend className="px-1 text-sm font-semibold">Imagens da pagina</legend>
-              <ImageAssetField
+              <DirectImageAssetField
                 currentValue={current?.logoUrl ?? ""}
-                fileName="logoUpload"
                 label="Logo"
                 name="logoUrl"
+                purpose="BRANDING_LOGO"
+                token={token}
               />
-              <ImageAssetField
+              <DirectImageAssetField
                 currentValue={current?.headerImageUrl ?? ""}
-                fileName="headerImageUpload"
                 label="Imagem de header"
                 name="headerImageUrl"
+                purpose="BRANDING_HEADER"
+                token={token}
               />
-              <ImageAssetField
+              <DirectImageAssetField
                 currentValue={current?.bodyImageUrl ?? ""}
-                fileName="bodyImageUpload"
                 label="Imagem de body"
                 name="bodyImageUrl"
+                purpose="BRANDING_BODY"
+                token={token}
               />
-              <ImageAssetField
+              <DirectImageAssetField
                 currentValue={current?.footerImageUrl ?? ""}
-                fileName="footerImageUpload"
                 label="Imagem de footer"
                 name="footerImageUrl"
+                purpose="BRANDING_FOOTER"
+                token={token}
               />
             </fieldset>
             <div className="grid gap-4 sm:grid-cols-2">
@@ -403,48 +393,6 @@ export default async function BrandingPage() {
         </section>
       </section>
     </main>
-  );
-}
-
-function ImageAssetField({
-  currentValue,
-  fileName,
-  label,
-  name,
-}: {
-  currentValue: string;
-  fileName: string;
-  label: string;
-  name: string;
-}) {
-  return (
-    <div className="grid gap-2 rounded-md border border-slate-100 bg-slate-50 p-3">
-      <label className="grid gap-1 text-sm font-medium">
-        {label}
-        <textarea
-          className="min-h-16 rounded-md border border-slate-300 bg-white px-3 py-2"
-          defaultValue={currentValue}
-          name={name}
-          placeholder="https://... ou data:image/..."
-        />
-      </label>
-      <label className="grid gap-1 text-sm font-medium">
-        Upload
-        <input
-          accept="image/*"
-          className="rounded-md border border-slate-300 bg-white px-3 py-2"
-          name={fileName}
-          type="file"
-        />
-      </label>
-      {currentValue ? (
-        <img
-          alt=""
-          className="h-20 w-full rounded-md border border-slate-200 bg-white object-contain"
-          src={currentValue}
-        />
-      ) : null}
-    </div>
   );
 }
 

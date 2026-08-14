@@ -36,7 +36,7 @@ export class MercadoPagoSyncController {
       { ...dto, integrationId, ...dates },
       dto.initialPeriodDays ? "INITIAL_LOAD" : "MANUAL"
     );
-    this.processor.queuePreview(run.id, user.tenantId);
+    await this.processor.queuePreview(run.id, user.tenantId);
     return run;
   }
 }

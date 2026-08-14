@@ -1,24 +1,89 @@
-import { Inject, Injectable, Logger } from "@nestjs/common";
-import { ExportFormat, ExportJobStatus, OperationalNotificationSeverity } from "@prisma/client";
-import { mkdir, writeFile } from "node:fs/promises";
-import { join } from "node:path";
+import { Inject, Injectable, Logger, OnModuleInit, Optional } from "@nestjs/common";
+import { ConfigService } from "@nestjs/config";
+import { AssetStorageProvider, BackgroundJob, ExportFormat, ExportJobStatus, OperationalNotificationSeverity } from "@prisma/client";
+import ExcelJS from "exceljs";
+import { once } from "node:events";
+import { PassThrough, Writable } from "node:stream";
 import { PrismaService } from "../../platform/database/prisma.service";
 import { NotificationsService } from "../notifications/notifications.service";
-import { ExportDataset, ExportProviderRegistry } from "./export-provider.registry";
+import {
+  ExportDataset,
+  ExportDescriptor,
+  ExportProvider,
+  ExportProviderJob,
+  ExportProviderRegistry,
+} from "./export-provider.registry";
+import { BackgroundJobRegistry } from "../../common/background-jobs/background-job.registry";
+import { BackgroundJobService } from "../../common/background-jobs/background-job.service";
+import { ASSET_STORAGE, AssetStorage } from "../../common/storage/asset-storage";
 
-const exportStorageRoot = join(process.cwd(), "tmp", "exports");
+const MAX_EXPORT_BYTES = 512 * 1024 * 1024;
 
 @Injectable()
-export class ExportJobWorker {
+export class ExportJobWorker implements OnModuleInit {
   private readonly logger = new Logger(ExportJobWorker.name);
 
   constructor(
     @Inject(PrismaService) private readonly prisma: PrismaService,
     @Inject(ExportProviderRegistry) private readonly providerRegistry: ExportProviderRegistry,
-    @Inject(NotificationsService) private readonly notificationsService: NotificationsService
+    @Inject(NotificationsService) private readonly notificationsService: NotificationsService,
+    @Optional() private readonly backgroundJobs?: BackgroundJobService,
+    @Optional() private readonly registry?: BackgroundJobRegistry,
+    @Optional() private readonly config?: ConfigService,
+    @Optional() @Inject(ASSET_STORAGE) private readonly assetStorage?: AssetStorage,
   ) {}
 
-  async process(exportId: string): Promise<void> {
+  async onModuleInit(): Promise<void> {
+    if (!this.durableEnabled()) return;
+    if (!this.backgroundJobs || !this.registry) throw new Error("Durable exports require BackgroundJobsModule");
+    this.registry.register({
+      type: "EXPORT",
+      policy: { leaseMs: 600_000, retryBaseDelayMs: 15_000, retryMaxDelayMs: 900_000 },
+      execute: (job) => this.execute(job),
+    });
+    await this.enqueueRecoverableExports();
+  }
+
+  async execute(job: BackgroundJob): Promise<{ processedCount: number }> {
+    await this.process(job.targetId, true, job.attempts >= job.maxAttempts);
+    return { processedCount: 1 };
+  }
+
+  async enqueueRecoverableExports(): Promise<void> {
+    if (!this.backgroundJobs) throw new Error("Background jobs are unavailable");
+    let after: string | undefined;
+    do {
+      const page = await this.prisma.exportJob.findMany({
+        where: { status: ExportJobStatus.PENDING, backgroundJobId: null },
+        select: { id: true, tenantId: true, fingerprint: true },
+        orderBy: { id: "asc" },
+        take: 25,
+        ...(after ? { cursor: { id: after }, skip: 1 } : {}),
+      });
+      for (const exportJob of page) {
+        const backgroundJob = await this.backgroundJobs.enqueue({
+          tenantId: exportJob.tenantId,
+          type: "EXPORT",
+          priority: "LOW",
+          targetType: "ExportJob",
+          targetId: exportJob.id,
+          dedupeKey: exportJob.fingerprint ?? exportJob.id,
+          payload: {},
+        });
+        if (backgroundJob.targetId === exportJob.id) {
+          await this.prisma.exportJob.update({
+            where: { id: exportJob.id },
+            data: { backgroundJobId: backgroundJob.id },
+          });
+        } else {
+          await this.prisma.exportJob.delete({ where: { id: exportJob.id } });
+        }
+      }
+      after = page.length === 25 ? page[page.length - 1]?.id : undefined;
+    } while (after);
+  }
+
+  async process(exportId: string, rethrow = false, terminalFailure = true): Promise<void> {
     const job = await this.prisma.exportJob.findUnique({ where: { id: exportId } });
 
     if (!job || job.status !== ExportJobStatus.PENDING) {
@@ -37,13 +102,24 @@ export class ExportJobWorker {
         throw new Error("Contexto de exportacao nao suportado");
       }
 
-      const dataset = await provider.build(job);
-      const file = renderExportFile(dataset, job.format);
+      const descriptor = await provider.describe(job);
+      validateRowLimit(job.format, descriptor.totalRows);
+      const file = describeExportFile(descriptor, job.format);
       const storageKey = `${job.tenantId}/${job.id}/${file.fileName}`;
-      const absolutePath = join(exportStorageRoot, storageKey);
-
-      await mkdir(join(exportStorageRoot, job.tenantId, job.id), { recursive: true });
-      await writeFile(absolutePath, file.content);
+      if (!this.assetStorage) throw new Error("Asset storage is unavailable");
+      await this.prisma.exportJob.update({
+        where: { id: job.id },
+        data: { totalRows: descriptor.totalRows, processedRows: 0 },
+      });
+      const output = new PassThrough();
+      const stored = this.assetStorage.write({
+        key: storageKey,
+        body: output,
+        contentType: file.mimeType,
+        maxBytes: MAX_EXPORT_BYTES,
+      });
+      await Promise.all([this.writeExport(provider, job, descriptor, output), stored]);
+      const storedFile = await stored;
 
       await this.prisma.exportJob.update({
         where: { id: job.id },
@@ -53,7 +129,11 @@ export class ExportJobWorker {
           fileName: file.fileName,
           fileMimeType: file.mimeType,
           fileStorageKey: storageKey,
-          fileSizeBytes: file.content.byteLength,
+          fileSizeBytes: storedFile.sizeBytes,
+          storageProvider:
+            this.config?.get<string>("ASSET_STORAGE_PROVIDER") === "s3"
+              ? AssetStorageProvider.OBJECT_STORAGE
+              : AssetStorageProvider.LOCAL,
           expiresAt: addDays(new Date(), 7),
         },
       });
@@ -77,46 +157,148 @@ export class ExportJobWorker {
       await this.prisma.exportJob.update({
         where: { id: job.id },
         data: {
-          status: ExportJobStatus.FAILED,
-          failedAt: new Date(),
+          status: terminalFailure ? ExportJobStatus.FAILED : ExportJobStatus.PENDING,
+          failedAt: terminalFailure ? new Date() : null,
           errorMessage: message,
         },
       });
 
-      await this.notificationsService.create({
-        tenantId: job.tenantId,
-        recipientUserId: job.requestedByUserId,
-        type: "PAYABLE_EXPORT_FAILED",
-        severity: OperationalNotificationSeverity.ERROR,
-        title: "Exportacao nao concluida",
-        message,
-        relatedEntityType: "export_job",
-        relatedEntityId: job.id,
-        exportJobId: job.id,
-      });
+      if (terminalFailure) {
+        await this.notificationsService.create({
+          tenantId: job.tenantId,
+          recipientUserId: job.requestedByUserId,
+          type: "PAYABLE_EXPORT_FAILED",
+          severity: OperationalNotificationSeverity.ERROR,
+          title: "Exportacao nao concluida",
+          message,
+          relatedEntityType: "export_job",
+          relatedEntityId: job.id,
+          exportJobId: job.id,
+        });
+      }
 
       this.logger.error(
         `Export job ${job.id} failed`,
         error instanceof Error ? error.stack : undefined
       );
+      if (rethrow) throw error;
     }
+  }
+
+  private durableEnabled(): boolean {
+    return this.config?.get<string>("EXPORT_DURABLE_JOBS_ENABLED") === "true";
+  }
+
+  private async writeExport(
+    provider: ExportProvider,
+    job: ExportProviderJob & { format: ExportFormat },
+    descriptor: ExportDescriptor,
+    output: Writable,
+  ): Promise<void> {
+    if (job.format === ExportFormat.CSV) {
+      await this.writeCsv(provider, job, descriptor, output);
+      return;
+    }
+
+    if (job.format === ExportFormat.XLSX) {
+      await this.writeXlsx(provider, job, descriptor, output);
+      return;
+    }
+
+    const rows: ExportDataset["rows"] = [];
+    let cursor: string | null = null;
+    const batchSize = this.config?.get<number>("EXPORT_BATCH_SIZE") ?? 250;
+    do {
+      const batch = await provider.readBatch(job, cursor, batchSize);
+      rows.push(...batch.rows);
+      cursor = batch.nextCursor;
+    } while (cursor);
+    output.end(renderPdf({ ...descriptor, rows }));
+    await once(output, "finish");
+  }
+
+  private async writeCsv(
+    provider: ExportProvider,
+    job: ExportProviderJob,
+    descriptor: ExportDescriptor,
+    output: Writable,
+  ): Promise<void> {
+    try {
+      await writeWithBackpressure(
+        output,
+        `\uFEFF${descriptor.columns.map((column) => csvCell(column.label)).join(",")}\r\n`,
+      );
+      await this.forEachBatch(provider, job, async (rows) => {
+        for (const row of rows) {
+          await writeWithBackpressure(
+            output,
+            `${descriptor.columns.map((column) => csvCell(row[column.key] ?? "")).join(",")}\r\n`,
+          );
+        }
+      });
+      output.end();
+      await once(output, "finish");
+    } catch (error) {
+      output.destroy();
+      throw error;
+    }
+  }
+
+  private async writeXlsx(
+    provider: ExportProvider,
+    job: ExportProviderJob,
+    descriptor: ExportDescriptor,
+    output: Writable,
+  ): Promise<void> {
+    const workbook = new ExcelJS.stream.xlsx.WorkbookWriter({
+      stream: output,
+      useSharedStrings: false,
+      useStyles: false,
+    });
+    const worksheet = workbook.addWorksheet("Exportacao");
+    worksheet.addRow(descriptor.columns.map((column) => column.label)).commit();
+    await this.forEachBatch(provider, job, async (rows) => {
+      for (const row of rows) {
+        worksheet.addRow(descriptor.columns.map((column) => row[column.key] ?? "")).commit();
+      }
+    });
+    worksheet.commit();
+    await workbook.commit();
+  }
+
+  private async forEachBatch(
+    provider: ExportProvider,
+    job: ExportProviderJob,
+    consume: (rows: ExportDataset["rows"]) => Promise<void>,
+  ): Promise<void> {
+    const batchSize = Math.max(1, this.config?.get<number>("EXPORT_BATCH_SIZE") ?? 250);
+    let cursor: string | null = null;
+    let processedRows = 0;
+    do {
+      const batch = await provider.readBatch(job, cursor, batchSize);
+      await consume(batch.rows);
+      processedRows += batch.rows.length;
+      await this.prisma.exportJob.update({
+        where: { id: job.id },
+        data: { processedRows },
+      });
+      cursor = batch.nextCursor;
+    } while (cursor);
   }
 }
 
-interface RenderedExportFile {
+interface ExportFileDescriptor {
   fileName: string;
   mimeType: string;
-  content: Buffer;
 }
 
-function renderExportFile(dataset: ExportDataset, format: ExportFormat): RenderedExportFile {
-  const baseName = slugify(dataset.title);
+function describeExportFile(dataset: ExportDescriptor, format: ExportFormat): ExportFileDescriptor {
+  const baseName = slugify(dataset.title) || "exportacao";
 
   if (format === ExportFormat.CSV) {
     return {
       fileName: `${baseName}.csv`,
       mimeType: "text/csv; charset=utf-8",
-      content: Buffer.from(renderCsv(dataset), "utf8"),
     };
   }
 
@@ -124,26 +306,26 @@ function renderExportFile(dataset: ExportDataset, format: ExportFormat): Rendere
     return {
       fileName: `${baseName}.pdf`,
       mimeType: "application/pdf",
-      content: renderPdf(dataset),
     };
   }
 
   return {
     fileName: `${baseName}.xlsx`,
     mimeType: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-    content: renderXlsx(dataset),
   };
 }
 
-function renderCsv(dataset: ExportDataset): string {
-  const lines = [
-    dataset.columns.map((column) => csvCell(column.label)).join(","),
-    ...dataset.rows.map((row) =>
-      dataset.columns.map((column) => csvCell(row[column.key] ?? "")).join(",")
-    ),
-  ];
+function validateRowLimit(format: ExportFormat, totalRows: number): void {
+  if (format === ExportFormat.PDF && totalRows > 1_000) {
+    throw new Error("PDF exports are limited to 1000 rows");
+  }
+  if (format === ExportFormat.XLSX && totalRows > 50_000) {
+    throw new Error("XLSX exports are limited to 50000 rows");
+  }
+}
 
-  return `${lines.join("\r\n")}\r\n`;
+async function writeWithBackpressure(output: NodeJS.WritableStream, content: string): Promise<void> {
+  if (!output.write(content)) await once(output, "drain");
 }
 
 function csvCell(value: string | number | null): string {
@@ -826,7 +1008,9 @@ function pdfTextHex(value: string): string {
     .toUpperCase();
 }
 
-function renderXlsx(dataset: ExportDataset): Buffer {
+// Kept temporarily only to make previously generated-file fixtures readable during migration.
+// Runtime generation uses ExcelJS.stream.xlsx.WorkbookWriter above.
+function _renderXlsx(dataset: ExportDataset): Buffer {
   const worksheetRows = [
     dataset.columns.map((column) => column.label),
     ...dataset.rows.map((row) => dataset.columns.map((column) => row[column.key] ?? "")),

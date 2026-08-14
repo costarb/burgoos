@@ -1,12 +1,14 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useRef, useState } from "react";
 import { Bell } from "lucide-react";
 import Link from "next/link";
-import { getNotifications } from "../../lib/api";
+import { getNotificationSummary } from "../../lib/api";
 import { readAuthSession } from "../../lib/auth-client";
+import { useAdaptivePolling } from "../../lib/adaptive-polling";
 
-const notificationPollIntervalMs = 5000;
+const notificationPollIntervalMs = Number(process.env.NEXT_PUBLIC_NOTIFICATION_POLL_INTERVAL_MS ?? 30_000);
+const hiddenPollIntervalMs = Number(process.env.NEXT_PUBLIC_HIDDEN_POLL_INTERVAL_MS ?? 120_000);
 
 interface NotificationCenterButtonProps {
   initialUnreadCount?: number;
@@ -16,35 +18,20 @@ export function NotificationCenterButton({
   initialUnreadCount = 0,
 }: NotificationCenterButtonProps) {
   const [unreadCount, setUnreadCount] = useState(initialUnreadCount);
+  const session = readAuthSession();
+  const etagRef = useRef<string>();
 
-  useEffect(() => {
-    const session = readAuthSession();
-
-    if (!session?.accessToken) {
-      return;
-    }
-
-    const token = session.accessToken;
-    let active = true;
-
-    function refreshUnreadCount() {
-      getNotifications(token, { limit: 1 })
-        .then((state) => {
-          if (active) {
-            setUnreadCount(state.unreadCount);
-          }
-        })
-        .catch(() => undefined);
-    }
-
-    refreshUnreadCount();
-    const interval = window.setInterval(refreshUnreadCount, notificationPollIntervalMs);
-
-    return () => {
-      active = false;
-      window.clearInterval(interval);
-    };
-  }, []);
+  useAdaptivePolling({
+    enabled: Boolean(session?.accessToken),
+    visibleIntervalMs: notificationPollIntervalMs,
+    hiddenIntervalMs: hiddenPollIntervalMs,
+    task: async (signal) => {
+      if (!session?.accessToken) return;
+      const result = await getNotificationSummary(session.accessToken, etagRef.current, signal);
+      etagRef.current = result.etag;
+      if (result.data) setUnreadCount(result.data.unreadCount);
+    },
+  });
 
   return (
     <Link

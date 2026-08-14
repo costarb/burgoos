@@ -4,6 +4,7 @@ import type { PublicOrderQueue, PublicQueueItem, PublicQueueStatus } from "@burg
 import React from "react";
 import { useEffect, useMemo, useState } from "react";
 import { getPublicOrderQueue, getPublicOrderQueueByDomain } from "../../../lib/api";
+import { useAdaptivePolling } from "../../../lib/adaptive-polling";
 
 type QueueSource = { slug: string } | { domain: string };
 
@@ -16,34 +17,38 @@ export function PublicOrderQueueClient({
 }) {
   const [queue, setQueue] = useState(initialQueue);
   const [lastSuccessAt, setLastSuccessAt] = useState(() => Date.now());
-  const [now, setNow] = useState(() => Date.now());
+  const [staleByAge, setStaleByAge] = useState(false);
   const [refreshFailed, setRefreshFailed] = useState(false);
 
-  useEffect(() => {
-    const refresh = async () => {
+  useAdaptivePolling({
+    visibleIntervalMs: 5_000,
+    hiddenIntervalMs: 30_000,
+    runImmediately: false,
+    task: async (signal) => {
       try {
         const next = "slug" in source
-          ? await getPublicOrderQueue(source.slug)
-          : await getPublicOrderQueueByDomain(source.domain);
+          ? await getPublicOrderQueue(source.slug, signal)
+          : await getPublicOrderQueueByDomain(source.domain, signal);
         if (next) {
           setQueue(next);
           setLastSuccessAt(Date.now());
           setRefreshFailed(false);
         }
-      } catch {
-        setRefreshFailed(true);
+      } catch (error) {
+        if (!signal.aborted) setRefreshFailed(true);
+        throw error;
       }
-    };
-    const poll = window.setInterval(() => void refresh(), 5_000);
-    const clock = window.setInterval(() => setNow(Date.now()), 1_000);
-    return () => {
-      window.clearInterval(poll);
-      window.clearInterval(clock);
-    };
-  }, [source]);
+    },
+  });
 
-  const stale = refreshFailed
-    || now - lastSuccessAt > queue.staleAfterSeconds * 1_000;
+  useEffect(() => {
+    setStaleByAge(false);
+    const delay = Math.max(0, lastSuccessAt + queue.staleAfterSeconds * 1_000 - Date.now());
+    const timer = window.setTimeout(() => setStaleByAge(true), delay);
+    return () => window.clearTimeout(timer);
+  }, [lastSuccessAt, queue.staleAfterSeconds]);
+
+  const stale = refreshFailed || staleByAge;
   const grouped = useMemo(() => groupActive(queue.active), [queue.active]);
 
   return (

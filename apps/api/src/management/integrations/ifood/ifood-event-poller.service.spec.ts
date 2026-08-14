@@ -268,4 +268,121 @@ describe("IfoodEventPollerService", () => {
     expect(setIntervalSpy).toHaveBeenCalledWith(expect.any(Function), 30_000);
     service.onModuleDestroy();
   });
+
+  it("does not start polling in the api-only runtime role", () => {
+    const register = vi.fn();
+    const service = new IfoodEventPollerService(
+      {} as never,
+      {} as never,
+      {} as never,
+      {} as never,
+      {} as never,
+      undefined,
+      undefined,
+      { get: vi.fn(() => "true") } as never,
+      undefined,
+      { register } as never,
+      { consumesBackgroundJobs: false } as never
+    );
+
+    service.onModuleInit();
+
+    expect(register).not.toHaveBeenCalled();
+  });
+
+  it("pages due integrations and enqueues one deduplicated job per integration", async () => {
+    const pageOne = [
+      { id: "integration-1", tenantId: "tenant-1" },
+      { id: "integration-2", tenantId: "tenant-2" },
+    ];
+    const pageTwo = [{ id: "integration-3", tenantId: "tenant-1" }];
+    const findMany = vi.fn().mockResolvedValueOnce(pageOne).mockResolvedValueOnce(pageTwo);
+    const enqueue = vi.fn().mockResolvedValue({ id: "job" });
+    const config = {
+      get: vi.fn((key: string) =>
+        key === "IFOOD_DURABLE_JOBS_ENABLED"
+          ? "true"
+          : key === "IFOOD_DISCOVERY_BATCH_SIZE"
+            ? "2"
+            : undefined
+      ),
+    };
+    const service = new IfoodEventPollerService(
+      { deliveryIntegration: { findMany } } as never,
+      {} as never,
+      {} as never,
+      {} as never,
+      {} as never,
+      undefined,
+      undefined,
+      config as never,
+      { enqueue } as never
+    );
+
+    await service.pollDueIntegrations(new Date("2026-08-07T12:00:00Z"));
+
+    expect(findMany).toHaveBeenNthCalledWith(
+      1,
+      expect.objectContaining({ take: 2, orderBy: { id: "asc" } })
+    );
+    expect(findMany).toHaveBeenNthCalledWith(
+      2,
+      expect.objectContaining({ take: 2, cursor: { id: "integration-2" }, skip: 1 })
+    );
+    expect(enqueue).toHaveBeenCalledTimes(3);
+    expect(enqueue).toHaveBeenCalledWith(
+      expect.objectContaining({
+        tenantId: "tenant-1",
+        type: "IFOOD_POLL",
+        targetId: "integration-1",
+        dedupeKey: "integration-1",
+      })
+    );
+  });
+
+  it("processes polled events sequentially within one integration", async () => {
+    const order: string[] = [];
+    const events = ["event-1", "event-2"].map((id) => ({
+      id,
+      code: "STATUS_UPDATE",
+      orderId: null,
+      raw: {},
+    }));
+    const service = new IfoodEventPollerService(
+      {
+        deliveryPlatformEvent: {
+          upsert: vi.fn(async ({ create }: { create: Record<string, unknown> }) => ({
+            ...create,
+            id: `db-${create.externalEventId}`,
+            status: "RECEIVED",
+            receivedAt: new Date(),
+            retryCount: 0,
+          })),
+          update: vi.fn(async ({ data }: { data: { status?: string } }) => {
+            if (data.status === "PROCESSING") order.push("process");
+            return {};
+          }),
+        },
+        deliveryIntegration: { update: vi.fn() },
+      } as never,
+      { getActiveCredentialSecret: vi.fn(async () => ({ accessToken: "token" })) } as never,
+      {
+        pollEvents: vi.fn(async () => events),
+        acknowledgeEvents: vi.fn(async ({ eventIds }: { eventIds: string[] }) => {
+          order.push(`ack:${eventIds[0]}`);
+        }),
+      } as never,
+      {} as never,
+      { record: vi.fn() } as never
+    );
+
+    await service.pollIntegration({
+      id: "integration-1",
+      tenantId: "tenant-1",
+      provider: "IFOOD",
+      externalMerchantId: "merchant-1",
+    } as never);
+
+    expect(order).toEqual(["process", "ack:event-1", "process", "ack:event-2"]);
+  });
 });

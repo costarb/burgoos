@@ -34,12 +34,14 @@ import { MercadoPagoWebhookService } from "./mercado-pago/mercado-pago-webhook.s
 import { MercadoPagoWebhookController } from "./mercado-pago/mercado-pago-webhook.controller";
 import { MercadoPagoReconciliationService } from "./mercado-pago/mercado-pago-reconciliation.service";
 import { MercadoPagoReconciliationScheduler } from "./mercado-pago/mercado-pago-reconciliation.scheduler";
+import { BackgroundJobsModule } from "../../common/background-jobs/background-jobs.module";
 
 @Module({
   imports: [
     ScheduleModule.forRoot(),
     AuthModule,
     DatabaseModule,
+    BackgroundJobsModule,
     PlatformIntegrationsModule,
     forwardRef(() => OrderingModule),
   ],

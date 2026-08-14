@@ -20,6 +20,19 @@ interface AggregateBucket {
   paymentFeeAmount: Prisma.Decimal;
 }
 
+interface AggregateRow {
+  dimensionKey?: string | null;
+  dimensionLabel?: string | null;
+  orderCount: bigint | number;
+  grossRevenue: Prisma.Decimal;
+  acquiredNetRevenue: Prisma.Decimal;
+  releasedNetRevenue: Prisma.Decimal;
+  receivableNetAmount: Prisma.Decimal;
+  paymentFeeAmount: Prisma.Decimal;
+  pendingOrderCount?: bigint | number;
+  nextExpectedReleaseDate?: Date | null;
+}
+
 @Injectable()
 export class SalesReportService {
   constructor(@Inject(PrismaService) private readonly prisma: PrismaService) {}
@@ -27,7 +40,39 @@ export class SalesReportService {
   async getReport(tenantId: string, query: ParsedSalesReportQuery) {
     const where = this.buildWhere(tenantId, query);
     const reportReferenceDate = new Date();
-    const [orders, total] = await Promise.all([
+    const aggregateWhere = this.buildAggregateWhere(tenantId, query);
+    const [summaryRows, dailyRows, institutionRows, methodRows, channelRows, orders, total] = await Promise.all([
+      this.aggregate(Prisma.sql`SELECT
+        COUNT(*)::bigint AS "orderCount",
+        COALESCE(SUM(COALESCE(o.payment_gross_amount, o.total)), 0) AS "grossRevenue",
+        COALESCE(SUM(COALESCE(o.payment_net_amount, o.payment_gross_amount, o.total)), 0) AS "acquiredNetRevenue",
+        COALESCE(SUM(CASE WHEN o.payment_release_expected_at IS NULL OR o.payment_release_expected_at <= ${reportReferenceDate} THEN COALESCE(o.payment_net_amount, o.payment_gross_amount, o.total) ELSE 0 END), 0) AS "releasedNetRevenue",
+        COALESCE(SUM(CASE WHEN o.payment_release_expected_at > ${reportReferenceDate} THEN COALESCE(o.payment_net_amount, o.payment_gross_amount, o.total) ELSE 0 END), 0) AS "receivableNetAmount",
+        COALESCE(SUM(o.payment_fee_amount), 0) AS "paymentFeeAmount",
+        COUNT(*) FILTER (WHERE o.payment_release_expected_at > ${reportReferenceDate})::bigint AS "pendingOrderCount",
+        MIN(CASE WHEN o.payment_release_expected_at > ${reportReferenceDate} THEN o.payment_release_expected_at END) AS "nextExpectedReleaseDate"
+        FROM orders o WHERE ${aggregateWhere}`),
+      this.aggregate(Prisma.sql`SELECT
+        TO_CHAR(o.created_at AT TIME ZONE 'America/Sao_Paulo', 'YYYY-MM-DD') AS "dimensionKey",
+        COUNT(*)::bigint AS "orderCount",
+        COALESCE(SUM(COALESCE(o.payment_gross_amount, o.total)), 0) AS "grossRevenue",
+        COALESCE(SUM(COALESCE(o.payment_net_amount, o.payment_gross_amount, o.total)), 0) AS "acquiredNetRevenue",
+        COALESCE(SUM(CASE WHEN o.payment_release_expected_at IS NULL OR o.payment_release_expected_at <= ${reportReferenceDate} THEN COALESCE(o.payment_net_amount, o.payment_gross_amount, o.total) ELSE 0 END), 0) AS "releasedNetRevenue",
+        COALESCE(SUM(CASE WHEN o.payment_release_expected_at > ${reportReferenceDate} THEN COALESCE(o.payment_net_amount, o.payment_gross_amount, o.total) ELSE 0 END), 0) AS "receivableNetAmount",
+        COALESCE(SUM(o.payment_fee_amount), 0) AS "paymentFeeAmount"
+        FROM orders o WHERE ${aggregateWhere} GROUP BY 1 ORDER BY 1`),
+      this.dimensionAggregate(aggregateWhere, Prisma.sql`COALESCE(o.payment_institution::text, 'NOT_INFORMED')`, reportReferenceDate),
+      this.dimensionAggregate(aggregateWhere, Prisma.sql`o.payment_method::text`, reportReferenceDate),
+      this.aggregate(Prisma.sql`SELECT
+        o.order_platform_id::text AS "dimensionKey", COALESCE(p.name, 'Sem canal') AS "dimensionLabel",
+        COUNT(*)::bigint AS "orderCount",
+        COALESCE(SUM(COALESCE(o.payment_gross_amount, o.total)), 0) AS "grossRevenue",
+        COALESCE(SUM(COALESCE(o.payment_net_amount, o.payment_gross_amount, o.total)), 0) AS "acquiredNetRevenue",
+        COALESCE(SUM(CASE WHEN o.payment_release_expected_at IS NULL OR o.payment_release_expected_at <= ${reportReferenceDate} THEN COALESCE(o.payment_net_amount, o.payment_gross_amount, o.total) ELSE 0 END), 0) AS "releasedNetRevenue",
+        COALESCE(SUM(CASE WHEN o.payment_release_expected_at > ${reportReferenceDate} THEN COALESCE(o.payment_net_amount, o.payment_gross_amount, o.total) ELSE 0 END), 0) AS "receivableNetAmount",
+        COALESCE(SUM(o.payment_fee_amount), 0) AS "paymentFeeAmount"
+        FROM orders o LEFT JOIN order_platforms p ON p.id = o.order_platform_id
+        WHERE ${aggregateWhere} GROUP BY o.order_platform_id, p.name ORDER BY "grossRevenue" DESC`),
       this.prisma.order.findMany({
         where,
         include: {
@@ -37,11 +82,13 @@ export class SalesReportService {
         orderBy: {
           createdAt: "asc",
         },
+        skip: (query.page - 1) * query.pageSize,
+        take: query.pageSize,
       }),
       this.prisma.order.count({ where }),
     ]);
 
-    const summary = this.createSummary(orders, reportReferenceDate);
+    const summary = this.rowToBucket(summaryRows[0]);
     const totalGross = summary.grossRevenue;
 
     return {
@@ -60,22 +107,22 @@ export class SalesReportService {
         periodStart: query.start,
         periodEnd: query.end,
       },
-      daily: this.createDailySummaries(orders, query.start, query.end, reportReferenceDate),
-      byPaymentInstitution: this.createPaymentDimensionSummary(
-        orders,
+      daily: this.createDailySummaries(dailyRows, query.start, query.end),
+      byPaymentInstitution: this.formatDimensionRows(
+        institutionRows,
         totalGross,
-        (order) => order.paymentInstitution ?? "NOT_INFORMED",
         (key) => paymentInstitutionLabel(key),
-        reportReferenceDate
       ),
-      byPaymentMethod: this.createPaymentDimensionSummary(
-        orders,
+      byPaymentMethod: this.formatDimensionRows(
+        methodRows,
         totalGross,
-        (order) => order.paymentMethod,
         (key) => paymentMethodLabel(key),
-        reportReferenceDate
       ),
-      byChannel: this.createChannelSummary(orders, reportReferenceDate),
+      byChannel: channelRows.map((row) => ({
+        orderPlatformId: row.dimensionKey,
+        orderPlatformName: row.dimensionLabel ?? "Sem canal",
+        ...this.formatAggregate(this.rowToBucket(row)),
+      })),
       analytical: this.createAnalyticalPage(
         orders,
         total,
@@ -83,7 +130,13 @@ export class SalesReportService {
         query.pageSize,
         reportReferenceDate
       ),
-      receivables: this.createReceivablesSummary(orders, reportReferenceDate),
+      receivables: {
+        pendingOrderCount: Number(summaryRows[0]?.pendingOrderCount ?? 0),
+        receivableNetAmount: toMoneyString(summary.receivableNetAmount),
+        nextExpectedReleaseDate: summaryRows[0]?.nextExpectedReleaseDate
+          ? formatLocalDate(summaryRows[0].nextExpectedReleaseDate)
+          : null,
+      },
     };
   }
 
@@ -102,25 +155,46 @@ export class SalesReportService {
     };
   }
 
-  private createSummary(orders: ReportOrder[], referenceDate: Date): AggregateBucket {
-    return orders.reduce(
-      (bucket, order) => addOrderToBucket(bucket, order, referenceDate),
-      emptyBucket()
-    );
+  private buildAggregateWhere(tenantId: string, query: ParsedSalesReportQuery): Prisma.Sql {
+    const clauses = [
+      Prisma.sql`o.tenant_id = ${tenantId}::uuid`,
+      Prisma.sql`o.deleted_at IS NULL`,
+      Prisma.sql`o.created_at >= ${query.periodStart}`,
+      Prisma.sql`o.created_at <= ${query.periodEnd}`,
+      Prisma.sql`o.status::text = ${(query.status ?? OrderStatus.DELIVERED)}`,
+    ];
+    if (query.paymentInstitution) clauses.push(Prisma.sql`o.payment_institution::text = ${query.paymentInstitution}`);
+    if (query.paymentMethod) clauses.push(Prisma.sql`o.payment_method::text = ${query.paymentMethod}`);
+    if (query.orderPlatformId) clauses.push(Prisma.sql`o.order_platform_id = ${query.orderPlatformId}::uuid`);
+    return Prisma.join(clauses, " AND ");
+  }
+
+  private aggregate(query: Prisma.Sql): Promise<AggregateRow[]> {
+    return this.prisma.$queryRaw<AggregateRow[]>(query);
+  }
+
+  private dimensionAggregate(
+    where: Prisma.Sql,
+    dimension: Prisma.Sql,
+    referenceDate: Date,
+  ): Promise<AggregateRow[]> {
+    return this.aggregate(Prisma.sql`SELECT
+      ${dimension} AS "dimensionKey",
+      COUNT(*)::bigint AS "orderCount",
+      COALESCE(SUM(COALESCE(o.payment_gross_amount, o.total)), 0) AS "grossRevenue",
+      COALESCE(SUM(COALESCE(o.payment_net_amount, o.payment_gross_amount, o.total)), 0) AS "acquiredNetRevenue",
+      COALESCE(SUM(CASE WHEN o.payment_release_expected_at IS NULL OR o.payment_release_expected_at <= ${referenceDate} THEN COALESCE(o.payment_net_amount, o.payment_gross_amount, o.total) ELSE 0 END), 0) AS "releasedNetRevenue",
+      COALESCE(SUM(CASE WHEN o.payment_release_expected_at > ${referenceDate} THEN COALESCE(o.payment_net_amount, o.payment_gross_amount, o.total) ELSE 0 END), 0) AS "receivableNetAmount",
+      COALESCE(SUM(o.payment_fee_amount), 0) AS "paymentFeeAmount"
+      FROM orders o WHERE ${where} GROUP BY 1 ORDER BY "grossRevenue" DESC`);
   }
 
   private createDailySummaries(
-    orders: ReportOrder[],
+    aggregateRows: AggregateRow[],
     periodStart: string,
     periodEnd: string,
-    referenceDate: Date
   ) {
-    const buckets = new Map<string, AggregateBucket>();
-
-    orders.forEach((order) => {
-      const key = formatLocalDate(order.createdAt);
-      buckets.set(key, addOrderToBucket(buckets.get(key) ?? emptyBucket(), order, referenceDate));
-    });
+    const buckets = new Map(aggregateRows.map((row) => [row.dimensionKey!, this.rowToBucket(row)]));
 
     const rows = [];
     let previous: AggregateBucket | null = null;
@@ -147,57 +221,23 @@ export class SalesReportService {
     return rows;
   }
 
-  private createPaymentDimensionSummary(
-    orders: ReportOrder[],
+  private formatDimensionRows(
+    rows: AggregateRow[],
     totalGross: Prisma.Decimal,
-    keyResolver: (order: ReportOrder) => string,
     labelResolver: (key: string) => string,
-    referenceDate: Date
   ) {
-    const buckets = new Map<string, AggregateBucket>();
-    orders.forEach((order) => {
-      const key = keyResolver(order);
-      buckets.set(key, addOrderToBucket(buckets.get(key) ?? emptyBucket(), order, referenceDate));
-    });
-
-    return [...buckets.entries()]
-      .map(([key, bucket]) => ({
+    return rows.map((row) => {
+      const key = row.dimensionKey ?? "NOT_INFORMED";
+      const bucket = this.rowToBucket(row);
+      return {
         dimensionKey: key,
         dimensionLabel: labelResolver(key),
         ...this.formatAggregate(bucket),
         shareOfGrossRevenue: totalGross.isZero()
           ? 0
           : bucket.grossRevenue.div(totalGross).toDecimalPlaces(4).toNumber(),
-      }))
-      .sort((left, right) => Number(right.grossRevenue) - Number(left.grossRevenue));
-  }
-
-  private createChannelSummary(orders: ReportOrder[], referenceDate: Date) {
-    const buckets = new Map<
-      string,
-      AggregateBucket & { orderPlatformId: string | null; orderPlatformName: string }
-    >();
-
-    orders.forEach((order) => {
-      const key = order.orderPlatformId ?? "NO_CHANNEL";
-      const current = buckets.get(key) ?? {
-        ...emptyBucket(),
-        orderPlatformId: order.orderPlatformId,
-        orderPlatformName: order.orderPlatform?.name ?? "Sem canal",
       };
-      buckets.set(key, {
-        ...current,
-        ...addOrderToBucket(current, order, referenceDate),
-      });
     });
-
-    return [...buckets.values()]
-      .map((bucket) => ({
-        orderPlatformId: bucket.orderPlatformId,
-        orderPlatformName: bucket.orderPlatformName,
-        ...this.formatAggregate(bucket),
-      }))
-      .sort((left, right) => Number(right.grossRevenue) - Number(left.grossRevenue));
   }
 
   private createAnalyticalPage(
@@ -207,14 +247,11 @@ export class SalesReportService {
     pageSize: number,
     referenceDate: Date
   ) {
-    const start = (page - 1) * pageSize;
-    const pageOrders = orders.slice(start, start + pageSize);
-
     return {
       page,
       pageSize,
       total,
-      items: pageOrders.map((order) => {
+      items: orders.map((order) => {
         const grossAmount = order.paymentGrossAmount ?? order.total;
         const acquiredNetAmount = order.paymentNetAmount ?? grossAmount;
 
@@ -257,23 +294,15 @@ export class SalesReportService {
     };
   }
 
-  private createReceivablesSummary(orders: ReportOrder[], referenceDate: Date) {
-    const pending = orders.filter((order) => !isPaymentReleased(order, referenceDate));
-    const nextExpectedReleaseDate = pending
-      .map((order) => order.paymentReleaseExpectedAt)
-      .filter((date): date is Date => Boolean(date))
-      .sort((left, right) => left.getTime() - right.getTime())[0];
-    const receivableNetAmount = pending.reduce(
-      (totalAmount, order) => totalAmount.add(acquiredNetAmountForOrder(order)),
-      new Prisma.Decimal(0)
-    );
-
+  private rowToBucket(row?: AggregateRow): AggregateBucket {
+    if (!row) return emptyBucket();
     return {
-      pendingOrderCount: pending.length,
-      receivableNetAmount: toMoneyString(receivableNetAmount),
-      nextExpectedReleaseDate: nextExpectedReleaseDate
-        ? formatLocalDate(nextExpectedReleaseDate)
-        : null,
+      orderCount: Number(row.orderCount),
+      grossRevenue: new Prisma.Decimal(row.grossRevenue),
+      acquiredNetRevenue: new Prisma.Decimal(row.acquiredNetRevenue),
+      releasedNetRevenue: new Prisma.Decimal(row.releasedNetRevenue),
+      receivableNetAmount: new Prisma.Decimal(row.receivableNetAmount),
+      paymentFeeAmount: new Prisma.Decimal(row.paymentFeeAmount),
     };
   }
 
@@ -303,33 +332,6 @@ function emptyBucket(): AggregateBucket {
     receivableNetAmount: new Prisma.Decimal(0),
     paymentFeeAmount: new Prisma.Decimal(0),
   };
-}
-
-function addOrderToBucket(
-  bucket: AggregateBucket,
-  order: ReportOrder,
-  referenceDate: Date
-): AggregateBucket {
-  const grossAmount = order.paymentGrossAmount ?? order.total;
-  const acquiredNetAmount = acquiredNetAmountForOrder(order);
-  const released = isPaymentReleased(order, referenceDate);
-
-  return {
-    orderCount: bucket.orderCount + 1,
-    grossRevenue: bucket.grossRevenue.add(grossAmount),
-    acquiredNetRevenue: bucket.acquiredNetRevenue.add(acquiredNetAmount),
-    releasedNetRevenue: released
-      ? bucket.releasedNetRevenue.add(acquiredNetAmount)
-      : bucket.releasedNetRevenue,
-    receivableNetAmount: released
-      ? bucket.receivableNetAmount
-      : bucket.receivableNetAmount.add(acquiredNetAmount),
-    paymentFeeAmount: bucket.paymentFeeAmount.add(order.paymentFeeAmount ?? new Prisma.Decimal(0)),
-  };
-}
-
-function acquiredNetAmountForOrder(order: ReportOrder): Prisma.Decimal {
-  return order.paymentNetAmount ?? order.paymentGrossAmount ?? order.total;
 }
 
 function isPaymentReleased(order: ReportOrder, referenceDate: Date): boolean {

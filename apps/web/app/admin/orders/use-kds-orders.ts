@@ -1,9 +1,10 @@
 "use client";
 
-import { Dispatch, SetStateAction, useCallback, useEffect, useState } from "react";
+import { Dispatch, SetStateAction, useCallback, useEffect, useRef, useState } from "react";
 import type { KdsOrder } from "@burgoos/types";
 import { io } from "socket.io-client";
 import { getKdsOrders } from "../../../lib/api";
+import { useAdaptivePolling } from "../../../lib/adaptive-polling";
 
 export function useKdsOrders({
   apiUrl,
@@ -23,9 +24,24 @@ export function useKdsOrders({
 } {
   const [orders, setOrders] = useState(initialOrders);
   const [connected, setConnected] = useState(false);
-  const refresh = useCallback(async () => {
-    setOrders(await getKdsOrders());
+  const inFlightRef = useRef<Promise<void> | null>(null);
+  const refresh = useCallback(async (signal?: AbortSignal) => {
+    if (inFlightRef.current) return inFlightRef.current;
+    const request = getKdsOrders(signal)
+      .then(setOrders)
+      .finally(() => {
+        if (inFlightRef.current === request) inFlightRef.current = null;
+      });
+    inFlightRef.current = request;
+    return request;
   }, []);
+
+  useAdaptivePolling({
+    visibleIntervalMs: connected ? 60_000 : 15_000,
+    hiddenIntervalMs: 120_000,
+    runImmediately: false,
+    task: refresh,
+  });
 
   useEffect(() => {
     const socket = io(apiUrl, {
@@ -42,11 +58,7 @@ export function useKdsOrders({
     socket.on("order-updated", invalidate);
     socket.on("order-status-changed", invalidate);
 
-    const interval = window.setInterval(invalidate, 15_000);
-    window.addEventListener("focus", invalidate);
     return () => {
-      window.clearInterval(interval);
-      window.removeEventListener("focus", invalidate);
       socket.disconnect();
     };
   }, [apiUrl, refresh, tenantId, token]);

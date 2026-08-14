@@ -7,6 +7,8 @@ export type OrderStatus =
   | "CANCELLED";
 
 export * from "./delivery-integrations";
+export * from "./background-jobs";
+export * from "./assets";
 export * from "./exports";
 export * from "./notifications";
 export * from "./payments";
@@ -1136,9 +1138,14 @@ export interface PayablesSummary {
 export interface PayablesResponse {
   items: Payable[];
   summary: PayablesSummary;
+  page?: number;
+  pageSize?: number;
+  total?: number;
 }
 
 export interface PayablesFilters {
+  page?: number;
+  pageSize?: number;
   start?: string;
   end?: string;
   status?: PayableStatus | string;

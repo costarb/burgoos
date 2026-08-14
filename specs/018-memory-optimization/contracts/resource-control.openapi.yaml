@@ -1,0 +1,243 @@
+openapi: 3.0.3
+info:
+  title: BurgoOS Resource Control Additions
+  version: 0.1.0
+  description: Additive contracts for efficient notifications, durable exports and direct asset uploads.
+servers:
+  - url: /api
+paths:
+  /admin/notifications/summary:
+    get:
+      summary: Get the authenticated user's notification summary
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Minimal notification summary
+          headers:
+            ETag:
+              schema: { type: string }
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotificationSummary'
+        '304':
+          description: Summary has not changed
+  /admin/notifications:
+    get:
+      summary: List notifications incrementally
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: query
+          name: limit
+          schema: { type: integer, minimum: 1, maximum: 50, default: 20 }
+        - in: query
+          name: cursor
+          description: Opaque cursor for older items
+          schema: { type: string }
+        - in: query
+          name: since
+          description: Return items changed after this version instant
+          schema: { type: string, format: date-time }
+      responses:
+        '200':
+          description: Notification page or delta
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotificationPage'
+  /admin/exports:
+    post:
+      summary: Queue a durable export
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateExportRequest'
+      responses:
+        '202':
+          description: Export queued or existing active equivalent returned
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExportJob'
+        '429':
+          description: Queue admission temporarily limited
+          headers:
+            Retry-After:
+              schema: { type: integer }
+  /admin/exports/{exportId}:
+    get:
+      summary: Get durable export status and progress
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: exportId
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Export state
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExportJob'
+        '404': { description: Export not found in authenticated scope }
+  /admin/assets/upload-intents:
+    post:
+      summary: Create a bounded direct-upload intent for a branding or product image
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateUploadIntent'
+      responses:
+        '201':
+          description: Short-lived upload intent
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UploadIntent'
+        '422': { description: Unsupported type, size or dimensions }
+  /admin/assets/local-uploads/{assetKey}:
+    put:
+      summary: Stream an upload into the authenticated local-development storage fallback
+      description: Available only when the local storage provider issued the upload intent.
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: assetKey
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          image/png: { schema: { type: string, format: binary } }
+          image/jpeg: { schema: { type: string, format: binary } }
+          image/webp: { schema: { type: string, format: binary } }
+      responses:
+        '204': { description: Stream stored within the issued intent limits }
+        '404': { description: Intent not found or not owned by the authenticated tenant }
+        '413': { description: Stream exceeds the issued size limit }
+        '422': { description: Content does not match the issued metadata }
+  /admin/assets/upload-intents/{assetKey}/confirm:
+    post:
+      summary: Confirm and validate the uploaded object signature, size and dimensions
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: assetKey
+          required: true
+          schema: { type: string }
+      responses:
+        '201':
+          description: Validated tenant-scoped asset
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [assetKey]
+                properties:
+                  assetKey: { type: string }
+        '404': { description: Intent or uploaded object not found in authenticated scope }
+        '422': { description: Content does not match the issued metadata }
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  schemas:
+    NotificationSummary:
+      type: object
+      required: [unreadCount, version]
+      properties:
+        unreadCount: { type: integer, minimum: 0 }
+        version: { type: string, format: date-time }
+    NotificationPage:
+      type: object
+      required: [unreadCount, items, version]
+      properties:
+        unreadCount: { type: integer, minimum: 0 }
+        items:
+          type: array
+          maxItems: 50
+          items: { $ref: '#/components/schemas/Notification' }
+        nextCursor: { type: string, nullable: true }
+        version: { type: string, format: date-time }
+    Notification:
+      type: object
+      required: [id, type, status, severity, title, message, createdAt]
+      properties:
+        id: { type: string, format: uuid }
+        type: { type: string }
+        status: { type: string, enum: [UNREAD, READ, ARCHIVED] }
+        severity: { type: string, enum: [INFO, SUCCESS, WARNING, ERROR] }
+        title: { type: string }
+        message: { type: string }
+        actionLabel: { type: string, nullable: true }
+        actionUrl: { type: string, nullable: true }
+        createdAt: { type: string, format: date-time }
+        readAt: { type: string, format: date-time, nullable: true }
+    CreateExportRequest:
+      type: object
+      required: [context, format, filters]
+      properties:
+        context: { type: string, enum: [PAYABLES, MANAGEMENT_REPORT] }
+        format: { type: string, enum: [CSV, PDF, XLSX] }
+        filters: { type: object, additionalProperties: true }
+        columns:
+          type: array
+          items: { type: string }
+    ExportJob:
+      type: object
+      required: [id, context, format, status, requestedAt, progress]
+      properties:
+        id: { type: string, format: uuid }
+        context: { type: string }
+        format: { type: string }
+        status: { type: string, enum: [PENDING, PROCESSING, COMPLETED, FAILED, EXPIRED] }
+        requestedAt: { type: string, format: date-time }
+        startedAt: { type: string, format: date-time, nullable: true }
+        completedAt: { type: string, format: date-time, nullable: true }
+        progress:
+          type: object
+          required: [processedRows]
+          properties:
+            processedRows: { type: integer, minimum: 0 }
+            totalRows: { type: integer, minimum: 0, nullable: true }
+            message: { type: string, nullable: true }
+        downloadUrl: { type: string, nullable: true }
+        expiresAt: { type: string, format: date-time, nullable: true }
+        errorMessage: { type: string, nullable: true }
+    CreateUploadIntent:
+      type: object
+      required: [purpose, fileName, contentType, sizeBytes, width, height]
+      properties:
+        purpose: { type: string, enum: [PRODUCT_IMAGE, BRANDING_LOGO, BRANDING_HEADER, BRANDING_BODY, BRANDING_FOOTER] }
+        fileName: { type: string, maxLength: 200 }
+        contentType: { type: string, enum: [image/png, image/jpeg, image/webp] }
+        sizeBytes: { type: integer, minimum: 1, maximum: 2097152 }
+        width: { type: integer, minimum: 1, maximum: 4096 }
+        height: { type: integer, minimum: 1, maximum: 4096 }
+    UploadIntent:
+      type: object
+      required: [assetKey, uploadUrl, method, headers, expiresAt]
+      properties:
+        assetKey: { type: string }
+        uploadUrl: { type: string, format: uri }
+        method: { type: string, enum: [PUT] }
+        headers:
+          type: object
+          additionalProperties: { type: string }
+        expiresAt: { type: string, format: date-time }

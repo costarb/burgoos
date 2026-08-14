@@ -1,7 +1,7 @@
 import React, { act } from "react";
 import { createRoot, Root } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { getNotifications } from "../../lib/api";
+import { getNotificationSummary } from "../../lib/api";
 import { readAuthSession } from "../../lib/auth-client";
 import { NotificationCenterButton } from "./notification-center-button";
 
@@ -18,14 +18,14 @@ vi.mock("next/link", () => ({
 }));
 
 vi.mock("../../lib/api", () => ({
-  getNotifications: vi.fn(),
+  getNotificationSummary: vi.fn(),
 }));
 
 vi.mock("../../lib/auth-client", () => ({
   readAuthSession: vi.fn(),
 }));
 
-const getNotificationsMock = vi.mocked(getNotifications);
+const getNotificationSummaryMock = vi.mocked(getNotificationSummary);
 const readAuthSessionMock = vi.mocked(readAuthSession);
 
 describe("NotificationCenterButton", () => {
@@ -39,7 +39,7 @@ describe("NotificationCenterButton", () => {
     container = document.createElement("div");
     document.body.appendChild(container);
     root = createRoot(container);
-    getNotificationsMock.mockReset();
+    getNotificationSummaryMock.mockReset();
     readAuthSessionMock.mockReset();
     readAuthSessionMock.mockReturnValue({
       accessToken: "token",
@@ -56,7 +56,11 @@ describe("NotificationCenterButton", () => {
       permissions: [],
       accessTokenExpiresAt: "2026-06-30T00:00:00.000Z",
     });
-    getNotificationsMock.mockResolvedValue({ unreadCount: 3, items: [] });
+    getNotificationSummaryMock.mockResolvedValue({
+      data: { unreadCount: 3, version: "2026-06-30T12:00:00.000Z" },
+      etag: '"version-1"',
+      notModified: false,
+    });
   });
 
   afterEach(() => {
@@ -73,13 +77,17 @@ describe("NotificationCenterButton", () => {
       await Promise.resolve();
     });
 
-    expect(getNotificationsMock).toHaveBeenCalledWith("token", { limit: 1 });
+    expect(getNotificationSummaryMock).toHaveBeenCalledWith("token", undefined, expect.any(AbortSignal));
     expect(container.querySelector("a")?.getAttribute("href")).toBe("/admin/notifications");
     expect(container.textContent).toContain("3");
   });
 
   it("caps the visible unread badge", async () => {
-    getNotificationsMock.mockResolvedValue({ unreadCount: 12, items: [] });
+    getNotificationSummaryMock.mockResolvedValue({
+      data: { unreadCount: 12, version: "2026-06-30T12:00:00.000Z" },
+      etag: '"version-1"',
+      notModified: false,
+    });
 
     await act(async () => {
       root.render(<NotificationCenterButton />);
@@ -91,9 +99,17 @@ describe("NotificationCenterButton", () => {
 
   it("refreshes unread count while the user stays on the page", async () => {
     vi.useFakeTimers();
-    getNotificationsMock
-      .mockResolvedValueOnce({ unreadCount: 0, items: [] })
-      .mockResolvedValueOnce({ unreadCount: 2, items: [] });
+    getNotificationSummaryMock
+      .mockResolvedValueOnce({
+        data: { unreadCount: 0, version: "2026-06-30T12:00:00.000Z" },
+        etag: '"version-1"',
+        notModified: false,
+      })
+      .mockResolvedValueOnce({
+        data: { unreadCount: 2, version: "2026-06-30T12:01:00.000Z" },
+        etag: '"version-2"',
+        notModified: false,
+      });
 
     await act(async () => {
       root.render(<NotificationCenterButton />);
@@ -103,11 +119,16 @@ describe("NotificationCenterButton", () => {
     expect(container.textContent).not.toContain("2");
 
     await act(async () => {
-      vi.advanceTimersByTime(5000);
+      vi.advanceTimersByTime(30000);
       await Promise.resolve();
     });
 
-    expect(getNotificationsMock).toHaveBeenCalledTimes(2);
+    expect(getNotificationSummaryMock).toHaveBeenCalledTimes(2);
+    expect(getNotificationSummaryMock).toHaveBeenLastCalledWith(
+      "token",
+      '"version-1"',
+      expect.any(AbortSignal),
+    );
     expect(container.textContent).toContain("2");
   });
 });

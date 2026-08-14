@@ -1,4 +1,5 @@
-import { BadRequestException, Inject, Injectable, Logger, NotFoundException } from "@nestjs/common";
+import { BadRequestException, Inject, Injectable, Logger, NotFoundException, Optional } from "@nestjs/common";
+import type { Readable } from "node:stream";
 import { DeliveryProvider, Prisma } from "@prisma/client";
 import { StoreBrandingService } from "../customer-experience/branding/store-branding.service";
 import { PrismaService } from "../platform/database/prisma.service";
@@ -7,12 +8,13 @@ import { CreateCategoryDto } from "./dto/create-category.dto";
 import { CreateProductDto } from "./dto/create-product.dto";
 import { UpdateCategoryDto } from "./dto/update-category.dto";
 import { UpdateProductDto } from "./dto/update-product.dto";
+import { ASSET_STORAGE, AssetStorage } from "../common/storage/asset-storage";
 
 type BrandingAssetKey = "logo" | "header" | "body" | "footer";
 
-interface PublicImageAsset {
-  value: string;
-}
+type PublicImageAsset =
+  | { value: string; body?: never; contentType?: never; contentLength?: never }
+  | { body: Readable; contentType?: string; contentLength?: number; value?: never };
 
 interface PublicStoreAddress {
   street?: string;
@@ -97,7 +99,8 @@ export class CatalogService {
 
   constructor(
     @Inject(PrismaService) private readonly prisma: PrismaService,
-    @Inject(StoreBrandingService) private readonly brandingService: StoreBrandingService
+    @Inject(StoreBrandingService) private readonly brandingService: StoreBrandingService,
+    @Optional() @Inject(ASSET_STORAGE) private readonly assetStorage?: AssetStorage,
   ) {}
 
   async listCategories(tenantId: string, filters: CategoryFilters = {}) {
@@ -397,7 +400,7 @@ export class CatalogService {
       throw new NotFoundException("Product image not found");
     }
 
-    return { value: product.imageUrl };
+    return this.resolvePublicImage(product.imageUrl);
   }
 
   async getPublicBrandingImage(slug: string, asset: BrandingAssetKey): Promise<PublicImageAsset> {
@@ -427,7 +430,22 @@ export class CatalogService {
       throw new NotFoundException("Branding image not found");
     }
 
-    return { value };
+    return this.resolvePublicImage(value);
+  }
+
+  private async resolvePublicImage(value: string): Promise<PublicImageAsset> {
+    if (!isStoredAssetKey(value)) return { value };
+    if (!this.assetStorage) throw new NotFoundException("Image storage unavailable");
+    try {
+      const stored = await this.assetStorage.read(value);
+      return {
+        body: stored.body,
+        contentType: stored.contentType ?? contentTypeForAssetKey(value),
+        contentLength: stored.contentLength,
+      };
+    } catch {
+      throw new NotFoundException("Image asset not found");
+    }
   }
 
   private async findPublicProductIdsWithImages(tenantId: string): Promise<Set<string>> {
@@ -636,11 +654,11 @@ export class CatalogService {
       return null;
     }
 
-    if (isHttpUrl(normalized) || isImageDataUrl(normalized)) {
+    if (isHttpUrl(normalized) || isImageDataUrl(normalized) || isStoredAssetKey(normalized)) {
       return normalized;
     }
 
-    throw new BadRequestException("Product image must be a URL or base64 image upload");
+    throw new BadRequestException("Product image must be a URL, asset key or legacy base64 image");
   }
 
   private toProductResponse(product: ProductResponseInput) {
@@ -669,4 +687,14 @@ function isHttpUrl(value: string): boolean {
 
 function isImageDataUrl(value: string): boolean {
   return /^data:image\/(png|jpe?g|webp|gif);base64,[a-z0-9+/=\s]+$/i.test(value);
+}
+
+function isStoredAssetKey(value: string): boolean {
+  return /^tenants\/[a-f0-9-]+\/images\/[a-z_]+\/[a-f0-9-]+\.(png|jpe?g|webp)$/i.test(value);
+}
+
+function contentTypeForAssetKey(value: string): string {
+  if (/\.png$/i.test(value)) return "image/png";
+  if (/\.webp$/i.test(value)) return "image/webp";
+  return "image/jpeg";
 }

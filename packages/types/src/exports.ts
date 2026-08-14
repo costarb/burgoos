@@ -28,5 +28,11 @@ export interface ExportJob {
   fileName: string | null;
   fileMimeType: string | null;
   fileSizeBytes: number | null;
+  progress: {
+    processedRows: number;
+    totalRows: number | null;
+    message: string | null;
+  };
+  expiresAt: string | null;
   downloadUrl: string | null;
 }

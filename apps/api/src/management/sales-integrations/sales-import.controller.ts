@@ -41,7 +41,7 @@ export class SalesImportController {
   @RequirePermission("integrations.sales.manage")
   async create(@CurrentUser() user: AuthUser, @Body() dto: CreateSalesImportRunDto) {
     const run = await this.service.create(user.tenantId, user.id, dto);
-    this.processor.queuePreview(run.id, user.tenantId);
+    await this.processor.queuePreview(run.id, user.tenantId);
     return run;
   }
   @Get(":id")
@@ -57,7 +57,7 @@ export class SalesImportController {
   @RequirePermission("integrations.sales.manage")
   async confirm(@CurrentUser() user: AuthUser, @Param("id") id: string) {
     const run = await this.service.get(user.tenantId, id);
-    this.processor.queueConfirmation(id, user.tenantId);
+    await this.processor.queueConfirmation(id, user.tenantId);
     return run;
   }
   @Get(":id/movements")

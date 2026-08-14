@@ -49,6 +49,23 @@ describe("AsyncExportMenu", () => {
     expect(button("XLSX").disabled).toBe(true);
   });
 
+  it("shows bounded row progress with an accessible progress indicator", async () => {
+    await act(async () => {
+      root.render(
+        <AsyncExportMenu
+          busy
+          onExport={vi.fn()}
+          progress={{ processedRows: 25, totalRows: 100, message: "Gerando arquivo" }}
+        />
+      );
+    });
+
+    expect(container.textContent).toContain("Gerando arquivo");
+    expect(container.textContent).toContain("25 de 100");
+    const progress = container.querySelector("progress");
+    expect(progress?.value).toBe(25);
+  });
+
   async function click(label: string) {
     await act(async () => {
       button(label).dispatchEvent(new MouseEvent("click", { bubbles: true }));

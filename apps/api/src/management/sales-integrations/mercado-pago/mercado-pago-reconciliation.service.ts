@@ -19,15 +19,20 @@ export class MercadoPagoReconciliationService {
   ) {}
 
   async reconcile(hours: 24 | 168): Promise<void> {
-    const connections = await this.prisma.salesIntegration.findMany({
-      where: { provider: "MERCADO_PAGO", status: "ACTIVE" },
-      select: { id: true, tenantId: true },
-    });
-    await Promise.allSettled(
-      connections.map((connection) =>
-        this.reconcileConnection(connection.tenantId, connection.id, hours)
-      )
-    );
+    let cursor: string | undefined;
+    do {
+      const connections = await this.prisma.salesIntegration.findMany({
+        where: { provider: "MERCADO_PAGO", status: "ACTIVE" },
+        select: { id: true, tenantId: true },
+        orderBy: { id: "asc" },
+        take: 25,
+        ...(cursor ? { cursor: { id: cursor }, skip: 1 } : {}),
+      });
+      for (const connection of connections) {
+        await this.reconcileConnection(connection.tenantId, connection.id, hours);
+      }
+      cursor = connections.length === 25 ? connections.at(-1)?.id : undefined;
+    } while (cursor);
   }
 
   async reconcileConnection(

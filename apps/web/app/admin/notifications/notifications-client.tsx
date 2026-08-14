@@ -1,15 +1,18 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useRef, useState } from "react";
 import type {
   NotificationCenterState,
+  NotificationPage,
   OperationalNotification,
   OperationalNotificationSeverity,
 } from "@burgoos/types";
 import { Bell, Check, Download, ExternalLink } from "lucide-react";
 import { getNotifications, markNotificationRead } from "../../../lib/api";
+import { useAdaptivePolling } from "../../../lib/adaptive-polling";
 
-const notificationPollIntervalMs = 5000;
+const notificationPollIntervalMs = Number(process.env.NEXT_PUBLIC_NOTIFICATION_POLL_INTERVAL_MS ?? 30_000);
+const hiddenPollIntervalMs = Number(process.env.NEXT_PUBLIC_HIDDEN_POLL_INTERVAL_MS ?? 120_000);
 
 interface NotificationsClientProps {
   token: string;
@@ -19,27 +22,25 @@ interface NotificationsClientProps {
 export function NotificationsClient({ token, initialState }: NotificationsClientProps) {
   const [state, setState] = useState(initialState);
   const [busyId, setBusyId] = useState<string | null>(null);
+  const versionRef = useRef((initialState as Partial<NotificationPage>).version);
 
-  useEffect(() => {
-    let active = true;
-
-    function refreshNotifications() {
-      getNotifications(token, { limit: 50 })
-        .then((nextState) => {
-          if (active) {
-            setState(nextState);
-          }
-        })
-        .catch(() => undefined);
-    }
-
-    const interval = window.setInterval(refreshNotifications, notificationPollIntervalMs);
-
-    return () => {
-      active = false;
-      window.clearInterval(interval);
-    };
-  }, [token]);
+  useAdaptivePolling({
+    visibleIntervalMs: notificationPollIntervalMs,
+    hiddenIntervalMs: hiddenPollIntervalMs,
+    runImmediately: false,
+    task: async (signal) => {
+      const nextState = await getNotifications(
+        token,
+        { limit: 50, since: versionRef.current },
+        signal,
+      );
+      versionRef.current = nextState.version;
+      setState((current) => ({
+        unreadCount: nextState.unreadCount,
+        items: mergeNotifications(current.items, nextState.items),
+      }));
+    },
+  });
 
   async function markRead(notification: OperationalNotification) {
     if (notification.status === "READ" || busyId) {
@@ -96,6 +97,17 @@ export function NotificationsClient({ token, initialState }: NotificationsClient
       </section>
     </main>
   );
+}
+
+export function mergeNotifications(
+  current: OperationalNotification[],
+  changed: OperationalNotification[],
+): OperationalNotification[] {
+  const byId = new Map(current.map((notification) => [notification.id, notification]));
+  for (const notification of changed) byId.set(notification.id, notification);
+  return [...byId.values()]
+    .sort((left, right) => right.createdAt.localeCompare(left.createdAt))
+    .slice(0, 50);
 }
 
 function NotificationRow({

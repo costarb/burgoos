@@ -89,6 +89,11 @@ describe("ManagementReportService", () => {
       BadRequestException
     );
   });
+
+  it("rejects interactive periods above 92 days with export guidance", () => {
+    expect(() => parseManagementReportQuery({ start: "2026-01-01", end: "2026-04-03" }))
+      .toThrow(/exportacao/i);
+  });
 });
 
 function period() {
@@ -175,6 +180,10 @@ function salesReportMock() {
 
 function accountsPayableMock() {
   return {
+    summarizeByCategory: vi.fn().mockResolvedValue([
+      { categoryId: "category-tax", categoryName: "Taxas", expected: "300.00", paid: "200.00", open: "100.00", overdue: "100.00" },
+      { categoryId: "category-rent", categoryName: "Aluguel", expected: "200.00", paid: "0.00", open: "200.00", overdue: "0.00" },
+    ]),
     list: vi.fn().mockResolvedValue({
       summary: {
         totalExpected: "500.00",

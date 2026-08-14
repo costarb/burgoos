@@ -110,6 +110,8 @@ describe("PayablesClient filters", () => {
       fileName: null,
       fileMimeType: null,
       fileSizeBytes: null,
+      progress: { processedRows: 0, totalRows: null, message: "Aguardando processamento" },
+      expiresAt: null,
       downloadUrl: null,
     });
     updatePayableMock.mockResolvedValue(payable({ description: "Conta editada" }));

@@ -58,7 +58,7 @@ export function OrdersClient({
     token,
     initialOrders: initialActiveOrders,
   });
-  const [historyOrders, setHistoryOrders] = useState(initialHistoryOrders);
+  const [, setHistoryOrders] = useState(initialHistoryOrders);
   const [error, setError] = useState<string | null>(null);
   const [operationMessage, setOperationMessage] = useState<string | null>(null);
   const [changingOrderId, setChangingOrderId] = useState<string | null>(null);

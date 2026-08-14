@@ -1,5 +1,5 @@
 import { Injectable, Logger } from "@nestjs/common";
-import { ChargeStatus, PaymentInstitution } from "@prisma/client";
+import { ChargeStatus, PaymentCharge, PaymentInstitution } from "@prisma/client";
 import { PrismaService } from "../../platform/database/prisma.service";
 import { MercadoPagoAuthenticatedRequestService } from "../../management/sales-integrations/mercado-pago/mercado-pago-authenticated-request.service";
 import { PaymentChargeService } from "../application/payment-charge.service";
@@ -17,8 +17,21 @@ export class PointReconciliationService {
 
   async reconcilePending(limit = 25) {
     const startedAt = Date.now();
+    const pending = await this.findStaleCharges(limit);
+    const results = [];
+    for (const charge of pending) {
+      results.push(await this.reconcileCharge(charge));
+    }
+    const succeeded = results.filter((result) => result.reconciled).length;
+    this.logger.log(
+      `event=point.reconciliation.completed metric=point_reconciliation_duration_ms value=${Date.now() - startedAt} attempted=${results.length} succeeded=${succeeded} failed=${results.length - succeeded}`,
+    );
+    return results;
+  }
+
+  async findStaleCharges(limit = 25) {
     const staleBefore = new Date(Date.now() - 60_000);
-    const pending = await this.prisma.paymentCharge.findMany({
+    return this.prisma.paymentCharge.findMany({
       where: {
         institution: PaymentInstitution.MERCADO_PAGO,
         status: {
@@ -34,30 +47,30 @@ export class PointReconciliationService {
         OR: [{ lastCheckedAt: null }, { lastCheckedAt: { lte: staleBefore } }],
       },
       orderBy: { lastCheckedAt: "asc" },
-      take: limit,
+      take: Math.max(1, Math.min(limit, 25)),
     });
-    const results = [];
-    for (const charge of pending) {
-      try {
-        const order = await this.authenticated.execute({
-          tenantId: charge.tenantId,
-          integrationId: charge.connectionId!,
-          request: (token) => this.point.getOrder(token, charge.providerOrderId!),
-        });
-        await this.charges.applyProviderOrder(charge.id, order);
-        results.push({ chargeId: charge.id, reconciled: true });
-      } catch {
-        await this.prisma.paymentCharge.update({
-          where: { id: charge.id },
-          data: { lastCheckedAt: new Date() },
-        });
-        results.push({ chargeId: charge.id, reconciled: false });
-      }
+  }
+
+  async reconcileCharge(
+    charge: Pick<PaymentCharge, "id" | "tenantId" | "connectionId" | "providerOrderId">,
+  ): Promise<{ chargeId: string; reconciled: boolean }> {
+    if (!charge.connectionId || !charge.providerOrderId) {
+      return { chargeId: charge.id, reconciled: false };
     }
-    const succeeded = results.filter((result) => result.reconciled).length;
-    this.logger.log(
-      `event=point.reconciliation.completed metric=point_reconciliation_duration_ms value=${Date.now() - startedAt} attempted=${results.length} succeeded=${succeeded} failed=${results.length - succeeded}`,
-    );
-    return results;
+    try {
+      const order = await this.authenticated.execute({
+        tenantId: charge.tenantId,
+        integrationId: charge.connectionId,
+        request: (token) => this.point.getOrder(token, charge.providerOrderId!),
+      });
+      await this.charges.applyProviderOrder(charge.id, order);
+      return { chargeId: charge.id, reconciled: true };
+    } catch {
+      await this.prisma.paymentCharge.update({
+        where: { id: charge.id },
+        data: { lastCheckedAt: new Date() },
+      });
+      return { chargeId: charge.id, reconciled: false };
+    }
   }
 }

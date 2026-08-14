@@ -21,12 +21,23 @@ import { IfoodDeliveryTrackingService } from "./ifood-delivery-tracking.service"
 import { IfoodClient } from "./ifood-client";
 import { IfoodDisputeService } from "./ifood-dispute.service";
 import { mapIfoodOrderToExternalDraft } from "./ifood-order-mapper";
+import { BackgroundJobService } from "../../../common/background-jobs/background-job.service";
+import {
+  BackgroundJobRegistry,
+  type RuntimeBackgroundJobHandler,
+} from "../../../common/background-jobs/background-job.registry";
+import type { BackgroundJob } from "@prisma/client";
+import { RuntimeRoleService } from "../../../config/runtime-role.service";
 
 const POLLING_INTERVAL_MS = 30_000;
 const DETAIL_RETRY_WINDOW_MS = 10 * 60_000;
 
 @Injectable()
-export class IfoodEventPollerService implements OnModuleInit, OnModuleDestroy {
+export class IfoodEventPollerService
+  implements OnModuleInit, OnModuleDestroy, RuntimeBackgroundJobHandler
+{
+  readonly type = "IFOOD_POLL" as const;
+  readonly policy = { leaseMs: 120_000, retryBaseDelayMs: 5_000, retryMaxDelayMs: 300_000 };
   private readonly logger = new Logger(IfoodEventPollerService.name);
   private pollingTimer?: NodeJS.Timeout;
   private pollingRunning = false;
@@ -47,13 +58,30 @@ export class IfoodEventPollerService implements OnModuleInit, OnModuleDestroy {
     @Inject(IfoodDeliveryTrackingService)
     private readonly tracking?: IfoodDeliveryTrackingService,
     @Optional()
-    private readonly config?: ConfigService
+    private readonly config?: ConfigService,
+    @Optional()
+    private readonly backgroundJobs?: BackgroundJobService,
+    @Optional()
+    private readonly backgroundJobRegistry?: BackgroundJobRegistry,
+    @Optional()
+    private readonly runtimeRole?: RuntimeRoleService
   ) {}
 
   onModuleInit() {
+    if (!this.consumerRoleEnabled()) {
+      this.logger.log("ifood.poll.scheduler status=disabled reason=runtime_role");
+      return;
+    }
     if (this.config?.get<string>("DELIVERY_INTEGRATIONS_ENABLED") === "false") {
       this.logger.log("ifood.poll.scheduler status=disabled");
       return;
+    }
+
+    if (this.durableJobsEnabled()) {
+      if (!this.backgroundJobs || !this.backgroundJobRegistry) {
+        throw new Error("iFood durable jobs require BackgroundJobsModule");
+      }
+      this.backgroundJobRegistry.register(this);
     }
 
     const intervalMs = this.pollingIntervalMs();
@@ -96,21 +124,71 @@ export class IfoodEventPollerService implements OnModuleInit, OnModuleDestroy {
   }
 
   async pollDueIntegrations(now = new Date()) {
-    const integrations = await this.prisma.deliveryIntegration.findMany({
+    const batchSize = this.discoveryBatchSize();
+    let cursor: string | undefined;
+    do {
+      const integrations = await this.prisma.deliveryIntegration.findMany({
+        where: {
+          provider: "IFOOD",
+          status: "ACTIVE",
+          pollingEnabled: true,
+          OR: [
+            { lastSuccessfulPollingAt: null },
+            { lastSuccessfulPollingAt: { lt: new Date(now.getTime() - POLLING_INTERVAL_MS) } },
+          ],
+        },
+        orderBy: { id: "asc" },
+        take: batchSize,
+        ...(cursor ? { cursor: { id: cursor }, skip: 1 } : {}),
+      });
+
+      for (const integration of integrations) {
+        if (this.durableJobsEnabled()) {
+          if (!this.backgroundJobs) {
+            throw new Error("iFood durable jobs require BackgroundJobService");
+          }
+          await this.backgroundJobs.enqueue({
+            tenantId: integration.tenantId,
+            type: "IFOOD_POLL",
+            priority: "HIGH",
+            targetType: "DeliveryIntegration",
+            targetId: integration.id,
+            dedupeKey: integration.id,
+            payload: { integrationId: integration.id },
+          });
+        } else {
+          await this.pollIntegration(integration);
+        }
+      }
+      cursor = integrations.length === batchSize ? integrations.at(-1)?.id : undefined;
+    } while (cursor);
+  }
+
+  async execute(job: BackgroundJob): Promise<{ processedCount: number }> {
+    const integration = await this.prisma.deliveryIntegration.findFirst({
       where: {
+        id: job.targetId,
+        tenantId: job.tenantId ?? "",
         provider: "IFOOD",
         status: "ACTIVE",
-        pollingEnabled: true,
-        OR: [
-          { lastSuccessfulPollingAt: null },
-          { lastSuccessfulPollingAt: { lt: new Date(now.getTime() - POLLING_INTERVAL_MS) } },
-        ],
       },
     });
+    if (!integration) return { processedCount: 0 };
+    await this.pollIntegration(integration);
+    return { processedCount: 1 };
+  }
 
-    for (const integration of integrations) {
-      await this.pollIntegration(integration);
-    }
+  private durableJobsEnabled(): boolean {
+    return this.config?.get<string>("IFOOD_DURABLE_JOBS_ENABLED") === "true";
+  }
+
+  private consumerRoleEnabled(): boolean {
+    return this.runtimeRole?.consumesBackgroundJobs ?? true;
+  }
+
+  private discoveryBatchSize(): number {
+    const configured = Number(this.config?.get<string>("IFOOD_DISCOVERY_BATCH_SIZE"));
+    return Number.isSafeInteger(configured) && configured > 0 ? Math.min(configured, 100) : 25;
   }
 
   async pollIntegration(integration: DeliveryIntegration) {

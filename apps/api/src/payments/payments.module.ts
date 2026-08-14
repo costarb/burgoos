@@ -18,9 +18,10 @@ import { PointReconciliationScheduler } from "./mercado-pago-point/point-reconci
 import { PaymentExceptionService } from "./application/payment-exception.service";
 import { PaymentExceptionResolutionService } from "./application/payment-exception-resolution.service";
 import { PaymentExceptionController } from "./payment-exception.controller";
+import { BackgroundJobsModule } from "../common/background-jobs/background-jobs.module";
 
 @Module({
-  imports: [DatabaseModule, AuthModule, forwardRef(() => SalesIntegrationsModule)],
+  imports: [DatabaseModule, AuthModule, BackgroundJobsModule, forwardRef(() => SalesIntegrationsModule)],
   providers: [
     MercadoPagoPointClient,
     PaymentTerminalService,

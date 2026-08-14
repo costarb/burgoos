@@ -9,13 +9,16 @@ describe("ManagementReportExportProvider", () => {
     };
     const provider = new ManagementReportExportProvider(service as never);
 
-    const dataset = await provider.build({
+    const job = {
       id: "export-1",
       tenantId: "tenant-1",
       requestedByUserId: "user-1",
       filtersSnapshot: { start: "2026-06-01", end: "2026-06-30" },
       columnsSnapshot: null,
-    });
+    };
+    const descriptor = await provider.describe(job);
+    const batch = await provider.readBatch(job, null, 250);
+    const dataset = { ...descriptor, rows: batch.rows };
 
     expect(provider.context).toBe(ExportContext.MANAGEMENT_REPORT);
     expect(service.getReport).toHaveBeenCalledWith(
@@ -25,6 +28,8 @@ describe("ManagementReportExportProvider", () => {
     expect(dataset.title).toBe("Relatorio gerencial 2026-06-01 a 2026-06-30");
     expect(dataset.layout).toBe("MANAGEMENT_REPORT");
     expect(dataset.metadata?.report).toEqual(reportFixture());
+    expect(dataset.totalRows).toBe(dataset.rows.length);
+    expect(batch.nextCursor).toBeNull();
     expect(dataset.columns.map((column) => column.label)).toEqual([
       "Secao",
       "Indicador",

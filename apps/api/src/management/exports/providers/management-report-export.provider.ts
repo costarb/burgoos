@@ -2,7 +2,7 @@ import { Inject, Injectable } from "@nestjs/common";
 import { ExportContext, Prisma } from "@prisma/client";
 import { ManagementReportService } from "../../reports/management-report.service";
 import { parseManagementReportQuery } from "../../reports/management-report.types";
-import { ExportDataset, ExportProvider, ExportProviderJob } from "../export-provider.registry";
+import { ExportDescriptor, ExportProvider, ExportProviderJob, ExportRowBatch } from "../export-provider.registry";
 
 const managementReportColumns = [
   { key: "section", label: "Secao" },
@@ -14,25 +14,54 @@ const managementReportColumns = [
 @Injectable()
 export class ManagementReportExportProvider implements ExportProvider {
   readonly context = ExportContext.MANAGEMENT_REPORT;
+  private readonly prepared = new Map<string, Awaited<ReturnType<ManagementReportService["getReport"]>>>();
 
   constructor(
     @Inject(ManagementReportService)
     private readonly managementReportService: ManagementReportService
   ) {}
 
-  async build(job: ExportProviderJob): Promise<ExportDataset> {
+  async describe(job: ExportProviderJob): Promise<ExportDescriptor> {
+    const report = await this.loadReport(job);
+    return {
+      title: `Relatorio gerencial ${report.period.start} a ${report.period.end}`,
+      layout: "MANAGEMENT_REPORT",
+      metadata: { report },
+      columns: managementReportColumns,
+      totalRows: managementRows(report).length,
+    };
+  }
+
+  async readBatch(
+    job: ExportProviderJob,
+    cursor: string | null,
+    limit: number,
+  ): Promise<ExportRowBatch> {
+    const report = await this.loadReport(job);
+    const rows = managementRows(report);
+    const offset = cursor ? Number(cursor) : 0;
+    const batch = rows.slice(offset, offset + limit);
+    const nextOffset = offset + batch.length;
+    if (nextOffset >= rows.length) this.prepared.delete(job.id);
+    return { rows: batch, nextCursor: nextOffset < rows.length ? String(nextOffset) : null };
+  }
+
+  private async loadReport(job: ExportProviderJob) {
+    const cached = this.prepared.get(job.id);
+    if (cached) return cached;
     const filters = normalizeManagementReportFilters(job.filtersSnapshot);
     const report = await this.managementReportService.getReport(
       job.tenantId,
       parseManagementReportQuery(filters)
     );
 
-    return {
-      title: `Relatorio gerencial ${report.period.start} a ${report.period.end}`,
-      layout: "MANAGEMENT_REPORT",
-      metadata: { report },
-      columns: managementReportColumns,
-      rows: [
+    this.prepared.set(job.id, report);
+    return report;
+  }
+}
+
+function managementRows(report: Awaited<ReturnType<ManagementReportService["getReport"]>>) {
+  return [
         row("Resumo executivo", "Periodo", `${report.period.start} a ${report.period.end}`),
         row("Resumo executivo", "Leitura gerencial", report.executiveSummary.periodNarrative),
         row("Resumo executivo", "Receita bruta", money(report.executiveSummary.grossRevenue)),
@@ -86,9 +115,7 @@ export class ManagementReportExportProvider implements ExportProvider {
             `Pago ${money(category.paid)} | Aberto ${money(category.open)} | Vencido ${money(category.overdue)}`
           )
         ),
-      ],
-    };
-  }
+  ];
 }
 
 function normalizeManagementReportFilters(value: Prisma.JsonValue): {

@@ -1,5 +1,8 @@
-import { Injectable } from "@nestjs/common";
-import { Prisma } from "@prisma/client";
+import { Injectable, OnModuleInit, Optional } from "@nestjs/common";
+import { ConfigService } from "@nestjs/config";
+import { BackgroundJob, Prisma } from "@prisma/client";
+import { BackgroundJobRegistry } from "../../../common/background-jobs/background-job.registry";
+import { BackgroundJobService } from "../../../common/background-jobs/background-job.service";
 import { PrismaService } from "../../../platform/database/prisma.service";
 import { IntegrationSecretService } from "../../../security/integration-secret.service";
 import { ProviderTransactionStateService } from "../provider-transaction-state.service";
@@ -10,15 +13,29 @@ import { mapMercadoPagoPayment } from "./mercado-pago.mapper";
 import { MercadoPagoWebhookPayload } from "./mercado-pago.types";
 
 @Injectable()
-export class MercadoPagoWebhookService {
+export class MercadoPagoWebhookService implements OnModuleInit {
   constructor(
     private readonly prisma: PrismaService,
     private readonly secrets: IntegrationSecretService,
     private readonly authenticated: MercadoPagoAuthenticatedRequestService,
     private readonly client: MercadoPagoClient,
     private readonly states: ProviderTransactionStateService,
-    private readonly audit: IntegrationAuditService
+    private readonly audit: IntegrationAuditService,
+    @Optional() private readonly jobs?: BackgroundJobService,
+    @Optional() private readonly registry?: BackgroundJobRegistry,
+    @Optional() private readonly config?: ConfigService,
   ) {}
+
+  async onModuleInit(): Promise<void> {
+    if (!this.durableEnabled()) return;
+    if (!this.jobs || !this.registry) throw new Error("Durable provider webhooks require BackgroundJobsModule");
+    this.registry.register({
+      type: "PROVIDER_WEBHOOK",
+      policy: { leaseMs: 120_000, retryBaseDelayMs: 5_000, retryMaxDelayMs: 600_000 },
+      execute: (job) => this.execute(job),
+    });
+    await this.enqueueRecoverableNotifications();
+  }
 
   async accept(input: {
     eventKey: string;
@@ -48,11 +65,57 @@ export class MercadoPagoWebhookService {
         return { accepted: true, duplicate: true };
       throw error;
     }
-    setImmediate(() => void this.process(notification.id));
+    if (this.durableEnabled()) {
+      if (!this.jobs) throw new Error("Background jobs are unavailable");
+      await this.jobs.enqueue({
+        type: "PROVIDER_WEBHOOK",
+        priority: "CRITICAL",
+        targetType: "ProviderNotification",
+        targetId: notification.id,
+        dedupeKey: notification.id,
+        payload: {},
+      });
+    } else {
+      setImmediate(() => void this.process(notification.id));
+    }
     return { accepted: true, duplicate: false };
   }
 
-  async process(notificationId: string): Promise<void> {
+  async execute(job: BackgroundJob): Promise<{ processedCount: number }> {
+    await this.process(job.targetId, true);
+    return { processedCount: 1 };
+  }
+
+  async enqueueRecoverableNotifications(): Promise<void> {
+    if (!this.jobs) throw new Error("Background jobs are unavailable");
+    let after: string | undefined;
+    do {
+      const page = await this.prisma.providerNotification.findMany({
+        where: {
+          status: { in: ["RECEIVED", "FAILED"] },
+          OR: [{ nextAttemptAt: null }, { nextAttemptAt: { lte: new Date() } }],
+        },
+        select: { id: true, tenantId: true },
+        orderBy: { id: "asc" },
+        take: 25,
+        ...(after ? { cursor: { id: after }, skip: 1 } : {}),
+      });
+      for (const notification of page) {
+        await this.jobs.enqueue({
+          tenantId: notification.tenantId,
+          type: "PROVIDER_WEBHOOK",
+          priority: "CRITICAL",
+          targetType: "ProviderNotification",
+          targetId: notification.id,
+          dedupeKey: notification.id,
+          payload: {},
+        });
+      }
+      after = page.length === 25 ? page[page.length - 1]?.id : undefined;
+    } while (after);
+  }
+
+  async process(notificationId: string, rethrow = false): Promise<void> {
     const claimed = await this.prisma.providerNotification.updateMany({
       where: {
         id: notificationId,
@@ -125,13 +188,21 @@ export class MercadoPagoWebhookService {
           resourceId: notification.providerResourceId,
         },
       });
-    } catch {
+    } catch (error) {
       const delayMinutes = Math.min(60, 2 ** Math.min(notification.attempts, 5));
       await this.prisma.providerNotification.update({
         where: { id: notificationId },
-        data: { status: "FAILED", nextAttemptAt: new Date(Date.now() + delayMinutes * 60_000) },
+        data: {
+          status: "FAILED",
+          nextAttemptAt: this.durableEnabled() ? null : new Date(Date.now() + delayMinutes * 60_000),
+        },
       });
+      if (rethrow) throw error;
     }
+  }
+
+  private durableEnabled(): boolean {
+    return this.config?.get<string>("PROVIDER_WEBHOOK_DURABLE_JOBS_ENABLED") === "true";
   }
 }
 
