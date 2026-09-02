@@ -13,7 +13,7 @@ describe("admin operation feedback", () => {
           message: "Importando pedidos.",
           progress: { current: 5, total: 10 },
         }}
-      />,
+      />
     );
 
     expect(html).toContain("Processando");
@@ -29,7 +29,7 @@ describe("admin operation feedback", () => {
           message: "Importacao concluida.",
           result: { processed: 10, completed: 8, skipped: 2, failed: 0 },
         }}
-      />,
+      />
     );
 
     expect(html).toContain("Concluido");
@@ -46,11 +46,15 @@ describe("admin operation feedback", () => {
         onConfirm={() => undefined}
         open
         title="Confirmar estorno"
-      />,
+      >
+        <div>Conteudo longo</div>
+      </ConfirmationDialog>
     );
 
     expect(html).toContain("Confirmar estorno");
     expect(html).toContain("O saldo sera recalculado.");
     expect(html).toContain("Estornar pagamento");
+    expect(html).toContain("max-h-[calc(100dvh-2rem)]");
+    expect(html).toContain("overflow-y-auto");
   });
 });
