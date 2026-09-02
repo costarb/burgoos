@@ -2,6 +2,13 @@
 
 BurgoOS delivery pilot monorepo.
 
+## Documentation
+
+- [User guide](docs/USER_GUIDE.md): operational instructions with screenshots for the main system workflows.
+- [System architecture](docs/ARCHITECTURE.md): components, runtime topology, integrations, jobs, security and architectural decisions.
+- [Data dictionary](docs/DATA_DICTIONARY.md): current entities, fields, enums, relationships, constraints and indexes generated from the Prisma schema.
+- [GitFlow](docs/GITFLOW.md): repository branching and release workflow.
+
 ## Delivery Integrations
 
 The iFood integration is designed as a store-scoped distributed application flow. Each store authorizes its own merchant access, and BurgoOS stores token metadata per tenant.
