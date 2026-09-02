@@ -77,7 +77,7 @@ export function MultiSelectFilter({
   }
 
   return (
-    <div className={`relative ${className}`} ref={rootRef}>
+    <div className={`relative min-w-0 ${className}`} ref={rootRef}>
       <button
         aria-controls={listId}
         aria-expanded={open}

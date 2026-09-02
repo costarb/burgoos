@@ -249,7 +249,7 @@ export function PayablesClient({ token, initialPayables, options }: PayablesClie
             onExport={requestPayablesExport}
           />
         </div>
-        <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-[1fr_1fr_1fr_1fr_1fr_1fr_auto_auto]">
+        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
           <input
             className="rounded-md border border-slate-200 px-3 py-2 text-sm"
             onChange={(event) =>
@@ -299,22 +299,24 @@ export function PayablesClient({ token, initialPayables, options }: PayablesClie
             type="month"
             value={filters.competenceMonth ?? ""}
           />
-          <button
-            className="rounded-md bg-slate-950 px-4 py-2 text-sm font-semibold text-white disabled:opacity-60"
-            disabled={busy}
-            onClick={applyFilters}
-            type="button"
-          >
-            Filtrar
-          </button>
-          <button
-            className="rounded-md border border-slate-300 px-4 py-2 text-sm font-semibold disabled:opacity-60"
-            disabled={busy}
-            onClick={clearFilters}
-            type="button"
-          >
-            Limpar
-          </button>
+          <div className="flex flex-wrap justify-end gap-3 sm:col-span-2 xl:col-span-3">
+            <button
+              className="min-w-24 rounded-md bg-slate-950 px-4 py-2 text-sm font-semibold text-white disabled:opacity-60"
+              disabled={busy}
+              onClick={applyFilters}
+              type="button"
+            >
+              Filtrar
+            </button>
+            <button
+              className="min-w-24 rounded-md border border-slate-300 px-4 py-2 text-sm font-semibold disabled:opacity-60"
+              disabled={busy}
+              onClick={clearFilters}
+              type="button"
+            >
+              Limpar
+            </button>
+          </div>
         </div>
       </section>
 
