@@ -1058,7 +1058,18 @@ export async function listAdminCategories(
   const params = new URLSearchParams();
 
   Object.entries(filters).forEach(([key, value]) => {
-    if (value !== undefined && value !== null && value !== "") {
+    if (Array.isArray(value)) {
+      const queryKey =
+        (
+          {
+            paymentInstitutions: "paymentInstitution",
+            paymentMethods: "paymentMethod",
+            orderPlatformIds: "orderPlatformId",
+            statuses: "status",
+          } as Record<string, string>
+        )[key] ?? key;
+      value.forEach((item) => params.append(queryKey, String(item)));
+    } else if (value !== undefined && value !== null && value !== "") {
       params.set(key, String(value));
     }
   });
@@ -1911,7 +1922,16 @@ export async function getPayables(
   const params = new URLSearchParams();
 
   Object.entries(filters).forEach(([key, value]) => {
-    if (value) {
+    if (Array.isArray(value)) {
+      const queryKey =
+        (
+          { statuses: "status", categoryIds: "categoryId", supplierIds: "supplierId" } as Record<
+            string,
+            string
+          >
+        )[key] ?? key;
+      value.forEach((item) => params.append(queryKey, String(item)));
+    } else if (value) {
       params.set(key, value);
     }
   });

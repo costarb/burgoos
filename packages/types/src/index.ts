@@ -568,10 +568,10 @@ export interface HistoricalOrderImportResult {
 export interface SalesReportFilters {
   start?: string;
   end?: string;
-  paymentInstitution?: PaymentInstitution;
-  paymentMethod?: PaymentMethod;
-  orderPlatformId?: string;
-  status?: OrderStatus;
+  paymentInstitutions?: PaymentInstitution[];
+  paymentMethods?: PaymentMethod[];
+  orderPlatformIds?: string[];
+  statuses?: OrderStatus[];
   page?: number;
   pageSize?: number;
 }
@@ -1142,9 +1142,9 @@ export interface PayablesFilters {
   pageSize?: number;
   start?: string;
   end?: string;
-  status?: PayableStatus | string;
-  categoryId?: string;
-  supplierId?: string;
+  statuses?: Array<PayableStatus | string>;
+  categoryIds?: string[];
+  supplierIds?: string[];
   competenceMonth?: string;
 }
 

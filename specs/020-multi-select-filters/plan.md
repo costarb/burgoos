@@ -26,7 +26,7 @@ Criar um componente React controlado de filtro multisseleção, sem nova depend�
 
 **Constraints**: acessibilidade por teclado; compatibilidade com query singular; isolamento por tenant; sem dependência visual adicional; filtros pendentes não podem aparentar estar aplicados
 
-**Scale/Scope**: componente compartilhado, dois filtros de conta no Controle de Caixa, contrato/API financeira e inventário dos filtros administrativos elegíveis
+**Scale/Scope**: componente compartilhado com seleção total, dois filtros de conta no Controle de Caixa, quatro filtros de Vendas, três filtros de Contas a Pagar e seus contratos de consulta/exportação
 
 ## Constitution Check
 
@@ -96,8 +96,8 @@ packages/types/src/index.ts
 
 ### Inventário de rollout
 
-- **Nesta implementação**: os dois filtros de conta do Controle de Caixa, que compartilham fonte e semântica.
-- **Elegíveis para adoção incremental**: filtros de status/categoria/fornecedor em Contas a Pagar; ação/loja em Auditoria; categoria/status em Estoque e Ingredientes; status/canal/meio nos relatórios e consultas, condicionados a contratos de união próprios.
+- **Nesta implementação**: os dois filtros de conta do Controle de Caixa; instituições, meios de pagamento, canais e status em Vendas; status, categorias e fornecedores em Contas a Pagar.
+- **Elegíveis para adoção incremental**: ação/loja em Auditoria e categoria/status em Estoque e Ingredientes, condicionados a contratos de união próprios.
 - **Não elegíveis**: formulários, troca de loja, seleção de conta para pagamento/movimento, destino de transferência e comandos de mudança de estado.
 
 ## Test Strategy

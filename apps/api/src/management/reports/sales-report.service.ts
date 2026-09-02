@@ -38,6 +38,15 @@ export class SalesReportService {
   constructor(@Inject(PrismaService) private readonly prisma: PrismaService) {}
 
   async getReport(tenantId: string, query: ParsedSalesReportQuery) {
+    query = {
+      ...query,
+      paymentInstitutions:
+        query.paymentInstitutions ?? (query.paymentInstitution ? [query.paymentInstitution] : []),
+      paymentMethods: query.paymentMethods ?? (query.paymentMethod ? [query.paymentMethod] : []),
+      orderPlatformIds:
+        query.orderPlatformIds ?? (query.orderPlatformId ? [query.orderPlatformId] : []),
+      statuses: query.statuses ?? (query.status ? [query.status] : []),
+    };
     const where = this.buildWhere(tenantId, query);
     const reportReferenceDate = new Date();
     const aggregateWhere = this.buildAggregateWhere(tenantId, query);
@@ -104,10 +113,10 @@ export class SalesReportService {
       filters: {
         start: query.start,
         end: query.end,
-        paymentInstitution: query.paymentInstitution,
-        paymentMethod: query.paymentMethod,
-        orderPlatformId: query.orderPlatformId,
-        status: query.status,
+        paymentInstitutions: query.paymentInstitutions,
+        paymentMethods: query.paymentMethods,
+        orderPlatformIds: query.orderPlatformIds,
+        statuses: query.statuses,
         page: query.page,
         pageSize: query.pageSize,
       },
@@ -146,6 +155,10 @@ export class SalesReportService {
   }
 
   private buildWhere(tenantId: string, query: ParsedSalesReportQuery): Prisma.OrderWhereInput {
+    const paymentInstitutions = query.paymentInstitutions ?? [];
+    const paymentMethods = query.paymentMethods ?? [];
+    const orderPlatformIds = query.orderPlatformIds ?? [];
+    const statuses = query.statuses ?? [];
     return {
       tenantId,
       deletedAt: null,
@@ -153,27 +166,35 @@ export class SalesReportService {
         gte: query.periodStart,
         lte: query.periodEnd,
       },
-      status: query.status ?? OrderStatus.DELIVERED,
-      paymentInstitution: query.paymentInstitution,
-      paymentMethod: query.paymentMethod,
-      orderPlatformId: query.orderPlatformId,
+      status: statuses.length ? { in: statuses } : OrderStatus.DELIVERED,
+      paymentInstitution: paymentInstitutions.length ? { in: paymentInstitutions } : undefined,
+      paymentMethod: paymentMethods.length ? { in: paymentMethods } : undefined,
+      orderPlatformId: orderPlatformIds.length ? { in: orderPlatformIds } : undefined,
     };
   }
 
   private buildAggregateWhere(tenantId: string, query: ParsedSalesReportQuery): Prisma.Sql {
+    const paymentInstitutions = query.paymentInstitutions ?? [];
+    const paymentMethods = query.paymentMethods ?? [];
+    const orderPlatformIds = query.orderPlatformIds ?? [];
+    const statuses = query.statuses ?? [];
     const clauses = [
       Prisma.sql`o.tenant_id = ${tenantId}::uuid`,
       Prisma.sql`o.deleted_at IS NULL`,
       Prisma.sql`o.created_at >= ${query.periodStart}`,
       Prisma.sql`o.created_at <= ${query.periodEnd}`,
-      Prisma.sql`o.status::text = ${query.status ?? OrderStatus.DELIVERED}`,
+      statuses.length
+        ? Prisma.sql`o.status::text IN (${Prisma.join(statuses)})`
+        : Prisma.sql`o.status::text = ${OrderStatus.DELIVERED}`,
     ];
-    if (query.paymentInstitution)
-      clauses.push(Prisma.sql`o.payment_institution::text = ${query.paymentInstitution}`);
-    if (query.paymentMethod)
-      clauses.push(Prisma.sql`o.payment_method::text = ${query.paymentMethod}`);
-    if (query.orderPlatformId)
-      clauses.push(Prisma.sql`o.order_platform_id = ${query.orderPlatformId}::uuid`);
+    if (paymentInstitutions.length)
+      clauses.push(
+        Prisma.sql`o.payment_institution::text IN (${Prisma.join(paymentInstitutions)})`
+      );
+    if (paymentMethods.length)
+      clauses.push(Prisma.sql`o.payment_method::text IN (${Prisma.join(paymentMethods)})`);
+    if (orderPlatformIds.length)
+      clauses.push(Prisma.sql`o.order_platform_id::text IN (${Prisma.join(orderPlatformIds)})`);
     return Prisma.join(clauses, " AND ");
   }
 

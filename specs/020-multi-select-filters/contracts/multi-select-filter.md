@@ -14,4 +14,5 @@
 - Cada opção é um checkbox rotulado.
 - Escape fecha e devolve foco; clique externo fecha.
 - Limpar produz `[]`.
+- “Selecionar todos” produz todos os valores habilitados; quando todos estão marcados, a mesma ação produz `[]`.
 - Alterações não disparam consulta por conta própria.

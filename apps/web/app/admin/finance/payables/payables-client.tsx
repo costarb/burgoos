@@ -15,6 +15,7 @@ import type {
 } from "@burgoos/types";
 import { AsyncExportMenu } from "../../../../components/admin/async-export-menu";
 import { OperationFeedback } from "../../../../components/admin/operation-feedback";
+import { MultiSelectFilter } from "../../../../components/admin/multi-select-filter";
 import {
   addPayablePayment,
   cancelPayable,
@@ -45,9 +46,9 @@ const statusLabels: Record<PayableStatus, string> = {
 const emptyFilters: PayablesFilters = {
   start: "",
   end: "",
-  status: "",
-  categoryId: "",
-  supplierId: "",
+  statuses: [],
+  categoryIds: [],
+  supplierIds: [],
   competenceMonth: "",
 };
 
@@ -263,48 +264,33 @@ export function PayablesClient({ token, initialPayables, options }: PayablesClie
             type="date"
             value={filters.end ?? ""}
           />
-          <select
-            className="rounded-md border border-slate-200 px-3 py-2 text-sm"
-            onChange={(event) =>
-              setFilters((current) => ({ ...current, status: event.target.value }))
-            }
-            value={filters.status ?? ""}
-          >
-            <option value="">Todos os status</option>
-            {Object.entries(statusLabels).map(([status, label]) => (
-              <option key={status} value={status}>
-                {label}
-              </option>
-            ))}
-          </select>
-          <select
-            className="rounded-md border border-slate-200 px-3 py-2 text-sm"
-            onChange={(event) =>
-              setFilters((current) => ({ ...current, categoryId: event.target.value }))
-            }
-            value={filters.categoryId ?? ""}
-          >
-            <option value="">Todas as categorias</option>
-            {options.categories.map((category) => (
-              <option key={category.id} value={category.id}>
-                {category.name}
-              </option>
-            ))}
-          </select>
-          <select
-            className="rounded-md border border-slate-200 px-3 py-2 text-sm"
-            onChange={(event) =>
-              setFilters((current) => ({ ...current, supplierId: event.target.value }))
-            }
-            value={filters.supplierId ?? ""}
-          >
-            <option value="">Todos os fornecedores</option>
-            {options.suppliers.map((supplier) => (
-              <option key={supplier.id} value={supplier.id}>
-                {supplier.name}
-              </option>
-            ))}
-          </select>
+          <MultiSelectFilter
+            label="Status"
+            onChange={(statuses) => setFilters((current) => ({ ...current, statuses }))}
+            options={Object.entries(statusLabels).map(([value, label]) => ({ value, label }))}
+            placeholder="Todos os status"
+            value={(filters.statuses ?? []).map(String)}
+          />
+          <MultiSelectFilter
+            label="Categorias"
+            onChange={(categoryIds) => setFilters((current) => ({ ...current, categoryIds }))}
+            options={options.categories.map((category) => ({
+              value: category.id,
+              label: category.name,
+            }))}
+            placeholder="Todas as categorias"
+            value={filters.categoryIds ?? []}
+          />
+          <MultiSelectFilter
+            label="Fornecedores"
+            onChange={(supplierIds) => setFilters((current) => ({ ...current, supplierIds }))}
+            options={options.suppliers.map((supplier) => ({
+              value: supplier.id,
+              label: supplier.name,
+            }))}
+            placeholder="Todos os fornecedores"
+            value={filters.supplierIds ?? []}
+          />
           <input
             className="rounded-md border border-slate-200 px-3 py-2 text-sm"
             onChange={(event) =>

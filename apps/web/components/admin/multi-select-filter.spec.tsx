@@ -43,14 +43,37 @@ describe("MultiSelectFilter", () => {
     expect(trigger.textContent).toContain("Todas as contas");
     act(() => trigger.click());
     const checkboxes = container.querySelectorAll<HTMLInputElement>('input[type="checkbox"]');
-    act(() => checkboxes[0].click());
     act(() => checkboxes[1].click());
+    act(() => checkboxes[2].click());
     expect(trigger.textContent).toContain("Todos");
     const clear = [...container.querySelectorAll("button")].find(
       (button) => button.textContent === "Limpar"
     )!;
     act(() => clear.click());
     expect(trigger.textContent).toContain("Todas as contas");
+  });
+
+  it("selects and clears every enabled option with one action", () => {
+    const onChange = vi.fn();
+    act(() =>
+      root.render(
+        <MultiSelectFilter
+          label="Contas"
+          onChange={onChange}
+          options={[
+            { value: "a", label: "Caixa" },
+            { value: "b", label: "Banco" },
+            { value: "c", label: "Inativa", disabled: true },
+          ]}
+          value={[]}
+        />
+      )
+    );
+    act(() =>
+      container.querySelector<HTMLButtonElement>('button[aria-haspopup="listbox"]')!.click()
+    );
+    act(() => container.querySelector<HTMLInputElement>('input[type="checkbox"]')!.click());
+    expect(onChange).toHaveBeenCalledWith(["a", "b"]);
   });
 
   it("closes with Escape and returns focus to the trigger", () => {

@@ -9,3 +9,6 @@
 7. Use Limpar e confirme o retorno ao consolidado de todas as contas.
 8. Repita abertura, navegação, marcação, limpeza e fechamento apenas pelo teclado.
 9. Valide layout estreito e estados sem opções/sem resultados.
+10. Em Vendas, combine duas instituições, dois meios, dois canais e dois status e confira os totais e a paginação.
+11. Em Contas a Pagar, combine dois status, duas categorias e dois fornecedores e confira a lista e a exportação.
+12. Em um filtro com várias opções, use “Selecionar todos” para marcar e depois desmarcar o conjunto.

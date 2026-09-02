@@ -8,10 +8,10 @@ interface SalesReportPageProps {
   searchParams: {
     start?: string;
     end?: string;
-    paymentInstitution?: string;
-    paymentMethod?: string;
-    orderPlatformId?: string;
-    status?: string;
+    paymentInstitution?: string | string[];
+    paymentMethod?: string | string[];
+    orderPlatformId?: string | string[];
+    status?: string | string[];
     page?: string;
     pageSize?: string;
   };
@@ -24,10 +24,10 @@ export default async function SalesReportPage({ searchParams }: SalesReportPageP
       {
         start: searchParams.start,
         end: searchParams.end,
-        paymentInstitution: searchParams.paymentInstitution as never,
-        paymentMethod: searchParams.paymentMethod as never,
-        orderPlatformId: searchParams.orderPlatformId,
-        status: searchParams.status as never,
+        paymentInstitutions: toArray(searchParams.paymentInstitution) as never,
+        paymentMethods: toArray(searchParams.paymentMethod) as never,
+        orderPlatformIds: toArray(searchParams.orderPlatformId),
+        statuses: toArray(searchParams.status) as never,
         page: searchParams.page ? Number(searchParams.page) : undefined,
         pageSize: searchParams.pageSize ? Number(searchParams.pageSize) : undefined,
       },
@@ -63,4 +63,8 @@ export default async function SalesReportPage({ searchParams }: SalesReportPageP
       </section>
     </main>
   );
+}
+
+function toArray(value?: string | string[]): string[] {
+  return Array.isArray(value) ? value : value ? [value] : [];
 }

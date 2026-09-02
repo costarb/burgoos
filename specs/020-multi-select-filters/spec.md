@@ -40,6 +40,7 @@ Como usuário administrativo, quero identificar, alterar e limpar minhas seleç�
 2. **Given** que duas opções estão marcadas, **When** o filtro é fechado, **Then** o controle apresenta um resumo inequívoco das seleções.
 3. **Given** que existem opções selecionadas, **When** o usuário limpa o controle, **Then** nenhuma opção permanece selecionada e o estado volta a representar todos os valores.
 4. **Given** que o usuário navega por teclado, **When** abre e percorre o controle, **Then** consegue marcar, desmarcar, fechar e retornar ao acionador sem depender do mouse.
+5. **Given** que existem muitas opções, **When** o usuário aciona “Selecionar todos”, **Then** todas as opções habilitadas são marcadas em uma única ação e podem ser desmarcadas juntas pela mesma opção.
 
 ---
 
@@ -86,6 +87,9 @@ Como usuário das telas administrativas, quero o mesmo comportamento de multisse
 - **FR-013**: Cada tela migrada MUST manter seus demais filtros, ações de limpar, paginação, exportação e estados vazios funcionando em conjunto com a seleção múltipla.
 - **FR-014**: O sistema MUST impedir que identificadores inválidos ou de outro estabelecimento retornem dados não autorizados.
 - **FR-015**: As seleções ainda não aplicadas MUST ser distinguíveis do conjunto usado na última consulta, evitando que os dados aparentem corresponder a critérios que ainda não foram executados.
+- **FR-016**: O controle compartilhado MUST oferecer a opção “Selecionar todos”, que marca somente opções habilitadas e alterna para desmarcar todas quando o conjunto completo estiver selecionado.
+- **FR-017**: A tela de Vendas MUST permitir múltipla seleção para instituições, meios de pagamento, canais e status, preservando período e paginação.
+- **FR-018**: A tela de Contas a Pagar MUST permitir múltipla seleção para status, categorias e fornecedores, preservando período, competência, paginação e exportação.
 
 ### Key Entities
 
@@ -121,6 +125,8 @@ Como usuário das telas administrativas, quero o mesmo comportamento de multisse
 
 - Componente compartilhado de filtro multisseleção.
 - Dois filtros de conta do Controle de Caixa e suporte completo à consulta de múltiplas contas.
+- Quatro filtros combináveis de Vendas: instituições, meios de pagamento, canais e status.
+- Três filtros combináveis de Contas a Pagar: status, categorias e fornecedores.
 - Inventário e migração dos filtros combináveis em listas e relatórios administrativos.
 - Testes de interação, regras financeiras, compatibilidade e isolamento por estabelecimento.
 

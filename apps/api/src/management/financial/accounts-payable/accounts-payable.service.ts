@@ -55,24 +55,25 @@ export class AccountsPayableService {
     const where = this.buildWhere(tenantId, query);
     const page = query.page ?? 1;
     const pageSize = query.pageSize ?? 50;
-    const statusIds = query.status
+    const statuses = queryValues(query.status).map((status) => status.toUpperCase());
+    const statusIds = statuses.length
       ? await this.queryStatusPageIds(tenantId, query, page, pageSize)
       : null;
     const [payables, summaryRows] = await Promise.all([
       this.prisma.payable.findMany({
-      where: statusIds ? { ...where, id: { in: statusIds } } : where,
-      include: payableInclude,
-      orderBy: [{ dueDate: "asc" }, { createdAt: "asc" }],
-      skip: statusIds ? undefined : (page - 1) * pageSize,
-      take: statusIds ? undefined : pageSize,
-    }),
+        where: statusIds ? { ...where, id: { in: statusIds } } : where,
+        include: payableInclude,
+        orderBy: [{ dueDate: "asc" }, { createdAt: "asc" }],
+        skip: statusIds ? undefined : (page - 1) * pageSize,
+        take: statusIds ? undefined : pageSize,
+      }),
       this.querySummary(tenantId, query),
     ]);
 
-    const normalizedStatus = query.status?.toUpperCase();
+    const normalizedStatuses = new Set(statuses);
     const items = payables
       .map((payable) => this.toResponse(payable))
-      .filter((item) => !normalizedStatus || item.status === normalizedStatus);
+      .filter((item) => normalizedStatuses.size === 0 || normalizedStatuses.has(item.status));
     const summary = summaryRows[0] ?? emptySummaryRow();
     return {
       items,
@@ -92,16 +93,18 @@ export class AccountsPayableService {
 
   async summarizeByCategory(
     tenantId: string,
-    query: Pick<PayablesQueryDto, "start" | "end">,
+    query: Pick<PayablesQueryDto, "start" | "end">
   ): Promise<PayableCategoryAggregate[]> {
-    const rows = await this.prisma.$queryRaw<Array<{
-      categoryId: string | null;
-      categoryName: string;
-      expected: Prisma.Decimal;
-      paid: Prisma.Decimal;
-      open: Prisma.Decimal;
-      overdue: Prisma.Decimal;
-    }>>(Prisma.sql`SELECT p.category_id::text AS "categoryId", c.name AS "categoryName",
+    const rows = await this.prisma.$queryRaw<
+      Array<{
+        categoryId: string | null;
+        categoryName: string;
+        expected: Prisma.Decimal;
+        paid: Prisma.Decimal;
+        open: Prisma.Decimal;
+        overdue: Prisma.Decimal;
+      }>
+    >(Prisma.sql`SELECT p.category_id::text AS "categoryId", c.name AS "categoryName",
       COALESCE(SUM(p.expected_amount), 0) AS expected,
       COALESCE(SUM(COALESCE(pp.paid, 0)), 0) AS paid,
       COALESCE(SUM(p.expected_amount - COALESCE(pp.paid, 0)), 0) AS open,
@@ -437,11 +440,13 @@ export class AccountsPayableService {
 
   private buildWhere(tenantId: string, query: PayablesQueryDto): Prisma.PayableWhereInput {
     const competenceRange = query.competenceMonth ? parseMonthRange(query.competenceMonth) : null;
+    const categoryIds = queryValues(query.categoryId);
+    const supplierIds = queryValues(query.supplierId);
 
     return {
       tenantId,
-      categoryId: query.categoryId,
-      supplierId: query.supplierId,
+      categoryId: prismaSelection(categoryIds),
+      supplierId: prismaSelection(supplierIds),
       competenceDate: competenceRange
         ? {
             gte: competenceRange.start,
@@ -456,9 +461,9 @@ export class AccountsPayableService {
   }
 
   private querySummary(tenantId: string, query: PayablesQueryDto): Promise<PayableSummaryRow[]> {
-    const status = query.status?.toUpperCase();
-    const statusPredicate = status
-      ? Prisma.sql`AND status = ${status}`
+    const statuses = queryValues(query.status).map((status) => status.toUpperCase());
+    const statusPredicate = statuses.length
+      ? Prisma.sql`AND status IN (${Prisma.join(statuses)})`
       : Prisma.empty;
     return this.prisma.$queryRaw<PayableSummaryRow[]>(Prisma.sql`WITH payable_values AS (
       SELECT p.expected_amount,
@@ -474,8 +479,8 @@ export class AccountsPayableService {
       FROM payables p
       LEFT JOIN (SELECT payable_id, SUM(amount) FILTER (WHERE reversed_at IS NULL) AS paid FROM payable_payments GROUP BY payable_id) pp ON pp.payable_id = p.id
       WHERE p.tenant_id = ${tenantId}::uuid
-      ${query.categoryId ? Prisma.sql`AND p.category_id = ${query.categoryId}::uuid` : Prisma.empty}
-      ${query.supplierId ? Prisma.sql`AND p.supplier_id = ${query.supplierId}::uuid` : Prisma.empty}
+      ${uuidInSql("p.category_id", queryValues(query.categoryId))}
+      ${uuidInSql("p.supplier_id", queryValues(query.supplierId))}
       ${query.start ? Prisma.sql`AND p.due_date >= ${parseDate(query.start)}` : Prisma.empty}
       ${query.end ? Prisma.sql`AND p.due_date <= ${endOfDay(parseDate(query.end))}` : Prisma.empty}
       ${query.competenceMonth ? competenceSql(query.competenceMonth) : Prisma.empty}
@@ -493,7 +498,7 @@ export class AccountsPayableService {
     tenantId: string,
     query: PayablesQueryDto,
     page: number,
-    pageSize: number,
+    pageSize: number
   ): Promise<string[]> {
     const rows = await this.prisma.$queryRaw<Array<{ id: string }>>(Prisma.sql`SELECT id FROM (
       SELECT p.id, p.due_date, p.created_at, CASE
@@ -505,12 +510,12 @@ export class AccountsPayableService {
       FROM payables p
       LEFT JOIN (SELECT payable_id, SUM(amount) FILTER (WHERE reversed_at IS NULL) AS paid FROM payable_payments GROUP BY payable_id) pp ON pp.payable_id = p.id
       WHERE p.tenant_id = ${tenantId}::uuid
-      ${query.categoryId ? Prisma.sql`AND p.category_id = ${query.categoryId}::uuid` : Prisma.empty}
-      ${query.supplierId ? Prisma.sql`AND p.supplier_id = ${query.supplierId}::uuid` : Prisma.empty}
+      ${uuidInSql("p.category_id", queryValues(query.categoryId))}
+      ${uuidInSql("p.supplier_id", queryValues(query.supplierId))}
       ${query.start ? Prisma.sql`AND p.due_date >= ${parseDate(query.start)}` : Prisma.empty}
       ${query.end ? Prisma.sql`AND p.due_date <= ${endOfDay(parseDate(query.end))}` : Prisma.empty}
       ${query.competenceMonth ? competenceSql(query.competenceMonth) : Prisma.empty}
-    ) filtered WHERE status = ${query.status!.toUpperCase()}
+    ) filtered WHERE status IN (${Prisma.join(queryValues(query.status).map((status) => status.toUpperCase()))})
     ORDER BY due_date, created_at OFFSET ${(page - 1) * pageSize} LIMIT ${pageSize}`);
     return rows.map((row) => row.id);
   }
@@ -629,12 +634,31 @@ export class AccountsPayableService {
       totalPaid: toMoneyString(sum("paidAmount")),
       totalRemaining: toMoneyString(sum("remainingAmount")),
       overdueAmount: toMoneyString(
-        overdue.reduce((total, item) => total.plus(item.remainingAmount), new Prisma.Decimal(0)),
+        overdue.reduce((total, item) => total.plus(item.remainingAmount), new Prisma.Decimal(0))
       ),
-      openCount: active.filter((item) => ["OPEN", "PARTIALLY_PAID", "OVERDUE"].includes(item.status)).length,
+      openCount: active.filter((item) =>
+        ["OPEN", "PARTIALLY_PAID", "OVERDUE"].includes(item.status)
+      ).length,
       overdueCount: overdue.length,
     };
   }
+}
+
+function queryValues(value?: string | string[]): string[] {
+  const values = Array.isArray(value) ? value : value ? [value] : [];
+  return [...new Set(values.map((item) => item.trim()).filter(Boolean))];
+}
+
+function uuidInSql(column: "p.category_id" | "p.supplier_id", values: string[]): Prisma.Sql {
+  if (!values.length) return Prisma.empty;
+  const identifier =
+    column === "p.category_id" ? Prisma.sql`p.category_id` : Prisma.sql`p.supplier_id`;
+  return Prisma.sql`AND ${identifier}::text IN (${Prisma.join(values)})`;
+}
+
+function prismaSelection(values: string[]): string | { in: string[] } | undefined {
+  if (values.length === 0) return undefined;
+  return values.length === 1 ? values[0] : { in: values };
 }
 
 function emptySummaryRow(): PayableSummaryRow {

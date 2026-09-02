@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { formatLocalDate, localDayEnd, localDayStart, parseSalesReportQuery } from "./sales-report.types";
+import {
+  formatLocalDate,
+  localDayEnd,
+  localDayStart,
+  parseSalesReportQuery,
+} from "./sales-report.types";
 
 describe("sales report business timezone", () => {
   it("builds Sao Paulo day boundaries independently from the server timezone", () => {
@@ -8,18 +13,22 @@ describe("sales report business timezone", () => {
   });
 
   it("limits interactive ranges to 92 days and directs larger periods to export", () => {
-    expect(() => parseSalesReportQuery({ start: "2026-01-01", end: "2026-04-03" }))
-      .toThrow(/no maximo 92 dias.*exportacao/i);
-    expect(parseSalesReportQuery({ start: "2026-01-01", end: "2026-04-02" }))
-      .toMatchObject({ start: "2026-01-01", end: "2026-04-02" });
+    expect(() => parseSalesReportQuery({ start: "2026-01-01", end: "2026-04-03" })).toThrow(
+      /no maximo 92 dias.*exportacao/i
+    );
+    expect(parseSalesReportQuery({ start: "2026-01-01", end: "2026-04-02" })).toMatchObject({
+      start: "2026-01-01",
+      end: "2026-04-02",
+    });
   });
 
   it("uses a bounded 31-day rolling window when dates are omitted", () => {
     const parsed = parseSalesReportQuery({});
-    const days = Math.round(
-      (Date.parse(`${parsed.end}T12:00:00.000Z`) - Date.parse(`${parsed.start}T12:00:00.000Z`))
-        / 86_400_000,
-    ) + 1;
+    const days =
+      Math.round(
+        (Date.parse(`${parsed.end}T12:00:00.000Z`) - Date.parse(`${parsed.start}T12:00:00.000Z`)) /
+          86_400_000
+      ) + 1;
     expect(days).toBe(31);
   });
 
@@ -27,5 +36,21 @@ describe("sales report business timezone", () => {
     expect(formatLocalDate(new Date("2026-07-21T00:00:42.000Z"))).toBe("2026-07-20");
     expect(formatLocalDate(new Date("2026-07-20T23:51:07.000Z"))).toBe("2026-07-20");
     expect(formatLocalDate(new Date("2026-07-21T03:00:11.000Z"))).toBe("2026-07-21");
+  });
+
+  it("parses repeated sales dimensions as deduplicated selections", () => {
+    expect(
+      parseSalesReportQuery({
+        paymentInstitution: ["PAGBANK", "MERCADO_PAGO", "PAGBANK"],
+        paymentMethod: ["PIX", "CASH"],
+        orderPlatformId: ["platform-1", "platform-2"],
+        status: ["DELIVERED", "CANCELLED"],
+      })
+    ).toMatchObject({
+      paymentInstitutions: ["PAGBANK", "MERCADO_PAGO"],
+      paymentMethods: ["PIX", "CASH"],
+      orderPlatformIds: ["platform-1", "platform-2"],
+      statuses: ["DELIVERED", "CANCELLED"],
+    });
   });
 });

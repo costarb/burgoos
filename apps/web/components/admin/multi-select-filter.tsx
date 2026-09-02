@@ -63,6 +63,9 @@ export function MultiSelectFilter({
         : selected.length === 1
           ? (options.find((option) => option.value === selected[0])?.label ?? placeholder)
           : `${selected.length} selecionados`;
+  const enabledValues = options.filter((option) => !option.disabled).map((option) => option.value);
+  const allSelected =
+    enabledValues.length > 0 && enabledValues.every((item) => selected.includes(item));
 
   function toggle(option: MultiSelectOption) {
     if (option.disabled) return;
@@ -122,6 +125,19 @@ export function MultiSelectFilter({
               Limpar
             </button>
           </div>
+          <label
+            aria-selected={allSelected}
+            className="flex cursor-pointer items-center gap-2 rounded px-2 py-2 text-sm font-semibold hover:bg-slate-50"
+            role="option"
+          >
+            <input
+              checked={allSelected}
+              onChange={() => onChange(allSelected ? [] : enabledValues)}
+              type="checkbox"
+            />
+            <span>Selecionar todos</span>
+          </label>
+          <div className="my-1 border-t border-slate-100" />
           {options.map((option) => (
             <label
               className={`flex cursor-pointer items-center gap-2 rounded px-2 py-2 text-sm hover:bg-slate-50 ${option.disabled ? "cursor-not-allowed opacity-50" : ""}`}
