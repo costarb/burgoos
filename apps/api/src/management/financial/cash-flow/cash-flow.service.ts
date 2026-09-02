@@ -54,11 +54,16 @@ export class CashFlowService {
     tenantId: string,
     asOf: Date,
     projectionEnd: Date,
-    financialAccountId?: string
+    financialAccountIds: string[] | string = []
   ) {
+    const requestedAccountIds = Array.isArray(financialAccountIds)
+      ? financialAccountIds
+      : [financialAccountIds];
+    const selectedAccountIds = [...new Set(requestedAccountIds.filter(Boolean))];
+    const hasAccountFilter = selectedAccountIds.length > 0;
     const [accounts, orders, payables, payments, movements] = await Promise.all([
       this.prisma.financialAccount.findMany({
-        where: { tenantId, ...(financialAccountId ? { id: financialAccountId } : {}) },
+        where: { tenantId, ...(hasAccountFilter ? { id: { in: selectedAccountIds } } : {}) },
         orderBy: { name: "asc" },
       }),
       this.prisma.order.findMany({
@@ -102,7 +107,7 @@ export class CashFlowService {
           tenantId,
           reversedAt: null,
           paidAt: { lte: asOf },
-          ...(financialAccountId ? { financialAccountId } : {}),
+          ...(hasAccountFilter ? { financialAccountId: { in: selectedAccountIds } } : {}),
         },
         include: {
           payable: { select: { description: true } },
@@ -114,8 +119,13 @@ export class CashFlowService {
           tenantId,
           reversedAt: null,
           occurredAt: { lte: asOf },
-          ...(financialAccountId
-            ? { OR: [{ financialAccountId }, { destinationAccountId: financialAccountId }] }
+          ...(hasAccountFilter
+            ? {
+                OR: [
+                  { financialAccountId: { in: selectedAccountIds } },
+                  { destinationAccountId: { in: selectedAccountIds } },
+                ],
+              }
             : {}),
         },
         include: {
@@ -139,10 +149,15 @@ export class CashFlowService {
     };
     const accountNames = new Map(accounts.map((account) => [account.id, account.name]));
     const orderReceipts = mapOrderReceipts(orders, accountMap, asOf).filter(
-      (receipt) => !financialAccountId || receipt.financialAccountId === financialAccountId
+      (receipt) =>
+        !hasAccountFilter ||
+        (receipt.financialAccountId !== null &&
+          selectedAccountIds.includes(receipt.financialAccountId))
     );
     const movementEntries = movementLedgerEntries(movements).filter(
-      (entry) => !financialAccountId || entry.financialAccountId === financialAccountId
+      (entry) =>
+        !hasAccountFilter ||
+        (entry.financialAccountId !== null && selectedAccountIds.includes(entry.financialAccountId))
     );
 
     const ledger = [
@@ -268,8 +283,20 @@ export class CashFlowService {
     };
   }
 
-  async getStatement(tenantId: string, start: Date, end: Date, financialAccountId?: string) {
-    const position = await this.getPosition(tenantId, end, end, financialAccountId);
+  async getStatement(
+    tenantId: string,
+    start: Date,
+    end: Date,
+    financialAccountIds: string[] | string = []
+  ) {
+    const selectedAccountIds = [
+      ...new Set(
+        (Array.isArray(financialAccountIds) ? financialAccountIds : [financialAccountIds]).filter(
+          Boolean
+        )
+      ),
+    ];
+    const position = await this.getPosition(tenantId, end, end, selectedAccountIds);
     const startKey = toDateOnly(start);
     const endKey = toDateOnly(end);
     const priorEntries = position.ledger.filter((entry) => entry.occurredAt < startKey);
@@ -281,7 +308,8 @@ export class CashFlowService {
     return formatStatement({
       start: startKey,
       end: endKey,
-      financialAccountId: financialAccountId ?? null,
+      financialAccountId: selectedAccountIds.length === 1 ? selectedAccountIds[0] : null,
+      financialAccountIds: selectedAccountIds,
       openingBalance: new Prisma.Decimal(openingBalance),
       entries: periodEntries,
     });
@@ -373,12 +401,14 @@ function formatStatement({
   start,
   end,
   financialAccountId,
+  financialAccountIds,
   openingBalance,
   entries,
 }: {
   start: string;
   end: string;
   financialAccountId: string | null;
+  financialAccountIds: string[];
   openingBalance: Prisma.Decimal;
   entries: FormattedLedgerEntry[];
 }) {
@@ -436,6 +466,7 @@ function formatStatement({
     start,
     end,
     financialAccountId,
+    financialAccountIds,
     openingBalance: toMoneyString(openingBalance),
     closingBalance: toMoneyString(openingBalance.plus(netAmount)),
     totalCredit: toMoneyString(totalCredit),

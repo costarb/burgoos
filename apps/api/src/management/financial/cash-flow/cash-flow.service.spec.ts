@@ -102,6 +102,22 @@ describe("CashFlowService", () => {
               openingBalance: new Prisma.Decimal(100),
               openingBalanceAt: new Date("2026-06-01T00:00:00.000Z"),
             },
+          ])
+          .mockResolvedValueOnce([
+            {
+              id: "account-1",
+              name: "Caixa Local",
+              paymentInstitution: "CAIXA_LOCAL",
+              openingBalance: new Prisma.Decimal(100),
+              openingBalanceAt: new Date("2026-06-01T00:00:00.000Z"),
+            },
+            {
+              id: "account-2",
+              name: "Dinheiro",
+              paymentInstitution: "DINHEIRO",
+              openingBalance: new Prisma.Decimal(0),
+              openingBalanceAt: new Date("2026-06-01T00:00:00.000Z"),
+            },
           ]),
       },
       order: {
@@ -145,6 +161,12 @@ describe("CashFlowService", () => {
       new Date("2026-06-06T23:59:59.999Z"),
       "account-1"
     );
+    const selectedAccountsStatement = await service.getStatement(
+      "tenant-1",
+      new Date("2026-06-05T00:00:00.000Z"),
+      new Date("2026-06-06T23:59:59.999Z"),
+      ["account-1", "account-2", "account-1"]
+    );
 
     expect(consolidated).toMatchObject({
       openingBalance: "100.00",
@@ -174,6 +196,17 @@ describe("CashFlowService", () => {
         financialAccountId: "account-1",
       }),
     ]);
+    expect(selectedAccountsStatement).toMatchObject({
+      financialAccountId: null,
+      financialAccountIds: ["account-1", "account-2"],
+      totalCredit: "30.00",
+      totalDebit: "30.00",
+      netAmount: "0.00",
+    });
+    expect(prismaMock.financialAccount.findMany).toHaveBeenLastCalledWith({
+      where: { tenantId: "tenant-1", id: { in: ["account-1", "account-2"] } },
+      orderBy: { name: "asc" },
+    });
   });
 
   it("preserves provider release dates that do not contain a time", async () => {

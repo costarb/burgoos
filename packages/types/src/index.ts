@@ -1,10 +1,4 @@
-export type OrderStatus =
-  | "PENDING"
-  | "PREPARING"
-  | "READY"
-  | "SHIPPED"
-  | "DELIVERED"
-  | "CANCELLED";
+export type OrderStatus = "PENDING" | "PREPARING" | "READY" | "SHIPPED" | "DELIVERED" | "CANCELLED";
 
 export * from "./delivery-integrations";
 export * from "./background-jobs";
@@ -1248,6 +1242,7 @@ export interface CashStatement {
   start: string;
   end: string;
   financialAccountId: string | null;
+  financialAccountIds: string[];
   openingBalance: string;
   closingBalance: string;
   totalCredit: string;

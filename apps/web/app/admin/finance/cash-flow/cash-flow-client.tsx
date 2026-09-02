@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import type {
   CashMovement,
   CashMovementInput,
@@ -12,6 +12,7 @@ import type {
   PaymentInstitutionConfiguration,
 } from "@burgoos/types";
 import { OperationFeedback } from "../../../../components/admin/operation-feedback";
+import { MultiSelectFilter } from "../../../../components/admin/multi-select-filter";
 import {
   createCashMovement,
   getCashPosition,
@@ -51,12 +52,14 @@ export function CashFlowClient({
   const [filters, setFilters] = useState({
     asOf: initialPosition.asOf,
     projectionEnd: initialPosition.projectionEnd,
-    financialAccountId: "",
+    financialAccountIds: [] as string[],
   });
   const [statementFilters, setStatementFilters] = useState({
     start: initialStatement.start,
     end: initialStatement.end,
-    financialAccountId: initialStatement.financialAccountId ?? "",
+    financialAccountIds:
+      initialStatement.financialAccountIds ??
+      (initialStatement.financialAccountId ? [initialStatement.financialAccountId] : []),
   });
   const filtersRef = useRef(filters);
   const statementFiltersRef = useRef(statementFilters);
@@ -205,20 +208,17 @@ export function CashFlowClient({
           type="date"
           value={filters.projectionEnd}
         />
-        <select
-          className="rounded-md border border-slate-200 px-3 py-2 text-sm"
-          onChange={(event) =>
-            setFilters((current) => ({ ...current, financialAccountId: event.target.value }))
+        <MultiSelectFilter
+          allLabel="Todas as contas"
+          emptyMessage="Nenhuma conta disponível"
+          label="Contas da posição de caixa"
+          onChange={(financialAccountIds) =>
+            setFilters((current) => ({ ...current, financialAccountIds }))
           }
-          value={filters.financialAccountId}
-        >
-          <option value="">Todas as contas</option>
-          {accounts.map((account) => (
-            <option key={account.id} value={account.id}>
-              {account.name}
-            </option>
-          ))}
-        </select>
+          options={accounts.map((account) => ({ value: account.id, label: account.name }))}
+          placeholder="Todas as contas"
+          value={filters.financialAccountIds}
+        />
         <button
           className="rounded-md bg-slate-950 px-4 py-2 text-sm font-semibold text-white disabled:opacity-60"
           disabled={busy}
@@ -310,23 +310,17 @@ export function CashFlowClient({
             type="date"
             value={statementFilters.end}
           />
-          <select
-            className="rounded-md border border-slate-200 px-3 py-2 text-sm"
-            onChange={(event) =>
-              setStatementFilters((current) => ({
-                ...current,
-                financialAccountId: event.target.value,
-              }))
+          <MultiSelectFilter
+            allLabel="Todas as contas"
+            emptyMessage="Nenhuma conta disponível"
+            label="Contas do extrato de caixa"
+            onChange={(financialAccountIds) =>
+              setStatementFilters((current) => ({ ...current, financialAccountIds }))
             }
-            value={statementFilters.financialAccountId}
-          >
-            <option value="">Todas as contas</option>
-            {accounts.map((account) => (
-              <option key={account.id} value={account.id}>
-                {account.name}
-              </option>
-            ))}
-          </select>
+            options={accounts.map((account) => ({ value: account.id, label: account.name }))}
+            placeholder="Todas as contas"
+            value={statementFilters.financialAccountIds}
+          />
           <button
             className="rounded-md bg-slate-950 px-4 py-2 text-sm font-semibold text-white disabled:opacity-60"
             disabled={busy}
