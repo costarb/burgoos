@@ -7,7 +7,7 @@ import type {
   SalesReportResponse,
 } from "@burgoos/types";
 import { useSearchParams } from "next/navigation";
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { MultiSelectFilter } from "../../../../components/admin/multi-select-filter";
 import { OrderMaintenanceDialog } from "../../orders/order-maintenance-dialog";
 
@@ -60,6 +60,13 @@ export function SalesReportClient({ report, orderPlatforms, token }: SalesReport
   const previousPage = Math.max(1, report.analytical.page - 1);
   const nextPage = report.analytical.page + 1;
   const hasNextPage = report.analytical.page * report.analytical.pageSize < report.analytical.total;
+
+  useEffect(() => {
+    setPaymentInstitutionValues(report.filters.paymentInstitutions ?? []);
+    setPaymentMethodValues(report.filters.paymentMethods ?? []);
+    setOrderPlatformValues(report.filters.orderPlatformIds ?? []);
+    setStatusValues(report.filters.statuses ?? []);
+  }, [report]);
 
   function replaceOrder(updatedOrder: AdminOrder): void {
     setAnalyticalItems((current) =>

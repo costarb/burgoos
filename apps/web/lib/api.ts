@@ -118,6 +118,7 @@ import type {
   ShiftCloseSummary,
 } from "@burgoos/types";
 import { clearAuthSession, readAuthSession } from "./auth-client";
+import { buildSalesReportSearchParams } from "./sales-report-query";
 
 const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? "http://127.0.0.1:3001";
 const AUTH_ACCESS_COOKIE = "burgoos.admin.access_token";
@@ -1631,13 +1632,7 @@ export async function getSalesReport(
   tokenOverride?: string
 ): Promise<SalesReportResponse> {
   const token = tokenOverride ?? (await getAdminToken());
-  const params = new URLSearchParams();
-
-  Object.entries(filters).forEach(([key, value]) => {
-    if (value !== undefined && value !== null && value !== "") {
-      params.set(key, String(value));
-    }
-  });
+  const params = buildSalesReportSearchParams(filters);
 
   const query = params.toString();
   return fetchAdmin<SalesReportResponse>(
