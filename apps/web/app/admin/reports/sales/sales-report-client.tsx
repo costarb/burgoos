@@ -10,10 +10,12 @@ import { useSearchParams } from "next/navigation";
 import React, { useEffect, useState } from "react";
 import { MultiSelectFilter } from "../../../../components/admin/multi-select-filter";
 import { OrderMaintenanceDialog } from "../../orders/order-maintenance-dialog";
+import { IfoodFinancialDetails } from "./ifood-financial-details";
 
 const paymentInstitutions = [
   ["PAGBANK", "PagBank"],
   ["MERCADO_PAGO", "Mercado Pago"],
+  ["IFOOD", "iFood"],
   ["DINHEIRO", "Dinheiro"],
   ["CAIXA_LOCAL", "Caixa local"],
 ];
@@ -167,6 +169,14 @@ export function SalesReportClient({ report, orderPlatforms, token }: SalesReport
         <SummaryCard label="Ticket medio" value={`R$ ${report.summary.averageTicket}`} />
       </section>
 
+      {report.ifoodFinancial && report.ifoodFinancial.saleCount > 0 ? (
+        <section className="grid gap-4 rounded-md border border-red-100 bg-red-50 p-4 sm:grid-cols-3">
+          <SummaryCard label="Vendas financeiras iFood" value={String(report.ifoodFinancial.saleCount)} />
+          <SummaryCard label="Recebivel iFood" value={`R$ ${report.ifoodFinancial.ifoodReceivableAmount}`} />
+          <SummaryCard label="Recebido pela loja" value={`R$ ${report.ifoodFinancial.storeReceivedAmount}`} />
+        </section>
+      ) : null}
+
       <DailyTrendChart daily={report.daily} />
 
       <section className="overflow-hidden rounded-md border border-slate-200 bg-white shadow-sm">
@@ -249,6 +259,9 @@ export function SalesReportClient({ report, orderPlatforms, token }: SalesReport
                       {[order.paymentInstitution, order.paymentMethod, order.paymentBrand]
                         .filter(Boolean)
                         .join(" / ")}
+                      {order.ifoodFinancial ? (
+                        <IfoodFinancialDetails detail={order.ifoodFinancial} />
+                      ) : null}
                     </td>
                     <td className="px-4 py-3">{order.externalPaymentId ?? "-"}</td>
                     <td className="px-4 py-3">R$ {order.grossAmount}</td>

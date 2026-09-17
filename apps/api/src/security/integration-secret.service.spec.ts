@@ -21,6 +21,24 @@ describe("IntegrationSecretService", () => {
     });
   });
 
+  it("redacts financial document, bank and NSU fields for iFood payloads", () => {
+    expect(
+      service.redact({
+        nsu: "123456",
+        acquirerDocument: "12345678900",
+        bankAccount: "0001-1",
+        cpf: "12345678900",
+        ok: 1,
+      })
+    ).toEqual({
+      nsu: "********",
+      acquirerDocument: "********",
+      bankAccount: "********",
+      cpf: "********",
+      ok: 1,
+    });
+  });
+
   it("round-trips typed credential envelopes", () => {
     const envelopes = [
       { version: 1, kind: "PAGBANK_EDI", ediToken: "edi-token" } as const,

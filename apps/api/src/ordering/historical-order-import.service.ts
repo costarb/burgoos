@@ -90,7 +90,7 @@ export interface NormalizedHistoricalSaleImportOptions {
 }
 
 export interface NormalizedHistoricalSale {
-  provider: "PAGBANK" | "MERCADO_PAGO";
+  provider: "PAGBANK" | "MERCADO_PAGO" | "IFOOD";
   channel: "API" | "FILE" | "OTHER";
   providerMovementId: string;
   externalSaleId: string;
@@ -98,9 +98,50 @@ export interface NormalizedHistoricalSale {
   grossAmount: number;
   netAmount?: number;
   feeAmount?: number;
-  paymentMethod: "PIX" | "PIX_MANUAL" | "DEBIT_CARD" | "CREDIT_CARD" | "DIGITAL_WALLET";
+  paymentMethod:
+    | "CASH"
+    | "PIX"
+    | "PIX_MANUAL"
+    | "CARD_ON_DELIVERY"
+    | "DEBIT_CARD"
+    | "CREDIT_CARD"
+    | "VOUCHER"
+    | "DIGITAL_WALLET";
   paymentBrand?: string;
   expectedReleaseAt?: string;
+  providerMethod?: string;
+  raw?: Record<string, unknown>;
+  financial?: {
+    bagAmount: number;
+    deliveryFeeAmount: number;
+    serviceFeeAmount: number;
+    benefitsAmount: number;
+    customerPaidAmount: number;
+    saleBalanceAmount: number;
+    ifoodReceivableAmount: number;
+    storeReceivedAmount: number;
+  };
+  payments?: Array<{
+    providerPaymentKey: string;
+    providerMethod: string;
+    mappedMethod: NormalizedHistoricalSale["paymentMethod"] | null;
+    paymentType: string | null;
+    liability: string;
+    amount: number;
+    currency: string;
+    brand: string | null;
+    nsuMasked: string | null;
+    acquirerDocumentMasked: string | null;
+    installments: Array<{
+      reference: string;
+      sequence: number | null;
+      amount: number;
+      expectedPaymentDate: string | null;
+      status: string | null;
+      settledAt: string | null;
+    }>;
+  }>;
+  mappingState?: { reviewRequired: boolean; unknownPaymentMethods: string[] };
 }
 
 @Injectable()
@@ -124,6 +165,12 @@ export class HistoricalOrderImportService {
     sale: NormalizedHistoricalSale,
     options: NormalizedHistoricalSaleImportOptions = {}
   ) {
+    if (
+      sale.provider === "IFOOD" &&
+      (!options.fixedProductId || options.strategy !== "FIXED_PRODUCT")
+    ) {
+      throw new BadRequestException("Vendas iFood historicas exigem um produto consolidado");
+    }
     const amount = new Prisma.Decimal(sale.grossAmount);
     const occurredAt = new Date(sale.occurredAt);
     if (!sale.externalSaleId.trim() || !Number.isFinite(sale.grossAmount) || amount.lte(0)) {
@@ -134,7 +181,11 @@ export class HistoricalOrderImportService {
     const paymentMethod = PaymentMethod[sale.paymentMethod];
     if (!paymentMethod) throw new BadRequestException("Meio de pagamento normalizado invalido");
     const paymentInstitution =
-      sale.provider === "PAGBANK" ? PaymentInstitution.PAGBANK : PaymentInstitution.MERCADO_PAGO;
+      sale.provider === "PAGBANK"
+        ? PaymentInstitution.PAGBANK
+        : sale.provider === "IFOOD"
+          ? PaymentInstitution.IFOOD
+          : PaymentInstitution.MERCADO_PAGO;
     const release = this.resolvePaymentRelease(
       occurredAt,
       sale.expectedReleaseAt ? new Date(sale.expectedReleaseAt) : undefined,
@@ -143,7 +194,10 @@ export class HistoricalOrderImportService {
     const row: ParsedImportRow = {
       rowNumber: 1,
       date: occurredAt,
-      description: `${sale.provider} ${sale.providerMovementId}`,
+      description:
+        sale.provider === "IFOOD"
+          ? `Venda financeira iFood consolidada ${sale.providerMovementId}`
+          : `${sale.provider} ${sale.providerMovementId}`,
       amount,
       feeAmount: sale.feeAmount === undefined ? undefined : new Prisma.Decimal(sale.feeAmount),
       netAmount: sale.netAmount === undefined ? undefined : new Prisma.Decimal(sale.netAmount),
@@ -260,7 +314,12 @@ export class HistoricalOrderImportService {
           const created = await transaction.order.create({
             data: {
               tenantId,
-              source: layout.endsWith("_API") ? OrderSource.API : OrderSource.IMPORT,
+              source:
+                layout === "IFOOD_API"
+                  ? OrderSource.IMPORT
+                  : layout.endsWith("_API")
+                    ? OrderSource.API
+                    : OrderSource.IMPORT,
               publicCode,
               status: OrderStatus.DELIVERED,
               total: row.amount,
@@ -1110,6 +1169,7 @@ function paymentInstitutionLabel(value: PaymentInstitution | null): string | nul
   return {
     PAGBANK: "PagBank",
     MERCADO_PAGO: "Mercado Pago",
+    IFOOD: "iFood",
     DINHEIRO: "Dinheiro",
     CAIXA_LOCAL: "Caixa Local",
   }[value];

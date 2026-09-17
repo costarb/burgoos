@@ -338,8 +338,8 @@ export function OrdersClient({
                                   assignment: result.assignment,
                                   version: result.version,
                                 }
-                              : candidate,
-                          ),
+                              : candidate
+                          )
                         )
                       }
                       target="orders"
@@ -544,6 +544,7 @@ function paymentInstitutionLabel(value: PaymentInstitution | null): string {
   const labels: Record<PaymentInstitution, string> = {
     PAGBANK: "PagBank",
     MERCADO_PAGO: "Mercado Pago",
+    IFOOD: "iFood",
     DINHEIRO: "Dinheiro",
     CAIXA_LOCAL: "Caixa local",
   };

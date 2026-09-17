@@ -77,6 +77,9 @@ describe("SalesImportHistoryService", () => {
       },
       oAuthAuthorizationAttempt: { findMany: vi.fn().mockResolvedValue([]), deleteMany: vi.fn() },
       providerNotification: { findMany: vi.fn().mockResolvedValue([]), deleteMany: vi.fn() },
+      externalFinancialSale: { findMany: vi.fn().mockResolvedValue([]), updateMany: vi.fn() },
+      externalFinancialEvent: { findMany: vi.fn().mockResolvedValue([]), updateMany: vi.fn() },
+      externalSettlement: { findMany: vi.fn().mockResolvedValue([]), updateMany: vi.fn() },
     } as never, undefined, undefined, { get: vi.fn((key) => key === "RETENTION_BATCH_SIZE" ? 2 : 5_000) } as never);
     await expect(service.purgeExpired(new Date("2026-07-18T00:00:00.000Z"))).resolves.toBe(2);
     expect(deleteMany).toHaveBeenCalledWith({

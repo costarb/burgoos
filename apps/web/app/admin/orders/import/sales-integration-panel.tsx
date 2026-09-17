@@ -21,6 +21,7 @@ import type {
 import React, { FormEvent, useEffect, useState } from "react";
 import { SalesProviderSelector } from "./sales-provider-selector";
 import { MercadoPagoConnectionPanel } from "./mercado-pago-connection-panel";
+import { IfoodFinancialPanel } from "./ifood-financial-panel";
 
 export function SalesRunSummary({
   run,
@@ -233,6 +234,14 @@ export function SalesIntegrationPanel({
           token={token}
           integration={integration}
           onChange={setIntegration}
+        />
+      ) : selectedProvider === "IFOOD" ? (
+        <IfoodFinancialPanel
+          token={token}
+          products={products}
+          integration={integration}
+          onIntegrationChange={setIntegration}
+          onCompleted={refresh}
         />
       ) : (
         <>

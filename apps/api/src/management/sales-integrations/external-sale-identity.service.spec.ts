@@ -54,4 +54,57 @@ describe("ExternalSaleIdentityService", () => {
       })
     );
   });
+
+  it("attaches an existing iFood operational order in the same tenant, merchant and environment", async () => {
+    const findFirst = vi.fn().mockResolvedValue({ orderId: "operational-order" });
+    const upsert = vi.fn();
+    const service = new ExternalSaleIdentityService({
+      platformOrderLink: { findFirst },
+      externalSaleIdentity: { upsert },
+    } as never);
+    const result = await service.attachOperationalIfoodOrder(
+      {
+        tenantId: "tenant",
+        provider: "IFOOD",
+        environment: "TEST",
+        integrationId: "sales-integration",
+        externalSaleId: "external-order",
+      },
+      "merchant",
+      "API"
+    );
+    expect(findFirst).toHaveBeenCalledWith({
+      where: {
+        tenantId: "tenant",
+        provider: "IFOOD",
+        externalMerchantId: "merchant",
+        externalOrderId: "external-order",
+        integration: { environment: "TEST" },
+      },
+      select: { orderId: true },
+    });
+    expect(upsert).toHaveBeenCalledWith(
+      expect.objectContaining({
+        create: expect.objectContaining({ orderId: "operational-order" }),
+        update: expect.objectContaining({ orderId: "operational-order" }),
+      })
+    );
+    expect(result).toBe("operational-order");
+  });
+
+  it("does not claim a historical identity when no matching operational order exists", async () => {
+    const upsert = vi.fn();
+    const service = new ExternalSaleIdentityService({
+      platformOrderLink: { findFirst: vi.fn().mockResolvedValue(null) },
+      externalSaleIdentity: { upsert },
+    } as never);
+    await expect(
+      service.attachOperationalIfoodOrder(
+        { tenantId: "tenant", provider: "IFOOD", externalSaleId: "sale" },
+        "merchant",
+        "API"
+      )
+    ).resolves.toBeNull();
+    expect(upsert).not.toHaveBeenCalled();
+  });
 });
