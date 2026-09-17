@@ -9,6 +9,25 @@ $repoRoot = (Resolve-Path (Join-Path $PSScriptRoot "..")).Path
 $runDirectory = Join-Path $repoRoot ".local\run"
 $stopScript = Join-Path $PSScriptRoot "stop-local.ps1"
 
+function Import-DotEnv([string]$Path) {
+  if (-not (Test-Path -LiteralPath $Path)) { return }
+  foreach ($line in Get-Content -LiteralPath $Path) {
+    $trimmed = $line.Trim()
+    if (-not $trimmed -or $trimmed.StartsWith("#")) { continue }
+    $separatorIndex = $trimmed.IndexOf("=")
+    if ($separatorIndex -lt 1) { continue }
+    $key = $trimmed.Substring(0, $separatorIndex).Trim()
+    $value = $trimmed.Substring($separatorIndex + 1).Trim().Trim('"').Trim("'")
+    # npm.cmd/ts-node inherit this process's environment, so child dev servers see
+    # DATABASE_URL, JWT secrets, etc. without each needing its own .env lookup.
+    if (-not (Test-Path "Env:$key")) {
+      [System.Environment]::SetEnvironmentVariable($key, $value, "Process")
+    }
+  }
+}
+
+Import-DotEnv (Join-Path $repoRoot ".env")
+
 function Get-ListeningProcessId([int]$Port) {
   $connection = Get-NetTCPConnection -State Listen -LocalPort $Port -ErrorAction SilentlyContinue |
     Select-Object -First 1

@@ -49,7 +49,27 @@ describe("POS migration compatibility", () => {
     };
     const findMany = vi.fn().mockResolvedValue([historicalOrder]);
     const count = vi.fn().mockResolvedValue(1);
-    const service = new SalesReportService({ order: { findMany, count } } as never);
+    const summaryRow = {
+      dimensionKey: undefined,
+      orderCount: BigInt(1),
+      grossRevenue: new Prisma.Decimal("25.00"),
+      acquiredNetRevenue: new Prisma.Decimal("24.00"),
+      releasedNetRevenue: new Prisma.Decimal("24.00"),
+      receivableNetAmount: new Prisma.Decimal("0"),
+      paymentFeeAmount: new Prisma.Decimal("1.00"),
+    };
+    const service = new SalesReportService({
+      $queryRaw: vi
+        .fn()
+        .mockResolvedValueOnce([summaryRow])
+        .mockResolvedValueOnce([{ ...summaryRow, dimensionKey: "2026-07-18" }])
+        .mockResolvedValueOnce([])
+        .mockResolvedValueOnce([])
+        .mockResolvedValueOnce([])
+        .mockResolvedValueOnce([]),
+      externalFinancialSale: { findMany: vi.fn().mockResolvedValue([]) },
+      order: { findMany, count },
+    } as never);
     const report = await service.getReport("tenant-1", {
       start: "2026-07-18",
       end: "2026-07-18",

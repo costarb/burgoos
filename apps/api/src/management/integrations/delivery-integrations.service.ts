@@ -56,9 +56,10 @@ export class DeliveryIntegrationsService {
 
     const integration = await this.prisma.deliveryIntegration.upsert({
       where: {
-        tenantId_provider: {
+        tenantId_provider_environment: {
           tenantId,
           provider: dto.provider,
+          environment: dto.environment ?? "PRODUCTION",
         },
       },
       update: {
@@ -72,6 +73,7 @@ export class DeliveryIntegrationsService {
       create: {
         tenantId,
         provider: dto.provider,
+        environment: dto.environment ?? "PRODUCTION",
         displayName: dto.displayName,
         externalMerchantId: dto.externalMerchantId ?? null,
         orderPlatformId: dto.orderPlatformId,
@@ -454,6 +456,7 @@ export class DeliveryIntegrationsService {
   private toResponse(integration: {
     id: string;
     provider: DeliveryProvider;
+    environment: "TEST" | "PRODUCTION";
     displayName: string;
     status: string;
     externalMerchantId: string | null;
@@ -477,6 +480,7 @@ export class DeliveryIntegrationsService {
     return {
       id: integration.id,
       provider: integration.provider,
+      environment: integration.environment,
       displayName: integration.displayName,
       status: integration.status,
       externalMerchantId: integration.externalMerchantId,
@@ -523,5 +527,4 @@ export class DeliveryIntegrationsService {
       ? "CENTRALIZED"
       : "DISTRIBUTED";
   }
-
 }

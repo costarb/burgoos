@@ -3,6 +3,7 @@ import {
   ConflictException,
   Injectable,
   NotFoundException,
+  Optional,
 } from "@nestjs/common";
 import {
   ExternalMovementStatus,
@@ -17,6 +18,7 @@ import { SalesIntegrationService } from "./sales-integration.service";
 import { SalesProviderRegistry } from "./sales-provider.registry";
 import { ProviderTransactionStateService } from "./provider-transaction-state.service";
 import { IntegrationAuditService } from "./integration-audit.service";
+import { IfoodFinancialCredentialService } from "./ifood/ifood-financial-credential.service";
 
 const EMPTY_COUNTS = {
   found: 0,
@@ -26,6 +28,10 @@ const EMPTY_COUNTS = {
   imported: 0,
   failed: 0,
   blockedDays: 0,
+  existingOrders: 0,
+  historicalCandidates: 0,
+  reconciled: 0,
+  unknown: 0,
 };
 
 @Injectable()
@@ -38,7 +44,8 @@ export class SalesImportPreviewService {
     private readonly transactionStates: ProviderTransactionStateService = {
       upsertFromMovement: async () => null,
     } as unknown as ProviderTransactionStateService,
-    private readonly audit?: IntegrationAuditService
+    private readonly audit?: IntegrationAuditService,
+    @Optional() private readonly ifoodCredentials?: IfoodFinancialCredentialService
   ) {}
 
   async create(
@@ -50,7 +57,10 @@ export class SalesImportPreviewService {
     const start = new Date(`${dto.startDate}T00:00:00.000Z`);
     const end = new Date(`${dto.endDate}T00:00:00.000Z`);
     const days = Math.floor((end.getTime() - start.getTime()) / 86400000) + 1;
-    const { integration } = await this.integrations.getCredential(tenantId, dto.integrationId);
+    const integration =
+      typeof this.integrations.get === "function"
+        ? await this.integrations.get(tenantId, dto.integrationId)
+        : (await this.integrations.getCredential(tenantId, dto.integrationId)).integration;
     const adapter = this.registry.get(integration.provider);
     if (days < 1 || days > adapter.capabilities.maxPeriodDays)
       throw new BadRequestException(
@@ -95,22 +105,31 @@ export class SalesImportPreviewService {
       },
     });
     const credential = run.integration.credentials[0];
-    if (!credential || (run.provider === "PAGBANK" && !run.integration.externalMerchantId))
+    if (
+      (run.provider !== "IFOOD" && !credential) ||
+      (run.provider === "PAGBANK" && !run.integration.externalMerchantId)
+    )
       throw new ConflictException("Configuracao incompleta");
     const adapter = this.registry.get(run.provider);
     const token =
-      typeof this.integrations.getCredential === "function"
-        ? (await this.integrations.getCredential(tenantId, run.integrationId)).token
-        : this.credentialToken(credential.secretCiphertext);
+      run.provider === "IFOOD"
+        ? (await this.requiredIfoodCredentials().getCredential(tenantId, run.integrationId))
+            .accessToken
+        : typeof this.integrations.getCredential === "function"
+          ? (await this.integrations.getCredential(tenantId, run.integrationId)).token
+          : this.credentialToken(credential!.secretCiphertext);
     const todayText = businessDate(new Date());
     const today = new Date(`${todayText}T00:00:00.000Z`);
     const effectiveEnd = run.endDate < today ? run.endDate : today;
     const prefetched =
-      run.provider === "MERCADO_PAGO" && run.startDate <= effectiveEnd
+      (run.provider === "MERCADO_PAGO" || run.provider === "IFOOD") && run.startDate <= effectiveEnd
         ? await adapter.fetchRange({
             startDate: run.startDate.toISOString().slice(0, 10),
             endDate: effectiveEnd.toISOString().slice(0, 10),
-            merchantId: `${tenantId}:${run.integrationId}`,
+            merchantId:
+              run.provider === "MERCADO_PAGO"
+                ? `${tenantId}:${run.integrationId}`
+                : (run.integration.externalMerchantId ?? ""),
             credential: token,
           })
         : null;
@@ -202,6 +221,11 @@ export class SalesImportPreviewService {
           if (status === "NEW") counts.new += 1;
           else if (status === "DUPLICATE") counts.duplicate += 1;
           else counts.rejected += 1;
+          if (run.provider === "IFOOD") {
+            if (status === "DUPLICATE") counts.existingOrders += 1;
+            else if (status === "NEW") counts.historicalCandidates += 1;
+            else counts.unknown += 1;
+          }
           await this.prisma.externalSalesMovement.create({
             data: {
               tenantId,
@@ -299,10 +323,16 @@ export class SalesImportPreviewService {
       return decrypted;
     }
   }
+
+  private requiredIfoodCredentials(): IfoodFinancialCredentialService {
+    if (!this.ifoodCredentials)
+      throw new ConflictException("Ponte de credencial iFood indisponivel");
+    return this.ifoodCredentials;
+  }
 }
 
 export function isDateBlockedForProvider(
-  _provider: "PAGBANK" | "MERCADO_PAGO",
+  _provider: "PAGBANK" | "MERCADO_PAGO" | "IFOOD",
   date: string,
   today: string
 ): boolean {

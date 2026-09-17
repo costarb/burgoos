@@ -53,7 +53,9 @@ export class IntegrationSecretService {
     return Object.fromEntries(
       Object.entries(value).map(([key, item]) => [
         key,
-        /secret|token|password|authorization|code|verifier|signature/i.test(key)
+        /secret|token|password|authorization|code|verifier|signature|document|bank|nsu|cpf|cnpj|iban|agency|account/i.test(
+          key
+        )
           ? "********"
           : this.redact(item),
       ])

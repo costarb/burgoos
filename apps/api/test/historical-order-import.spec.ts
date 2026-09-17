@@ -7,7 +7,7 @@ const tenantId = "11111111-1111-4111-8111-111111111111";
 describe("historical order payment release import", () => {
   const prismaMock = {
     product: { findMany: vi.fn() },
-    order: { findMany: vi.fn(), create: vi.fn() },
+    order: { findMany: vi.fn(), count: vi.fn(), create: vi.fn() },
     orderPlatform: { upsert: vi.fn() },
     paymentInstitutionConfiguration: { findMany: vi.fn(), findFirst: vi.fn() },
     externalSaleIdentity: { create: vi.fn(), update: vi.fn(), deleteMany: vi.fn() },
@@ -30,6 +30,7 @@ describe("historical order payment release import", () => {
     prismaMock.paymentInstitutionConfiguration.findMany.mockResolvedValue([]);
     prismaMock.paymentInstitutionConfiguration.findFirst.mockResolvedValue(null);
     prismaMock.order.findMany.mockResolvedValue([]);
+    prismaMock.order.count.mockResolvedValue(0);
     prismaMock.orderPlatform.upsert.mockResolvedValue({
       id: "33333333-3333-4333-8333-333333333333",
     });
@@ -190,5 +191,35 @@ describe("historical order payment release import", () => {
       })
     ).rejects.toThrow(/normalizada invalida/);
     expect(prismaMock.order.create).not.toHaveBeenCalled();
+  });
+
+  it("requires and records a fixed consolidated product for historical iFood sales", async () => {
+    const sale = {
+      provider: "IFOOD" as const,
+      channel: "API" as const,
+      providerMovementId: "ifood-order-1",
+      externalSaleId: "ifood-order-1",
+      occurredAt: "2026-09-01T23:30:00.000Z",
+      grossAmount: 50,
+      paymentMethod: "PIX" as const,
+    };
+    await expect(service.importNormalizedSale(tenantId, sale)).rejects.toThrow(
+      /produto consolidado/
+    );
+    const result = await service.importNormalizedSale(tenantId, sale, {
+      strategy: "FIXED_PRODUCT",
+      fixedProductId: "22222222-2222-4222-8222-222222222222",
+      orderPlatformName: "IFOOD",
+    });
+    expect(prismaMock.order.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        source: "IMPORT",
+        status: "DELIVERED",
+        total: new Prisma.Decimal(50),
+        paymentInstitution: "IFOOD",
+        notes: expect.stringContaining("Venda financeira iFood consolidada"),
+      }),
+    });
+    expect(result.importedCount).toBe(1);
   });
 });

@@ -351,6 +351,7 @@ function paymentInstitutionLabel(value: PaymentInstitution | null): string | nul
   return {
     PAGBANK: "PagBank",
     MERCADO_PAGO: "Mercado Pago",
+    IFOOD: "iFood",
     DINHEIRO: "Dinheiro",
     CAIXA_LOCAL: "Caixa Local",
   }[value];

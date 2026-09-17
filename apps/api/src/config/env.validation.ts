@@ -38,6 +38,8 @@ const INTEGER_DEFAULTS = {
   EXPORT_BATCH_SIZE: 250,
   RETENTION_BATCH_SIZE: 250,
   RETENTION_DEADLINE_MS: 5_000,
+  IFOOD_FINANCIAL_TIMEOUT_MS: 15_000,
+  IFOOD_FINANCIAL_RAW_PAYLOAD_RETENTION_DAYS: 180,
 } as const;
 
 export function validateEnvironment(input: Environment): Environment {
@@ -56,18 +58,23 @@ export function validateEnvironment(input: Environment): Environment {
   for (const key of DURABLE_HANDLER_FLAGS) {
     env[key] = booleanString(env[key], key, "false");
   }
+  env.IFOOD_FINANCIAL_HOMOLOGATION = booleanString(
+    env.IFOOD_FINANCIAL_HOMOLOGATION,
+    "IFOOD_FINANCIAL_HOMOLOGATION",
+    "false"
+  );
 
   const warning = env.MEMORY_WARNING_RSS_MB as number;
   const high = env.MEMORY_HIGH_RSS_MB as number;
   const peak = env.MEMORY_PEAK_RSS_MB as number;
   if (!(warning < high && high < peak && peak < 512)) {
-    throw new Error(
-      "Memory RSS thresholds must satisfy warning < high < peak < 512 MB"
-    );
+    throw new Error("Memory RSS thresholds must satisfy warning < high < peak < 512 MB");
   }
 
   env.API_BODY_LIMIT = nonEmpty(env.API_BODY_LIMIT) ? env.API_BODY_LIMIT.trim() : "2mb";
-  env.ASSET_LOCAL_ROOT = nonEmpty(env.ASSET_LOCAL_ROOT) ? env.ASSET_LOCAL_ROOT.trim() : "tmp/assets";
+  env.ASSET_LOCAL_ROOT = nonEmpty(env.ASSET_LOCAL_ROOT)
+    ? env.ASSET_LOCAL_ROOT.trim()
+    : "tmp/assets";
 
   if (env.ASSET_STORAGE_PROVIDER === "s3") {
     for (const key of ["S3_REGION", "S3_BUCKET"] as const) {
@@ -91,6 +98,7 @@ export function validateEnvironment(input: Environment): Environment {
   validateHttpUrl(env, "MERCADO_PAGO_POST_CALLBACK_URL");
   validateHttpUrl(env, "MERCADO_PAGO_API_BASE_URL");
   validateHttpUrl(env, "PAGBANK_EDI_BASE_URL");
+  validateHttpUrl(env, "IFOOD_FINANCIAL_BASE_URL");
 
   return env;
 }

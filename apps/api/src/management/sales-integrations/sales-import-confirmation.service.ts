@@ -1,4 +1,4 @@
-import { ConflictException, Injectable, NotFoundException } from "@nestjs/common";
+import { ConflictException, Injectable, NotFoundException, Optional } from "@nestjs/common";
 import { PaymentReleaseSource, SalesImportRunStatus } from "@prisma/client";
 import {
   HistoricalOrderImportService,
@@ -6,13 +6,17 @@ import {
 } from "../../ordering/historical-order-import.service";
 import { PrismaService } from "../../platform/database/prisma.service";
 import { ExternalSaleIdentityService } from "./external-sale-identity.service";
+import { IntegrationAuditService } from "./integration-audit.service";
+import { IfoodFinancialSaleService } from "./ifood/ifood-financial-sale.service";
 
 @Injectable()
 export class SalesImportConfirmationService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly historical: HistoricalOrderImportService,
-    private readonly identities: ExternalSaleIdentityService
+    private readonly identities: ExternalSaleIdentityService,
+    @Optional() private readonly ifoodFinancialSales?: IfoodFinancialSaleService,
+    @Optional() private readonly audit?: IntegrationAuditService
   ) {}
 
   async confirm(tenantId: string, runId: string, resume = false) {
@@ -51,6 +55,9 @@ export class SalesImportConfirmationService {
     let imported = Number(counts.imported ?? 0);
     let failed = 0;
     let duplicate = Number(counts.duplicate ?? 0);
+    let enriched = Number(counts.enriched ?? 0);
+    let created = Number(counts.created ?? 0);
+    let reconciled = Number(counts.reconciled ?? 0);
 
     for (const movement of movements) {
       const sale = movement.normalizedData as unknown as NormalizedHistoricalSale;
@@ -65,6 +72,24 @@ export class SalesImportConfirmationService {
         integrationId: run.integrationId,
         externalSaleId: movement.externalSaleId,
       };
+      if (run.provider === "IFOOD") {
+        const existingOrderId = await this.identities.attachOperationalIfoodOrder(
+          identityKey,
+          run.integration.externalMerchantId ?? "",
+          run.channel
+        );
+        if (existingOrderId) {
+          await this.reconcileExistingOrder(identityKey, sale);
+          await this.prisma.externalSalesMovement.update({
+            where: { id: movement.id },
+            data: { status: "IMPORTED", orderId: existingOrderId, importedAt: new Date() },
+          });
+          await this.persistIfoodSale(run, sale, existingOrderId);
+          enriched += 1;
+          reconciled += 1;
+          continue;
+        }
+      }
       if (movement.status === "DUPLICATE") {
         await this.reconcileExistingOrder(identityKey, sale);
         continue;
@@ -82,13 +107,31 @@ export class SalesImportConfirmationService {
         const result = await this.historical.importNormalizedSale(tenantId, sale, {
           strategy: run.strategy as "PRICE_WEIGHTED" | "FIXED_PRODUCT",
           fixedProductId: run.fixedProductId ?? undefined,
-          orderPlatformName: run.provider === "MERCADO_PAGO" ? "MERCADO_PAGO" : "PAGBANK_EDI",
-          onOrderCreated: (client, orderId) =>
-            this.identities.linkOrder(client, identityKey, movement.id, orderId),
+          orderPlatformName:
+            run.provider === "MERCADO_PAGO"
+              ? "MERCADO_PAGO"
+              : run.provider === "IFOOD"
+                ? "IFOOD"
+                : "PAGBANK_EDI",
+          onOrderCreated: async (client, orderId) => {
+            await this.identities.linkOrder(client, identityKey, movement.id, orderId);
+            if (run.provider === "IFOOD" && this.ifoodFinancialSales) {
+              await this.ifoodFinancialSales.persist({
+                tenantId,
+                integrationId: run.integrationId,
+                environment: run.integration.environment,
+                externalMerchantId: run.integration.externalMerchantId ?? "",
+                orderId,
+                sale,
+                client,
+              });
+            }
+          },
         });
         const orderId = result.imported[0]?.orderId;
         if (!orderId) throw new Error("Venda nao gerou pedido");
         imported += 1;
+        created += 1;
       } catch {
         failed += 1;
         await this.identities.release(identityKey);
@@ -105,20 +148,31 @@ export class SalesImportConfirmationService {
       }
     }
 
-    return this.prisma.salesImportRun.update({
+    const completed = await this.prisma.salesImportRun.update({
       where: { id: runId },
       data: {
         status: failed > 0 ? "COMPLETED_WITH_ERRORS" : "COMPLETED",
-        counts: { ...counts, imported, failed, duplicate },
+        counts: { ...counts, imported, failed, duplicate, enriched, created, reconciled },
         completedAt: new Date(),
       },
     });
+    if (run.provider === "IFOOD" && this.audit) {
+      await this.audit.record({
+        tenantId,
+        integrationId: run.integrationId,
+        actorUserId: run.requestedByUserId,
+        action: "IFOOD_FINANCIAL_IMPORT_CONFIRMED",
+        outcome: completed.status,
+        metadata: { runId },
+      });
+    }
+    return completed;
   }
 
   private async reconcileExistingOrder(
     identityKey: {
       tenantId: string;
-      provider: "PAGBANK" | "MERCADO_PAGO";
+      provider: "PAGBANK" | "MERCADO_PAGO" | "IFOOD";
       environment: "TEST" | "PRODUCTION";
       integrationId: string;
       externalSaleId: string;
@@ -151,6 +205,27 @@ export class SalesImportConfirmationService {
             }
           : {}),
       },
+    });
+  }
+
+  private async persistIfoodSale(
+    run: {
+      provider: string;
+      tenantId: string;
+      integrationId: string;
+      integration: { environment: "TEST" | "PRODUCTION"; externalMerchantId: string | null };
+    },
+    sale: NormalizedHistoricalSale,
+    orderId: string
+  ) {
+    if (run.provider !== "IFOOD" || !this.ifoodFinancialSales) return;
+    await this.ifoodFinancialSales.persist({
+      tenantId: run.tenantId,
+      integrationId: run.integrationId,
+      environment: run.integration.environment,
+      externalMerchantId: run.integration.externalMerchantId ?? "",
+      orderId,
+      sale,
     });
   }
 }

@@ -57,6 +57,7 @@ export interface DeliveryProviderCapabilities {
 export interface DeliveryIntegrationSummary {
   id: string;
   provider: DeliveryProvider;
+  environment?: "TEST" | "PRODUCTION";
   displayName: string;
   status: DeliveryIntegrationStatus;
   externalMerchantId: string | null;

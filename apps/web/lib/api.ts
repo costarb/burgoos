@@ -116,6 +116,7 @@ import type {
   PaymentExceptionDetail,
   ResolvePaymentExceptionInput,
   ShiftCloseSummary,
+  IfoodFinancialReadiness,
 } from "@burgoos/types";
 import { clearAuthSession, readAuthSession } from "./auth-client";
 import { buildSalesReportSearchParams } from "./sales-report-query";
@@ -2402,15 +2403,20 @@ export function listSalesIntegrations(token: string): Promise<SalesIntegrationVi
   return fetchAdmin(token, "/api/admin/sales-integrations");
 }
 
+export function listDeliveryIntegrations(token: string): Promise<DeliveryIntegrationDetail[]> {
+  return fetchAdmin(token, "/api/admin/integrations/delivery");
+}
+
 export function createSalesIntegration(
   token: string,
   payload: {
-    provider: "PAGBANK" | "MERCADO_PAGO";
+    provider: "PAGBANK" | "MERCADO_PAGO" | "IFOOD";
     channel: "API";
     displayName: string;
     externalMerchantId?: string;
     environment?: "TEST" | "PRODUCTION";
     credentialMode?: "PROVIDER_TOKEN" | "OAUTH" | "FIXED_TOKEN";
+    deliveryIntegrationId?: string;
   }
 ): Promise<SalesIntegrationView> {
   return fetchAdmin(token, "/api/admin/sales-integrations", {
@@ -2423,12 +2429,13 @@ export function updateSalesIntegration(
   token: string,
   integrationId: string,
   payload: {
-    provider: "PAGBANK" | "MERCADO_PAGO";
+    provider: "PAGBANK" | "MERCADO_PAGO" | "IFOOD";
     channel: "API";
     displayName: string;
     externalMerchantId?: string;
     environment?: "TEST" | "PRODUCTION";
     credentialMode?: "PROVIDER_TOKEN" | "OAUTH" | "FIXED_TOKEN";
+    deliveryIntegrationId?: string;
   }
 ): Promise<SalesIntegrationView> {
   return fetchAdmin(token, `/api/admin/sales-integrations/${integrationId}`, {
@@ -2550,4 +2557,100 @@ export function listSalesImportMovements(
     token,
     `/api/admin/sales-import-runs/${runId}/movements?page=${page}&pageSize=${pageSize}`
   );
+}
+
+export interface IfoodFinancialReconciliationRunView {
+  id: string;
+  status: "PENDING" | "FETCHING" | "COMPLETED" | "PARTIAL" | "FAILED";
+  trigger: "MANUAL" | "DAILY" | "HOMOLOGATION";
+  startDate: string;
+  endDate: string;
+  counts: { sales: number; events: number; settlements: number; divergent: number };
+  errorCode: string | null;
+  errorMessage: string | null;
+}
+
+export interface IfoodReconciliationFileView {
+  requestId: string;
+  competence: string;
+  status: "REQUESTED" | "PROCESSING" | "READY" | "EXPIRED" | "FAILED";
+  reused: boolean;
+  orderCount: number | null;
+  lineCount: number | null;
+  expiresAt: string | null;
+  errorCode: string | null;
+  errorMessage: string | null;
+}
+
+export function createIfoodFinancialReconciliation(
+  token: string,
+  integrationId: string,
+  startDate: string,
+  endDate: string
+): Promise<IfoodFinancialReconciliationRunView> {
+  return fetchAdmin(
+    token,
+    `/api/admin/sales-integrations/${integrationId}/financial-reconciliations`,
+    { method: "POST", body: JSON.stringify({ startDate, endDate }) }
+  );
+}
+export function listIfoodFinancialReconciliations(
+  token: string,
+  integrationId: string
+): Promise<{ items: IfoodFinancialReconciliationRunView[] }> {
+  return fetchAdmin(
+    token,
+    `/api/admin/sales-integrations/${integrationId}/financial-reconciliations`
+  );
+}
+export function getIfoodFinancialReconciliation(
+  token: string,
+  integrationId: string,
+  runId: string
+): Promise<IfoodFinancialReconciliationRunView> {
+  return fetchAdmin(
+    token,
+    `/api/admin/sales-integrations/${integrationId}/financial-reconciliations/${runId}`
+  );
+}
+export function requestIfoodReconciliationFile(
+  token: string,
+  integrationId: string,
+  competence: string
+): Promise<IfoodReconciliationFileView> {
+  return fetchAdmin(token, `/api/admin/sales-integrations/${integrationId}/reconciliation-files`, {
+    method: "POST",
+    body: JSON.stringify({ competence }),
+  });
+}
+export function getIfoodReconciliationFile(
+  token: string,
+  integrationId: string,
+  requestId: string
+): Promise<IfoodReconciliationFileView> {
+  return fetchAdmin(
+    token,
+    `/api/admin/sales-integrations/${integrationId}/reconciliation-files/${encodeURIComponent(requestId)}`
+  );
+}
+export function getIfoodReconciliationFileDownloadUrl(
+  integrationId: string,
+  requestId: string
+): string {
+  return `/api/admin/sales-integrations/${integrationId}/reconciliation-files/${encodeURIComponent(requestId)}/download`;
+}
+
+export function getIfoodFinancialReadiness(
+  token: string,
+  integrationId: string
+): Promise<IfoodFinancialReadiness> {
+  return fetchAdmin(token, `/api/admin/sales-integrations/${integrationId}/ifood/readiness`);
+}
+export function revalidateIfoodFinancialReadiness(
+  token: string,
+  integrationId: string
+): Promise<IfoodFinancialReadiness> {
+  return fetchAdmin(token, `/api/admin/sales-integrations/${integrationId}/ifood/readiness`, {
+    method: "POST",
+  });
 }

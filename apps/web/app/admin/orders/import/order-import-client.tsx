@@ -389,6 +389,7 @@ function paymentInstitutionLabel(value: PaymentInstitution | null): string {
   const labels: Record<PaymentInstitution, string> = {
     PAGBANK: "PagBank",
     MERCADO_PAGO: "Mercado Pago",
+    IFOOD: "iFood",
     DINHEIRO: "Dinheiro",
     CAIXA_LOCAL: "Caixa local",
   };

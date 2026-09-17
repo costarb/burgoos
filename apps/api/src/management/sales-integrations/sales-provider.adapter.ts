@@ -1,4 +1,4 @@
-export type SalesProvider = "PAGBANK" | "MERCADO_PAGO";
+export type SalesProvider = "PAGBANK" | "MERCADO_PAGO" | "IFOOD";
 export type SalesInputChannel = "API" | "FILE" | "OTHER";
 export type ExternalMovementKind = "SALE" | "NON_SALE" | "UNKNOWN";
 export interface SalesProviderCapability {
@@ -18,7 +18,47 @@ export interface NormalizedHistoricalSale {
   grossAmount: number;
   netAmount?: number;
   feeAmount?: number;
-  paymentMethod: "PIX" | "PIX_MANUAL" | "DEBIT_CARD" | "CREDIT_CARD" | "DIGITAL_WALLET";
+  paymentMethod:
+    | "CASH"
+    | "PIX"
+    | "PIX_MANUAL"
+    | "CARD_ON_DELIVERY"
+    | "DEBIT_CARD"
+    | "CREDIT_CARD"
+    | "VOUCHER"
+    | "DIGITAL_WALLET";
+  providerMethod?: string;
+  financial?: {
+    bagAmount: number;
+    deliveryFeeAmount: number;
+    serviceFeeAmount: number;
+    benefitsAmount: number;
+    customerPaidAmount: number;
+    saleBalanceAmount: number;
+    ifoodReceivableAmount: number;
+    storeReceivedAmount: number;
+  };
+  payments?: Array<{
+    providerPaymentKey: string;
+    providerMethod: string;
+    mappedMethod: NormalizedHistoricalSale["paymentMethod"] | null;
+    paymentType: string | null;
+    liability: string;
+    amount: number;
+    currency: string;
+    brand: string | null;
+    nsuMasked: string | null;
+    acquirerDocumentMasked: string | null;
+    installments: Array<{
+      reference: string;
+      sequence: number | null;
+      amount: number;
+      expectedPaymentDate: string | null;
+      status: string | null;
+      settledAt: string | null;
+    }>;
+  }>;
+  mappingState?: { reviewRequired: boolean; unknownPaymentMethods: string[] };
   installments?: number;
   paymentBrand?: string;
   expectedReleaseAt?: string;

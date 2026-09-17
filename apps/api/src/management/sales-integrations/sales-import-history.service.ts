@@ -32,6 +32,7 @@ export class SalesImportHistoryService {
     return {
       items: items.map((item) => ({
         ...item,
+        counts: this.previewCounts(item.counts),
         errorMessage: this.safeMessage(item.errorMessage),
         integration: {
           ...item.integration,
@@ -109,5 +110,19 @@ export class SalesImportHistoryService {
     if (!value || typeof value !== "object" || Array.isArray(value)) return null;
     const candidate = (value as Record<string, unknown>)[field];
     return typeof candidate === "string" ? candidate : null;
+  }
+
+  private previewCounts(value: unknown) {
+    const counts =
+      value && typeof value === "object" && !Array.isArray(value)
+        ? (value as Record<string, unknown>)
+        : {};
+    return {
+      ...counts,
+      existingOrders: Number(counts.existingOrders ?? 0),
+      historicalCandidates: Number(counts.historicalCandidates ?? 0),
+      reconciled: Number(counts.reconciled ?? 0),
+      unknown: Number(counts.unknown ?? 0),
+    };
   }
 }

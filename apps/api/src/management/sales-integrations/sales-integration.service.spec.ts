@@ -1,4 +1,4 @@
-import { ConflictException, NotFoundException } from "@nestjs/common";
+import { ConflictException, NotFoundException, UnprocessableEntityException } from "@nestjs/common";
 import { describe, expect, it, vi } from "vitest";
 import { SalesIntegrationService } from "./sales-integration.service";
 
@@ -88,6 +88,29 @@ describe("SalesIntegrationService", () => {
           createdByUserId: "actor",
           updatedByUserId: "actor",
         }),
+      })
+    );
+  });
+
+  it("rejects an iFood operational link from a different tenant or environment", async () => {
+    const findFirst = vi.fn().mockResolvedValue(null);
+    const service = new SalesIntegrationService(
+      { deliveryIntegration: { findFirst } } as never,
+      {} as never
+    );
+    await expect(
+      service.create("tenant", "actor", {
+        provider: "IFOOD",
+        channel: "API",
+        displayName: "iFood Financeiro",
+        externalMerchantId: "merchant",
+        deliveryIntegrationId: "11111111-1111-4111-8111-111111111111",
+        environment: "TEST",
+      })
+    ).rejects.toBeInstanceOf(UnprocessableEntityException);
+    expect(findFirst).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({ tenantId: "tenant", environment: "TEST" }),
       })
     );
   });

@@ -1,0 +1,324 @@
+openapi: 3.0.3
+info:
+  title: BurgoOS iFood Financial Administration
+  version: 0.1.0
+servers:
+  - url: /api
+paths:
+  /admin/sales-integrations/{integrationId}/ifood/readiness:
+    get:
+      summary: Get financial access and production readiness
+      security: [{ bearerAuth: [] }]
+      parameters: [{ $ref: "#/components/parameters/IntegrationId" }]
+      responses:
+        "200":
+          description: Readiness without secrets
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Readiness" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+        "404": { $ref: "#/components/responses/NotFound" }
+    post:
+      summary: Revalidate financial access
+      security: [{ bearerAuth: [] }]
+      parameters: [{ $ref: "#/components/parameters/IntegrationId" }]
+      responses:
+        "200":
+          description: Updated readiness
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Readiness" }
+        "409": { $ref: "#/components/responses/Conflict" }
+  /admin/sales-import-runs:
+    get:
+      summary: List tenant sales import runs
+      security: [{ bearerAuth: [] }]
+      responses:
+        "200":
+          description: Runs
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [items]
+                properties:
+                  items:
+                    type: array
+                    items: { $ref: "#/components/schemas/ImportRun" }
+    post:
+      summary: Start provider-neutral sales preview
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/CreateImport" }
+      responses:
+        "202":
+          description: Accepted
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ImportRun" }
+        "400": { $ref: "#/components/responses/Invalid" }
+        "409": { $ref: "#/components/responses/Conflict" }
+  /admin/sales-import-runs/{runId}:
+    get:
+      summary: Get preview progress
+      security: [{ bearerAuth: [] }]
+      parameters: [{ $ref: "#/components/parameters/RunId" }]
+      responses:
+        "200":
+          description: Run
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ImportRun" }
+        "404": { $ref: "#/components/responses/NotFound" }
+  /admin/sales-import-runs/{runId}/confirm:
+    post:
+      summary: Confirm enrichment and historical creation
+      security: [{ bearerAuth: [] }]
+      parameters: [{ $ref: "#/components/parameters/RunId" }]
+      responses:
+        "202":
+          description: Accepted
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ImportRun" }
+        "409": { $ref: "#/components/responses/Conflict" }
+  /admin/sales-import-runs/{runId}/movements:
+    get:
+      summary: List filtered movement outcomes for a run
+      security: [{ bearerAuth: [] }]
+      parameters: [{ $ref: "#/components/parameters/RunId" }]
+      responses:
+        "200":
+          description: Movements
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [items]
+                properties:
+                  items: { type: array, items: { type: object } }
+        "404": { $ref: "#/components/responses/NotFound" }
+  /admin/sales-integrations/{integrationId}/financial-reconciliations:
+    post:
+      summary: Start events and settlements reconciliation
+      security: [{ bearerAuth: [] }]
+      parameters: [{ $ref: "#/components/parameters/IntegrationId" }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/CreateReconciliation" }
+      responses:
+        "202":
+          description: Accepted
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ReconciliationRun" }
+        "409": { $ref: "#/components/responses/Conflict" }
+    get:
+      summary: List reconciliation history
+      security: [{ bearerAuth: [] }]
+      parameters: [{ $ref: "#/components/parameters/IntegrationId" }]
+      responses:
+        "200":
+          description: Runs
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [items]
+                properties:
+                  items:
+                    type: array
+                    items: { $ref: "#/components/schemas/ReconciliationRun" }
+  /admin/sales-integrations/{integrationId}/financial-reconciliations/{runId}:
+    get:
+      summary: Get reconciliation progress and divergence totals
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { $ref: "#/components/parameters/IntegrationId" }
+        - { $ref: "#/components/parameters/RunId" }
+      responses:
+        "200":
+          description: Reconciliation run
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ReconciliationRun" }
+        "404": { $ref: "#/components/responses/NotFound" }
+  /admin/sales-integrations/{integrationId}/reconciliation-files:
+    post:
+      summary: Request or reuse an on-demand monthly reconciliation file
+      security: [{ bearerAuth: [] }]
+      parameters: [{ $ref: "#/components/parameters/IntegrationId" }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/CreateReconciliationFile" }
+      responses:
+        "202":
+          description: File request accepted or reused
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ReconciliationFile" }
+        "409": { $ref: "#/components/responses/Conflict" }
+  /admin/sales-integrations/{integrationId}/reconciliation-files/{requestId}:
+    get:
+      summary: Get on-demand file generation status
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { $ref: "#/components/parameters/IntegrationId" }
+        - { $ref: "#/components/parameters/RequestId" }
+      responses:
+        "200":
+          description: Current file status
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ReconciliationFile" }
+        "404": { $ref: "#/components/responses/NotFound" }
+  /admin/sales-integrations/{integrationId}/reconciliation-files/{requestId}/download:
+    get:
+      summary: Obtain a fresh temporary download redirect for a ready file
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - { $ref: "#/components/parameters/IntegrationId" }
+        - { $ref: "#/components/parameters/RequestId" }
+      responses:
+        "302":
+          description: Redirect to temporary provider download URL
+        "409": { $ref: "#/components/responses/Conflict" }
+components:
+  securitySchemes:
+    bearerAuth: { type: http, scheme: bearer, bearerFormat: JWT }
+  parameters:
+    IntegrationId:
+      name: integrationId
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
+    RunId:
+      name: runId
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
+    RequestId:
+      name: requestId
+      in: path
+      required: true
+      schema: { type: string }
+  schemas:
+    CreateImport:
+      type: object
+      required: [integrationId, startDate, endDate, strategy]
+      properties:
+        integrationId: { type: string, format: uuid }
+        startDate: { type: string, format: date }
+        endDate: { type: string, format: date }
+        strategy: { type: string, enum: [PRICE_WEIGHTED, FIXED_PRODUCT] }
+        fixedProductId: { type: string, format: uuid }
+    ImportRun:
+      type: object
+      required: [id, provider, status, startDate, endDate, counts]
+      properties:
+        id: { type: string, format: uuid }
+        provider: { type: string, enum: [PAGBANK, MERCADO_PAGO, IFOOD] }
+        status:
+          type: string
+          enum:
+            [
+              PENDING,
+              FETCHING,
+              PREVIEW_READY,
+              PARTIALLY_READY,
+              IMPORTING,
+              COMPLETED,
+              COMPLETED_WITH_ERRORS,
+              FAILED,
+              CANCELLED,
+            ]
+        startDate: { type: string, format: date }
+        endDate: { type: string, format: date }
+        counts: { $ref: "#/components/schemas/Counts" }
+        errorCode: { type: string, nullable: true }
+        errorMessage: { type: string, nullable: true }
+    Counts:
+      type: object
+      additionalProperties: { type: integer, minimum: 0 }
+    Readiness:
+      type: object
+      required:
+        [integrationId, status, environment, merchantId, permissions, productionEnabled, checks]
+      properties:
+        integrationId: { type: string, format: uuid }
+        status:
+          {
+            type: string,
+            enum: [PENDING_PERMISSION, READY_TEST, READY_PRODUCTION, REQUIRES_ATTENTION],
+          }
+        environment: { type: string, enum: [TEST, PRODUCTION] }
+        merchantId: { type: string }
+        permissions: { type: array, items: { type: string } }
+        productionEnabled: { type: boolean }
+        lastValidatedAt: { type: string, format: date-time, nullable: true }
+        checks:
+          type: array
+          items:
+            type: object
+            required: [code, passed]
+            properties:
+              code: { type: string }
+              passed: { type: boolean }
+              message: { type: string, nullable: true }
+    CreateReconciliation:
+      type: object
+      required: [startDate, endDate]
+      properties:
+        startDate: { type: string, format: date }
+        endDate: { type: string, format: date }
+    CreateReconciliationFile:
+      type: object
+      required: [competence]
+      properties:
+        competence:
+          type: string
+          pattern: "^\\d{4}-(0[1-9]|1[0-2])$"
+    ReconciliationFile:
+      type: object
+      required: [requestId, competence, status, reused]
+      properties:
+        requestId: { type: string }
+        competence: { type: string }
+        status: { type: string, enum: [REQUESTED, PROCESSING, READY, EXPIRED, FAILED] }
+        reused: { type: boolean }
+        orderCount: { type: integer, minimum: 0, nullable: true }
+        lineCount: { type: integer, minimum: 0, nullable: true }
+        expiresAt: { type: string, format: date-time, nullable: true }
+        errorCode: { type: string, nullable: true }
+        errorMessage: { type: string, nullable: true }
+    ReconciliationRun:
+      type: object
+      required: [id, status, trigger, startDate, endDate, counts]
+      properties:
+        id: { type: string, format: uuid }
+        status: { type: string, enum: [PENDING, FETCHING, COMPLETED, PARTIAL, FAILED] }
+        trigger: { type: string, enum: [MANUAL, DAILY, HOMOLOGATION] }
+        startDate: { type: string, format: date }
+        endDate: { type: string, format: date }
+        counts:
+          type: object
+          required: [sales, events, settlements, divergent]
+          properties:
+            sales: { type: integer, minimum: 0 }
+            events: { type: integer, minimum: 0 }
+            settlements: { type: integer, minimum: 0 }
+            divergent: { type: integer, minimum: 0 }
+        errorCode: { type: string, nullable: true }
+        errorMessage: { type: string, nullable: true }
+  responses:
+    Invalid: { description: Invalid date range or strategy }
+    Forbidden: { description: User or provider permission denied }
+    NotFound: { description: Tenant-owned resource not found }
+    Conflict: { description: Integration not ready or overlapping operation }
