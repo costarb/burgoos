@@ -139,17 +139,17 @@ describe("PayablesClient filters", () => {
     });
 
     await renderClient();
-    changeSelect("Todas as categorias", "category-food");
+    changeMultiSelect("Categorias", "Insumos");
     await clickButton("Filtrar");
 
     expect(getPayablesMock).toHaveBeenCalledWith(
       expect.objectContaining({
-        categoryId: "category-food",
+        categoryIds: ["category-food"],
       })
     );
     expect(container.textContent).toContain("Nenhuma conta a pagar encontrada.");
     expect(container.textContent).toContain("R$ 0.00");
-    expect(selectByOption("Todas as categorias").value).toBe("category-food");
+    expect(buttonByAriaLabel("Categorias").getAttribute("aria-label")).toContain("Insumos");
   });
 
   it("keeps metric cards and consultation area visible", async () => {
@@ -207,9 +207,9 @@ describe("PayablesClient filters", () => {
     expect(getPayablesMock).toHaveBeenCalledWith({
       start: "",
       end: "",
-      status: "",
-      categoryId: "",
-      supplierId: "",
+      statuses: [],
+      categoryIds: [],
+      supplierIds: [],
       competenceMonth: "",
     });
     expect(container.querySelector('[role="dialog"]')).toBeNull();
@@ -235,9 +235,9 @@ describe("PayablesClient filters", () => {
     expect(getPayablesMock).toHaveBeenCalledWith({
       start: "",
       end: "",
-      status: "",
-      categoryId: "",
-      supplierId: "",
+      statuses: [],
+      categoryIds: [],
+      supplierIds: [],
       competenceMonth: "",
     });
     expect(container.querySelector('[role="dialog"]')).toBeNull();
@@ -255,13 +255,13 @@ describe("PayablesClient filters", () => {
 
   it("requests reusable async export with current filters", async () => {
     await renderClient();
-    changeSelect("Todas as categorias", "category-food");
+    changeMultiSelect("Categorias", "Insumos");
     await clickButton("CSV");
 
     expect(requestExportJobMock).toHaveBeenCalledWith("token", {
       context: "PAYABLES",
       format: "CSV",
-      filters: expect.objectContaining({ categoryId: "category-food" }),
+      filters: expect.objectContaining({ categoryIds: ["category-food"] }),
     });
     expect(container.textContent).toContain(
       "Arquivo CSV solicitado. Ele sera criado em paralelo e voce sera notificado quando estiver concluido."
@@ -285,23 +285,25 @@ describe("PayablesClient filters", () => {
       });
 
     await renderClient();
-    changeSelect("Todos os fornecedores", "supplier-market");
+    changeMultiSelect("Fornecedores", "Mercado Central");
     await clickButton("Filtrar");
-    await clickButton("Limpar");
+    await clickLastButton("Limpar");
 
     expect(getPayablesMock).toHaveBeenNthCalledWith(
       1,
       expect.objectContaining({
-        supplierId: "supplier-market",
+        supplierIds: ["supplier-market"],
       })
     );
     expect(getPayablesMock).toHaveBeenNthCalledWith(
       2,
       expect.objectContaining({
-        supplierId: "",
+        supplierIds: [],
       })
     );
-    expect(selectByOption("Todos os fornecedores").value).toBe("");
+    expect(buttonByAriaLabel("Fornecedores").getAttribute("aria-label")).toContain(
+      "Todos os fornecedores"
+    );
   });
 
   it("submits reference month and combined filters, then clears all controls", async () => {
@@ -321,29 +323,29 @@ describe("PayablesClient filters", () => {
     changeInput("month", "2026-06");
     changeInput("date", "2026-06-01", 0);
     changeInput("date", "2026-06-30", 1);
-    changeSelect("Todos os status", "OPEN");
-    changeSelect("Todas as categorias", "category-food");
-    changeSelect("Todos os fornecedores", "supplier-market");
+    changeMultiSelect("Status", "Aberta");
+    changeMultiSelect("Categorias", "Insumos");
+    changeMultiSelect("Fornecedores", "Mercado Central");
 
     await clickButton("Filtrar");
 
     expect(getPayablesMock).toHaveBeenNthCalledWith(1, {
       start: "2026-06-01",
       end: "2026-06-30",
-      status: "OPEN",
-      categoryId: "category-food",
-      supplierId: "supplier-market",
+      statuses: ["OPEN"],
+      categoryIds: ["category-food"],
+      supplierIds: ["supplier-market"],
       competenceMonth: "2026-06",
     });
 
-    await clickButton("Limpar");
+    await clickLastButton("Limpar");
 
     expect(getPayablesMock).toHaveBeenNthCalledWith(2, {
       start: "",
       end: "",
-      status: "",
-      categoryId: "",
-      supplierId: "",
+      statuses: [],
+      categoryIds: [],
+      supplierIds: [],
       competenceMonth: "",
     });
     expect(inputByType("month").value).toBe("");
@@ -357,11 +359,17 @@ describe("PayablesClient filters", () => {
     });
   }
 
-  function changeSelect(optionText: string, value: string) {
-    const select = selectByOption(optionText);
+  function changeMultiSelect(label: string, optionText: string) {
+    const trigger = buttonByAriaLabel(label);
     act(() => {
-      select.value = value;
-      select.dispatchEvent(new Event("change", { bubbles: true }));
+      trigger.click();
+    });
+    const option = [...container.querySelectorAll("label")].find((item) =>
+      item.textContent?.includes(optionText)
+    );
+    if (!option) throw new Error(`Multi-select option "${optionText}" not found`);
+    act(() => {
+      option.querySelector<HTMLInputElement>('input[type="checkbox"]')!.click();
     });
   }
 
@@ -380,17 +388,22 @@ describe("PayablesClient filters", () => {
     });
   }
 
-  function selectByOption(optionText: string): HTMLSelectElement {
-    const selects = [...container.querySelectorAll("select")];
-    const select = selects.find((item) =>
-      [...item.options].some((option) => option.textContent === optionText)
+  async function clickLastButton(label: string) {
+    const matches = [...container.querySelectorAll<HTMLButtonElement>("button")].filter(
+      (item) => item.textContent?.trim() === label
     );
+    await act(async () => {
+      matches.at(-1)?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+      await Promise.resolve();
+    });
+  }
 
-    if (!select) {
-      throw new Error(`Select with option "${optionText}" not found`);
-    }
-
-    return select;
+  function buttonByAriaLabel(label: string): HTMLButtonElement {
+    const result = [...container.querySelectorAll<HTMLButtonElement>("button")].find((item) =>
+      item.getAttribute("aria-label")?.startsWith(`${label}:`)
+    );
+    if (!result) throw new Error(`Multi-select "${label}" not found`);
+    return result;
   }
 
   function inputByType(type: string, index = 0): HTMLInputElement {

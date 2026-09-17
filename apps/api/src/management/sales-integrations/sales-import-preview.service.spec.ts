@@ -269,6 +269,104 @@ describe("SalesImportPreviewService", () => {
     });
     expect(Date.now() - started).toBeLessThan(10000);
   }, 15000);
+
+  it("classifies iFood candidates, existing orders and unknown sales from one range prefetch", async () => {
+    const date = new Date(businessToday().getTime() - 86_400_000);
+    const sale = (id: string) => ({
+      providerMovementId: id,
+      externalSaleId: id,
+      externalEventCode: "CONCLUDED",
+      kind: "SALE" as const,
+      raw: {},
+      sale: {
+        provider: "IFOOD" as const,
+        channel: "API" as const,
+        providerMovementId: id,
+        externalSaleId: id,
+        occurredAt: date.toISOString(),
+        grossAmount: 10,
+        paymentMethod: "PIX" as const,
+        raw: {},
+      },
+    });
+    const run = {
+      id: "run-ifood",
+      tenantId: "tenant",
+      integrationId: "integration-ifood",
+      provider: "IFOOD",
+      channel: "API",
+      startDate: date,
+      endDate: date,
+      requestedByUserId: "user",
+      trigger: "MANUAL",
+      integration: {
+        externalMerchantId: "merchant-ifood",
+        environment: "PRODUCTION",
+        credentials: [],
+      },
+    };
+    const update = vi
+      .fn()
+      .mockResolvedValueOnce(run)
+      .mockImplementation(({ data }) => Promise.resolve({ ...run, ...data }));
+    const adapter = {
+      fetchRange: vi.fn().mockResolvedValue({
+        days: [
+          {
+            date: date.toISOString().slice(0, 10),
+            validated: true,
+            pagesFetched: 2,
+            totalPages: 2,
+            totalElements: 3,
+            movements: [
+              sale("new-sale"),
+              sale("existing-sale"),
+              {
+                providerMovementId: "unknown-sale",
+                externalSaleId: "unknown-sale",
+                externalEventCode: "FUTURE",
+                kind: "UNKNOWN",
+                sale: null,
+                raw: {},
+                rejectionCode: "UNKNOWN_STATUS",
+              },
+            ],
+          },
+        ],
+      }),
+    };
+    const current = new SalesImportPreviewService(
+      {
+        salesImportRun: { update },
+        salesImportDay: { upsert: vi.fn().mockResolvedValue({ id: "day" }), update: vi.fn() },
+        externalSalesMovement: { deleteMany: vi.fn(), create: vi.fn() },
+        externalSaleIdentity: {
+          findUnique: vi
+            .fn()
+            .mockResolvedValueOnce(null)
+            .mockResolvedValueOnce({ id: "identity" })
+            .mockResolvedValueOnce(null),
+        },
+      } as never,
+      {} as never,
+      { get: vi.fn(() => adapter) } as never,
+      { redact: vi.fn((value) => value) } as never,
+      { upsertFromMovement: vi.fn().mockResolvedValue(null) } as never,
+      undefined,
+      { getCredential: vi.fn().mockResolvedValue({ accessToken: "token" }) } as never
+    );
+    const result = await current.process("run-ifood", "tenant");
+    expect(adapter.fetchRange).toHaveBeenCalledTimes(1);
+    expect(adapter.fetchRange).toHaveBeenCalledWith(
+      expect.objectContaining({ merchantId: "merchant-ifood", credential: "token" })
+    );
+    expect(result.counts).toMatchObject({
+      found: 3,
+      historicalCandidates: 1,
+      existingOrders: 1,
+      unknown: 1,
+    });
+  });
 });
 
 function businessToday(): Date {

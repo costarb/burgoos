@@ -35,6 +35,16 @@ import { MercadoPagoWebhookController } from "./mercado-pago/mercado-pago-webhoo
 import { MercadoPagoReconciliationService } from "./mercado-pago/mercado-pago-reconciliation.service";
 import { MercadoPagoReconciliationScheduler } from "./mercado-pago/mercado-pago-reconciliation.scheduler";
 import { BackgroundJobsModule } from "../../common/background-jobs/background-jobs.module";
+import { DeliveryIntegrationsModule } from "../integrations/delivery-integrations.module";
+import { IfoodFinancialCredentialService } from "./ifood/ifood-financial-credential.service";
+import { IfoodFinancialClient } from "./ifood/ifood-financial.client";
+import { IfoodSalesProviderAdapter } from "./ifood/ifood-sales-provider.adapter";
+import { IfoodFinancialSaleService } from "./ifood/ifood-financial-sale.service";
+import { IfoodFinancialController } from "./ifood/ifood-financial.controller";
+import { IfoodFinancialReadinessService } from "./ifood/ifood-financial-readiness.service";
+import { IfoodFinancialReconciliationService } from "./ifood/ifood-financial-reconciliation.service";
+import { IfoodFinancialReconciliationProcessor } from "./ifood/ifood-financial-reconciliation.processor";
+import { IfoodFinancialObservabilityService } from "./ifood/ifood-financial-observability.service";
 
 @Module({
   imports: [
@@ -43,6 +53,7 @@ import { BackgroundJobsModule } from "../../common/background-jobs/background-jo
     DatabaseModule,
     BackgroundJobsModule,
     PlatformIntegrationsModule,
+    DeliveryIntegrationsModule,
     forwardRef(() => OrderingModule),
   ],
   controllers: [
@@ -52,6 +63,7 @@ import { BackgroundJobsModule } from "../../common/background-jobs/background-jo
     MercadoPagoCallbackController,
     MercadoPagoSyncController,
     MercadoPagoWebhookController,
+    IfoodFinancialController,
   ],
   providers: [
     IntegrationAuditService,
@@ -78,6 +90,14 @@ import { BackgroundJobsModule } from "../../common/background-jobs/background-jo
     SalesImportHistoryService,
     SalesImportRetentionService,
     SalesImportRunProcessor,
+    IfoodFinancialCredentialService,
+    IfoodFinancialClient,
+    IfoodSalesProviderAdapter,
+    IfoodFinancialSaleService,
+    IfoodFinancialReconciliationService,
+    IfoodFinancialReconciliationProcessor,
+    IfoodFinancialReadinessService,
+    IfoodFinancialObservabilityService,
   ],
   exports: [
     SalesIntegrationService,
@@ -85,17 +105,20 @@ import { BackgroundJobsModule } from "../../common/background-jobs/background-jo
     SalesIntegrationOperationLockService,
     MercadoPagoAuthenticatedRequestService,
     MercadoPagoWebhookSignatureService,
+    IfoodFinancialCredentialService,
   ],
 })
 export class SalesIntegrationsModule implements OnModuleInit {
   constructor(
     private readonly registry: SalesProviderRegistry,
     private readonly pagbank: PagBankSalesProviderAdapter,
-    private readonly mercadoPago: MercadoPagoSalesProviderAdapter
+    private readonly mercadoPago: MercadoPagoSalesProviderAdapter,
+    private readonly ifood: IfoodSalesProviderAdapter
   ) {}
   onModuleInit() {
     if (!this.registry) return;
     if (this.pagbank) this.registry.register(this.pagbank);
     if (this.mercadoPago) this.registry.register(this.mercadoPago);
+    if (this.ifood) this.registry.register(this.ifood);
   }
 }

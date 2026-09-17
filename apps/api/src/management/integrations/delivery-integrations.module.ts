@@ -39,6 +39,7 @@ import { BackgroundJobsModule } from "../../common/background-jobs/background-jo
     IfoodDeliveryTrackingService,
     IfoodDisputeService,
     IfoodStatusSyncService,
+    IfoodAuthService,
   ],
 })
 export class DeliveryIntegrationsModule {}

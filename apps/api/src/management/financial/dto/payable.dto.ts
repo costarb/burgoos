@@ -115,16 +115,16 @@ export class PayablesQueryDto {
   end?: string;
 
   @IsOptional()
-  @IsString()
-  status?: string;
+  @IsString({ each: true })
+  status?: string | string[];
 
   @IsOptional()
-  @IsUUID()
-  categoryId?: string;
+  @IsUUID(undefined, { each: true })
+  categoryId?: string | string[];
 
   @IsOptional()
-  @IsUUID()
-  supplierId?: string;
+  @IsUUID(undefined, { each: true })
+  supplierId?: string | string[];
 
   @IsOptional()
   @IsString()

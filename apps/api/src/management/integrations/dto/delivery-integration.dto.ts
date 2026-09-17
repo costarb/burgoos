@@ -5,6 +5,10 @@ export class DeliveryIntegrationDto {
   @IsEnum(DeliveryProvider)
   provider!: DeliveryProvider;
 
+  @IsOptional()
+  @IsIn(["TEST", "PRODUCTION"])
+  environment?: "TEST" | "PRODUCTION";
+
   @IsString()
   @MaxLength(80)
   displayName!: string;

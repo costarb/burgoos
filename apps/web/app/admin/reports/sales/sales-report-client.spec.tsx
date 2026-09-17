@@ -9,6 +9,26 @@ vi.mock("next/navigation", () => ({
 }));
 
 describe("sales report client", () => {
+  it("keeps applied payment methods selected and submitted after rendering", () => {
+    const html = renderToStaticMarkup(
+      <SalesReportClient
+        orderPlatforms={[]}
+        report={{
+          ...reportFixture,
+          filters: {
+            ...reportFixture.filters,
+            paymentMethods: ["PIX", "CASH"],
+          },
+        }}
+        token="token"
+      />
+    );
+
+    expect(html).toContain('aria-label="Meios de pagamento: 2 selecionados"');
+    expect(html).toContain('name="paymentMethod" type="hidden" value="PIX"');
+    expect(html).toContain('name="paymentMethod" type="hidden" value="CASH"');
+  });
+
   it("renders the daily evolution chart with gross, net and zero-sale days", () => {
     const html = renderToStaticMarkup(
       <SalesReportClient

@@ -20,7 +20,8 @@ describe("sales report bounded database aggregation", () => {
         .mockResolvedValueOnce([row("2026-08-01", 1, "10"), row("2026-08-02", 2, "50")])
         .mockResolvedValueOnce([row("MERCADO_PAGO", 2, "50"), row("CAIXA_LOCAL", 1, "10")])
         .mockResolvedValueOnce([row("PIX", 2, "50"), row("CASH", 1, "10")])
-        .mockResolvedValueOnce([{ ...row("platform-1", 3, "60"), dimensionLabel: "Delivery" }]),
+        .mockResolvedValueOnce([{ ...row("platform-1", 3, "60"), dimensionLabel: "Delivery" }])
+        .mockResolvedValueOnce([]),
       order: {
         findMany: vi.fn().mockResolvedValue([]),
         count: vi.fn().mockResolvedValue(3),
@@ -46,6 +47,6 @@ describe("sales report bounded database aggregation", () => {
     ]));
     expect(report.daily).toHaveLength(2);
     expect(prisma.order.findMany).toHaveBeenCalledWith(expect.objectContaining({ skip: 1, take: 1 }));
-    expect(prisma.$queryRaw).toHaveBeenCalledTimes(5);
+    expect(prisma.$queryRaw).toHaveBeenCalledTimes(6);
   });
 });

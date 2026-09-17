@@ -25,7 +25,9 @@ describe("sales report service", () => {
         ])
         .mockResolvedValueOnce([
           { ...aggregateRow({ key: platformId, gross: "50.00", net: "48.50", released: "28.50", receivable: "20.00", fee: "1.50", orderCount: 2 }), dimensionLabel: "FOOD_TRUCK" },
-        ]),
+        ])
+        .mockResolvedValueOnce([]),
+      externalFinancialSale: { findMany: vi.fn().mockResolvedValue([]) },
       order: {
         findMany: vi.fn().mockResolvedValue([
           order({

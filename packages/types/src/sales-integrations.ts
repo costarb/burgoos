@@ -1,4 +1,4 @@
-export type SalesProvider = "PAGBANK" | "MERCADO_PAGO";
+export type SalesProvider = "PAGBANK" | "MERCADO_PAGO" | "IFOOD";
 export type SalesInputChannel = "API" | "FILE" | "OTHER";
 export type SalesIntegrationEnvironment = "TEST" | "PRODUCTION";
 export type SalesCredentialMode = "PROVIDER_TOKEN" | "OAUTH" | "FIXED_TOKEN";
@@ -88,6 +88,8 @@ export interface SalesIntegrationView {
   lastErrorMessage: string | null;
   createdAt: string;
   updatedAt: string;
+  deliveryIntegrationId?: string | null;
+  financialReadiness?: IfoodFinancialReadinessStatus | null;
 }
 
 export interface SalesRunCounts {
@@ -98,6 +100,77 @@ export interface SalesRunCounts {
   imported: number;
   failed: number;
   blockedDays: number;
+  existingOrders?: number;
+  historicalCandidates?: number;
+  reconciled?: number;
+  unknown?: number;
+  enriched?: number;
+  created?: number;
+  reviewRequired?: number;
+}
+
+export type IfoodFinancialReadinessStatus =
+  | "PENDING_PERMISSION"
+  | "READY_TEST"
+  | "READY_PRODUCTION"
+  | "REQUIRES_ATTENTION";
+
+export interface IfoodFinancialReadinessCheck {
+  code: string;
+  passed: boolean;
+  message: string | null;
+}
+
+export interface IfoodFinancialReadiness {
+  integrationId: string;
+  status: IfoodFinancialReadinessStatus;
+  environment: SalesIntegrationEnvironment;
+  merchantId: string;
+  permissions: string[];
+  productionEnabled: boolean;
+  lastValidatedAt: string | null;
+  checks: IfoodFinancialReadinessCheck[];
+}
+
+export type FinancialReconciliationStatus =
+  | "PENDING"
+  | "FETCHING"
+  | "COMPLETED"
+  | "PARTIAL"
+  | "FAILED";
+
+export type FinancialReconciliationTrigger = "MANUAL" | "DAILY" | "HOMOLOGATION";
+
+export interface FinancialReconciliationRunView {
+  id: string;
+  status: FinancialReconciliationStatus;
+  trigger: FinancialReconciliationTrigger;
+  startDate: string;
+  endDate: string;
+  counts: {
+    sales: number;
+    events: number;
+    settlements: number;
+    divergent: number;
+  };
+  errorCode: string | null;
+  errorMessage: string | null;
+  startedAt: string | null;
+  completedAt: string | null;
+}
+
+export type ReconciliationFileStatus = "REQUESTED" | "PROCESSING" | "READY" | "EXPIRED" | "FAILED";
+
+export interface ReconciliationFileView {
+  requestId: string;
+  competence: string;
+  status: ReconciliationFileStatus;
+  reused: boolean;
+  orderCount: number | null;
+  lineCount: number | null;
+  expiresAt: string | null;
+  errorCode: string | null;
+  errorMessage: string | null;
 }
 
 export interface SalesImportDayView {
@@ -186,9 +259,58 @@ export interface NormalizedHistoricalSale {
   grossAmount: number;
   netAmount?: number;
   feeAmount?: number;
-  paymentMethod: "PIX" | "PIX_MANUAL" | "DEBIT_CARD" | "CREDIT_CARD" | "DIGITAL_WALLET";
+  paymentMethod:
+    | "CASH"
+    | "PIX"
+    | "PIX_MANUAL"
+    | "CARD_ON_DELIVERY"
+    | "DEBIT_CARD"
+    | "CREDIT_CARD"
+    | "VOUCHER"
+    | "DIGITAL_WALLET";
+  providerMethod?: string;
+  financial?: NormalizedSaleFinancial;
+  payments?: NormalizedSalePayment[];
+  mappingState?: {
+    reviewRequired: boolean;
+    unknownPaymentMethods: string[];
+  };
   installments?: number;
   paymentBrand?: string;
   expectedReleaseAt?: string;
   raw: Record<string, unknown>;
+}
+
+export interface NormalizedSaleFinancial {
+  bagAmount: number;
+  deliveryFeeAmount: number;
+  serviceFeeAmount: number;
+  benefitsAmount: number;
+  customerPaidAmount: number;
+  saleBalanceAmount: number;
+  ifoodReceivableAmount: number;
+  storeReceivedAmount: number;
+}
+
+export interface NormalizedSaleInstallment {
+  reference: string;
+  sequence: number | null;
+  amount: number;
+  expectedPaymentDate: string | null;
+  status: string | null;
+  settledAt: string | null;
+}
+
+export interface NormalizedSalePayment {
+  providerPaymentKey: string;
+  providerMethod: string;
+  mappedMethod: NormalizedHistoricalSale["paymentMethod"] | null;
+  paymentType: string | null;
+  liability: string;
+  amount: number;
+  currency: string;
+  brand: string | null;
+  nsuMasked: string | null;
+  acquirerDocumentMasked: string | null;
+  installments: NormalizedSaleInstallment[];
 }

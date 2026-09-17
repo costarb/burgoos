@@ -1,4 +1,10 @@
-import { ConflictException, Injectable, NotFoundException } from "@nestjs/common";
+import {
+  ConflictException,
+  Injectable,
+  NotFoundException,
+  Optional,
+  UnprocessableEntityException,
+} from "@nestjs/common";
 import { Prisma, SalesCredentialStatus, SalesIntegrationStatus } from "@prisma/client";
 import { PrismaService } from "../../platform/database/prisma.service";
 import { IntegrationSecretService } from "../../security/integration-secret.service";
@@ -7,12 +13,14 @@ import {
   SalesIntegrationStatusDto,
   UpsertSalesIntegrationDto,
 } from "./dto/sales-integration.dto";
+import { IntegrationAuditService } from "./integration-audit.service";
 
 @Injectable()
 export class SalesIntegrationService {
   constructor(
     private readonly prisma: PrismaService,
-    private readonly secrets: IntegrationSecretService
+    private readonly secrets: IntegrationSecretService,
+    @Optional() private readonly audit?: IntegrationAuditService
   ) {}
   list(tenantId: string) {
     return this.prisma.salesIntegration
@@ -28,6 +36,7 @@ export class SalesIntegrationService {
     return this.view(row);
   }
   async create(tenantId: string, userId: string, dto: UpsertSalesIntegrationDto) {
+    const deliveryIntegration = await this.validateIfoodLink(tenantId, dto);
     const row = await this.prisma.salesIntegration.create({
       data: {
         tenantId,
@@ -40,28 +49,60 @@ export class SalesIntegrationService {
           dto.credentialMode ?? (dto.provider === "PAGBANK" ? "PROVIDER_TOKEN" : "OAUTH"),
         displayName: dto.displayName,
         externalMerchantId: dto.externalMerchantId,
+        deliveryIntegrationId: deliveryIntegration?.id,
+        financialReadiness: dto.provider === "IFOOD" ? "PENDING_PERMISSION" : undefined,
         settings: (dto.settings ?? {}) as Prisma.InputJsonValue,
       },
       include: { credentials: true },
     });
+    if (row.provider === "IFOOD" && this.audit) {
+      await this.audit.record({
+        tenantId,
+        integrationId: row.id,
+        actorUserId: userId,
+        action: "IFOOD_FINANCIAL_LINKED",
+        outcome: "CREATED",
+        metadata: { resourceId: deliveryIntegration?.id },
+      });
+    }
     return this.view(row);
   }
   async update(tenantId: string, userId: string, id: string, dto: UpsertSalesIntegrationDto) {
-    await this.find(tenantId, id);
+    const existing = await this.find(tenantId, id);
+    if (existing.provider !== dto.provider) {
+      throw new UnprocessableEntityException("O provedor da integracao nao pode ser alterado");
+    }
+    const deliveryIntegration = await this.validateIfoodLink(tenantId, dto);
     const row = await this.prisma.salesIntegration.update({
       where: { id },
       data: {
         displayName: dto.displayName,
         externalMerchantId: dto.externalMerchantId,
+        deliveryIntegrationId: deliveryIntegration?.id,
         settings: (dto.settings ?? {}) as Prisma.InputJsonValue,
         updatedByUserId: userId,
       },
       include: { credentials: { where: { status: SalesCredentialStatus.ACTIVE }, take: 1 } },
     });
+    if (row.provider === "IFOOD" && this.audit) {
+      await this.audit.record({
+        tenantId,
+        integrationId: row.id,
+        actorUserId: userId,
+        action: "IFOOD_FINANCIAL_LINKED",
+        outcome: "UPDATED",
+        metadata: { resourceId: deliveryIntegration?.id },
+      });
+    }
     return this.view(row);
   }
   async rotateCredential(tenantId: string, userId: string, id: string, dto: SalesCredentialDto) {
-    await this.find(tenantId, id);
+    const integration = await this.find(tenantId, id);
+    if (integration.provider === "IFOOD") {
+      throw new ConflictException(
+        "A integracao financeira iFood reutiliza a credencial da integracao operacional"
+      );
+    }
     await this.prisma.$transaction(async (tx) => {
       await tx.salesIntegrationCredential.updateMany({
         where: { tenantId, integrationId: id, status: SalesCredentialStatus.ACTIVE },
@@ -85,7 +126,11 @@ export class SalesIntegrationService {
   }
   async setStatus(tenantId: string, userId: string, id: string, dto: SalesIntegrationStatusDto) {
     const row = await this.find(tenantId, id);
-    if (dto.status === "ACTIVE" && (!row.externalMerchantId || row.credentials.length === 0))
+    if (
+      dto.status === "ACTIVE" &&
+      (!row.externalMerchantId ||
+        (row.provider === "IFOOD" ? !row.deliveryIntegrationId : row.credentials.length === 0))
+    )
       throw new ConflictException("USER e TOKEN sao obrigatorios para ativar");
     const updated = await this.prisma.salesIntegration.update({
       where: { id },
@@ -155,6 +200,47 @@ export class SalesIntegrationService {
       lastErrorMessage: row.lastErrorMessage,
       createdAt: row.createdAt.toISOString(),
       updatedAt: row.updatedAt.toISOString(),
+      deliveryIntegrationId: row.deliveryIntegrationId,
+      financialReadiness: row.financialReadiness,
     };
+  }
+
+  private async validateIfoodLink(tenantId: string, dto: UpsertSalesIntegrationDto) {
+    if (dto.provider !== "IFOOD") return null;
+    if (!dto.deliveryIntegrationId) {
+      throw new UnprocessableEntityException("A integracao operacional iFood e obrigatoria");
+    }
+    const environment = dto.environment ?? "PRODUCTION";
+    const delivery = await this.prisma.deliveryIntegration.findFirst({
+      where: {
+        id: dto.deliveryIntegrationId,
+        tenantId,
+        provider: "IFOOD",
+        environment,
+      },
+      include: {
+        credentials: {
+          where: { status: "ACTIVE" },
+          take: 1,
+          orderBy: { createdAt: "desc" },
+        },
+      },
+    });
+    if (!delivery) {
+      throw new UnprocessableEntityException(
+        "Integracao operacional iFood invalida para a loja e ambiente"
+      );
+    }
+    if (!delivery.externalMerchantId || delivery.externalMerchantId !== dto.externalMerchantId) {
+      throw new UnprocessableEntityException(
+        "O merchant deve ser o mesmo da integracao operacional"
+      );
+    }
+    if (delivery.credentials.length === 0) {
+      throw new UnprocessableEntityException(
+        "A integracao operacional iFood nao possui credencial ativa"
+      );
+    }
+    return delivery;
   }
 }

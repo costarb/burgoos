@@ -36,6 +36,7 @@ type DialogState =
 const paymentInstitutionLabels: Record<PaymentInstitution, string> = {
   PAGBANK: "PagBank",
   MERCADO_PAGO: "Mercado Pago",
+  IFOOD: "iFood",
   DINHEIRO: "Dinheiro",
   CAIXA_LOCAL: "Caixa Local",
 };

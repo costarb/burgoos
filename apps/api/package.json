@@ -45,6 +45,7 @@
     "@types/node": "^20.0.0",
     "@types/supertest": "^7.2.0",
     "cross-env": "^7.0.3",
+    "js-yaml": "^4.1.1",
     "supertest": "^7.0.0",
     "ts-node": "^10.9.0",
     "tsconfig-paths": "^4.2.0",

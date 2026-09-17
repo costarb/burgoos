@@ -3,6 +3,23 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { SalesImportRetentionService } from "./sales-import-retention.service";
 
+function emptyIfoodPrisma() {
+  return {
+    externalFinancialSale: {
+      findMany: vi.fn().mockResolvedValue([]),
+      updateMany: vi.fn(),
+    },
+    externalFinancialEvent: {
+      findMany: vi.fn().mockResolvedValue([]),
+      updateMany: vi.fn(),
+    },
+    externalSettlement: {
+      findMany: vi.fn().mockResolvedValue([]),
+      updateMany: vi.fn(),
+    },
+  };
+}
+
 describe("SalesImportRetentionService", () => {
   afterEach(() => vi.restoreAllMocks());
 
@@ -17,6 +34,7 @@ describe("SalesImportRetentionService", () => {
         salesImportRun: { findMany, deleteMany },
         oAuthAuthorizationAttempt: { findMany, deleteMany },
         providerNotification: { findMany, deleteMany },
+        ...emptyIfoodPrisma(),
       } as never,
       { enqueue } as never,
       { register } as never,
@@ -46,6 +64,7 @@ describe("SalesImportRetentionService", () => {
         salesImportRun: { findMany: empty, deleteMany: vi.fn() },
         oAuthAuthorizationAttempt: { findMany: empty, deleteMany: vi.fn() },
         providerNotification: { findMany: empty, deleteMany: vi.fn() },
+        ...emptyIfoodPrisma(),
       } as never,
       { enqueue } as never,
       undefined,
@@ -54,5 +73,87 @@ describe("SalesImportRetentionService", () => {
 
     await expect(service.execute({ id: "retention-job" } as BackgroundJob)).resolves.toEqual({ processedCount: 0 });
     expect(enqueue).not.toHaveBeenCalled();
+  });
+
+  it("redacts expired iFood raw payloads without deleting the canonical rows", async () => {
+    vi.spyOn(Date, "now").mockReturnValue(0);
+    const empty = vi.fn().mockResolvedValue([]);
+    const saleUpdateMany = vi.fn().mockResolvedValue({ count: 1 });
+    const eventUpdateMany = vi.fn().mockResolvedValue({ count: 1 });
+    const settlementUpdateMany = vi.fn().mockResolvedValue({ count: 1 });
+    const prisma = {
+      salesImportRun: { findMany: empty, deleteMany: vi.fn() },
+      oAuthAuthorizationAttempt: { findMany: empty, deleteMany: vi.fn() },
+      providerNotification: { findMany: empty, deleteMany: vi.fn() },
+      externalFinancialSale: {
+        findMany: vi.fn().mockResolvedValue([{ id: "sale-1" }]),
+        updateMany: saleUpdateMany,
+      },
+      externalFinancialEvent: {
+        findMany: vi.fn().mockResolvedValue([{ id: "event-1" }]),
+        updateMany: eventUpdateMany,
+      },
+      externalSettlement: {
+        findMany: vi.fn().mockResolvedValue([{ id: "settlement-1" }]),
+        updateMany: settlementUpdateMany,
+      },
+    };
+    const service = new SalesImportRetentionService(
+      prisma as never,
+      undefined,
+      undefined,
+      { get: vi.fn(() => 250) } as never
+    );
+
+    const now = new Date("2026-09-07T00:00:00.000Z");
+    const result = await service.purgeExpired(now);
+
+    expect(prisma.externalFinancialSale.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({
+          provider: "IFOOD",
+          NOT: { rawPayload: { path: ["redacted"], equals: true } },
+        }),
+      })
+    );
+    expect(saleUpdateMany).toHaveBeenCalledWith({
+      where: { id: { in: ["sale-1"] } },
+      data: { rawPayload: { redacted: true, redactedAt: now.toISOString() } },
+    });
+    expect(eventUpdateMany).toHaveBeenCalledWith({
+      where: { id: { in: ["event-1"] } },
+      data: { rawPayload: { redacted: true, redactedAt: now.toISOString() } },
+    });
+    expect(settlementUpdateMany).toHaveBeenCalledWith({
+      where: { id: { in: ["settlement-1"] } },
+      data: { rawPayload: { redacted: true, redactedAt: now.toISOString() } },
+    });
+    // Only rawPayload is overwritten: no other field/table is touched by redaction.
+    expect(saleUpdateMany.mock.calls[0][0].data).toEqual({
+      rawPayload: { redacted: true, redactedAt: now.toISOString() },
+    });
+    // purgeExpired still reports deleted rows only; execute() reports deleted + redacted.
+    expect(result).toBe(0);
+  });
+
+  it("skips already-redacted rows so the same records are not rewritten every day", async () => {
+    const findMany = vi.fn().mockResolvedValue([]);
+    const service = new SalesImportRetentionService(
+      {
+        salesImportRun: { findMany: vi.fn().mockResolvedValue([]), deleteMany: vi.fn() },
+        oAuthAuthorizationAttempt: { findMany: vi.fn().mockResolvedValue([]), deleteMany: vi.fn() },
+        providerNotification: { findMany: vi.fn().mockResolvedValue([]), deleteMany: vi.fn() },
+        externalFinancialSale: { findMany, updateMany: vi.fn() },
+        externalFinancialEvent: { findMany, updateMany: vi.fn() },
+        externalSettlement: { findMany, updateMany: vi.fn() },
+      } as never,
+      undefined,
+      undefined,
+      { get: vi.fn(() => 250) } as never
+    );
+    await service.purgeExpired(new Date("2026-09-07T00:00:00.000Z"));
+    for (const call of findMany.mock.calls) {
+      expect(call[0].where.NOT).toEqual({ rawPayload: { path: ["redacted"], equals: true } });
+    }
   });
 });

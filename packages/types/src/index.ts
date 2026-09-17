@@ -1,10 +1,4 @@
-export type OrderStatus =
-  | "PENDING"
-  | "PREPARING"
-  | "READY"
-  | "SHIPPED"
-  | "DELIVERED"
-  | "CANCELLED";
+export type OrderStatus = "PENDING" | "PREPARING" | "READY" | "SHIPPED" | "DELIVERED" | "CANCELLED";
 
 export * from "./delivery-integrations";
 export * from "./background-jobs";
@@ -123,7 +117,7 @@ export type PaymentMethod =
 
 export * from "./sales-integrations";
 
-export type PaymentInstitution = "PAGBANK" | "MERCADO_PAGO" | "DINHEIRO" | "CAIXA_LOCAL";
+export type PaymentInstitution = "PAGBANK" | "MERCADO_PAGO" | "IFOOD" | "DINHEIRO" | "CAIXA_LOCAL";
 export type PaymentReleaseSource = "EXTRACT" | "D_PLUS_30_FALLBACK" | "IMMEDIATE";
 export type PaymentReleaseStatus = "RELEASED" | "PENDING_RELEASE";
 export type OrderMaintenanceAction = "EDIT" | "DELETE";
@@ -574,10 +568,10 @@ export interface HistoricalOrderImportResult {
 export interface SalesReportFilters {
   start?: string;
   end?: string;
-  paymentInstitution?: PaymentInstitution;
-  paymentMethod?: PaymentMethod;
-  orderPlatformId?: string;
-  status?: OrderStatus;
+  paymentInstitutions?: PaymentInstitution[];
+  paymentMethods?: PaymentMethod[];
+  orderPlatformIds?: string[];
+  statuses?: OrderStatus[];
   page?: number;
   pageSize?: number;
 }
@@ -665,6 +659,45 @@ export interface SalesAnalyticalOrder {
   itemCount: number;
   assignedProducts: SalesAnalyticalProduct[];
   imported: boolean;
+  ifoodFinancial?: IfoodFinancialOrderDetail | null;
+}
+
+export interface IfoodFinancialPaymentDetail {
+  providerMethod: string;
+  mappedMethod: PaymentMethod | null;
+  liability: string;
+  amount: string;
+  currency: string;
+  brand: string | null;
+  installmentCount: number;
+  installments: Array<{
+    reference: string;
+    amount: string;
+    expectedPaymentDate: string | null;
+    status: string | null;
+  }>;
+}
+
+export interface IfoodFinancialOrderDetail {
+  status: string;
+  bagAmount: string;
+  deliveryFeeAmount: string;
+  serviceFeeAmount: string;
+  benefitsAmount: string;
+  customerPaidAmount: string;
+  saleBalanceAmount: string;
+  ifoodReceivableAmount: string;
+  storeReceivedAmount: string;
+  payments: IfoodFinancialPaymentDetail[];
+}
+
+export interface IfoodFinancialReportSummary {
+  saleCount: number;
+  bagAmount: string;
+  customerPaidAmount: string;
+  saleBalanceAmount: string;
+  ifoodReceivableAmount: string;
+  storeReceivedAmount: string;
 }
 
 export interface SalesAnalyticalPage {
@@ -690,6 +723,7 @@ export interface SalesReportResponse {
   byChannel: ChannelSummary[];
   analytical: SalesAnalyticalPage;
   receivables: ReceivablesSummary;
+  ifoodFinancial?: IfoodFinancialReportSummary;
 }
 
 export interface ManagementReportFilters {
@@ -1148,9 +1182,9 @@ export interface PayablesFilters {
   pageSize?: number;
   start?: string;
   end?: string;
-  status?: PayableStatus | string;
-  categoryId?: string;
-  supplierId?: string;
+  statuses?: Array<PayableStatus | string>;
+  categoryIds?: string[];
+  supplierIds?: string[];
   competenceMonth?: string;
 }
 
@@ -1248,6 +1282,7 @@ export interface CashStatement {
   start: string;
   end: string;
   financialAccountId: string | null;
+  financialAccountIds: string[];
   openingBalance: string;
   closingBalance: string;
   totalCredit: string;

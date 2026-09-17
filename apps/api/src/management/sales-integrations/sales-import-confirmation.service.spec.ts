@@ -45,6 +45,7 @@ function setup(
   };
   const identities = {
     claim: vi.fn().mockResolvedValue(true),
+    attachOperationalIfoodOrder: vi.fn().mockResolvedValue(null),
     linkOrder: vi.fn().mockResolvedValue(undefined),
     release: vi.fn().mockResolvedValue(undefined),
   };
@@ -232,5 +233,55 @@ describe("SalesImportConfirmationService", () => {
         paymentReleaseSource: "EXTRACT",
       }),
     });
+  });
+
+  it("enriches an existing operational iFood order without creating a historical order", async () => {
+    const { prisma, historical, identities } = setup();
+    prisma.salesImportRun.findFirst.mockResolvedValue({
+      ...run,
+      tenantId: "tenant",
+      integrationId: "sales-ifood",
+      provider: "IFOOD",
+      strategy: "FIXED_PRODUCT",
+      fixedProductId: "product",
+      integration: {
+        environment: "PRODUCTION",
+        externalMerchantId: "merchant",
+      },
+    });
+    prisma.externalSalesMovement.findMany.mockResolvedValue([
+      { ...movement, normalizedData: { ...movement.normalizedData, provider: "IFOOD" } },
+    ]);
+    prisma.externalSaleIdentity.findUnique.mockResolvedValue({ orderId: "operational-order" });
+    identities.attachOperationalIfoodOrder = vi.fn().mockResolvedValue("operational-order");
+    const persist = vi.fn().mockResolvedValue({ id: "financial-sale" });
+    const service = new SalesImportConfirmationService(
+      prisma as never,
+      historical as never,
+      identities as never,
+      { persist } as never
+    );
+
+    const result = await service.confirm("tenant", "run");
+
+    expect(historical.importNormalizedSale).not.toHaveBeenCalled();
+    expect(persist).toHaveBeenCalledWith(
+      expect.objectContaining({ orderId: "operational-order", externalMerchantId: "merchant" })
+    );
+    expect(prisma.externalSalesMovement.update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({ status: "IMPORTED", orderId: "operational-order" }),
+      })
+    );
+    expect(result.counts).toMatchObject({ enriched: 1, created: 0, reconciled: 1 });
+  });
+
+  it("returns a completed iFood run unchanged when confirmation is repeated", async () => {
+    const { prisma, historical, service } = setup();
+    const completed = { ...run, provider: "IFOOD", status: "COMPLETED" };
+    prisma.salesImportRun.findFirst.mockResolvedValue(completed);
+    await expect(service.confirm("tenant", "run")).resolves.toBe(completed);
+    expect(prisma.externalSalesMovement.findMany).not.toHaveBeenCalled();
+    expect(historical.importNormalizedSale).not.toHaveBeenCalled();
   });
 });

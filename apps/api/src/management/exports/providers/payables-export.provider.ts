@@ -2,7 +2,12 @@ import { Inject, Injectable } from "@nestjs/common";
 import { ExportContext, Prisma } from "@prisma/client";
 import { AccountsPayableService } from "../../financial/accounts-payable/accounts-payable.service";
 import { PayablesQueryDto } from "../../financial/dto/payable.dto";
-import { ExportDescriptor, ExportProvider, ExportProviderJob, ExportRowBatch } from "../export-provider.registry";
+import {
+  ExportDescriptor,
+  ExportProvider,
+  ExportProviderJob,
+  ExportRowBatch,
+} from "../export-provider.registry";
 
 const payablesColumns = [
   { key: "description", label: "Conta" },
@@ -25,10 +30,11 @@ export class PayablesExportProvider implements ExportProvider {
   ) {}
 
   async describe(job: ExportProviderJob): Promise<ExportDescriptor> {
-    const response = await this.accountsPayableService.list(
-      job.tenantId,
-      { ...normalizePayablesFilters(job.filtersSnapshot), page: 1, pageSize: 1 },
-    );
+    const response = await this.accountsPayableService.list(job.tenantId, {
+      ...normalizePayablesFilters(job.filtersSnapshot),
+      page: 1,
+      pageSize: 1,
+    });
 
     return {
       title: "Contas a pagar",
@@ -40,7 +46,7 @@ export class PayablesExportProvider implements ExportProvider {
   async readBatch(
     job: ExportProviderJob,
     cursor: string | null,
-    limit: number,
+    limit: number
   ): Promise<ExportRowBatch> {
     const page = cursor ? Number(cursor) : 1;
     if (!Number.isInteger(page) || page < 1) throw new Error("Cursor de exportacao invalido");
@@ -75,11 +81,20 @@ function normalizePayablesFilters(value: Prisma.JsonValue): PayablesQueryDto {
   return {
     start: toOptionalString(source.start),
     end: toOptionalString(source.end),
-    status: toOptionalString(source.status),
-    categoryId: toOptionalString(source.categoryId),
-    supplierId: toOptionalString(source.supplierId),
+    status: toOptionalStrings(source.status),
+    categoryId: toOptionalStrings(source.categoryId),
+    supplierId: toOptionalStrings(source.supplierId),
     competenceMonth: toOptionalString(source.competenceMonth),
   };
+}
+
+function toOptionalStrings(value: unknown): string[] | undefined {
+  if (!Array.isArray(value))
+    return toOptionalString(value) ? [toOptionalString(value)!] : undefined;
+  const values = value.filter(
+    (item): item is string => typeof item === "string" && item.length > 0
+  );
+  return values.length ? values : undefined;
 }
 
 function toOptionalString(value: unknown): string | undefined {

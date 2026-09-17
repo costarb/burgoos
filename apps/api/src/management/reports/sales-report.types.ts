@@ -16,10 +16,10 @@ const businessDateFormatter = new Intl.DateTimeFormat("en-CA", {
 export interface SalesReportQuery {
   start?: string;
   end?: string;
-  paymentInstitution?: string;
-  paymentMethod?: string;
-  orderPlatformId?: string;
-  status?: string;
+  paymentInstitution?: string | string[];
+  paymentMethod?: string | string[];
+  orderPlatformId?: string | string[];
+  status?: string | string[];
   page?: string;
   pageSize?: string;
 }
@@ -29,6 +29,11 @@ export interface ParsedSalesReportQuery {
   end: string;
   periodStart: Date;
   periodEnd: Date;
+  paymentInstitutions?: PaymentInstitution[];
+  paymentMethods?: PaymentMethod[];
+  orderPlatformIds?: string[];
+  statuses?: OrderStatus[];
+  /** Legacy singular fields kept for internal callers during migration. */
   paymentInstitution?: PaymentInstitution;
   paymentMethod?: PaymentMethod;
   orderPlatformId?: string;
@@ -63,14 +68,14 @@ export function parseSalesReportQuery(query: SalesReportQuery): ParsedSalesRepor
     end,
     periodStart,
     periodEnd,
-    paymentInstitution: parseEnum(
+    paymentInstitutions: parseEnums(
       query.paymentInstitution,
       paymentInstitutions,
       "paymentInstitution"
     ),
-    paymentMethod: parseEnum(query.paymentMethod, paymentMethods, "paymentMethod"),
-    orderPlatformId: query.orderPlatformId || undefined,
-    status: parseEnum(query.status, orderStatuses, "status"),
+    paymentMethods: parseEnums(query.paymentMethod, paymentMethods, "paymentMethod"),
+    orderPlatformIds: normalizeValues(query.orderPlatformId),
+    statuses: parseEnums(query.status, orderStatuses, "status"),
     page,
     pageSize,
   };
@@ -80,7 +85,7 @@ export function assertInteractivePeriod(periodStart: Date, periodEnd: Date): voi
   const inclusiveDays = Math.floor((periodEnd.getTime() - periodStart.getTime()) / 86_400_000) + 1;
   if (inclusiveDays > MAX_INTERACTIVE_REPORT_DAYS) {
     throw new BadRequestException(
-      `Relatorios interativos aceitam no maximo ${MAX_INTERACTIVE_REPORT_DAYS} dias. Solicite uma exportacao para periodos maiores.`,
+      `Relatorios interativos aceitam no maximo ${MAX_INTERACTIVE_REPORT_DAYS} dias. Solicite uma exportacao para periodos maiores.`
     );
   }
 }
@@ -171,20 +176,21 @@ function parseDateParts(date: string): [number, number, number] {
   return [year, month, day];
 }
 
-function parseEnum<T extends string>(
-  value: string | undefined,
+function parseEnums<T extends string>(
+  value: string | string[] | undefined,
   allowed: T[],
   fieldName: string
-): T | undefined {
-  if (!value) {
-    return undefined;
-  }
-
-  if (!allowed.includes(value as T)) {
+): T[] {
+  const values = normalizeValues(value);
+  if (values.some((item) => !allowed.includes(item as T))) {
     throw new BadRequestException(`${fieldName} invalido`);
   }
+  return values as T[];
+}
 
-  return value as T;
+function normalizeValues(value?: string | string[]): string[] {
+  const values = Array.isArray(value) ? value : value ? [value] : [];
+  return [...new Set(values.map((item) => item.trim()).filter(Boolean))];
 }
 
 function parsePositiveInteger(value: string | undefined, fallback: number, fieldName: string) {

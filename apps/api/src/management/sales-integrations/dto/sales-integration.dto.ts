@@ -15,8 +15,8 @@ import {
 } from "class-validator";
 
 export class UpsertSalesIntegrationDto {
-  @IsIn(["PAGBANK", "MERCADO_PAGO"])
-  provider!: "PAGBANK" | "MERCADO_PAGO";
+  @IsIn(["PAGBANK", "MERCADO_PAGO", "IFOOD"])
+  provider!: "PAGBANK" | "MERCADO_PAGO" | "IFOOD";
   @IsIn(["API"])
   channel!: "API";
   @IsString()
@@ -28,6 +28,9 @@ export class UpsertSalesIntegrationDto {
   @MinLength(1)
   @MaxLength(100)
   externalMerchantId?: string;
+  @ValidateIf((value: UpsertSalesIntegrationDto) => value.provider === "IFOOD")
+  @IsUUID()
+  deliveryIntegrationId?: string;
   @IsOptional()
   @IsIn(["TEST", "PRODUCTION"])
   environment?: "TEST" | "PRODUCTION";

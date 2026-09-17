@@ -7,19 +7,20 @@ import type {
   SalesReportResponse,
 } from "@burgoos/types";
 import { useSearchParams } from "next/navigation";
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
+import { MultiSelectFilter } from "../../../../components/admin/multi-select-filter";
 import { OrderMaintenanceDialog } from "../../orders/order-maintenance-dialog";
+import { IfoodFinancialDetails } from "./ifood-financial-details";
 
 const paymentInstitutions = [
-  ["", "Todas instituicoes"],
   ["PAGBANK", "PagBank"],
   ["MERCADO_PAGO", "Mercado Pago"],
+  ["IFOOD", "iFood"],
   ["DINHEIRO", "Dinheiro"],
   ["CAIXA_LOCAL", "Caixa local"],
 ];
 
 const paymentMethods = [
-  ["", "Todos meios"],
   ["CASH", "Dinheiro"],
   ["PIX_MANUAL", "Pix manual"],
   ["CARD_ON_DELIVERY", "Cartao na entrega"],
@@ -31,7 +32,6 @@ const paymentMethods = [
 ];
 
 const statuses = [
-  ["", "Entregues"],
   ["PENDING", "Pendente"],
   ["PREPARING", "Preparando"],
   ["SHIPPED", "Enviado"],
@@ -49,9 +49,26 @@ export function SalesReportClient({ report, orderPlatforms, token }: SalesReport
   const searchParams = useSearchParams();
   const [maintenanceOrder, setMaintenanceOrder] = useState<AdminOrder | null>(null);
   const [analyticalItems, setAnalyticalItems] = useState(report.analytical.items);
+  const [paymentInstitutionValues, setPaymentInstitutionValues] = useState<string[]>(
+    report.filters.paymentInstitutions ?? []
+  );
+  const [paymentMethodValues, setPaymentMethodValues] = useState<string[]>(
+    report.filters.paymentMethods ?? []
+  );
+  const [orderPlatformValues, setOrderPlatformValues] = useState<string[]>(
+    report.filters.orderPlatformIds ?? []
+  );
+  const [statusValues, setStatusValues] = useState<string[]>(report.filters.statuses ?? []);
   const previousPage = Math.max(1, report.analytical.page - 1);
   const nextPage = report.analytical.page + 1;
   const hasNextPage = report.analytical.page * report.analytical.pageSize < report.analytical.total;
+
+  useEffect(() => {
+    setPaymentInstitutionValues(report.filters.paymentInstitutions ?? []);
+    setPaymentMethodValues(report.filters.paymentMethods ?? []);
+    setOrderPlatformValues(report.filters.orderPlatformIds ?? []);
+    setStatusValues(report.filters.statuses ?? []);
+  }, [report]);
 
   function replaceOrder(updatedOrder: AdminOrder): void {
     setAnalyticalItems((current) =>
@@ -82,51 +99,45 @@ export function SalesReportClient({ report, orderPlatforms, token }: SalesReport
           name="end"
           type="date"
         />
-        <select
-          className="rounded-md border border-slate-200 px-3 py-2 text-sm"
-          defaultValue={report.filters.paymentInstitution ?? ""}
-          name="paymentInstitution"
-        >
-          {paymentInstitutions.map(([value, label]) => (
-            <option key={value} value={value}>
-              {label}
-            </option>
-          ))}
-        </select>
-        <select
-          className="rounded-md border border-slate-200 px-3 py-2 text-sm"
-          defaultValue={report.filters.paymentMethod ?? ""}
-          name="paymentMethod"
-        >
-          {paymentMethods.map(([value, label]) => (
-            <option key={value} value={value}>
-              {label}
-            </option>
-          ))}
-        </select>
-        <select
-          className="rounded-md border border-slate-200 px-3 py-2 text-sm"
-          defaultValue={report.filters.orderPlatformId ?? ""}
-          name="orderPlatformId"
-        >
-          <option value="">Todos canais</option>
-          {orderPlatforms.map((platform) => (
-            <option key={platform.id} value={platform.id}>
-              {platform.name}
-            </option>
-          ))}
-        </select>
-        <select
-          className="rounded-md border border-slate-200 px-3 py-2 text-sm"
-          defaultValue={report.filters.status ?? ""}
-          name="status"
-        >
-          {statuses.map(([value, label]) => (
-            <option key={value} value={value}>
-              {label}
-            </option>
-          ))}
-        </select>
+        <FilterField name="paymentInstitution" values={paymentInstitutionValues}>
+          <MultiSelectFilter
+            label="Instituições"
+            onChange={setPaymentInstitutionValues}
+            options={paymentInstitutions.map(([value, label]) => ({ value, label }))}
+            placeholder="Todas instituições"
+            value={paymentInstitutionValues}
+          />
+        </FilterField>
+        <FilterField name="paymentMethod" values={paymentMethodValues}>
+          <MultiSelectFilter
+            label="Meios de pagamento"
+            onChange={setPaymentMethodValues}
+            options={paymentMethods.map(([value, label]) => ({ value, label }))}
+            placeholder="Todos meios"
+            value={paymentMethodValues}
+          />
+        </FilterField>
+        <FilterField name="orderPlatformId" values={orderPlatformValues}>
+          <MultiSelectFilter
+            label="Canais"
+            onChange={setOrderPlatformValues}
+            options={orderPlatforms.map((platform) => ({
+              value: platform.id,
+              label: platform.name,
+            }))}
+            placeholder="Todos canais"
+            value={orderPlatformValues}
+          />
+        </FilterField>
+        <FilterField name="status" values={statusValues}>
+          <MultiSelectFilter
+            label="Status"
+            onChange={setStatusValues}
+            options={statuses.map(([value, label]) => ({ value, label }))}
+            placeholder="Entregues"
+            value={statusValues}
+          />
+        </FilterField>
         <button
           className="rounded-md bg-ink px-4 py-2 text-sm font-semibold text-white"
           type="submit"
@@ -157,6 +168,14 @@ export function SalesReportClient({ report, orderPlatforms, token }: SalesReport
         <SummaryCard label="Taxas" value={`R$ ${report.summary.paymentFeeAmount}`} />
         <SummaryCard label="Ticket medio" value={`R$ ${report.summary.averageTicket}`} />
       </section>
+
+      {report.ifoodFinancial && report.ifoodFinancial.saleCount > 0 ? (
+        <section className="grid gap-4 rounded-md border border-red-100 bg-red-50 p-4 sm:grid-cols-3">
+          <SummaryCard label="Vendas financeiras iFood" value={String(report.ifoodFinancial.saleCount)} />
+          <SummaryCard label="Recebivel iFood" value={`R$ ${report.ifoodFinancial.ifoodReceivableAmount}`} />
+          <SummaryCard label="Recebido pela loja" value={`R$ ${report.ifoodFinancial.storeReceivedAmount}`} />
+        </section>
+      ) : null}
 
       <DailyTrendChart daily={report.daily} />
 
@@ -240,6 +259,9 @@ export function SalesReportClient({ report, orderPlatforms, token }: SalesReport
                       {[order.paymentInstitution, order.paymentMethod, order.paymentBrand]
                         .filter(Boolean)
                         .join(" / ")}
+                      {order.ifoodFinancial ? (
+                        <IfoodFinancialDetails detail={order.ifoodFinancial} />
+                      ) : null}
                     </td>
                     <td className="px-4 py-3">{order.externalPaymentId ?? "-"}</td>
                     <td className="px-4 py-3">R$ {order.grossAmount}</td>
@@ -305,6 +327,25 @@ export function SalesReportClient({ report, orderPlatforms, token }: SalesReport
           token={token}
         />
       ) : null}
+    </div>
+  );
+}
+
+function FilterField({
+  name,
+  values,
+  children,
+}: {
+  name: string;
+  values: string[];
+  children: React.ReactNode;
+}) {
+  return (
+    <div>
+      {values.map((value) => (
+        <input key={value} name={name} type="hidden" value={value} />
+      ))}
+      {children}
     </div>
   );
 }

@@ -33,15 +33,33 @@ interface AggregateRow {
   nextExpectedReleaseDate?: Date | null;
 }
 
+interface IfoodFinancialAggregateRow {
+  saleCount: bigint | number;
+  bagAmount: Prisma.Decimal;
+  customerPaidAmount: Prisma.Decimal;
+  saleBalanceAmount: Prisma.Decimal;
+  ifoodReceivableAmount: Prisma.Decimal;
+  storeReceivedAmount: Prisma.Decimal;
+}
+
 @Injectable()
 export class SalesReportService {
   constructor(@Inject(PrismaService) private readonly prisma: PrismaService) {}
 
   async getReport(tenantId: string, query: ParsedSalesReportQuery) {
+    query = {
+      ...query,
+      paymentInstitutions:
+        query.paymentInstitutions ?? (query.paymentInstitution ? [query.paymentInstitution] : []),
+      paymentMethods: query.paymentMethods ?? (query.paymentMethod ? [query.paymentMethod] : []),
+      orderPlatformIds:
+        query.orderPlatformIds ?? (query.orderPlatformId ? [query.orderPlatformId] : []),
+      statuses: query.statuses ?? (query.status ? [query.status] : []),
+    };
     const where = this.buildWhere(tenantId, query);
     const reportReferenceDate = new Date();
     const aggregateWhere = this.buildAggregateWhere(tenantId, query);
-    const [summaryRows, dailyRows, institutionRows, methodRows, channelRows, orders, total] =
+    const [summaryRows, dailyRows, institutionRows, methodRows, channelRows, orders, total, ifoodRows] =
       await Promise.all([
         this.aggregate(Prisma.sql`SELECT
         COUNT(*)::bigint AS "orderCount",
@@ -95,7 +113,18 @@ export class SalesReportService {
           take: query.pageSize,
         }),
         this.prisma.order.count({ where }),
+        this.aggregateIfoodFinancial(tenantId, query),
       ]);
+
+    const ifoodDetails = orders.length
+      ? await this.prisma.externalFinancialSale.findMany({
+          where: { tenantId, orderId: { in: orders.map((order) => order.id) } },
+          include: { payments: { include: { installments: true } } },
+        })
+      : [];
+    const ifoodByOrder = new Map(
+      ifoodDetails.filter((sale) => sale.orderId).map((sale) => [sale.orderId!, sale])
+    );
 
     const summary = this.rowToBucket(summaryRows[0]);
     const totalGross = summary.grossRevenue;
@@ -104,10 +133,10 @@ export class SalesReportService {
       filters: {
         start: query.start,
         end: query.end,
-        paymentInstitution: query.paymentInstitution,
-        paymentMethod: query.paymentMethod,
-        orderPlatformId: query.orderPlatformId,
-        status: query.status,
+        paymentInstitutions: query.paymentInstitutions,
+        paymentMethods: query.paymentMethods,
+        orderPlatformIds: query.orderPlatformIds,
+        statuses: query.statuses,
         page: query.page,
         pageSize: query.pageSize,
       },
@@ -133,7 +162,8 @@ export class SalesReportService {
         total,
         query.page,
         query.pageSize,
-        reportReferenceDate
+        reportReferenceDate,
+        ifoodByOrder
       ),
       receivables: {
         pendingOrderCount: Number(summaryRows[0]?.pendingOrderCount ?? 0),
@@ -142,10 +172,15 @@ export class SalesReportService {
           ? formatLocalDate(summaryRows[0].nextExpectedReleaseDate)
           : null,
       },
+      ifoodFinancial: this.formatIfoodFinancial(ifoodRows[0]),
     };
   }
 
   private buildWhere(tenantId: string, query: ParsedSalesReportQuery): Prisma.OrderWhereInput {
+    const paymentInstitutions = query.paymentInstitutions ?? [];
+    const paymentMethods = query.paymentMethods ?? [];
+    const orderPlatformIds = query.orderPlatformIds ?? [];
+    const statuses = query.statuses ?? [];
     return {
       tenantId,
       deletedAt: null,
@@ -153,27 +188,35 @@ export class SalesReportService {
         gte: query.periodStart,
         lte: query.periodEnd,
       },
-      status: query.status ?? OrderStatus.DELIVERED,
-      paymentInstitution: query.paymentInstitution,
-      paymentMethod: query.paymentMethod,
-      orderPlatformId: query.orderPlatformId,
+      status: statuses.length ? { in: statuses } : OrderStatus.DELIVERED,
+      paymentInstitution: paymentInstitutions.length ? { in: paymentInstitutions } : undefined,
+      paymentMethod: paymentMethods.length ? { in: paymentMethods } : undefined,
+      orderPlatformId: orderPlatformIds.length ? { in: orderPlatformIds } : undefined,
     };
   }
 
   private buildAggregateWhere(tenantId: string, query: ParsedSalesReportQuery): Prisma.Sql {
+    const paymentInstitutions = query.paymentInstitutions ?? [];
+    const paymentMethods = query.paymentMethods ?? [];
+    const orderPlatformIds = query.orderPlatformIds ?? [];
+    const statuses = query.statuses ?? [];
     const clauses = [
       Prisma.sql`o.tenant_id = ${tenantId}::uuid`,
       Prisma.sql`o.deleted_at IS NULL`,
       Prisma.sql`o.created_at >= ${query.periodStart}`,
       Prisma.sql`o.created_at <= ${query.periodEnd}`,
-      Prisma.sql`o.status::text = ${query.status ?? OrderStatus.DELIVERED}`,
+      statuses.length
+        ? Prisma.sql`o.status::text IN (${Prisma.join(statuses)})`
+        : Prisma.sql`o.status::text = ${OrderStatus.DELIVERED}`,
     ];
-    if (query.paymentInstitution)
-      clauses.push(Prisma.sql`o.payment_institution::text = ${query.paymentInstitution}`);
-    if (query.paymentMethod)
-      clauses.push(Prisma.sql`o.payment_method::text = ${query.paymentMethod}`);
-    if (query.orderPlatformId)
-      clauses.push(Prisma.sql`o.order_platform_id = ${query.orderPlatformId}::uuid`);
+    if (paymentInstitutions.length)
+      clauses.push(
+        Prisma.sql`o.payment_institution::text IN (${Prisma.join(paymentInstitutions)})`
+      );
+    if (paymentMethods.length)
+      clauses.push(Prisma.sql`o.payment_method::text IN (${Prisma.join(paymentMethods)})`);
+    if (orderPlatformIds.length)
+      clauses.push(Prisma.sql`o.order_platform_id::text IN (${Prisma.join(orderPlatformIds)})`);
     return Prisma.join(clauses, " AND ");
   }
 
@@ -253,7 +296,13 @@ export class SalesReportService {
     total: number,
     page: number,
     pageSize: number,
-    referenceDate: Date
+    referenceDate: Date,
+    ifoodByOrder: Map<
+      string,
+      Prisma.ExternalFinancialSaleGetPayload<{
+        include: { payments: { include: { installments: true } } };
+      }>
+    > = new Map()
   ) {
     return {
       page,
@@ -263,6 +312,7 @@ export class SalesReportService {
         const grossAmount = order.paymentGrossAmount ?? order.total;
         const acquiredNetAmount = order.paymentNetAmount ?? grossAmount;
 
+        const ifood = ifoodByOrder.get(order.id);
         return {
           orderId: order.id,
           createdAt: order.createdAt.toISOString(),
@@ -297,6 +347,48 @@ export class SalesReportService {
             total: toMoneyString(item.total),
           })),
           imported: Boolean(order.externalPaymentId),
+          ifoodFinancial: ifood
+            ? {
+                status: ifood.status,
+                bagAmount: toMoneyString(ifood.bagAmount),
+                deliveryFeeAmount: toMoneyString(ifood.deliveryFeeAmount),
+                serviceFeeAmount: toMoneyString(ifood.serviceFeeAmount),
+                benefitsAmount: toMoneyString(ifood.benefitsAmount),
+                customerPaidAmount: toMoneyString(ifood.customerPaidAmount),
+                saleBalanceAmount: toMoneyString(ifood.saleBalanceAmount),
+                ifoodReceivableAmount: toMoneyString(
+                  ifood.payments
+                    .filter((payment) => payment.liability === "IFOOD")
+                    .reduce(
+                      (sum, payment) => sum.add(payment.amount),
+                      new Prisma.Decimal(0)
+                    )
+                ),
+                storeReceivedAmount: toMoneyString(
+                  ifood.payments
+                    .filter((payment) => payment.liability === "STORE")
+                    .reduce(
+                      (sum, payment) => sum.add(payment.amount),
+                      new Prisma.Decimal(0)
+                    )
+                ),
+                payments: ifood.payments.map((payment) => ({
+                  providerMethod: payment.providerMethod,
+                  mappedMethod: payment.mappedMethod,
+                  liability: payment.liability,
+                  amount: toMoneyString(payment.amount),
+                  currency: payment.currency,
+                  brand: payment.brand,
+                  installmentCount: payment.installments.length,
+                  installments: payment.installments.map((installment) => ({
+                    reference: installment.reference,
+                    amount: toMoneyString(installment.amount),
+                    expectedPaymentDate: installment.expectedPaymentDate?.toISOString() ?? null,
+                    status: installment.status,
+                  })),
+                })),
+              }
+            : null,
         };
       }),
     };
@@ -327,6 +419,35 @@ export class SalesReportService {
           ? new Prisma.Decimal(0)
           : bucket.grossRevenue.div(bucket.orderCount).toDecimalPlaces(2)
       ),
+    };
+  }
+
+  private aggregateIfoodFinancial(tenantId: string, query: ParsedSalesReportQuery) {
+    return this.prisma.$queryRaw<IfoodFinancialAggregateRow[]>(Prisma.sql`
+      SELECT
+        COUNT(*)::bigint AS "saleCount",
+        COALESCE(SUM(s.bag_amount), 0) AS "bagAmount",
+        COALESCE(SUM(s.customer_paid_amount), 0) AS "customerPaidAmount",
+        COALESCE(SUM(s.sale_balance_amount), 0) AS "saleBalanceAmount",
+        COALESCE(SUM((SELECT COALESCE(SUM(p.amount), 0) FROM external_sale_payments p WHERE p.sale_id = s.id AND p.liability = 'IFOOD')), 0) AS "ifoodReceivableAmount",
+        COALESCE(SUM((SELECT COALESCE(SUM(p.amount), 0) FROM external_sale_payments p WHERE p.sale_id = s.id AND p.liability = 'STORE')), 0) AS "storeReceivedAmount"
+      FROM external_financial_sales s
+      WHERE s.tenant_id = ${tenantId}::uuid
+        AND s.occurred_at >= ${query.periodStart}
+        AND s.occurred_at <= ${query.periodEnd}
+    `);
+  }
+
+  private formatIfoodFinancial(row?: IfoodFinancialAggregateRow) {
+    return {
+      saleCount: Number(row?.saleCount ?? 0),
+      bagAmount: toMoneyString(row?.bagAmount ?? new Prisma.Decimal(0)),
+      customerPaidAmount: toMoneyString(row?.customerPaidAmount ?? new Prisma.Decimal(0)),
+      saleBalanceAmount: toMoneyString(row?.saleBalanceAmount ?? new Prisma.Decimal(0)),
+      ifoodReceivableAmount: toMoneyString(
+        row?.ifoodReceivableAmount ?? new Prisma.Decimal(0)
+      ),
+      storeReceivedAmount: toMoneyString(row?.storeReceivedAmount ?? new Prisma.Decimal(0)),
     };
   }
 }
@@ -366,6 +487,7 @@ function paymentInstitutionLabel(key: string): string {
   const labels: Record<string, string> = {
     PAGBANK: "PagBank",
     MERCADO_PAGO: "Mercado Pago",
+    IFOOD: "iFood",
     DINHEIRO: "Dinheiro",
     CAIXA_LOCAL: "Caixa local",
     NOT_INFORMED: "Nao informado",

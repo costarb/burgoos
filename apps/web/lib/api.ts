@@ -116,8 +116,10 @@ import type {
   PaymentExceptionDetail,
   ResolvePaymentExceptionInput,
   ShiftCloseSummary,
+  IfoodFinancialReadiness,
 } from "@burgoos/types";
 import { clearAuthSession, readAuthSession } from "./auth-client";
+import { buildSalesReportSearchParams } from "./sales-report-query";
 
 const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? "http://127.0.0.1:3001";
 const AUTH_ACCESS_COOKIE = "burgoos.admin.access_token";
@@ -273,17 +275,14 @@ export class AdminApiError extends Error {
     public readonly status: number,
     public readonly path: string,
     message: string,
-    public readonly code?: string,
+    public readonly code?: string
   ) {
     super(message);
     this.name = "AdminApiError";
   }
 }
 
-export function isApiConflict(
-  error: unknown,
-  code?: ApiConflictCode,
-): error is AdminApiError {
+export function isApiConflict(error: unknown, code?: ApiConflictCode): error is AdminApiError {
   return (
     error instanceof AdminApiError &&
     error.status === 409 &&
@@ -380,7 +379,11 @@ export async function getPublicMenu(slug: string): Promise<PublicMenu | null> {
 }
 
 export async function getPublicMenuByDomain(domain: string): Promise<PublicMenu | null> {
-  const normalizedDomain = domain.trim().toLowerCase().replace(/\.$/, "").replace(/^www\./, "");
+  const normalizedDomain = domain
+    .trim()
+    .toLowerCase()
+    .replace(/\.$/, "")
+    .replace(/^www\./, "");
   const cacheKey = `domain:${normalizedDomain}`;
   const path = `/api/public/domains/${encodeURIComponent(normalizedDomain)}/menu`;
   const cached = readPublicMenuCache(cacheKey);
@@ -404,29 +407,33 @@ export async function getPublicMenuByDomain(domain: string): Promise<PublicMenu 
 
 export function getPublicOrderQueue(
   slug: string,
-  signal?: AbortSignal,
+  signal?: AbortSignal
 ): Promise<PublicOrderQueue | null> {
   return fetchPublicOrderQueue(
     `/api/public/tenants/${encodeURIComponent(slug)}/order-queue`,
-    signal,
+    signal
   );
 }
 
 export function getPublicOrderQueueByDomain(
   domain: string,
-  signal?: AbortSignal,
+  signal?: AbortSignal
 ): Promise<PublicOrderQueue | null> {
-  const normalized = domain.trim().toLowerCase().replace(/:\d+$/, "").replace(/\.$/, "")
+  const normalized = domain
+    .trim()
+    .toLowerCase()
+    .replace(/:\d+$/, "")
+    .replace(/\.$/, "")
     .replace(/^www\./, "");
   return fetchPublicOrderQueue(
     `/api/public/domains/${encodeURIComponent(normalized)}/order-queue`,
-    signal,
+    signal
   );
 }
 
 async function fetchPublicOrderQueue(
   path: string,
-  signal?: AbortSignal,
+  signal?: AbortSignal
 ): Promise<PublicOrderQueue | null> {
   const response = await fetch(`${apiUrl}${path}`, {
     headers: { Accept: "application/json" },
@@ -1053,7 +1060,18 @@ export async function listAdminCategories(
   const params = new URLSearchParams();
 
   Object.entries(filters).forEach(([key, value]) => {
-    if (value !== undefined && value !== null && value !== "") {
+    if (Array.isArray(value)) {
+      const queryKey =
+        (
+          {
+            paymentInstitutions: "paymentInstitution",
+            paymentMethods: "paymentMethod",
+            orderPlatformIds: "orderPlatformId",
+            statuses: "status",
+          } as Record<string, string>
+        )[key] ?? key;
+      value.forEach((item) => params.append(queryKey, String(item)));
+    } else if (value !== undefined && value !== null && value !== "") {
       params.set(key, String(value));
     }
   });
@@ -1128,7 +1146,7 @@ export async function getPosCatalog(): Promise<PosCatalog> {
 
 export async function createCounterOrder(
   input: CreateCounterOrderInput,
-  idempotencyKey: string,
+  idempotencyKey: string
 ): Promise<PosOrder> {
   const token = await requireSessionAccessToken();
   return fetchAdmin<PosOrder>(token, "/api/admin/pos/orders", {
@@ -1150,7 +1168,7 @@ export async function getPendingPaymentOrders(): Promise<PendingPaymentOrder[]> 
 
 export async function updateCounterOrder(
   orderId: string,
-  input: UpdateCounterOrderInput,
+  input: UpdateCounterOrderInput
 ): Promise<PosOrder> {
   const token = await requireSessionAccessToken();
   return fetchAdmin<PosOrder>(token, `/api/admin/pos/orders/${orderId}`, {
@@ -1166,7 +1184,7 @@ export async function getKdsOrders(signal?: AbortSignal): Promise<KdsOrder[]> {
 
 export async function updateKdsOrderStatus(
   orderId: string,
-  input: UpdateKdsOrderStatusInput,
+  input: UpdateKdsOrderStatusInput
 ): Promise<KdsOrder> {
   const token = await requireSessionAccessToken();
   return fetchAdmin<KdsOrder>(token, `/api/admin/kds/orders/${orderId}/status`, {
@@ -1190,26 +1208,26 @@ export async function getOperationalAssignees(): Promise<OperationalAssignee[]> 
 export async function claimOperationalAssignment(
   target: "orders" | "tabs",
   targetId: string,
-  input: ClaimOperationalAssignmentInput,
+  input: ClaimOperationalAssignmentInput
 ): Promise<OperationalAssignmentResult> {
   const token = await requireSessionAccessToken();
   return fetchAdmin<OperationalAssignmentResult>(
     token,
     `/api/admin/operational-assignments/${target}/${targetId}/claim`,
-    { method: "POST", body: JSON.stringify(input) },
+    { method: "POST", body: JSON.stringify(input) }
   );
 }
 
 export async function transferOperationalAssignment(
   target: "orders" | "tabs",
   targetId: string,
-  input: TransferOperationalAssignmentInput,
+  input: TransferOperationalAssignmentInput
 ): Promise<OperationalAssignmentResult> {
   const token = await requireSessionAccessToken();
   return fetchAdmin<OperationalAssignmentResult>(
     token,
     `/api/admin/operational-assignments/${target}/${targetId}/transfer`,
-    { method: "POST", body: JSON.stringify(input) },
+    { method: "POST", body: JSON.stringify(input) }
   );
 }
 
@@ -1226,7 +1244,7 @@ export async function getServiceTab(tabId: string): Promise<ServiceTabDetail> {
 
 export async function openServiceTab(
   input: CreateServiceTabInput,
-  idempotencyKey: string,
+  idempotencyKey: string
 ): Promise<ServiceTabDetail> {
   const token = await requireSessionAccessToken();
   return fetchAdmin<ServiceTabDetail>(token, "/api/admin/tabs", {
@@ -1238,7 +1256,7 @@ export async function openServiceTab(
 
 export async function updateServiceTab(
   tabId: string,
-  input: UpdateServiceTabInput,
+  input: UpdateServiceTabInput
 ): Promise<ServiceTabDetail> {
   const token = await requireSessionAccessToken();
   return fetchAdmin<ServiceTabDetail>(token, `/api/admin/tabs/${tabId}`, {
@@ -1249,7 +1267,7 @@ export async function updateServiceTab(
 
 export async function checkoutServiceTab(
   tabId: string,
-  input: ServiceTabTransitionInput,
+  input: ServiceTabTransitionInput
 ): Promise<ServiceTabDetail> {
   const token = await requireSessionAccessToken();
   return fetchAdmin<ServiceTabDetail>(token, `/api/admin/tabs/${tabId}/checkout`, {
@@ -1260,7 +1278,7 @@ export async function checkoutServiceTab(
 
 export async function reopenServiceTab(
   tabId: string,
-  input: ServiceTabTransitionInput,
+  input: ServiceTabTransitionInput
 ): Promise<ServiceTabDetail> {
   const token = await requireSessionAccessToken();
   return fetchAdmin<ServiceTabDetail>(token, `/api/admin/tabs/${tabId}/reopen`, {
@@ -1283,7 +1301,7 @@ export async function syncPaymentTerminals(): Promise<PaymentTerminal[]> {
 
 export async function setPaymentTerminalEnabled(
   terminalId: string,
-  enabled: boolean,
+  enabled: boolean
 ): Promise<PaymentTerminal> {
   const token = await requireSessionAccessToken();
   return fetchAdmin<PaymentTerminal>(token, `/api/admin/payment-terminals/${terminalId}/enabled`, {
@@ -1294,7 +1312,7 @@ export async function setPaymentTerminalEnabled(
 
 export async function createPaymentCharge(
   input: CreatePaymentChargeInput,
-  idempotencyKey: string,
+  idempotencyKey: string
 ): Promise<PaymentCharge> {
   const token = await requireSessionAccessToken();
   return fetchAdmin<PaymentCharge>(token, "/api/admin/payment-charges", {
@@ -1311,19 +1329,19 @@ export async function getPaymentCharge(chargeId: string): Promise<PaymentCharge>
 
 export async function getActivePaymentCharge(
   targetType: "ORDER" | "SERVICE_TAB",
-  targetId: string,
+  targetId: string
 ): Promise<PaymentCharge | null> {
   const token = await requireSessionAccessToken();
   const query = new URLSearchParams({ targetType, targetId });
   return fetchAdmin<PaymentCharge | null>(
     token,
-    `/api/admin/payment-charges/active?${query.toString()}`,
+    `/api/admin/payment-charges/active?${query.toString()}`
   );
 }
 
 export async function refreshPaymentCharge(
   chargeId: string,
-  signal?: AbortSignal,
+  signal?: AbortSignal
 ): Promise<PaymentCharge> {
   const token = await requireSessionAccessToken();
   return fetchAdmin<PaymentCharge>(token, `/api/admin/payment-charges/${chargeId}/refresh`, {
@@ -1341,7 +1359,7 @@ export async function cancelPaymentCharge(chargeId: string): Promise<PaymentChar
 }
 
 export async function getPaymentExceptions(
-  status?: "OPEN" | "RESOLVED" | "DISMISSED",
+  status?: "OPEN" | "RESOLVED" | "DISMISSED"
 ): Promise<PaymentException[]> {
   const token = await requireSessionAccessToken();
   const query = status ? `?status=${encodeURIComponent(status)}` : "";
@@ -1356,18 +1374,14 @@ export async function getPaymentException(id: string): Promise<PaymentExceptionD
 export async function finishPaymentException(
   id: string,
   action: "resolve" | "dismiss",
-  input: ResolvePaymentExceptionInput,
+  input: ResolvePaymentExceptionInput
 ): Promise<PaymentException> {
   const token = await requireSessionAccessToken();
-  return fetchAdmin<PaymentException>(
-    token,
-    `/api/admin/payment-exceptions/${id}/${action}`,
-    {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(input),
-    },
-  );
+  return fetchAdmin<PaymentException>(token, `/api/admin/payment-exceptions/${id}/${action}`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(input),
+  });
 }
 
 export async function getShiftCloseSummary(): Promise<ShiftCloseSummary> {
@@ -1382,7 +1396,7 @@ export async function getManualPaymentOptions(): Promise<ManualPaymentOption[]> 
 
 export async function confirmManualPayment(
   input: ConfirmManualPaymentInput,
-  idempotencyKey: string,
+  idempotencyKey: string
 ): Promise<PaymentCharge> {
   const token = await requireSessionAccessToken();
   return fetchAdmin<PaymentCharge>(token, "/api/admin/manual-payments", {
@@ -1394,14 +1408,13 @@ export async function confirmManualPayment(
 
 export async function cancelManualPayment(
   chargeId: string,
-  input: CancelManualPaymentInput,
+  input: CancelManualPaymentInput
 ): Promise<PaymentCharge> {
   const token = await requireSessionAccessToken();
-  return fetchAdmin<PaymentCharge>(
-    token,
-    `/api/admin/manual-payments/${chargeId}/cancel`,
-    { method: "POST", body: JSON.stringify(input) },
-  );
+  return fetchAdmin<PaymentCharge>(token, `/api/admin/manual-payments/${chargeId}/cancel`, {
+    method: "POST",
+    body: JSON.stringify(input),
+  });
 }
 
 export async function getAdminOrderQueue(): Promise<{
@@ -1620,13 +1633,7 @@ export async function getSalesReport(
   tokenOverride?: string
 ): Promise<SalesReportResponse> {
   const token = tokenOverride ?? (await getAdminToken());
-  const params = new URLSearchParams();
-
-  Object.entries(filters).forEach(([key, value]) => {
-    if (value !== undefined && value !== null && value !== "") {
-      params.set(key, String(value));
-    }
-  });
+  const params = buildSalesReportSearchParams(filters);
 
   const query = params.toString();
   return fetchAdmin<SalesReportResponse>(
@@ -1791,7 +1798,7 @@ export async function getCashPosition(
   filters: {
     asOf?: string;
     projectionEnd?: string;
-    financialAccountId?: string;
+    financialAccountIds?: string[];
   } = {}
 ): Promise<{
   token: string;
@@ -1802,11 +1809,7 @@ export async function getCashPosition(
   const token = await getAdminToken();
   const params = new URLSearchParams();
 
-  Object.entries(filters).forEach(([key, value]) => {
-    if (value) {
-      params.set(key, value);
-    }
-  });
+  appendCashFlowFilters(params, filters);
 
   const query = params.toString();
   const [position, accounts, categories] = await Promise.all([
@@ -1823,15 +1826,11 @@ export async function getCashPosition(
 
 export async function getCashLedger(
   token: string,
-  filters: { asOf?: string; financialAccountId?: string } = {}
+  filters: { asOf?: string; financialAccountIds?: string[] } = {}
 ): Promise<CashLedgerEntry[]> {
   const params = new URLSearchParams();
 
-  Object.entries(filters).forEach(([key, value]) => {
-    if (value) {
-      params.set(key, value);
-    }
-  });
+  appendCashFlowFilters(params, filters);
 
   const query = params.toString();
   return fetchAdmin<CashLedgerEntry[]>(
@@ -1842,15 +1841,11 @@ export async function getCashLedger(
 
 export async function getCashStatement(
   token: string,
-  filters: { start?: string; end?: string; financialAccountId?: string } = {}
+  filters: { start?: string; end?: string; financialAccountIds?: string[] } = {}
 ): Promise<CashStatement> {
   const params = new URLSearchParams();
 
-  Object.entries(filters).forEach(([key, value]) => {
-    if (value) {
-      params.set(key, value);
-    }
-  });
+  appendCashFlowFilters(params, filters);
 
   const query = params.toString();
   return fetchAdmin<CashStatement>(
@@ -1876,6 +1871,19 @@ export async function listCashMovements(
     token,
     `/api/admin/financial/cash-flow/movements${query ? `?${query}` : ""}`
   );
+}
+
+function appendCashFlowFilters(
+  params: URLSearchParams,
+  filters: Record<string, string | string[] | undefined>
+) {
+  Object.entries(filters).forEach(([key, value]) => {
+    if (key === "financialAccountIds") {
+      [...new Set(value ?? [])].forEach((id) => id && params.append("financialAccountId", id));
+    } else if (typeof value === "string" && value) {
+      params.set(key, value);
+    }
+  });
 }
 
 export async function createCashMovement(
@@ -1910,7 +1918,16 @@ export async function getPayables(
   const params = new URLSearchParams();
 
   Object.entries(filters).forEach(([key, value]) => {
-    if (value) {
+    if (Array.isArray(value)) {
+      const queryKey =
+        (
+          { statuses: "status", categoryIds: "categoryId", supplierIds: "supplierId" } as Record<
+            string,
+            string
+          >
+        )[key] ?? key;
+      value.forEach((item) => params.append(queryKey, String(item)));
+    } else if (value) {
       params.set(key, value);
     }
   });
@@ -2004,7 +2021,7 @@ export async function getExportJob(token: string, exportId: string): Promise<Exp
 
 export function createImageUploadIntent(
   token: string,
-  payload: ImageUploadIntentRequest,
+  payload: ImageUploadIntentRequest
 ): Promise<ImageUploadIntent> {
   return fetchAdmin<ImageUploadIntent>(token, "/api/admin/assets/upload-intents", {
     method: "POST",
@@ -2013,15 +2030,19 @@ export function createImageUploadIntent(
 }
 
 export function confirmImageUpload(token: string, assetKey: string): Promise<{ assetKey: string }> {
-  return fetchAdmin(token, `/api/admin/assets/upload-intents/${encodeURIComponent(assetKey)}/confirm`, {
-    method: "POST",
-  });
+  return fetchAdmin(
+    token,
+    `/api/admin/assets/upload-intents/${encodeURIComponent(assetKey)}/confirm`,
+    {
+      method: "POST",
+    }
+  );
 }
 
 export async function getNotifications(
   token: string,
   params: NotificationPageQuery = {},
-  signal?: AbortSignal,
+  signal?: AbortSignal
 ): Promise<NotificationPage> {
   const query = new URLSearchParams();
 
@@ -2034,14 +2055,14 @@ export async function getNotifications(
   return fetchAdmin<NotificationPage>(
     token,
     `/api/admin/notifications${query.toString() ? `?${query.toString()}` : ""}`,
-    { signal },
+    { signal }
   );
 }
 
 export async function getNotificationSummary(
   token: string,
   etag?: string,
-  signal?: AbortSignal,
+  signal?: AbortSignal
 ): Promise<NotificationSummaryResponse> {
   const response = await fetch(`${apiUrl}/api/admin/notifications/summary`, {
     headers: {
@@ -2063,7 +2084,7 @@ export async function getNotificationSummary(
     throw new AdminApiError(
       response.status,
       "/api/admin/notifications/summary",
-      "Falha ao consultar notificacoes",
+      "Falha ao consultar notificacoes"
     );
   }
   return {
@@ -2382,15 +2403,20 @@ export function listSalesIntegrations(token: string): Promise<SalesIntegrationVi
   return fetchAdmin(token, "/api/admin/sales-integrations");
 }
 
+export function listDeliveryIntegrations(token: string): Promise<DeliveryIntegrationDetail[]> {
+  return fetchAdmin(token, "/api/admin/integrations/delivery");
+}
+
 export function createSalesIntegration(
   token: string,
   payload: {
-    provider: "PAGBANK" | "MERCADO_PAGO";
+    provider: "PAGBANK" | "MERCADO_PAGO" | "IFOOD";
     channel: "API";
     displayName: string;
     externalMerchantId?: string;
     environment?: "TEST" | "PRODUCTION";
     credentialMode?: "PROVIDER_TOKEN" | "OAUTH" | "FIXED_TOKEN";
+    deliveryIntegrationId?: string;
   }
 ): Promise<SalesIntegrationView> {
   return fetchAdmin(token, "/api/admin/sales-integrations", {
@@ -2403,12 +2429,13 @@ export function updateSalesIntegration(
   token: string,
   integrationId: string,
   payload: {
-    provider: "PAGBANK" | "MERCADO_PAGO";
+    provider: "PAGBANK" | "MERCADO_PAGO" | "IFOOD";
     channel: "API";
     displayName: string;
     externalMerchantId?: string;
     environment?: "TEST" | "PRODUCTION";
     credentialMode?: "PROVIDER_TOKEN" | "OAUTH" | "FIXED_TOKEN";
+    deliveryIntegrationId?: string;
   }
 ): Promise<SalesIntegrationView> {
   return fetchAdmin(token, `/api/admin/sales-integrations/${integrationId}`, {
@@ -2530,4 +2557,100 @@ export function listSalesImportMovements(
     token,
     `/api/admin/sales-import-runs/${runId}/movements?page=${page}&pageSize=${pageSize}`
   );
+}
+
+export interface IfoodFinancialReconciliationRunView {
+  id: string;
+  status: "PENDING" | "FETCHING" | "COMPLETED" | "PARTIAL" | "FAILED";
+  trigger: "MANUAL" | "DAILY" | "HOMOLOGATION";
+  startDate: string;
+  endDate: string;
+  counts: { sales: number; events: number; settlements: number; divergent: number };
+  errorCode: string | null;
+  errorMessage: string | null;
+}
+
+export interface IfoodReconciliationFileView {
+  requestId: string;
+  competence: string;
+  status: "REQUESTED" | "PROCESSING" | "READY" | "EXPIRED" | "FAILED";
+  reused: boolean;
+  orderCount: number | null;
+  lineCount: number | null;
+  expiresAt: string | null;
+  errorCode: string | null;
+  errorMessage: string | null;
+}
+
+export function createIfoodFinancialReconciliation(
+  token: string,
+  integrationId: string,
+  startDate: string,
+  endDate: string
+): Promise<IfoodFinancialReconciliationRunView> {
+  return fetchAdmin(
+    token,
+    `/api/admin/sales-integrations/${integrationId}/financial-reconciliations`,
+    { method: "POST", body: JSON.stringify({ startDate, endDate }) }
+  );
+}
+export function listIfoodFinancialReconciliations(
+  token: string,
+  integrationId: string
+): Promise<{ items: IfoodFinancialReconciliationRunView[] }> {
+  return fetchAdmin(
+    token,
+    `/api/admin/sales-integrations/${integrationId}/financial-reconciliations`
+  );
+}
+export function getIfoodFinancialReconciliation(
+  token: string,
+  integrationId: string,
+  runId: string
+): Promise<IfoodFinancialReconciliationRunView> {
+  return fetchAdmin(
+    token,
+    `/api/admin/sales-integrations/${integrationId}/financial-reconciliations/${runId}`
+  );
+}
+export function requestIfoodReconciliationFile(
+  token: string,
+  integrationId: string,
+  competence: string
+): Promise<IfoodReconciliationFileView> {
+  return fetchAdmin(token, `/api/admin/sales-integrations/${integrationId}/reconciliation-files`, {
+    method: "POST",
+    body: JSON.stringify({ competence }),
+  });
+}
+export function getIfoodReconciliationFile(
+  token: string,
+  integrationId: string,
+  requestId: string
+): Promise<IfoodReconciliationFileView> {
+  return fetchAdmin(
+    token,
+    `/api/admin/sales-integrations/${integrationId}/reconciliation-files/${encodeURIComponent(requestId)}`
+  );
+}
+export function getIfoodReconciliationFileDownloadUrl(
+  integrationId: string,
+  requestId: string
+): string {
+  return `/api/admin/sales-integrations/${integrationId}/reconciliation-files/${encodeURIComponent(requestId)}/download`;
+}
+
+export function getIfoodFinancialReadiness(
+  token: string,
+  integrationId: string
+): Promise<IfoodFinancialReadiness> {
+  return fetchAdmin(token, `/api/admin/sales-integrations/${integrationId}/ifood/readiness`);
+}
+export function revalidateIfoodFinancialReadiness(
+  token: string,
+  integrationId: string
+): Promise<IfoodFinancialReadiness> {
+  return fetchAdmin(token, `/api/admin/sales-integrations/${integrationId}/ifood/readiness`, {
+    method: "POST",
+  });
 }

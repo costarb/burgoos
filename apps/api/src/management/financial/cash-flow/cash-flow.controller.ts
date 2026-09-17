@@ -110,7 +110,7 @@ export class CashFlowController {
     @CurrentUser() user: AuthUser,
     @Query("asOf") asOf?: string,
     @Query("projectionEnd") projectionEnd?: string,
-    @Query("financialAccountId") financialAccountId?: string
+    @Query("financialAccountId") financialAccountId?: string | string[]
   ) {
     const referenceDate = asOf ? endOfDay(parseDate(asOf)) : new Date();
     const endDate = projectionEnd ? endOfDay(parseDate(projectionEnd)) : addDays(referenceDate, 30);
@@ -119,7 +119,7 @@ export class CashFlowController {
       user.tenantId,
       referenceDate,
       endDate,
-      financialAccountId
+      normalizeQueryValues(financialAccountId)
     );
   }
 
@@ -128,14 +128,14 @@ export class CashFlowController {
   async getLedger(
     @CurrentUser() user: AuthUser,
     @Query("asOf") asOf?: string,
-    @Query("financialAccountId") financialAccountId?: string
+    @Query("financialAccountId") financialAccountId?: string | string[]
   ) {
     const referenceDate = asOf ? endOfDay(parseDate(asOf)) : new Date();
     const position = await this.cashFlowService.getPosition(
       user.tenantId,
       referenceDate,
       referenceDate,
-      financialAccountId
+      normalizeQueryValues(financialAccountId)
     );
     return position.ledger;
   }
@@ -146,12 +146,17 @@ export class CashFlowController {
     @CurrentUser() user: AuthUser,
     @Query("start") start?: string,
     @Query("end") end?: string,
-    @Query("financialAccountId") financialAccountId?: string
+    @Query("financialAccountId") financialAccountId?: string | string[]
   ) {
     const endDate = end ? endOfDay(parseDate(end)) : new Date();
     const startDate = start ? parseDate(start) : addDays(endDate, -30);
 
-    return this.cashFlowService.getStatement(user.tenantId, startDate, endDate, financialAccountId);
+    return this.cashFlowService.getStatement(
+      user.tenantId,
+      startDate,
+      endDate,
+      normalizeQueryValues(financialAccountId)
+    );
   }
 
   @Get("cash-flow/movements")
@@ -203,4 +208,9 @@ function addDays(value: Date, days: number): Date {
   next.setDate(next.getDate() + days);
   next.setHours(23, 59, 59, 999);
   return next;
+}
+
+export function normalizeQueryValues(value?: string | string[]): string[] {
+  const values = Array.isArray(value) ? value : value ? [value] : [];
+  return [...new Set(values.map((item) => item.trim()).filter(Boolean))];
 }
