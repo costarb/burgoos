@@ -20,6 +20,9 @@ import { OrderMaintenanceDialog } from "./order-maintenance-dialog";
 import { useKdsOrders } from "./use-kds-orders";
 import { AssignmentControl } from "./assignment-control";
 import { PaymentCheckoutDialog } from "../pos/payment-checkout-dialog";
+import { useOrderQueueShortcuts } from "./use-order-queue-shortcuts";
+import { OrderQueueShortcutBar } from "./order-queue-shortcut-bar";
+import { isPendingPlatformOrder } from "./order-queue-helpers";
 
 export interface OrdersClientProps {
   apiUrl: string;
@@ -82,7 +85,62 @@ export function OrdersClient({
     [activeOrders]
   );
 
-  async function changeStatus(order: KdsOrder, status: OrderStatus): Promise<void> {
+  const isInputBlocked = maintenanceOrder !== null || checkoutOrder !== null || refusingOrderId !== null;
+
+  const {
+    selectedOrderId,
+    selectedOrder,
+    position,
+    pendingCancelOrderId,
+    registerCardRef,
+    selectOrder: setQueueSelection,
+  } = useOrderQueueShortcuts({
+    orders: activeOrders,
+    columns: activeStatuses,
+    isInputBlocked,
+    onPrimaryAction: async (order) => {
+      if (changingOrderId !== null || platformActionOrderId !== null) {
+        return;
+      }
+      const nextOrderId = nextOrderIdAfter(order.id);
+      let succeeded = false;
+
+      if (isPendingPlatformOrder(order)) {
+        succeeded = await acceptPlatformOrder(order);
+      } else {
+        const nextStatus = order.nextStatuses.find((status) => status !== "CANCELLED");
+        succeeded = nextStatus ? await changeStatus(order, nextStatus) : false;
+      }
+
+      if (succeeded) {
+        setQueueSelection(nextOrderId);
+      }
+    },
+    onDestructiveAction: (order) => {
+      if (isPendingPlatformOrder(order)) {
+        void openRefuseForm(order);
+        return;
+      }
+      if (changingOrderId !== null) {
+        return;
+      }
+      void changeStatus(order, "CANCELLED");
+    },
+    onCharge: (order) => setCheckoutOrder(order),
+  });
+
+  function nextOrderIdAfter(orderId: string): string | null {
+    if (activeOrders.length <= 1) {
+      return null;
+    }
+    const currentIndex = activeOrders.findIndex((item) => item.id === orderId);
+    if (currentIndex === -1) {
+      return null;
+    }
+    return activeOrders[(currentIndex + 1) % activeOrders.length].id;
+  }
+
+  async function changeStatus(order: KdsOrder, status: OrderStatus): Promise<boolean> {
     setError(null);
     setOperationMessage(null);
     setChangingOrderId(order.id);
@@ -99,20 +157,22 @@ export function OrdersClient({
       if (status === "DELIVERED" || status === "CANCELLED") {
         setActiveOrders((current) => current.filter((item) => item.id !== order.id));
         setHistoryOrders((current) => [updatedOrder, ...current]);
-        return;
+        return true;
       }
 
       setActiveOrders((current) =>
         current.map((item) => (item.id === order.id ? updatedOrder : item))
       );
+      return true;
     } catch (caughtError) {
       setError(caughtError instanceof Error ? caughtError.message : "Falha ao atualizar pedido.");
+      return false;
     } finally {
       setChangingOrderId(null);
     }
   }
 
-  async function acceptPlatformOrder(order: AdminOrder): Promise<void> {
+  async function acceptPlatformOrder(order: AdminOrder): Promise<boolean> {
     setError(null);
     setOperationMessage(null);
     setPlatformActionOrderId(order.id);
@@ -121,8 +181,10 @@ export function OrdersClient({
       await confirmPlatformOrder(token, order.id);
       setOperationMessage(`Pedido iFood de ${order.customerName} aceito.`);
       await refresh();
+      return true;
     } catch (caughtError) {
       setError(caughtError instanceof Error ? caughtError.message : "Falha ao aceitar pedido.");
+      return false;
     } finally {
       setPlatformActionOrderId(null);
     }
@@ -239,13 +301,29 @@ export function OrdersClient({
                   Nenhum pedido.
                 </p>
               ) : (
-                group.orders.map((order) => (
+                group.orders.map((order) => {
+                  const isSelected = order.id === selectedOrderId;
+                  return (
                   <article
-                    className={`rounded-md border bg-white p-4 shadow-sm ${
+                    aria-label={
+                      isSelected
+                        ? `Pedido #${order.publicCode} de ${order.customerName}, selecionado${
+                            position ? ` (${position.index} de ${position.total})` : ""
+                          }`
+                        : undefined
+                    }
+                    className={`rounded-md border bg-white p-4 shadow-sm outline-none ${
                       order.overdue ? "border-red-400 ring-2 ring-red-100" : "border-slate-200"
-                    }`}
+                    } ${isSelected ? "ring-4 ring-blue-600 ring-offset-2" : ""}`}
                     key={order.id}
+                    ref={registerCardRef(order.id)}
+                    tabIndex={-1}
                   >
+                    {isSelected && position ? (
+                      <p className="mb-2 w-fit rounded bg-blue-600 px-2 py-1 text-[10px] font-bold uppercase text-white">
+                        Selecionado - {position.index}/{position.total}
+                      </p>
+                    ) : null}
                     <div className="flex items-start justify-between gap-3">
                       <div>
                         <div className="mb-2 flex flex-wrap gap-1">
@@ -500,12 +578,19 @@ export function OrdersClient({
                       )}
                     </div>
                   </article>
-                ))
+                  );
+                })
               )}
             </div>
           </div>
         ))}
       </section>
+
+      <OrderQueueShortcutBar
+        pendingCancelOrderId={pendingCancelOrderId}
+        position={position}
+        selectedOrder={selectedOrder}
+      />
 
       {maintenanceOrder ? (
         <OrderMaintenanceDialog
@@ -572,10 +657,6 @@ function formatTime(value: string): string {
     hour: "2-digit",
     minute: "2-digit",
   }).format(new Date(value));
-}
-
-function isPendingPlatformOrder(order: AdminOrder): boolean {
-  return order.platformProvider === "IFOOD" && order.status === "PENDING";
 }
 
 function confirmationStateLabel(value: NonNullable<AdminOrder["platformConfirmationState"]>) {
