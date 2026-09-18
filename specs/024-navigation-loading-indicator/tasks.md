@@ -109,8 +109,8 @@ Projeto web deste monorepo: `apps/web/components/admin/` e `apps/web/app/{admin,
 **Purpose**: Validar o comportamento de ponta a ponta e garantir que nada existente quebrou.
 
 - [x] T015 [P] Rodar a suíte web (`apps/web`), typecheck e lint; corrigir regressões encontradas. **Resultado**: 170/170 testes passando (57 arquivos, incluindo os 20 novos desta feature), `tsc --noEmit` e `eslint` limpos.
-- [ ] T016 Navegar manualmente por uma amostra representativa de rotas (`/admin`, `/admin/orders`, `/admin/reports/sales`, `/admin/finance/payables`, `/platform/stores`) para confirmar que o `loading.tsx` correto (herdado ou específico) aparece em cada uma.
-- [ ] T017 Executar o roteiro de `specs/024-navigation-loading-indicator/quickstart.md` manualmente e registrar o resultado.
+- [x] T016 Navegar manualmente por uma amostra representativa de rotas (`/admin`, `/admin/orders`, `/admin/reports/sales`, `/admin/finance/payables`, `/platform/stores`) para confirmar que o `loading.tsx` correto (herdado ou específico) aparece em cada uma. **Resultado parcial**: `npx next build` compila e gera as 40 rotas (34 de `/admin`+`/platform`) sem erro, confirmando estruturalmente que os 4 `loading.tsx` e a herança de Suspense boundary estão corretos. **Pendente**: confirmação visual num navegador real (`next dev` + clique), não executada nesta sessão.
+- [ ] T017 Executar o roteiro de `specs/024-navigation-loading-indicator/quickstart.md` manualmente e registrar o resultado. **Pendente**: requer navegador/app rodando com interação visual (throttle de rede, observar a barra e os esqueletos); os 10 passos não têm equivalente automatizado nesta feature (é uma validação inerentemente visual).
 
 ---
 
