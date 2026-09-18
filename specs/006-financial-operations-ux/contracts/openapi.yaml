@@ -1,6 +1,6 @@
 openapi: 3.0.3
 info:
-  title: BurgoOS Financial Operations API
+  title: RRFive OS Financial Operations API
   version: 0.1.0
   description: Tenant-scoped admin contracts for accounts payable and cash flow.
 paths:

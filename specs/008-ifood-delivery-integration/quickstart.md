@@ -23,8 +23,8 @@ npm run db:generate
 Run API and web:
 
 ```powershell
-npm run dev --workspace @burgoos/api
-npm run dev --workspace @burgoos/web
+npm run dev --workspace @rrfive/api
+npm run dev --workspace @rrfive/web
 ```
 
 ## Manual Validation Flow
@@ -72,17 +72,17 @@ npm run dev --workspace @burgoos/web
 Focused backend tests:
 
 ```powershell
-npm run test --workspace @burgoos/api -- delivery-integration
-npm run test --workspace @burgoos/api -- ifood
-npm run test --workspace @burgoos/api -- ifood-event-poller ifood-dispute
+npm run test --workspace @rrfive/api -- delivery-integration
+npm run test --workspace @rrfive/api -- ifood
+npm run test --workspace @rrfive/api -- ifood-event-poller ifood-dispute
 ```
 
 Focused web tests:
 
 ```powershell
-npm run test --workspace @burgoos/web -- delivery-integrations
-npm run test --workspace @burgoos/web -- delivery-integrations-page
-npm run test --workspace @burgoos/web -- orders
+npm run test --workspace @rrfive/web -- delivery-integrations
+npm run test --workspace @rrfive/web -- delivery-integrations-page
+npm run test --workspace @rrfive/web -- orders
 ```
 
 Prisma validation:
@@ -119,8 +119,8 @@ npm run build
 - Merchant permission propagation can temporarily show validation as pending.
 - Customer data imported from iFood must respect provider privacy limitations in views and printouts.
 - Render API build command:
-  `npm ci && npm run db:generate && npx prisma migrate deploy --schema packages/database/prisma/schema.prisma && npm run build --workspace @burgoos/api`
-- Render API start command: `npm run start --workspace @burgoos/api`
+  `npm ci && npm run db:generate && npx prisma migrate deploy --schema packages/database/prisma/schema.prisma && npm run build --workspace @rrfive/api`
+- Render API start command: `npm run start --workspace @rrfive/api`
 - Render web build command:
-  `npm ci && npm run db:generate && npm run build --workspace @burgoos/web`
+  `npm ci && npm run db:generate && npm run build --workspace @rrfive/web`
 - Do not rotate `DELIVERY_INTEGRATION_SECRET_KEY` after saving credentials unless all store credentials are re-saved.

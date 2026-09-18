@@ -22,7 +22,7 @@ async function main(): Promise<void> {
   const passwordHash = await hash("admin123", 10);
 
   await prisma.platformUser.upsert({
-    where: { email: "platform@burgoos.local" },
+    where: { email: "platform@rrfive.local" },
     update: {
       active: true,
       role: PlatformUserRole.SUPER_ADMIN,
@@ -30,7 +30,7 @@ async function main(): Promise<void> {
     create: {
       role: PlatformUserRole.SUPER_ADMIN,
       name: "Admin Plataforma",
-      email: "platform@burgoos.local",
+      email: "platform@rrfive.local",
       passwordHash,
       active: true,
     },
@@ -95,7 +95,7 @@ async function main(): Promise<void> {
   });
 
   await prisma.user.upsert({
-    where: { email: "admin@burgoos.local" },
+    where: { email: "admin@rrfive.local" },
     update: {
       isMaster: true,
       status: AccessUserStatus.ACTIVE,
@@ -107,7 +107,7 @@ async function main(): Promise<void> {
       status: AccessUserStatus.ACTIVE,
       isMaster: true,
       name: "Admin Piloto",
-      email: "admin@burgoos.local",
+      email: "admin@rrfive.local",
       passwordHash,
     },
   });
@@ -440,7 +440,7 @@ async function main(): Promise<void> {
   });
 
   const masterUser = await prisma.user.findUniqueOrThrow({
-    where: { email: "admin@burgoos.local" },
+    where: { email: "admin@rrfive.local" },
     select: { id: true },
   });
 
@@ -487,7 +487,7 @@ async function main(): Promise<void> {
   });
 
   const storeAdmin = await prisma.user.upsert({
-    where: { email: "loja.admin@burgoos.local" },
+    where: { email: "loja.admin@rrfive.local" },
     update: {
       status: AccessUserStatus.ACTIVE,
       isMaster: false,
@@ -498,7 +498,7 @@ async function main(): Promise<void> {
       status: AccessUserStatus.ACTIVE,
       isMaster: false,
       name: "Admin Loja Piloto",
-      email: "loja.admin@burgoos.local",
+      email: "loja.admin@rrfive.local",
       passwordHash,
     },
   });
@@ -525,7 +525,7 @@ async function main(): Promise<void> {
   });
 
   const operatorUser = await prisma.user.upsert({
-    where: { email: "operador@burgoos.local" },
+    where: { email: "operador@rrfive.local" },
     update: {
       status: AccessUserStatus.ACTIVE,
       isMaster: false,
@@ -536,7 +536,7 @@ async function main(): Promise<void> {
       status: AccessUserStatus.ACTIVE,
       isMaster: false,
       name: "Operador Piloto",
-      email: "operador@burgoos.local",
+      email: "operador@rrfive.local",
       passwordHash,
       storeAssignments: {
         create: {

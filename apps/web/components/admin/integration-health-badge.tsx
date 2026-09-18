@@ -1,4 +1,4 @@
-import type { DeliveryIntegrationStatus } from "@burgoos/types";
+import type { DeliveryIntegrationStatus } from "@rrfive/types";
 
 const statusLabel: Record<DeliveryIntegrationStatus, string> = {
   DRAFT: "Rascunho",

@@ -17,8 +17,8 @@ Validar consulta, preview, vínculo operacional, importação histórica, valore
 ```powershell
 npm.cmd run typecheck
 npm.cmd run lint
-npm.cmd run test --workspace @burgoos/api
-npm.cmd run test --workspace @burgoos/web
+npm.cmd run test --workspace @rrfive/api
+npm.cmd run test --workspace @rrfive/web
 ```
 
 Cobrir client/mapper, dedupe cruzado, repetição/concorrência, liability, parcelas, eventos, liquidações, dois tenants e regressão dos providers existentes.

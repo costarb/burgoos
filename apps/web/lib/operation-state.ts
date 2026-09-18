@@ -1,4 +1,4 @@
-import type { OperationState } from "@burgoos/types";
+import type { OperationState } from "@rrfive/types";
 
 export const idleOperationState: OperationState = { status: "idle" };
 

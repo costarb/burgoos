@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import type { ShiftCloseSummary } from "@burgoos/types";
+import type { ShiftCloseSummary } from "@rrfive/types";
 import { getShiftCloseSummary } from "../../../lib/api";
 
 export function ShiftClosePanel({ initialSummary }: { initialSummary: ShiftCloseSummary }) {

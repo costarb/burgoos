@@ -1,6 +1,6 @@
 openapi: 3.0.3
 info:
-  title: BurgoOS Sales Integrations Admin API
+  title: RRFive OS Sales Integrations Admin API
   version: 1.0.0
   description: Tenant-scoped contracts for configuring providers, previewing external sales and importing historical orders.
 servers:

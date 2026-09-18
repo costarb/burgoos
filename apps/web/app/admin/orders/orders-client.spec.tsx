@@ -2,7 +2,7 @@ import React, { act } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { createRoot, Root } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import type { KdsOrder } from "@burgoos/types";
+import type { KdsOrder } from "@rrfive/types";
 import { OrdersClient } from "./orders-client";
 import {
   confirmPlatformOrder,

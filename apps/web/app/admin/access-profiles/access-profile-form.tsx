@@ -4,7 +4,7 @@ import type {
   AccessPermissionGroup,
   AccessProfileDetail,
   AccessStoreSummary,
-} from "@burgoos/types";
+} from "@rrfive/types";
 import { FormEvent, useMemo, useState } from "react";
 import { createAccessProfile, updateAccessProfile } from "../../../lib/api";
 

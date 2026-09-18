@@ -79,7 +79,7 @@ export class IntegrationSecretService {
     if (this.config.get<string>("NODE_ENV") === "production") {
       throw new InternalServerErrorException("INTEGRATION_SECRET_KEY obrigatoria em producao");
     }
-    return createHash("sha256").update("burgoos-local-delivery-integration-secret").digest();
+    return createHash("sha256").update("rrfive-local-delivery-integration-secret").digest();
   }
 }
 

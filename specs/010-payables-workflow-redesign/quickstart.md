@@ -12,8 +12,8 @@
 
 ```powershell
 docker compose up -d postgres
-npm.cmd run dev --workspace @burgoos/api
-npm.cmd run dev --workspace @burgoos/web
+npm.cmd run dev --workspace @rrfive/api
+npm.cmd run dev --workspace @rrfive/web
 ```
 
 Open:
@@ -62,8 +62,8 @@ Open:
 ## Automated Checks
 
 ```powershell
-npm.cmd run test --workspace @burgoos/api
-npm.cmd run test --workspace @burgoos/web
+npm.cmd run test --workspace @rrfive/api
+npm.cmd run test --workspace @rrfive/web
 npm.cmd run typecheck --workspaces --if-present
 npm.cmd run lint --workspaces --if-present
 ```

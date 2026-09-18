@@ -1,6 +1,6 @@
 "use client";
 
-import type { DeliveryProvider, OperationState, TechnicalSheetSummary } from "@burgoos/types";
+import type { DeliveryProvider, OperationState, TechnicalSheetSummary } from "@rrfive/types";
 import React, { ChangeEvent, FormEvent, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { ModalShell } from "../../../components/admin/modal-shell";

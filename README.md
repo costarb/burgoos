@@ -1,6 +1,6 @@
-# BurgoOS
+# RRFive OS
 
-BurgoOS delivery pilot monorepo.
+RRFive OS delivery pilot monorepo.
 
 ## Documentation
 
@@ -11,7 +11,7 @@ BurgoOS delivery pilot monorepo.
 
 ## Delivery Integrations
 
-The iFood integration is designed as a store-scoped distributed application flow. Each store authorizes its own merchant access, and BurgoOS stores token metadata per tenant.
+The iFood integration is designed as a store-scoped distributed application flow. Each store authorizes its own merchant access, and RRFive OS stores token metadata per tenant.
 
 ### API Environment Variables
 
@@ -34,11 +34,11 @@ IFOOD_MOCK_MODE=false
 - Use the iFood homologation credentials until the app is approved for production.
 - The polling interval must respect iFood's documented 30-second baseline.
 - Recommended API build command:
-  `npm ci && npm run db:generate && npx prisma migrate deploy --schema packages/database/prisma/schema.prisma && npm run build --workspace @burgoos/api`
+  `npm ci && npm run db:generate && npx prisma migrate deploy --schema packages/database/prisma/schema.prisma && npm run build --workspace @rrfive/api`
 - Recommended API start command:
-  `npm run start --workspace @burgoos/api`
+  `npm run start --workspace @rrfive/api`
 - Recommended web build command:
-  `npm ci && npm run db:generate && npm run build --workspace @burgoos/web`
+  `npm ci && npm run db:generate && npm run build --workspace @rrfive/web`
 - `DELIVERY_INTEGRATION_SECRET_KEY` must stay stable after credentials are saved. Rotating it without re-saving store credentials makes stored iFood tokens unreadable.
 - Keep `IFOOD_MOCK_MODE=false` in production and use mock mode only for local validation.
 - Confirm Render has the same `DATABASE_URL`, JWT variables, API public URL, web public URL and iFood base URLs configured for the target environment.

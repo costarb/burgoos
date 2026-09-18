@@ -1,6 +1,6 @@
 openapi: 3.0.3
 info:
-  title: BurgoOS Resource Control Additions
+  title: RRFive OS Resource Control Additions
   version: 0.1.0
   description: Additive contracts for efficient notifications, durable exports and direct asset uploads.
 servers:

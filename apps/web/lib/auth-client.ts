@@ -1,7 +1,7 @@
-import type { AuthSession } from "@burgoos/types";
+import type { AuthSession } from "@rrfive/types";
 
-const AUTH_SESSION_KEY = "burgoos.admin.session";
-const AUTH_ACCESS_COOKIE = "burgoos.admin.access_token";
+const AUTH_SESSION_KEY = "rrfive.admin.session";
+const AUTH_ACCESS_COOKIE = "rrfive.admin.access_token";
 const SESSION_REFRESH_THRESHOLD_MS = 30 * 60 * 1000;
 const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? "http://127.0.0.1:3001";
 

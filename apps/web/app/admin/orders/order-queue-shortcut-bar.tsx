@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import type { KdsOrder } from "@burgoos/types";
+import type { KdsOrder } from "@rrfive/types";
 import type { OrderQueuePosition } from "./use-order-queue-shortcuts";
 import { isPendingPlatformOrder } from "./order-queue-helpers";
 

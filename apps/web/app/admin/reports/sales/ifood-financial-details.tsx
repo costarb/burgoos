@@ -1,4 +1,4 @@
-import type { IfoodFinancialOrderDetail } from "@burgoos/types";
+import type { IfoodFinancialOrderDetail } from "@rrfive/types";
 import React from "react";
 
 export function IfoodFinancialDetails({ detail }: { detail: IfoodFinancialOrderDetail }) {

@@ -2,7 +2,7 @@
 
 import type { FormEvent } from "react";
 import { useState, useTransition } from "react";
-import type { Ingredient, InventoryBalance, StockMovementType } from "@burgoos/types";
+import type { Ingredient, InventoryBalance, StockMovementType } from "@rrfive/types";
 import { useRouter } from "next/navigation";
 import { OperationFeedback } from "../../../components/admin/operation-feedback";
 import { createStockMovement } from "../../../lib/api";

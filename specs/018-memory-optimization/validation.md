@@ -9,14 +9,14 @@
 |---|---|---|
 | OpenAPI YAML syntax | PASS | Parsed with Python `yaml.safe_load` |
 | Prisma schema | PASS | `prisma validate` |
-| API typecheck | PASS | `npm.cmd run typecheck --workspace @burgoos/api` |
-| Web typecheck | PASS | `npm.cmd run typecheck --workspace @burgoos/web` |
+| API typecheck | PASS | `npm.cmd run typecheck --workspace @rrfive/api` |
+| Web typecheck | PASS | `npm.cmd run typecheck --workspace @rrfive/web` |
 | API focused operational suite | PASS | 23 tests: tenant/redaction/flags, 100-job worker, assets and exports |
 | Web focused operational suite | PASS | 12 tests: adaptive polling, notifications, branding and catalog |
 | Resource alert fixture | PASS | 1 root Vitest test |
 | Diff whitespace validation | PASS | `git diff --check` |
-| API lint | PASS | `npm.cmd run lint --workspace @burgoos/api` |
-| Web lint | PASS | `npm.cmd run lint --workspace @burgoos/web` |
+| API lint | PASS | `npm.cmd run lint --workspace @rrfive/api` |
+| Web lint | PASS | `npm.cmd run lint --workspace @rrfive/web` |
 | Legacy scheduler role isolation | PASS | 5 focused files / 20 tests plus compiled `APP_ROLE=api` health and log check |
 | Production builds outside OneDrive | PASS | Nest and Next standalone builds completed from temporary staging |
 | 2026-08-14 focused API quickstart suite | PASS | 12 files / 51 tests: lease, recovery, 100 jobs, security, reports, exports, assets and integration guards |

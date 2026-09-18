@@ -1,6 +1,6 @@
 "use client";
 
-import type { PublicOrderQueue, PublicQueueItem, PublicQueueStatus } from "@burgoos/types";
+import type { PublicOrderQueue, PublicQueueItem, PublicQueueStatus } from "@rrfive/types";
 import React from "react";
 import { useEffect, useMemo, useState } from "react";
 import { getPublicOrderQueue, getPublicOrderQueueByDomain } from "../../../lib/api";

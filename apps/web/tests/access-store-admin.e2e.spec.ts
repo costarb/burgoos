@@ -1,9 +1,9 @@
 import { APIRequestContext, expect, test } from "@playwright/test";
 
 const apiUrl = process.env.E2E_API_URL ?? "http://127.0.0.1:3001";
-const masterEmail = process.env.E2E_MASTER_EMAIL ?? "admin@burgoos.local";
+const masterEmail = process.env.E2E_MASTER_EMAIL ?? "admin@rrfive.local";
 const masterPassword = process.env.E2E_MASTER_PASSWORD ?? "admin123";
-const storeAdminEmail = process.env.E2E_STORE_ADMIN_EMAIL ?? "loja.admin@burgoos.local";
+const storeAdminEmail = process.env.E2E_STORE_ADMIN_EMAIL ?? "loja.admin@rrfive.local";
 const storeAdminPassword = process.env.E2E_STORE_ADMIN_PASSWORD ?? "admin123";
 
 test.describe("store admin access management", () => {

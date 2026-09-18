@@ -18,7 +18,7 @@ Validate the first multi-store setup and branding flow locally:
 ```powershell
 npm install
 npm run db:up
-$env:DATABASE_URL='postgresql://burgoos:burgoos@127.0.0.1:5432/burgoos?schema=public&sslmode=disable'
+$env:DATABASE_URL='postgresql://rrfive:rrfive@127.0.0.1:5432/rrfive?schema=public&sslmode=disable'
 npm run db:migrate
 npm run db:seed
 npm run dev
@@ -39,8 +39,8 @@ Local URLs and seeded credentials:
 - Platform stores: `http://localhost:3000/platform/stores`
 - Store branding: `http://localhost:3000/admin/branding`
 - Public pilot menu: `http://localhost:3000/piloto`
-- Store admin credentials used by server-rendered admin pages: `admin@burgoos.local` / `admin123`
-- Platform admin credentials used by platform setup pages: `platform@burgoos.local` / `admin123`
+- Store admin credentials used by server-rendered admin pages: `admin@rrfive.local` / `admin123`
+- Platform admin credentials used by platform setup pages: `platform@rrfive.local` / `admin123`
 
 ## Manual Validation Script
 

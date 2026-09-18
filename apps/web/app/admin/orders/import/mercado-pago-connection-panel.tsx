@@ -1,6 +1,6 @@
 "use client";
 
-import type { SalesImportRunView, SalesIntegrationView, SalesMovementView } from "@burgoos/types";
+import type { SalesImportRunView, SalesIntegrationView, SalesMovementView } from "@rrfive/types";
 import React, { FormEvent, useEffect, useState } from "react";
 import {
   connectMercadoPagoFixedToken,

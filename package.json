@@ -1,8 +1,8 @@
 {
-  "name": "burgoos",
+  "name": "rrfive",
   "version": "0.1.0",
   "private": true,
-  "description": "BurgoOS delivery pilot monorepo",
+  "description": "RRFive OS delivery pilot monorepo",
   "packageManager": "npm@10.8.2",
   "workspaces": [
     "apps/*",

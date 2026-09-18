@@ -54,7 +54,7 @@ describe("validateEnvironment resource controls", () => {
       validateEnvironment({
         ASSET_STORAGE_PROVIDER: "s3",
         S3_REGION: "us-east-1",
-        S3_BUCKET: "burgoos-assets",
+        S3_BUCKET: "rrfive-assets",
       }).ASSET_STORAGE_PROVIDER
     ).toBe("s3");
   });

@@ -11,10 +11,10 @@
 ## Static validation
 
 ```powershell
-npm.cmd run typecheck --workspace @burgoos/api
-npm.cmd run typecheck --workspace @burgoos/web
-npm.cmd run lint --workspace @burgoos/api
-npm.cmd run lint --workspace @burgoos/web
+npm.cmd run typecheck --workspace @rrfive/api
+npm.cmd run typecheck --workspace @rrfive/web
+npm.cmd run lint --workspace @rrfive/api
+npm.cmd run lint --workspace @rrfive/web
 ```
 
 ## Database and contract validation
@@ -31,9 +31,9 @@ Verify that two concurrent claim attempts return one lease owner, an expired lea
 Run the same artifact in each supported role:
 
 ```powershell
-$env:APP_ROLE='api'; npm.cmd run start --workspace @burgoos/api
-$env:APP_ROLE='worker'; npm.cmd run start --workspace @burgoos/api
-$env:APP_ROLE='all'; npm.cmd run start --workspace @burgoos/api
+$env:APP_ROLE='api'; npm.cmd run start --workspace @rrfive/api
+$env:APP_ROLE='worker'; npm.cmd run start --workspace @rrfive/api
+$env:APP_ROLE='all'; npm.cmd run start --workspace @rrfive/api
 ```
 
 - `api`: accepts requests and enqueues, but does not consume background work.

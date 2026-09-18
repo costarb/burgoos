@@ -1,7 +1,7 @@
 import React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
-import type { PosCatalog, PosOrder } from "@burgoos/types";
+import type { PosCatalog, PosOrder } from "@rrfive/types";
 import {
   cartFromOrder,
   estimatedCartTotal,

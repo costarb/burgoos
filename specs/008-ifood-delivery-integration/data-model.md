@@ -215,7 +215,7 @@ Rules:
 
 ### PlatformSyncAttempt
 
-Outbound communication attempt from BurgoOS to the delivery platform.
+Outbound communication attempt from RRFive OS to the delivery platform.
 
 Fields:
 

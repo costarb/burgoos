@@ -9,10 +9,15 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
-        ink: "#1f2933",
-        tomato: "#d83a2e",
+        // RRFive OS identity: violet-black ink, electric-indigo primary,
+        // raspberry-coral spark (sparing use), violet-tinted paper background.
+        // "tomato"/"cream" keys kept for compatibility with existing classes.
+        ink: "#1b1730",
+        tomato: "#5b3df6",
+        "tomato-deep": "#3b22c4",
+        spark: "#ff5c8a",
         leaf: "#2f7d57",
-        cream: "#fff8ed"
+        cream: "#faf9fc"
       }
     }
   },

@@ -5,7 +5,7 @@ import type {
   OrderPlatform,
   SalesAnalyticalOrder,
   SalesReportResponse,
-} from "@burgoos/types";
+} from "@rrfive/types";
 import { useSearchParams } from "next/navigation";
 import React, { useEffect, useState } from "react";
 import { MultiSelectFilter } from "../../../../components/admin/multi-select-filter";

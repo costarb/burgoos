@@ -1,6 +1,6 @@
 openapi: 3.0.3
 info:
-  title: BurgoOS Management Report API
+  title: RRFive OS Management Report API
   version: 0.1.0
   description: Admin API contract for the consolidated management report.
 paths:

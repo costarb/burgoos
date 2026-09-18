@@ -14,7 +14,7 @@ describe("AccessAuditService", () => {
       eventType: AccessAuditEventType.LOGIN_FAILURE,
       result: AccessAuditResult.FAILED,
       metadata: {
-        login: "admin@burgoos.local",
+        login: "admin@rrfive.local",
         refreshToken: "secret",
         passwordHash: "hash",
       },
@@ -23,7 +23,7 @@ describe("AccessAuditService", () => {
     expect(create).toHaveBeenCalledWith({
       data: expect.objectContaining({
         metadata: {
-          login: "admin@burgoos.local",
+          login: "admin@rrfive.local",
           refreshToken: "[REDACTED]",
           passwordHash: "[REDACTED]",
         },

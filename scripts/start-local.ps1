@@ -108,8 +108,8 @@ if (-not $SkipDatabase) {
 try {
   Write-Host "Iniciando API e web..." -ForegroundColor Cyan
   # APP_ROLE defaults to "all" locally so HTTP and durable jobs are both available.
-  Start-LocalApplication "api" @("run", "dev", "--workspace", "@burgoos/api") 3001
-  Start-LocalApplication "web" @("run", "dev", "--workspace", "@burgoos/web") 3000
+  Start-LocalApplication "api" @("run", "dev", "--workspace", "@rrfive/api") 3001
+  Start-LocalApplication "web" @("run", "dev", "--workspace", "@rrfive/web") 3000
 } catch {
   Write-Warning $_.Exception.Message
   & $stopScript

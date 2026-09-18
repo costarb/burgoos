@@ -1,6 +1,6 @@
 "use client";
 
-import type { MenuEngineeringItem, MenuEngineeringReport } from "@burgoos/types";
+import type { MenuEngineeringItem, MenuEngineeringReport } from "@rrfive/types";
 
 const classificationLabels: Record<MenuEngineeringItem["classification"], string> = {
   STAR: "Estrela",

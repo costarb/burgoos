@@ -1,4 +1,4 @@
-import type { SalesProviderCapability } from "@burgoos/types";
+import type { SalesProviderCapability } from "@rrfive/types";
 import React from "react";
 
 export function SalesProviderSelector({

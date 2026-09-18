@@ -2,9 +2,9 @@
 -- Execute depois de aplicar as migrations Prisma.
 --
 -- Usuarios criados/atualizados:
---   admin@burgoos.local / admin123
---   loja.admin@burgoos.local / admin123
---   operador@burgoos.local / admin123
+--   admin@rrfive.local / admin123
+--   loja.admin@rrfive.local / admin123
+--   operador@rrfive.local / admin123
 --
 -- Troque as senhas apos o primeiro acesso.
 
@@ -171,9 +171,9 @@ SELECT
 FROM tenants tenant
 CROSS JOIN (
   VALUES
-    ('30000000-0000-4000-8000-000000000001'::uuid, 'OWNER'::"UserRole", 'ACTIVE'::"AccessUserStatus", true, 'Admin Piloto', 'admin@burgoos.local', '$2a$10$SvsgcvCTvdXaPh.6jm/wAeKt.lHjyHmYidoERHb4bM6zuH4UliI8a'),
-    ('30000000-0000-4000-8000-000000000002'::uuid, 'ADMIN'::"UserRole", 'ACTIVE'::"AccessUserStatus", false, 'Admin Loja Piloto', 'loja.admin@burgoos.local', '$2a$10$SvsgcvCTvdXaPh.6jm/wAeKt.lHjyHmYidoERHb4bM6zuH4UliI8a'),
-    ('30000000-0000-4000-8000-000000000003'::uuid, 'OPERATOR'::"UserRole", 'ACTIVE'::"AccessUserStatus", false, 'Operador Piloto', 'operador@burgoos.local', '$2a$10$SvsgcvCTvdXaPh.6jm/wAeKt.lHjyHmYidoERHb4bM6zuH4UliI8a')
+    ('30000000-0000-4000-8000-000000000001'::uuid, 'OWNER'::"UserRole", 'ACTIVE'::"AccessUserStatus", true, 'Admin Piloto', 'admin@rrfive.local', '$2a$10$SvsgcvCTvdXaPh.6jm/wAeKt.lHjyHmYidoERHb4bM6zuH4UliI8a'),
+    ('30000000-0000-4000-8000-000000000002'::uuid, 'ADMIN'::"UserRole", 'ACTIVE'::"AccessUserStatus", false, 'Admin Loja Piloto', 'loja.admin@rrfive.local', '$2a$10$SvsgcvCTvdXaPh.6jm/wAeKt.lHjyHmYidoERHb4bM6zuH4UliI8a'),
+    ('30000000-0000-4000-8000-000000000003'::uuid, 'OPERATOR'::"UserRole", 'ACTIVE'::"AccessUserStatus", false, 'Operador Piloto', 'operador@rrfive.local', '$2a$10$SvsgcvCTvdXaPh.6jm/wAeKt.lHjyHmYidoERHb4bM6zuH4UliI8a')
 ) AS user_seed(id, role, status, is_master, name, email, password_hash)
 WHERE tenant.slug = 'piloto'
 ON CONFLICT (email) DO UPDATE
@@ -207,7 +207,7 @@ SELECT
 FROM users user_account
 JOIN tenants tenant ON tenant.slug = 'piloto'
 JOIN access_profiles profile ON profile.tenant_id IS NULL AND profile.name = 'Master'
-WHERE user_account.email = 'admin@burgoos.local'
+WHERE user_account.email = 'admin@rrfive.local'
 ON CONFLICT (user_id, tenant_id) DO UPDATE
 SET
   profile_id = EXCLUDED.profile_id,
@@ -237,7 +237,7 @@ SELECT
 FROM users user_account
 JOIN tenants tenant ON tenant.slug = 'piloto'
 JOIN access_profiles profile ON profile.tenant_id = tenant.id AND profile.name = 'Admin da loja'
-WHERE user_account.email = 'loja.admin@burgoos.local'
+WHERE user_account.email = 'loja.admin@rrfive.local'
 ON CONFLICT (user_id, tenant_id) DO UPDATE
 SET
   profile_id = EXCLUDED.profile_id,
@@ -267,7 +267,7 @@ SELECT
 FROM users user_account
 JOIN tenants tenant ON tenant.slug = 'piloto'
 JOIN access_profiles profile ON profile.tenant_id = tenant.id AND profile.name = 'Operador'
-WHERE user_account.email = 'operador@burgoos.local'
+WHERE user_account.email = 'operador@rrfive.local'
 ON CONFLICT (user_id, tenant_id) DO UPDATE
 SET
   profile_id = EXCLUDED.profile_id,

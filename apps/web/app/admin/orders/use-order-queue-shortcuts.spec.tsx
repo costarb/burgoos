@@ -1,7 +1,7 @@
 import React, { act } from "react";
 import { createRoot, Root } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import type { KdsOrder, OrderStatus } from "@burgoos/types";
+import type { KdsOrder, OrderStatus } from "@rrfive/types";
 import { useOrderQueueShortcuts } from "./use-order-queue-shortcuts";
 import type { UseOrderQueueShortcutsResult } from "./use-order-queue-shortcuts";
 

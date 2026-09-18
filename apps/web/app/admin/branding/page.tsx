@@ -1,5 +1,5 @@
 import React from "react";
-import type { OperationState } from "@burgoos/types";
+import type { OperationState } from "@rrfive/types";
 import { revalidatePath } from "next/cache";
 import { OperationForm } from "../../../components/admin/operation-form";
 import { SubmitButton } from "../../../components/admin/submit-button";
@@ -12,7 +12,7 @@ import {
   restoreBranding,
   saveBrandingDraft,
 } from "../../../lib/api";
-import type { StoreLayoutPresetKey } from "@burgoos/types";
+import type { StoreLayoutPresetKey } from "@rrfive/types";
 
 export const dynamic = "force-dynamic";
 

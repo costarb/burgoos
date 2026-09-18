@@ -19,7 +19,7 @@ Validate the first operational profitability flow locally:
 ```powershell
 npm install
 npm run db:up
-$env:DATABASE_URL='postgresql://burgoos:burgoos@127.0.0.1:5432/burgoos?schema=public&sslmode=disable'
+$env:DATABASE_URL='postgresql://rrfive:rrfive@127.0.0.1:5432/rrfive?schema=public&sslmode=disable'
 npm run db:migrate
 npm run dev
 ```
@@ -28,7 +28,7 @@ Implementation validation commands:
 
 ```powershell
 npm.cmd run typecheck --workspaces --if-present
-npm.cmd run test -w @burgoos/api
+npm.cmd run test -w @rrfive/api
 npm.cmd run lint
 ```
 

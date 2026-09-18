@@ -1,5 +1,5 @@
 import React from "react";
-import type { StoreOpenMode } from "@burgoos/types";
+import type { StoreOpenMode } from "@rrfive/types";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { getPlatformAdminToken, getPlatformStore, updatePlatformStore } from "../../../../lib/api";

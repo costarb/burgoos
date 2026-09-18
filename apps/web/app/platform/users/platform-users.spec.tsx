@@ -8,7 +8,7 @@ vi.mock("../../../lib/api", () => ({
     {
       id: "platform-admin-id",
       name: "Admin Plataforma",
-      email: "platform@burgoos.local",
+      email: "platform@rrfive.local",
       role: "SUPER_ADMIN",
       active: true,
       createdAt: "2026-07-08T12:00:00.000Z",

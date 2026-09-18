@@ -34,10 +34,10 @@
 ## Automated validation
 
 ```powershell
-npm.cmd run typecheck --workspace=@burgoos/api
-npm.cmd run typecheck --workspace=@burgoos/web
-npm.cmd test --workspace=@burgoos/api
-npm.cmd test --workspace=@burgoos/web
-npm.cmd run lint --workspace=@burgoos/api
-npm.cmd run lint --workspace=@burgoos/web
+npm.cmd run typecheck --workspace=@rrfive/api
+npm.cmd run typecheck --workspace=@rrfive/web
+npm.cmd test --workspace=@rrfive/api
+npm.cmd test --workspace=@rrfive/web
+npm.cmd run lint --workspace=@rrfive/api
+npm.cmd run lint --workspace=@rrfive/web
 ```

@@ -1,4 +1,4 @@
-import type { OperationState } from "@burgoos/types";
+import type { OperationState } from "@rrfive/types";
 import { revalidatePath } from "next/cache";
 import {
   activateDeliveryIntegration,
