@@ -8,6 +8,14 @@ const config: Config = {
   ],
   theme: {
     extend: {
+      fontFamily: {
+        // RRFive OS identity: Archivo Black for the brand/display face
+        // (page titles, wordmark), IBM Plex Sans for interface text,
+        // IBM Plex Mono for order codes, money and timestamps.
+        sans: ["var(--font-body)", "ui-sans-serif", "system-ui", "sans-serif"],
+        display: ["var(--font-display)", "Arial Black", "sans-serif"],
+        mono: ["var(--font-mono)", "SFMono-Regular", "Consolas", "monospace"]
+      },
       colors: {
         // RRFive OS identity: violet-black ink, electric-indigo primary,
         // raspberry-coral spark (sparing use), violet-tinted paper background.

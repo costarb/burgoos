@@ -9,13 +9,21 @@
 body {
   margin: 0;
   font-family:
-    Inter,
+    var(--font-body),
     ui-sans-serif,
     system-ui,
     -apple-system,
     BlinkMacSystemFont,
     "Segoe UI",
     sans-serif;
+}
+
+/* RRFive OS identity: page titles use the display face. Every h1 in the
+   admin/public screens is already a large hero-style title (text-2xl or
+   bigger), which is the scale Archivo Black is designed to read well at. */
+h1 {
+  font-family: var(--font-display), "Arial Black", sans-serif;
+  letter-spacing: -0.01em;
 }
 
 button,
