@@ -61,6 +61,14 @@ export function PayablesClient({ token, initialPayables, options }: PayablesClie
   const [operation, setOperation] = useState<OperationState>({ status: "idle" });
   const [busy, setBusy] = useState(false);
   const [filters, setFilters] = useState<PayablesFilters>(emptyFilters);
+  const [page, setPage] = useState(1);
+
+  const total = payables.total ?? payables.items.length;
+  const pageSize = payables.pageSize ?? (payables.items.length || 50);
+  const currentPage = payables.page ?? page;
+  const totalPages = Math.max(1, Math.ceil(total / pageSize));
+  const hasPreviousPage = currentPage > 1;
+  const hasNextPage = currentPage < totalPages;
 
   const selectedPayableSnapshot = useMemo(
     () =>
@@ -94,9 +102,22 @@ export function PayablesClient({ token, initialPayables, options }: PayablesClie
     }
   }
 
-  async function refresh(nextFilters = filters) {
-    const response = await getPayables(nextFilters);
-    setPayables(response.payables);
+  async function refresh(nextFilters = filters, nextPage = page) {
+    const result = await getPayables({ ...nextFilters, page: nextPage });
+    const responseTotal = result.payables.total ?? result.payables.items.length;
+    const responsePageSize = result.payables.pageSize ?? (result.payables.items.length || 50);
+    const responsePage = result.payables.page ?? nextPage;
+    const maxPage = Math.max(1, Math.ceil(responseTotal / responsePageSize));
+
+    if (responsePage > maxPage) {
+      const corrected = await getPayables({ ...nextFilters, page: maxPage });
+      setPayables(corrected.payables);
+      setPage(corrected.payables.page ?? maxPage);
+      return;
+    }
+
+    setPayables(result.payables);
+    setPage(responsePage);
   }
 
   async function openDetails(payable: Payable) {
@@ -109,7 +130,7 @@ export function PayablesClient({ token, initialPayables, options }: PayablesClie
 
   async function applyFilters() {
     await run("Aplicando filtros de contas a pagar.", async () => {
-      await refresh(filters);
+      await refresh(filters, 1);
     });
   }
 
@@ -117,7 +138,19 @@ export function PayablesClient({ token, initialPayables, options }: PayablesClie
     const nextFilters = emptyFilters;
     setFilters(nextFilters);
     await run("Limpando filtros de contas a pagar.", async () => {
-      await refresh(nextFilters);
+      await refresh(nextFilters, 1);
+    });
+  }
+
+  async function goToPreviousPage() {
+    await run("Carregando pagina anterior de contas a pagar.", async () => {
+      await refresh(filters, Math.max(1, currentPage - 1));
+    });
+  }
+
+  async function goToNextPage() {
+    await run("Carregando proxima pagina de contas a pagar.", async () => {
+      await refresh(filters, currentPage + 1);
     });
   }
 
@@ -367,6 +400,35 @@ export function PayablesClient({ token, initialPayables, options }: PayablesClie
             </article>
           ))
         )}
+        {payables.items.length > 0 ? (
+          <div className="flex flex-wrap items-center justify-between gap-3 border-t border-slate-200 px-4 py-3 text-sm text-slate-600">
+            <p>
+              Pagina {currentPage} de {totalPages} - {total} registro(s) encontrado(s)
+            </p>
+            <div className="flex gap-2">
+              <button
+                className="rounded-md border border-slate-300 px-3 py-2 text-sm font-semibold disabled:opacity-60"
+                disabled={busy || !hasPreviousPage}
+                onClick={() => {
+                  void goToPreviousPage();
+                }}
+                type="button"
+              >
+                Pagina anterior
+              </button>
+              <button
+                className="rounded-md border border-slate-300 px-3 py-2 text-sm font-semibold disabled:opacity-60"
+                disabled={busy || !hasNextPage}
+                onClick={() => {
+                  void goToNextPage();
+                }}
+                type="button"
+              >
+                Proxima pagina
+              </button>
+            </div>
+          </div>
+        ) : null}
       </section>
 
       <PayableDetailDialog
