@@ -29,7 +29,7 @@ Projeto web deste monorepo: `apps/web/app/admin/finance/payables/` (frontend afe
 
 **Purpose**: Confirmar que os contratos compartilhados já suportam a feature antes de tocar na tela.
 
-- [ ] T001 Confirmar que `PayablesFilters` e `PayablesResponse` em `packages/types/src/index.ts` já expõem `page`, `pageSize` e `total`; se algum campo estiver ausente, adicioná-lo nesse arquivo (não esperado, conforme research.md).
+- [x] T001 Confirmar que `PayablesFilters` e `PayablesResponse` em `packages/types/src/index.ts` já expõem `page`, `pageSize` e `total`; se algum campo estiver ausente, adicioná-lo nesse arquivo (não esperado, conforme research.md).
 
 **Checkpoint**: Contrato compartilhado confirmado — nenhuma mudança de tipos esperada.
 
@@ -41,8 +41,8 @@ Projeto web deste monorepo: `apps/web/app/admin/finance/payables/` (frontend afe
 
 **⚠️ CRITICAL**: Nenhuma user story pode ser implementada antes desta fase.
 
-- [ ] T002 Em `apps/web/app/admin/finance/payables/payables-client.tsx`, adicionar estado `page` (inicial `1`) e alterar `refresh` para `refresh(nextFilters = filters, nextPage = page)`, enviando `{ ...nextFilters, page: nextPage }` para `getPayables` e sincronizando `page` com `response.payables.page` retornado.
-- [ ] T003 Em `apps/web/app/admin/finance/payables/payables-client.tsx`, calcular valores derivados a partir de `payables` (`total`, `pageSize`, `page`): `totalPages = Math.max(1, Math.ceil(payables.total / payables.pageSize))`, `hasPreviousPage`, `hasNextPage`, disponíveis para o JSX da lista.
+- [x] T002 Em `apps/web/app/admin/finance/payables/payables-client.tsx`, adicionar estado `page` (inicial `1`) e alterar `refresh` para `refresh(nextFilters = filters, nextPage = page)`, enviando `{ ...nextFilters, page: nextPage }` para `getPayables` e sincronizando `page` com `response.payables.page` retornado.
+- [x] T003 Em `apps/web/app/admin/finance/payables/payables-client.tsx`, calcular valores derivados a partir de `payables` (`total`, `pageSize`, `page`): `totalPages = Math.max(1, Math.ceil(payables.total / payables.pageSize))`, `hasPreviousPage`, `hasNextPage`, disponíveis para o JSX da lista.
 
 **Checkpoint**: Estado e cálculo de paginação prontos; as user stories abaixo só adicionam UI/comportamento sobre essa base.
 
@@ -58,14 +58,14 @@ Projeto web deste monorepo: `apps/web/app/admin/finance/payables/` (frontend afe
 
 > Escrever estes testes primeiro; devem falhar antes da implementação desta fase.
 
-- [ ] T004 [US1] Adicionar teste em `apps/web/app/admin/finance/payables/payables-client.spec.tsx`: clicar em "Próxima página" chama `getPayables` com `page: 2` e renderiza os itens da resposta mockada da página 2.
-- [ ] T005 [US1] Adicionar teste em `apps/web/app/admin/finance/payables/payables-client.spec.tsx`: clicar em "Página anterior" a partir da página 2 chama `getPayables` com `page: 1`.
-- [ ] T006 [US1] Adicionar teste em `apps/web/app/admin/finance/payables/payables-client.spec.tsx`: botão "Próxima página" fica desabilitado quando `page * pageSize >= total`; botão "Página anterior" fica desabilitado quando `page <= 1`.
+- [x] T004 [US1] Adicionar teste em `apps/web/app/admin/finance/payables/payables-client.spec.tsx`: clicar em "Próxima página" chama `getPayables` com `page: 2` e renderiza os itens da resposta mockada da página 2.
+- [x] T005 [US1] Adicionar teste em `apps/web/app/admin/finance/payables/payables-client.spec.tsx`: clicar em "Página anterior" a partir da página 2 chama `getPayables` com `page: 1`.
+- [x] T006 [US1] Adicionar teste em `apps/web/app/admin/finance/payables/payables-client.spec.tsx`: botão "Próxima página" fica desabilitado quando `page * pageSize >= total`; botão "Página anterior" fica desabilitado quando `page <= 1`.
 
 ### Implementation for User Story 1
 
-- [ ] T007 [US1] Em `apps/web/app/admin/finance/payables/payables-client.tsx`, implementar `goToNextPage`/`goToPreviousPage` que chamam `refresh(filters, page + 1)` / `refresh(filters, page - 1)` dentro do wrapper `run(...)` já existente (reaproveitando estado `busy`/`operation`).
-- [ ] T008 [US1] Em `apps/web/app/admin/finance/payables/payables-client.tsx`, adicionar bloco de navegação abaixo do grid com botões "Página anterior" e "Próxima página", desabilitados conforme `hasPreviousPage`/`hasNextPage` e enquanto `busy` for verdadeiro.
+- [x] T007 [US1] Em `apps/web/app/admin/finance/payables/payables-client.tsx`, implementar `goToNextPage`/`goToPreviousPage` que chamam `refresh(filters, page + 1)` / `refresh(filters, page - 1)` dentro do wrapper `run(...)` já existente (reaproveitando estado `busy`/`operation`).
+- [x] T008 [US1] Em `apps/web/app/admin/finance/payables/payables-client.tsx`, adicionar bloco de navegação abaixo do grid com botões "Página anterior" e "Próxima página", desabilitados conforme `hasPreviousPage`/`hasNextPage` e enquanto `busy` for verdadeiro.
 
 **Checkpoint**: User Story 1 funcional e testável de forma independente — usuário já consegue ver todos os registros navegando entre páginas.
 
@@ -79,12 +79,12 @@ Projeto web deste monorepo: `apps/web/app/admin/finance/payables/` (frontend afe
 
 ### Tests for User Story 2 ⚠️
 
-- [ ] T009 [US2] Adicionar teste em `apps/web/app/admin/finance/payables/payables-client.spec.tsx`: com resposta mockada (`total`, `page`, `pageSize`), a tela exibe "Página {page} de {totalPages}" e o total de registros encontrados.
-- [ ] T010 [US2] Adicionar teste em `apps/web/app/admin/finance/payables/payables-client.spec.tsx`: ao navegar da página 1 para a página 2 (mock com `summary` idêntico em ambas respostas), os valores dos cartões `Previsto`/`Pago`/`Em aberto`/`Vencido` permanecem inalterados.
+- [x] T009 [US2] Adicionar teste em `apps/web/app/admin/finance/payables/payables-client.spec.tsx`: com resposta mockada (`total`, `page`, `pageSize`), a tela exibe "Página {page} de {totalPages}" e o total de registros encontrados.
+- [x] T010 [US2] Adicionar teste em `apps/web/app/admin/finance/payables/payables-client.spec.tsx`: ao navegar da página 1 para a página 2 (mock com `summary` idêntico em ambas respostas), os valores dos cartões `Previsto`/`Pago`/`Em aberto`/`Vencido` permanecem inalterados.
 
 ### Implementation for User Story 2
 
-- [ ] T011 [US2] Em `apps/web/app/admin/finance/payables/payables-client.tsx`, adicionar texto "Página {page} de {totalPages}" e "{total} registro(s) encontrado(s)" junto ao bloco de navegação criado em T008.
+- [x] T011 [US2] Em `apps/web/app/admin/finance/payables/payables-client.tsx`, adicionar texto "Página {page} de {totalPages}" e "{total} registro(s) encontrado(s)" junto ao bloco de navegação criado em T008.
 
 **Checkpoint**: User Stories 1 e 2 funcionam em conjunto — usuário navega, sabe onde está e confia nos totais exibidos.
 
@@ -98,14 +98,14 @@ Projeto web deste monorepo: `apps/web/app/admin/finance/payables/` (frontend afe
 
 ### Tests for User Story 3 ⚠️
 
-- [ ] T012 [US3] Adicionar teste em `apps/web/app/admin/finance/payables/payables-client.spec.tsx`: estando na página 2, clicar em "Filtrar" chama `getPayables` com `page: 1` (mantendo os demais filtros).
-- [ ] T013 [US3] Adicionar teste em `apps/web/app/admin/finance/payables/payables-client.spec.tsx`: estando na página 2, clicar em "Limpar" chama `getPayables` com `page: 1` e filtros vazios.
-- [ ] T014 [US3] Adicionar teste em `apps/web/app/admin/finance/payables/payables-client.spec.tsx`: quando a resposta mockada retorna `page` maior que `Math.ceil(total / pageSize)` (ex.: registros removidos), a tela dispara nova busca ajustando para a última página válida (ou `1` quando `total = 0`), sem exibir grid vazio por página inválida.
+- [x] T012 [US3] Adicionar teste em `apps/web/app/admin/finance/payables/payables-client.spec.tsx`: estando na página 2, clicar em "Filtrar" chama `getPayables` com `page: 1` (mantendo os demais filtros).
+- [x] T013 [US3] Adicionar teste em `apps/web/app/admin/finance/payables/payables-client.spec.tsx`: estando na página 2, clicar em "Limpar" chama `getPayables` com `page: 1` e filtros vazios.
+- [x] T014 [US3] Adicionar teste em `apps/web/app/admin/finance/payables/payables-client.spec.tsx`: quando a resposta mockada retorna `page` maior que `Math.ceil(total / pageSize)` (ex.: registros removidos), a tela dispara nova busca ajustando para a última página válida (ou `1` quando `total = 0`), sem exibir grid vazio por página inválida.
 
 ### Implementation for User Story 3
 
-- [ ] T015 [US3] Em `apps/web/app/admin/finance/payables/payables-client.tsx`, alterar `applyFilters` e `clearFilters` para chamar `refresh(nextFilters, 1)`, reiniciando a página.
-- [ ] T016 [US3] Em `apps/web/app/admin/finance/payables/payables-client.tsx`, após cada `refresh`, comparar `response.payables.page` com o `totalPages` recém-calculado; se inválido, disparar nova chamada a `getPayables` com a última página válida (ou `1` se `total === 0`) antes de atualizar o estado exibido.
+- [x] T015 [US3] Em `apps/web/app/admin/finance/payables/payables-client.tsx`, alterar `applyFilters` e `clearFilters` para chamar `refresh(nextFilters, 1)`, reiniciando a página.
+- [x] T016 [US3] Em `apps/web/app/admin/finance/payables/payables-client.tsx`, após cada `refresh`, comparar `response.payables.page` com o `totalPages` recém-calculado; se inválido, disparar nova chamada a `getPayables` com a última página válida (ou `1` se `total === 0`) antes de atualizar o estado exibido.
 
 **Checkpoint**: Todas as user stories funcionam de forma independente e integrada — navegação completa, informativa e resiliente a mudanças de filtro/dados.
 
@@ -115,9 +115,9 @@ Projeto web deste monorepo: `apps/web/app/admin/finance/payables/` (frontend afe
 
 **Purpose**: Validar o comportamento de ponta a ponta e garantir que nada existente quebrou.
 
-- [ ] T017 [P] Rodar a suíte web (`apps/web`) incluindo `payables-client.spec.tsx`, typecheck e lint; corrigir regressões encontradas.
-- [ ] T018 [P] Rodar a suíte da API (`apps/api`), especialmente `accounts-payable.service.spec.ts`, para confirmar que o backend segue inalterado e compatível.
-- [ ] T019 Executar o roteiro de `specs/022-payables-grid-pagination/quickstart.md` manualmente (ou via E2E, se aplicável) e registrar o resultado.
+- [x] T017 [P] Rodar a suíte web (`apps/web`) incluindo `payables-client.spec.tsx`, typecheck e lint; corrigir regressões encontradas. **Resultado**: 137/137 testes passando, `tsc --noEmit` e `eslint` limpos.
+- [x] T018 [P] Rodar a suíte da API (`apps/api`), especialmente `accounts-payable.service.spec.ts`, para confirmar que o backend segue inalterado e compatível. **Resultado**: `accounts-payable.service.spec.ts`/`payable-rules.spec.ts` (8/8) passam. A suíte completa tem 26 arquivos falhando por `this.prisma.$queryRaw is not a function` e timeouts de rede/timing — pré-existentes neste ambiente sem Postgres real, **não relacionados** a esta feature (nenhum arquivo de `apps/api` foi alterado).
+- [ ] T019 Executar o roteiro de `specs/022-payables-grid-pagination/quickstart.md` manualmente (ou via E2E, se aplicável) e registrar o resultado. **Pendente**: requer navegador/app rodando; os 10 passos do roteiro estão cobertos por equivalentes automatizados em `payables-client.spec.tsx` (T004-T014), mas a validação manual em ambiente real ainda não foi executada.
 
 ---
 
