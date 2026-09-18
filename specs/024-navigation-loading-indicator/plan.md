@@ -26,7 +26,7 @@ Hoje a troca de tela no painel administrativo (`/admin` e `/platform`, 34 págin
 
 **Constraints**: sem biblioteca nova (Next 14 não tem `useLinkStatus`/eventos de router nativos); cobre apenas navegação via `next/link` do menu lateral (não links `<a href>` secundários); respeitar `prefers-reduced-motion`; esqueletos podem ser genéricos, não pixel-perfect por tela
 
-**Scale/Scope**: `AdminShell` (montagem única), 34 arquivos `loading.tsx` novos (um por pasta de rota de primeiro nível sob `/admin` e `/platform`), um componente de esqueleto genérico com 2 variações
+**Scale/Scope**: `AdminShell` (montagem única); `loading.tsx` na raiz de `/admin` e `/platform` (2 arquivos) cobre as 34 páginas por herança de Suspense boundary do Next.js — pastas com conteúdo bem diferente do genérico (ex.: relatórios com cartões de métrica) recebem um `loading.tsx` próprio adicional; um componente de esqueleto genérico com 2 variações
 
 ## Constitution Check
 
@@ -67,13 +67,15 @@ apps/web/components/admin/
 ├── route-skeleton.tsx                 # NOVO: esqueleto genérico (variações list/panel)
 └── route-skeleton.spec.tsx            # NOVO: testes das variações
 
-apps/web/app/admin/**/loading.tsx      # NOVOS: um por pasta de rota de 1º nível (~30)
-apps/web/app/platform/**/loading.tsx   # NOVOS: um por pasta de rota de 1º nível (~4)
+apps/web/app/admin/loading.tsx         # NOVO: fallback de todas as rotas sob /admin
+apps/web/app/platform/loading.tsx      # NOVO: fallback de todas as rotas sob /platform
+apps/web/app/admin/reports/loading.tsx # NOVO: override "panel" (relatórios têm mais cartões/gráfico)
+apps/web/app/admin/finance/loading.tsx # NOVO: override "panel" (financeiro/fluxo de caixa)
 ```
 
 Nenhum arquivo de `apps/api` ou `packages/types` é alterado — a feature é inteiramente de interação no cliente.
 
-**Structure Decision**: montar a barra de progresso uma única vez dentro de `AdminShell` (compartilhado por `/admin` e `/platform`) em vez de duplicar em cada `layout.tsx`; usar a convenção nativa `loading.tsx` do Next.js para os esqueletos, apoiada por um único componente de esqueleto reutilizável para não precisar de 34 designs bespoke.
+**Structure Decision**: montar a barra de progresso uma única vez dentro de `AdminShell` (compartilhado por `/admin` e `/platform`) em vez de duplicar em cada `layout.tsx`. Para os esqueletos, `loading.tsx` do Next.js aplica automaticamente ao segmento onde está E a todos os segmentos filhos que não tenham seu próprio `loading.tsx` (Suspense boundary por herança) — por isso dois arquivos na raiz de `/admin` e `/platform` já cobrem as 34 páginas; pastas cujo conteúdo real é visivelmente diferente do genérico "list" (relatórios e financeiro, com cartões de métrica) recebem um `loading.tsx` próprio com `variant="panel"`.
 
 ## Design
 
@@ -94,21 +96,22 @@ Nenhum arquivo de `apps/api` ou `packages/types` é alterado — a feature é in
 
 ### `loading.tsx` por rota
 
-- Cada pasta de rota de primeiro nível sob `app/admin/` e `app/platform/` recebe um `loading.tsx` mínimo:
+- `app/admin/loading.tsx` e `app/platform/loading.tsx` (raiz de cada seção) renderizam `<RouteSkeleton variant="list" />` — por herança de Suspense boundary do Next.js, isso já cobre qualquer página abaixo que não tenha seu próprio `loading.tsx` (as 34 páginas de ambas as seções):
   ```tsx
-  import { RouteSkeleton } from "../../../components/admin/route-skeleton";
+  import { RouteSkeleton } from "../../components/admin/route-skeleton";
   export default function Loading() {
-    return <RouteSkeleton variant="list" />; // ou "panel", conforme a tela
+    return <RouteSkeleton variant="list" />;
   }
   ```
-- Next.js já cuida de exibir esse arquivo automaticamente via `React.Suspense` assim que a navegação para aquele segmento começa — nenhum código de detecção adicional é necessário aqui.
+- `app/admin/reports/loading.tsx` e `app/admin/finance/loading.tsx` sobrepõem o fallback da raiz com `<RouteSkeleton variant="panel" />`, por serem seções com cartões de métrica/gráfico — mais próximas visualmente dessa variação do que da lista genérica.
+- Next.js já cuida de exibir o `loading.tsx` mais específico automaticamente via `React.Suspense` assim que a navegação para aquele segmento começa — nenhum código de detecção adicional é necessário aqui.
 
 ## Test Strategy
 
 - **`navigation-progress-bar.spec.tsx`** (com `vi.useFakeTimers()`): não aparece antes de 150ms; aparece após 150ms se a navegação ainda não concluiu; não aparece se a navegação conclui antes de 150ms; permanece pelo menos 200ms uma vez visível; volta a `idle` após o tempo-limite de 15s mesmo sem mudança de rota; uma nova navegação iniciada com a barra já visível não regride para `pending`.
 - **`admin-shell.spec.tsx`**: confirma que a barra está montada e reage a cliques nos links do menu tanto em `/admin` quanto em `/platform`.
 - **`route-skeleton.spec.tsx`**: renderiza as duas variações sem erro, com os elementos esperados (blocos, linhas).
-- **Regression**: suíte web existente, typecheck e lint. Verificação manual de que os ~34 arquivos `loading.tsx` foram criados (checagem de cobertura via script/contagem, não teste unitário por rota).
+- **Regression**: suíte web existente, typecheck e lint. Verificação manual/build de que os 4 arquivos `loading.tsx` (raiz de `/admin`, raiz de `/platform`, `reports`, `finance`) cobrem as 34 páginas por herança, navegando por uma amostra representativa de rotas.
 
 ## Constitution Check - Post Design
 
