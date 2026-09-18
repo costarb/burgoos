@@ -1,4 +1,4 @@
-import type { SalesReportFilters } from "@burgoos/types";
+import type { SalesReportFilters } from "@rrfive/types";
 
 const arrayQueryKeys = {
   paymentInstitutions: "paymentInstitution",

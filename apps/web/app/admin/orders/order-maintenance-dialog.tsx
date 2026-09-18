@@ -6,7 +6,7 @@ import type {
   EditOrderInput,
   OrderMaintenanceRecord,
   PlatformSyncAttemptSummary,
-} from "@burgoos/types";
+} from "@rrfive/types";
 import { OperationFeedback } from "../../../components/admin/operation-feedback";
 import {
   deleteAdminOrder,

@@ -5,7 +5,7 @@ import type {
   ManualPaymentOption,
   PaymentInstitution,
   PaymentMethod,
-} from "@burgoos/types";
+} from "@rrfive/types";
 import {
   confirmManualPayment,
   getManualPaymentOptions,

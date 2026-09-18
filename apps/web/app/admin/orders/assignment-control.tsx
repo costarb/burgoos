@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import type { OperationalAssignee, OperationalAssignment } from "@burgoos/types";
+import type { OperationalAssignee, OperationalAssignment } from "@rrfive/types";
 import {
   claimOperationalAssignment,
   getOperationalAssignees,

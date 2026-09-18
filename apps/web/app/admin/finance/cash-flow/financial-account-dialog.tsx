@@ -9,7 +9,7 @@ import type {
   FinancialCategoryInput,
   OperationState,
   PaymentInstitutionConfiguration,
-} from "@burgoos/types";
+} from "@rrfive/types";
 import { ConfirmationDialog } from "../../../../components/admin/confirmation-dialog";
 import { OperationFeedback } from "../../../../components/admin/operation-feedback";
 import {

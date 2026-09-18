@@ -107,7 +107,7 @@ describe("store onboarding and branding flow", () => {
       id: "99999999-9999-4999-8999-999999999999",
       role: "SUPER_ADMIN",
       name: "Admin Plataforma",
-      email: "platform@burgoos.local",
+      email: "platform@rrfive.local",
       passwordHash: platformPasswordHash,
       active: true,
     });
@@ -271,7 +271,7 @@ describe("store onboarding and branding flow", () => {
   it("creates a store, logs in as owner, publishes branding and restores previous branding", async () => {
     const platformLogin = await request(app.getHttpServer())
       .post("/api/auth/platform/login")
-      .send({ email: "platform@burgoos.local", password: "admin123" })
+      .send({ email: "platform@rrfive.local", password: "admin123" })
       .expect(201);
 
     await request(app.getHttpServer())

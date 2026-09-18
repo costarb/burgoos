@@ -1,6 +1,6 @@
 "use client";
 
-import type { AccessUserDetail } from "@burgoos/types";
+import type { AccessUserDetail } from "@rrfive/types";
 import { useState } from "react";
 import { updateAccessUser } from "../../../lib/api";
 

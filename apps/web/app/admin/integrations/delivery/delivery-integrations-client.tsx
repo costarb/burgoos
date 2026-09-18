@@ -7,7 +7,7 @@ import type {
   DeliveryIntegrationHealth,
   OperationState,
   OrderPlatform,
-} from "@burgoos/types";
+} from "@rrfive/types";
 import { IntegrationHealthBadge } from "../../../../components/admin/integration-health-badge";
 import { OperationForm } from "../../../../components/admin/operation-form";
 import { SubmitButton } from "../../../../components/admin/submit-button";

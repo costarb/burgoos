@@ -1,6 +1,6 @@
 openapi: 3.0.3
 info:
-  title: BurgoOS CMV, Pricing and Inventory API
+  title: RRFive OS CMV, Pricing and Inventory API
   version: 0.1.0
   description: Admin API contract for tenant-scoped CMV, pricing, stock and DRE workflows.
 servers:

@@ -9,7 +9,7 @@ import type {
   PaymentMethod,
   PublicMenu,
   PublicMenuProduct,
-} from "@burgoos/types";
+} from "@rrfive/types";
 import { createPublicOrder } from "../../../lib/api";
 
 interface CartLine {
@@ -22,7 +22,7 @@ interface PublicMenuClientProps {
   navigationBase?: string;
 }
 
-const cartStorageKey = "burgoos:cart";
+const cartStorageKey = "rrfive:cart";
 
 export function PublicMenuClient({ menu, navigationBase }: PublicMenuClientProps) {
   const branding = menu.tenant.branding;

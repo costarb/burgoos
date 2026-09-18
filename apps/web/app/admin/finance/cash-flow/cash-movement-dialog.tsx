@@ -7,7 +7,7 @@ import type {
   CashMovementType,
   FinancialAccount,
   FinancialCategory,
-} from "@burgoos/types";
+} from "@rrfive/types";
 
 interface CashMovementDialogProps {
   accounts: FinancialAccount[];

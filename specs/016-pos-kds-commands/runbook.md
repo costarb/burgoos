@@ -8,7 +8,7 @@ manuais em Caixa/PagBank e tratamento inicial de incidentes.
 
 ## Pré-requisitos
 
-- Aplicação Mercado Pago central do BurgoOS configurada pelo `SUPER_ADMIN`.
+- Aplicação Mercado Pago central do RRFive OS configurada pelo `SUPER_ADMIN`.
 - Loja conectada por OAuth ou, somente para teste controlado, por token fixo.
 - Integração no ambiente correto (`TEST` ou `PRODUCTION`).
 - Usuário operador com `payments.charge` e `payments.confirm-manual`.

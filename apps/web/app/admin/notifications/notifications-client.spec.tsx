@@ -1,7 +1,7 @@
 import React, { act } from "react";
 import { createRoot, Root } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import type { NotificationCenterState } from "@burgoos/types";
+import type { NotificationCenterState } from "@rrfive/types";
 import { getNotifications, markNotificationRead } from "../../../lib/api";
 import { mergeNotifications, NotificationsClient } from "./notifications-client";
 

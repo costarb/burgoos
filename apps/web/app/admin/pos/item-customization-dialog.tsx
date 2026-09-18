@@ -2,7 +2,7 @@
 
 import React from "react";
 import { useMemo, useState } from "react";
-import type { CounterOrderItemModificationInput, PosCatalogProduct } from "@burgoos/types";
+import type { CounterOrderItemModificationInput, PosCatalogProduct } from "@rrfive/types";
 
 export interface CustomizedCartItem {
   key: string;

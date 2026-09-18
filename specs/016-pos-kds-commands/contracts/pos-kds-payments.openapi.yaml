@@ -1,6 +1,6 @@
 openapi: 3.0.3
 info:
-  title: BurgoOS POS, Tabs, KDS and Payments
+  title: RRFive OS POS, Tabs, KDS and Payments
   version: 0.1.0
   description: Contracts for counter order capture, service tabs, KDS, payment charges and public queue.
 servers:

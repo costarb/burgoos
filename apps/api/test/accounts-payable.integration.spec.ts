@@ -24,7 +24,7 @@ class TestAuthGuard implements CanActivate {
       id: userId,
       tenantId,
       role: UserRole.OWNER,
-      email: "admin@burgoos.local",
+      email: "admin@rrfive.local",
       name: "Admin Piloto",
       isMaster: false,
       activeStoreId: tenantId,

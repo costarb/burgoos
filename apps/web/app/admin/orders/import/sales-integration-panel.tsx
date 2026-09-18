@@ -17,7 +17,7 @@ import type {
   SalesImportRunView,
   SalesIntegrationView,
   SalesProviderCapability,
-} from "@burgoos/types";
+} from "@rrfive/types";
 import React, { FormEvent, useEffect, useState } from "react";
 import { SalesProviderSelector } from "./sales-provider-selector";
 import { MercadoPagoConnectionPanel } from "./mercado-pago-connection-panel";

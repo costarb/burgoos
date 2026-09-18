@@ -1,7 +1,7 @@
 import React, { act } from "react";
 import { createRoot, Root } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import type { ManagementReportResponse } from "@burgoos/types";
+import type { ManagementReportResponse } from "@rrfive/types";
 import { getManagementReport, requestExportJob } from "../../../../lib/api";
 import { ManagementReportClient } from "./management-report-client";
 

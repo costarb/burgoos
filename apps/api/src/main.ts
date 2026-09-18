@@ -33,7 +33,7 @@ export async function bootstrap(): Promise<void> {
 
   if (shouldEnableSwagger(process.env.NODE_ENV)) {
     const config = new DocumentBuilder()
-      .setTitle("BurgoOS API")
+      .setTitle("RRFive OS API")
       .setDescription("Delivery pilot API")
       .setVersion("0.1.0")
       .addBearerAuth()

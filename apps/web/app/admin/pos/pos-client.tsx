@@ -8,7 +8,7 @@ import type {
   PosOrder,
   PendingPaymentOrder,
   ServiceTabSummary,
-} from "@burgoos/types";
+} from "@rrfive/types";
 import {
   createCounterOrder,
   openServiceTab,

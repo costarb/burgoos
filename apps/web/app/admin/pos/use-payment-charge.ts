@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import type { PaymentCharge } from "@burgoos/types";
+import type { PaymentCharge } from "@rrfive/types";
 import { refreshPaymentCharge } from "../../../lib/api";
 import { useAdaptivePolling } from "../../../lib/adaptive-polling";
 

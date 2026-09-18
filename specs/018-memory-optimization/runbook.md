@@ -68,9 +68,9 @@ The local fallback is not suitable for multi-instance production because files a
 Build in a separate build environment. Start runtime processes from built artifacts:
 
 ```text
-APP_ROLE=api NODE_OPTIONS=--max-old-space-size=384 npm run start:api --workspace @burgoos/api
-APP_ROLE=worker NODE_OPTIONS=--max-old-space-size=384 npm run start:worker --workspace @burgoos/api
-npm run start --workspace @burgoos/web
+APP_ROLE=api NODE_OPTIONS=--max-old-space-size=384 npm run start:api --workspace @rrfive/api
+APP_ROLE=worker NODE_OPTIONS=--max-old-space-size=384 npm run start:worker --workspace @rrfive/api
+npm run start --workspace @rrfive/web
 ```
 
 Next.js uses standalone output. Package only `.next/standalone`, `.next/static` and required public assets in the production runtime image.

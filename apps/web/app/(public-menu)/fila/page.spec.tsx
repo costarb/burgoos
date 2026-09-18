@@ -1,7 +1,7 @@
 import React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
-import type { PublicOrderQueue } from "@burgoos/types";
+import type { PublicOrderQueue } from "@rrfive/types";
 import { PublicOrderQueueClient } from "./public-order-queue";
 
 describe("PublicOrderQueueClient", () => {

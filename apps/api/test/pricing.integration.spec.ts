@@ -106,7 +106,7 @@ describe("pricing integration", () => {
   async function login(): Promise<string> {
     const response = await request(app.getHttpServer())
       .post("/api/auth/login")
-      .send({ email: "admin@burgoos.local", password: "admin123" })
+      .send({ email: "admin@rrfive.local", password: "admin123" })
       .expect(201);
 
     return response.body.accessToken as string;
@@ -118,7 +118,7 @@ describe("pricing integration", () => {
       tenantId,
       role: UserRole.OWNER,
       name: "Admin Piloto",
-      email: "admin@burgoos.local",
+      email: "admin@rrfive.local",
       passwordHash,
       tenant: { id: tenantId, active: true },
     });

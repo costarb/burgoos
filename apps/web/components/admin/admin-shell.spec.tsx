@@ -143,7 +143,7 @@ describe("admin navigation permissions", () => {
     } as never, "store-b");
 
     const event = dispatchEvent.mock.calls[0]?.[0] as CustomEvent;
-    expect(event.type).toBe("burgoos:store-changed");
+    expect(event.type).toBe("rrfive:store-changed");
     expect(event.detail).toEqual({ storeId: "store-b" });
     expect(reload).toHaveBeenCalledOnce();
   });

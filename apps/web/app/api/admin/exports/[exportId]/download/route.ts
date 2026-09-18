@@ -2,7 +2,7 @@ import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
 
 const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? "http://127.0.0.1:3001";
-const AUTH_ACCESS_COOKIE = "burgoos.admin.access_token";
+const AUTH_ACCESS_COOKIE = "rrfive.admin.access_token";
 
 export async function GET(
   _request: Request,

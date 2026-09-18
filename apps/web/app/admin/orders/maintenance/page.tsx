@@ -1,4 +1,4 @@
-import type { OrderStatus } from "@burgoos/types";
+import type { OrderStatus } from "@rrfive/types";
 import { getOrderMaintenanceHistory, getOrderMaintenanceSearch } from "../../../../lib/api";
 
 interface MaintenancePageProps {

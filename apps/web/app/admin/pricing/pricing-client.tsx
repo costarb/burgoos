@@ -1,6 +1,6 @@
 "use client";
 
-import type { OrderPlatform, ProductPricing } from "@burgoos/types";
+import type { OrderPlatform, ProductPricing } from "@rrfive/types";
 import { useRouter } from "next/navigation";
 
 interface PricingClientProps {

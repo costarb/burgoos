@@ -1,4 +1,4 @@
-import type { ImageAssetContentType, ImageAssetPurpose } from "@burgoos/types";
+import type { ImageAssetContentType, ImageAssetPurpose } from "@rrfive/types";
 import { confirmImageUpload, createImageUploadIntent } from "./api";
 
 export const IMAGE_UPLOAD_MAX_BYTES = 2 * 1024 * 1024;

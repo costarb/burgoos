@@ -14,9 +14,9 @@
     "skipLibCheck": true,
     "baseUrl": ".",
     "paths": {
-      "@burgoos/database": ["packages/database/src/index.ts"],
-      "@burgoos/types": ["packages/types/src/index.ts"],
-      "@burgoos/ui": ["packages/ui/src/index.ts"]
+      "@rrfive/database": ["packages/database/src/index.ts"],
+      "@rrfive/types": ["packages/types/src/index.ts"],
+      "@rrfive/ui": ["packages/ui/src/index.ts"]
     }
   }
 }

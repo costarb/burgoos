@@ -1,7 +1,7 @@
 import React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it, vi } from "vitest";
-import type { AdminOrder } from "@burgoos/types";
+import type { AdminOrder } from "@rrfive/types";
 import { OrderMaintenanceDialog } from "./order-maintenance-dialog";
 
 const order: AdminOrder = {

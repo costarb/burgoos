@@ -1,6 +1,6 @@
 "use client";
 
-import type { AccessUserDetail } from "@burgoos/types";
+import type { AccessUserDetail } from "@rrfive/types";
 import type { AccessUsersOptions } from "../../../lib/api";
 import { useEffect, useMemo, useState } from "react";
 import { readAuthSession } from "../../../lib/auth-client";

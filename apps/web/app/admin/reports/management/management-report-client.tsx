@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useMemo, useState } from "react";
-import type { ExportFormat, ManagementReportResponse, OperationState } from "@burgoos/types";
+import type { ExportFormat, ManagementReportResponse, OperationState } from "@rrfive/types";
 import { AsyncExportMenu } from "../../../../components/admin/async-export-menu";
 import { OperationFeedback } from "../../../../components/admin/operation-feedback";
 import { getManagementReport, requestExportJob } from "../../../../lib/api";
