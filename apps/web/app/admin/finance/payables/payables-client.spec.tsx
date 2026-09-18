@@ -211,6 +211,7 @@ describe("PayablesClient filters", () => {
       categoryIds: [],
       supplierIds: [],
       competenceMonth: "",
+      page: 1,
     });
     expect(container.querySelector('[role="dialog"]')).toBeNull();
   });
@@ -239,6 +240,7 @@ describe("PayablesClient filters", () => {
       categoryIds: [],
       supplierIds: [],
       competenceMonth: "",
+      page: 1,
     });
     expect(container.querySelector('[role="dialog"]')).toBeNull();
   });
@@ -336,6 +338,7 @@ describe("PayablesClient filters", () => {
       categoryIds: ["category-food"],
       supplierIds: ["supplier-market"],
       competenceMonth: "2026-06",
+      page: 1,
     });
 
     await clickLastButton("Limpar");
@@ -347,14 +350,177 @@ describe("PayablesClient filters", () => {
       categoryIds: [],
       supplierIds: [],
       competenceMonth: "",
+      page: 1,
     });
     expect(inputByType("month").value).toBe("");
+  });
+
+  it("navigates to the next page and renders its items", async () => {
+    getPayablesMock.mockResolvedValueOnce({
+      token: "token",
+      payables: response([payable({ id: "payable-2", description: "Conta da pagina 2" })], undefined, {
+        page: 2,
+        pageSize: 1,
+        total: 2,
+      }),
+      options,
+    });
+
+    await renderClientWith(
+      response([payable({ id: "payable-1", description: "Conta da pagina 1" })], undefined, {
+        page: 1,
+        pageSize: 1,
+        total: 2,
+      })
+    );
+
+    expect(container.textContent).toContain("Conta da pagina 1");
+    await clickButton("Proxima pagina");
+
+    expect(getPayablesMock).toHaveBeenCalledWith(expect.objectContaining({ page: 2 }));
+    expect(container.textContent).toContain("Conta da pagina 2");
+  });
+
+  it("navigates to the previous page", async () => {
+    getPayablesMock.mockResolvedValueOnce({
+      token: "token",
+      payables: response([payable({ id: "payable-1", description: "Conta da pagina 1" })], undefined, {
+        page: 1,
+        pageSize: 1,
+        total: 2,
+      }),
+      options,
+    });
+
+    await renderClientWith(
+      response([payable({ id: "payable-2", description: "Conta da pagina 2" })], undefined, {
+        page: 2,
+        pageSize: 1,
+        total: 2,
+      })
+    );
+
+    await clickButton("Pagina anterior");
+
+    expect(getPayablesMock).toHaveBeenCalledWith(expect.objectContaining({ page: 1 }));
+    expect(container.textContent).toContain("Conta da pagina 1");
+  });
+
+  it("disables navigation buttons at the boundaries", async () => {
+    await renderClientWith(
+      response([payable({ id: "payable-1" })], undefined, { page: 1, pageSize: 1, total: 1 })
+    );
+
+    expect(button("Pagina anterior").disabled).toBe(true);
+    expect(button("Proxima pagina").disabled).toBe(true);
+  });
+
+  it("shows total records and current page position", async () => {
+    await renderClientWith(
+      response([payable({ id: "payable-1" }), payable({ id: "payable-2" })], undefined, {
+        page: 1,
+        pageSize: 2,
+        total: 5,
+      })
+    );
+
+    expect(container.textContent).toContain("Pagina 1 de 3");
+    expect(container.textContent).toContain("5 registro(s) encontrado(s)");
+  });
+
+  it("keeps summary totals unchanged while navigating pages", async () => {
+    const summary: PayablesResponse["summary"] = {
+      totalExpected: "500.00",
+      totalPaid: "100.00",
+      totalRemaining: "400.00",
+      overdueAmount: "50.00",
+      openCount: 5,
+      overdueCount: 1,
+    };
+
+    getPayablesMock.mockResolvedValueOnce({
+      token: "token",
+      payables: response([payable({ id: "payable-2" })], summary, { page: 2, pageSize: 1, total: 5 }),
+      options,
+    });
+
+    await renderClientWith(
+      response([payable({ id: "payable-1" })], summary, { page: 1, pageSize: 1, total: 5 })
+    );
+
+    expect(container.textContent).toContain("R$ 500.00");
+    await clickButton("Proxima pagina");
+    expect(container.textContent).toContain("R$ 500.00");
+  });
+
+  it("resets to the first page when filters are applied", async () => {
+    getPayablesMock.mockResolvedValueOnce({
+      token: "token",
+      payables: response([payable({ id: "payable-1" })], undefined, { page: 1, pageSize: 1, total: 1 }),
+      options,
+    });
+
+    await renderClientWith(
+      response([payable({ id: "payable-2" })], undefined, { page: 2, pageSize: 1, total: 2 })
+    );
+
+    await clickButton("Filtrar");
+
+    expect(getPayablesMock).toHaveBeenCalledWith(expect.objectContaining({ page: 1 }));
+  });
+
+  it("resets to the first page when filters are cleared", async () => {
+    getPayablesMock.mockResolvedValueOnce({
+      token: "token",
+      payables: response([payable({ id: "payable-1" })], undefined, { page: 1, pageSize: 1, total: 1 }),
+      options,
+    });
+
+    await renderClientWith(
+      response([payable({ id: "payable-2" })], undefined, { page: 2, pageSize: 1, total: 2 })
+    );
+
+    await clickLastButton("Limpar");
+
+    expect(getPayablesMock).toHaveBeenCalledWith(expect.objectContaining({ page: 1 }));
+  });
+
+  it("recovers to the last valid page when the result set shrinks", async () => {
+    getPayablesMock
+      .mockResolvedValueOnce({
+        token: "token",
+        payables: response([payable({ id: "payable-1" })], undefined, { page: 3, pageSize: 1, total: 1 }),
+        options,
+      })
+      .mockResolvedValueOnce({
+        token: "token",
+        payables: response([payable({ id: "payable-1" })], undefined, { page: 1, pageSize: 1, total: 1 }),
+        options,
+      });
+
+    await renderClientWith(
+      response([payable({ id: "payable-old" })], undefined, { page: 2, pageSize: 1, total: 3 })
+    );
+
+    await clickButton("Proxima pagina");
+
+    expect(getPayablesMock).toHaveBeenNthCalledWith(1, expect.objectContaining({ page: 3 }));
+    expect(getPayablesMock).toHaveBeenNthCalledWith(2, expect.objectContaining({ page: 1 }));
+    expect(container.textContent).toContain("Pagina 1 de 1");
   });
 
   async function renderClient() {
     await act(async () => {
       root.render(
         <PayablesClient initialPayables={response([payable()])} options={options} token="token" />
+      );
+    });
+  }
+
+  async function renderClientWith(initialPayables: PayablesResponse) {
+    await act(async () => {
+      root.render(
+        <PayablesClient initialPayables={initialPayables} options={options} token="token" />
       );
     });
   }
@@ -470,11 +636,13 @@ function response(
     overdueAmount: "0.00",
     openCount: items.length,
     overdueCount: 0,
-  }
+  },
+  pagination: Partial<Pick<PayablesResponse, "page" | "pageSize" | "total">> = {}
 ): PayablesResponse {
   return {
     items,
     summary,
+    ...pagination,
   };
 }
 
