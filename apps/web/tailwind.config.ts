@@ -18,6 +18,15 @@ const config: Config = {
         spark: "#ff5c8a",
         leaf: "#2f7d57",
         cream: "#faf9fc"
+      },
+      keyframes: {
+        "nav-progress-sweep": {
+          "0%": { transform: "translateX(-100%)" },
+          "100%": { transform: "translateX(400%)" }
+        }
+      },
+      animation: {
+        "nav-progress-sweep": "nav-progress-sweep 1.1s ease-in-out infinite"
       }
     }
   },

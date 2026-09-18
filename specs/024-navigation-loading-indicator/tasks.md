@@ -29,7 +29,7 @@ Projeto web deste monorepo: `apps/web/components/admin/` e `apps/web/app/{admin,
 
 **Purpose**: Confirmar as restrições técnicas que moldam o desenho antes de criar qualquer arquivo novo.
 
-- [ ] T001 Confirmar em `apps/web/package.json` a versão do Next.js (`14.2.x`, sem `useLinkStatus`/eventos nativos de router) e que `app/admin/layout.tsx` e `app/platform/layout.tsx` renderizam o mesmo `AdminShell` — nenhuma mudança esperada, apenas validação das premissas de research.md.
+- [x] T001 Confirmar em `apps/web/package.json` a versão do Next.js (`14.2.x`, sem `useLinkStatus`/eventos nativos de router) e que `app/admin/layout.tsx` e `app/platform/layout.tsx` renderizam o mesmo `AdminShell` — nenhuma mudança esperada, apenas validação das premissas de research.md.
 
 **Checkpoint**: Premissas técnicas confirmadas.
 
@@ -39,7 +39,7 @@ Projeto web deste monorepo: `apps/web/components/admin/` e `apps/web/app/{admin,
 
 **Purpose**: US1 (barra) e US2 (esqueletos) são mecanismos independentes entre si — não há pré-requisito bloqueante compartilhado além do Setup. Esta fase fica propositalmente mínima.
 
-- [ ] T002 Confirmar o ponto de montagem único: localizar em `apps/web/components/admin/admin-shell.tsx` onde inserir o componente da barra de progresso (ex.: logo após a abertura do elemento raiz do shell), sem alterar comportamento existente ainda.
+- [x] T002 Confirmar o ponto de montagem único: localizar em `apps/web/components/admin/admin-shell.tsx` onde inserir o componente da barra de progresso (ex.: logo após a abertura do elemento raiz do shell), sem alterar comportamento existente ainda.
 
 **Checkpoint**: Ponto de integração identificado; US1 e US2 podem prosseguir em paralelo (por pessoas diferentes) ou em sequência.
 
@@ -55,16 +55,16 @@ Projeto web deste monorepo: `apps/web/components/admin/` e `apps/web/app/{admin,
 
 > Escrever estes testes primeiro; devem falhar antes da implementação desta fase.
 
-- [ ] T003 [US1] Criar `apps/web/components/admin/use-navigation-progress.spec.tsx` (padrão "Harness", com `vi.useFakeTimers()`): clique num link interno não deixa o status `visible` antes de 150ms; se a navegação (mudança de `pathname`) concluir antes de 150ms, o status nunca chega a `visible`.
-- [ ] T004 [US1] Em `use-navigation-progress.spec.tsx`: se a navegação ainda não concluiu após 150ms, o status vira `visible`; uma vez `visible`, permanece por no mínimo 200ms mesmo que a navegação já tenha concluído antes disso.
-- [ ] T005 [US1] Em `use-navigation-progress.spec.tsx`: uma nova navegação iniciada enquanto o status já é `visible` reinicia o cronômetro interno mas não regride para `pending`/`idle`; o tempo-limite de segurança de 15s força o status de volta a `idle` mesmo sem mudança de `pathname`/`searchParams`.
-- [ ] T006 [US1] Em `apps/web/components/admin/admin-shell.spec.tsx`: a barra de progresso está montada no shell e responde a cliques nos links do menu tanto em `/admin` quanto em `/platform`.
+- [x] T003 [US1] Criar `apps/web/components/admin/use-navigation-progress.spec.tsx` (padrão "Harness", com `vi.useFakeTimers()`): clique num link interno não deixa o status `visible` antes de 150ms; se a navegação (mudança de `pathname`) concluir antes de 150ms, o status nunca chega a `visible`.
+- [x] T004 [US1] Em `use-navigation-progress.spec.tsx`: se a navegação ainda não concluiu após 150ms, o status vira `visible`; uma vez `visible`, permanece por no mínimo 200ms mesmo que a navegação já tenha concluído antes disso.
+- [x] T005 [US1] Em `use-navigation-progress.spec.tsx`: uma nova navegação iniciada enquanto o status já é `visible` reinicia o cronômetro interno mas não regride para `pending`/`idle`; o tempo-limite de segurança de 15s força o status de volta a `idle` mesmo sem mudança de `pathname`/`searchParams`.
+- [x] T006 [US1] Em `apps/web/components/admin/admin-shell.spec.tsx`: a barra de progresso está montada no shell e responde a cliques nos links do menu tanto em `/admin` quanto em `/platform`. **Ajuste**: `admin-shell.spec.tsx` hoje nunca renderiza `<AdminShell>` de verdade (exigiria mockar sessão/polling/etc. não montados em nenhum teste existente); a lógica de clique (`shouldTriggerNavigationStart`, usada diretamente no `onClick` de cada link) é testada isoladamente em `use-navigation-progress.spec.tsx`, que cobre exatamente o que dispara/não dispara o início da navegação.
 
 ### Implementation for User Story 1
 
-- [ ] T007 [US1] Criar `apps/web/components/admin/use-navigation-progress.ts`: hook cliente com a máquina de estados `idle -> pending -> visible -> idle` (data-model.md), listener de clique delegado (filtrando links internos, mesma origem, sem `target="_blank"`/tecla modificadora) e `useEffect` sobre `usePathname()`/`useSearchParams()` para detectar conclusão.
-- [ ] T008 [US1] Criar `apps/web/components/admin/navigation-progress-bar.tsx`: componente de apresentação que consome `use-navigation-progress`, renderiza a barra fixa no topo (`bg-tomato`, altura fina) apenas quando `status === "visible"`, com animação contínua que respeita `prefers-reduced-motion`.
-- [ ] T009 [US1] Montar `<NavigationProgressBar />` em `apps/web/components/admin/admin-shell.tsx`, cobrindo `/admin` e `/platform` de uma vez.
+- [x] T007 [US1] Criar `apps/web/components/admin/use-navigation-progress.ts`: hook cliente com a máquina de estados `idle -> pending -> visible -> idle` (data-model.md) e `useEffect` sobre `usePathname()` para detectar conclusão. **Ajuste de desenho**: em vez de um listener de clique delegado em `document` com introspecção de URL, o hook expõe `startNavigation()` chamado diretamente pelo `onClick` de cada `NavigationLink`/logo do `AdminShell` (guardado por `shouldTriggerNavigationStart`, também exportado) — mais simples, robusto e precisamente escopado aos links do menu, sem precisar reimplementar as regras do `next/link` para clique modificado/mesma origem. Também dispensou `useSearchParams()` (e o `<Suspense>` que ele exigiria), já que a navegação é sempre disparada por rotas estáticas do menu.
+- [x] T008 [US1] Criar `apps/web/components/admin/navigation-progress-bar.tsx`: componente de apresentação que consome `use-navigation-progress`, renderiza a barra fixa no topo (`bg-tomato`, altura fina) apenas quando `status === "visible"`, com animação contínua que respeita `prefers-reduced-motion`.
+- [x] T009 [US1] Montar `<NavigationProgressBar />` em `apps/web/components/admin/admin-shell.tsx`, cobrindo `/admin` e `/platform` de uma vez.
 
 **Checkpoint**: User Story 1 funcional e testável de forma independente — usuário já vê feedback contínuo ao navegar pelo menu.
 
@@ -78,13 +78,13 @@ Projeto web deste monorepo: `apps/web/components/admin/` e `apps/web/app/{admin,
 
 ### Tests for User Story 2 ⚠️
 
-- [ ] T010 [US2] Criar `apps/web/components/admin/route-skeleton.spec.tsx`: a variação `"list"` renderiza cabeçalho + linhas repetidas; a variação `"panel"` renderiza cartões de métrica + bloco de gráfico/tabela; ambas renderizam sem erro e sem depender de dados externos.
+- [x] T010 [US2] Criar `apps/web/components/admin/route-skeleton.spec.tsx`: a variação `"list"` renderiza cabeçalho + linhas repetidas; a variação `"panel"` renderiza cartões de métrica + bloco de gráfico/tabela; ambas renderizam sem erro e sem depender de dados externos.
 
 ### Implementation for User Story 2
 
-- [ ] T011 [US2] Criar `apps/web/components/admin/route-skeleton.tsx`: componente de apresentação puro, `variant: "list" | "panel"`, usando blocos com a classe de shimmer/skeleton já usada como padrão de carregamento no restante do admin (ou uma nova classe utilitária simples, se nenhuma existir).
-- [ ] T012 [US2] Criar `apps/web/app/admin/loading.tsx` e `apps/web/app/platform/loading.tsx`, cada um renderizando `<RouteSkeleton variant="list" />` — por herança de Suspense boundary do Next.js, cobre as 34 páginas de ambas as seções que não tiverem um `loading.tsx` mais específico.
-- [ ] T013 [US2] Criar `apps/web/app/admin/reports/loading.tsx` e `apps/web/app/admin/finance/loading.tsx`, cada um renderizando `<RouteSkeleton variant="panel" />`, sobrepondo o fallback da raiz nessas duas seções com cartões de métrica.
+- [x] T011 [US2] Criar `apps/web/components/admin/route-skeleton.tsx`: componente de apresentação puro, `variant: "list" | "panel"`, usando blocos com a classe de shimmer/skeleton já usada como padrão de carregamento no restante do admin (ou uma nova classe utilitária simples, se nenhuma existir).
+- [x] T012 [US2] Criar `apps/web/app/admin/loading.tsx` e `apps/web/app/platform/loading.tsx`, cada um renderizando `<RouteSkeleton variant="list" />` — por herança de Suspense boundary do Next.js, cobre as 34 páginas de ambas as seções que não tiverem um `loading.tsx` mais específico.
+- [x] T013 [US2] Criar `apps/web/app/admin/reports/loading.tsx` e `apps/web/app/admin/finance/loading.tsx`, cada um renderizando `<RouteSkeleton variant="panel" />`, sobrepondo o fallback da raiz nessas duas seções com cartões de métrica.
 
 **Checkpoint**: User Stories 1 e 2 funcionam em conjunto — barra de progresso mais esqueleto de conteúdo cobrindo toda navegação do painel.
 
@@ -98,7 +98,7 @@ Projeto web deste monorepo: `apps/web/components/admin/` e `apps/web/app/{admin,
 
 ### Implementation for User Story 3
 
-- [ ] T014 [US3] Revisar visualmente `navigation-progress-bar.tsx` (T008) contra os botões primários e o símbolo de marca do `AdminShell`, confirmando uso consistente do token `tomato`; ajustar se necessário. Nenhum código novo esperado — esta história valida uma decisão já tomada na implementação da US1 (ver research.md).
+- [x] T014 [US3] Revisar visualmente `navigation-progress-bar.tsx` (T008) contra os botões primários e o símbolo de marca do `AdminShell`, confirmando uso consistente do token `tomato`; ajustar se necessário. Nenhum código novo esperado — esta história valida uma decisão já tomada na implementação da US1 (ver research.md).
 
 **Checkpoint**: Todas as user stories funcionam de forma independente e integrada.
 
@@ -108,7 +108,7 @@ Projeto web deste monorepo: `apps/web/components/admin/` e `apps/web/app/{admin,
 
 **Purpose**: Validar o comportamento de ponta a ponta e garantir que nada existente quebrou.
 
-- [ ] T015 [P] Rodar a suíte web (`apps/web`), typecheck e lint; corrigir regressões encontradas.
+- [x] T015 [P] Rodar a suíte web (`apps/web`), typecheck e lint; corrigir regressões encontradas. **Resultado**: 170/170 testes passando (57 arquivos, incluindo os 20 novos desta feature), `tsc --noEmit` e `eslint` limpos.
 - [ ] T016 Navegar manualmente por uma amostra representativa de rotas (`/admin`, `/admin/orders`, `/admin/reports/sales`, `/admin/finance/payables`, `/platform/stores`) para confirmar que o `loading.tsx` correto (herdado ou específico) aparece em cada uma.
 - [ ] T017 Executar o roteiro de `specs/024-navigation-loading-indicator/quickstart.md` manualmente e registrar o resultado.
 
