@@ -18,7 +18,7 @@ Validate the first sales reports module:
 ```powershell
 npm install
 npm run db:up
-$env:DATABASE_URL='postgresql://burgoos:burgoos@127.0.0.1:5432/burgoos?schema=public&sslmode=disable'
+$env:DATABASE_URL='postgresql://rrfive:rrfive@127.0.0.1:5432/rrfive?schema=public&sslmode=disable'
 npm run db:migrate
 npm run dev
 ```

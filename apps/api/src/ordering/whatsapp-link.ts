@@ -30,7 +30,7 @@ const fulfillmentLabels: Record<FulfillmentMethod, string> = {
 
 export function buildWhatsAppOrderLink(input: BuildWhatsAppLinkInput): string {
   const lines = [
-    "Novo pedido BurgoOS",
+    "Novo pedido RRFive OS",
     "",
     `Cliente: ${input.customerName}`,
     `Telefone: ${input.customerPhone}`,

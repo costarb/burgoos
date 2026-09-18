@@ -1,10 +1,10 @@
 # Arquitetura do Sistema
 
-Este documento descreve a arquitetura atual do BurgoOS, seus componentes, responsabilidades, fluxos principais e restrições operacionais. Deve ser atualizado sempre que houver mudança estrutural relevante.
+Este documento descreve a arquitetura atual do RRFive OS, seus componentes, responsabilidades, fluxos principais e restrições operacionais. Deve ser atualizado sempre que houver mudança estrutural relevante.
 
 ## 1. Visão geral
 
-O BurgoOS, mantido neste repositório `erp.lite`, é um monólito modular organizado em monorepo. A solução contém uma aplicação web, uma API NestJS, um processo de worker e pacotes compartilhados. O PostgreSQL é a fonte de verdade dos dados de negócio e também sustenta a fila durável de tarefas em segundo plano.
+O RRFive OS, mantido neste repositório `erp.lite`, é um monólito modular organizado em monorepo. A solução contém uma aplicação web, uma API NestJS, um processo de worker e pacotes compartilhados. O PostgreSQL é a fonte de verdade dos dados de negócio e também sustenta a fila durável de tarefas em segundo plano.
 
 ```mermaid
 flowchart LR
@@ -86,7 +86,7 @@ flowchart TB
 
 ### 3.1 Frontend
 
-A aplicação web utiliza Next.js 14 com App Router e React 18. Suas responsabilidades são renderizar as experiências públicas e administrativas, consumir a API REST, manter cache remoto com React Query e receber atualizações com Socket.IO. Componentes e contratos são compartilhados por `@burgoos/ui` e `@burgoos/types`.
+A aplicação web utiliza Next.js 14 com App Router e React 18. Suas responsabilidades são renderizar as experiências públicas e administrativas, consumir a API REST, manter cache remoto com React Query e receber atualizações com Socket.IO. Componentes e contratos são compartilhados por `@rrfive/ui` e `@rrfive/types`.
 
 O build utiliza saída `standalone`. Dados volumosos devem permanecer paginados; o navegador não deve carregar conjuntos completos quando a tela necessita apenas de uma janela de resultados.
 

@@ -1,6 +1,6 @@
 "use client";
 
-import type { AuthSession } from "@burgoos/types";
+import type { AuthSession } from "@rrfive/types";
 import { LogIn } from "lucide-react";
 import Link from "next/link";
 import { FormEvent, useState } from "react";
@@ -39,7 +39,7 @@ export default function LoginPage() {
           <div className="grid h-11 w-11 place-items-center rounded-md bg-tomato text-lg font-bold">
             B
           </div>
-          <h1 className="mt-5 text-3xl font-semibold">BurgoOS</h1>
+          <h1 className="mt-5 text-3xl font-semibold">RRFive OS</h1>
           <p className="mt-2 text-sm text-slate-300">Acesse a administracao da loja.</p>
         </div>
 

@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
-import type { OperationalAssignment } from "@burgoos/types";
+import type { OperationalAssignment } from "@rrfive/types";
 import { readAuthSession } from "../../../lib/auth-client";
 import { PointChargePanel } from "./point-charge-panel";
 import { ManualPaymentPanel } from "./manual-payment-panel";

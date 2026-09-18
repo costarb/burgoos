@@ -8,7 +8,7 @@ import type {
   OrderStatus,
   PaymentInstitution,
   PaymentMethod,
-} from "@burgoos/types";
+} from "@rrfive/types";
 import {
   confirmPlatformOrder,
   getPlatformCancellationReasons,

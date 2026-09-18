@@ -6,7 +6,7 @@ import type {
   NotificationPage,
   OperationalNotification,
   OperationalNotificationSeverity,
-} from "@burgoos/types";
+} from "@rrfive/types";
 import { Bell, Check, Download, ExternalLink } from "lucide-react";
 import { getNotifications, markNotificationRead } from "../../../lib/api";
 import { useAdaptivePolling } from "../../../lib/adaptive-polling";

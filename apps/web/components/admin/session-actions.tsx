@@ -1,6 +1,6 @@
 "use client";
 
-import type { AuthSession } from "@burgoos/types";
+import type { AuthSession } from "@rrfive/types";
 import { LogOut } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";

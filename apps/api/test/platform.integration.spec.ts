@@ -193,7 +193,7 @@ describe("platform foundation", () => {
     const passwordHash = await hash("admin123", 10);
 
     prismaMock.user.findUnique.mockImplementation(({ where }: { where: { email: string } }) => {
-      if (where.email !== "admin@burgoos.local") {
+      if (where.email !== "admin@rrfive.local") {
         return null;
       }
 
@@ -202,7 +202,7 @@ describe("platform foundation", () => {
         tenantId: activeTenant.id,
         role: "OWNER",
         name: "Admin Piloto",
-        email: "admin@burgoos.local",
+        email: "admin@rrfive.local",
         passwordHash,
         tenant: activeTenant
       };
@@ -449,7 +449,7 @@ describe("platform foundation", () => {
   it("authenticates the pilot admin and returns scoped tokens", async () => {
     const response = await request(app.getHttpServer())
       .post("/api/auth/login")
-      .send({ email: "admin@burgoos.local", password: "admin123" })
+      .send({ email: "admin@rrfive.local", password: "admin123" })
       .expect(201);
 
     expect(response.body.accessToken).toEqual(expect.any(String));
@@ -458,7 +458,7 @@ describe("platform foundation", () => {
       id: "user-owner",
       tenantId: activeTenant.id,
       role: "OWNER",
-      email: "admin@burgoos.local"
+      email: "admin@rrfive.local"
     });
   });
 
@@ -481,7 +481,7 @@ describe("platform foundation", () => {
   it("resolves admin tenant from the authenticated token", async () => {
     const login = await request(app.getHttpServer())
       .post("/api/auth/login")
-      .send({ email: "admin@burgoos.local", password: "admin123" })
+      .send({ email: "admin@rrfive.local", password: "admin123" })
       .expect(201);
 
     const response = await request(app.getHttpServer())
@@ -501,7 +501,7 @@ describe("platform foundation", () => {
         sub: "user-other",
         tenantId: "tenant-other",
         role: "OWNER",
-        email: "other@burgoos.local",
+        email: "other@rrfive.local",
         name: "Other User"
       },
       {
@@ -519,7 +519,7 @@ describe("platform foundation", () => {
   it("creates categories and products scoped to the authenticated tenant", async () => {
     const login = await request(app.getHttpServer())
       .post("/api/auth/login")
-      .send({ email: "admin@burgoos.local", password: "admin123" })
+      .send({ email: "admin@rrfive.local", password: "admin123" })
       .expect(201);
 
     const category = await request(app.getHttpServer())
@@ -557,7 +557,7 @@ describe("platform foundation", () => {
   it("rejects catalog writes against another tenant category", async () => {
     const login = await request(app.getHttpServer())
       .post("/api/auth/login")
-      .send({ email: "admin@burgoos.local", password: "admin123" })
+      .send({ email: "admin@rrfive.local", password: "admin123" })
       .expect(201);
 
     await request(app.getHttpServer())
@@ -686,7 +686,7 @@ describe("platform foundation", () => {
   it("lists only tenant-scoped active order queue entries", async () => {
     const login = await request(app.getHttpServer())
       .post("/api/auth/login")
-      .send({ email: "admin@burgoos.local", password: "admin123" })
+      .send({ email: "admin@rrfive.local", password: "admin123" })
       .expect(201);
 
     const response = await request(app.getHttpServer())
@@ -706,7 +706,7 @@ describe("platform foundation", () => {
   it("updates valid order statuses and rejects invalid transitions", async () => {
     const login = await request(app.getHttpServer())
       .post("/api/auth/login")
-      .send({ email: "admin@burgoos.local", password: "admin123" })
+      .send({ email: "admin@rrfive.local", password: "admin123" })
       .expect(201);
 
     const updated = await request(app.getHttpServer())
@@ -730,7 +730,7 @@ describe("platform foundation", () => {
   it("returns a daily summary with delivered order revenue only", async () => {
     const login = await request(app.getHttpServer())
       .post("/api/auth/login")
-      .send({ email: "admin@burgoos.local", password: "admin123" })
+      .send({ email: "admin@rrfive.local", password: "admin123" })
       .expect(201);
 
     const response = await request(app.getHttpServer())

@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import type { ExportFormat, ExportJob } from "@burgoos/types";
+import type { ExportFormat, ExportJob } from "@rrfive/types";
 
 interface AsyncExportMenuProps {
   busy?: boolean;

@@ -173,7 +173,7 @@ function description(field) {
 const out = [];
 const add = (...lines) => out.push(...lines);
 add(
-  "# Dicionário de dados — BurgoOS",
+  "# Dicionário de dados — RRFive OS",
   "",
   "> Fonte de verdade estrutural: `packages/database/prisma/schema.prisma`.",
   "> Documento gerado por `node scripts/generate-data-dictionary.mjs`; complemente a semântica no gerador para preservar alterações.",

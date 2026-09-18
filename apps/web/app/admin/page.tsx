@@ -7,7 +7,7 @@ import {
   TrendingUp,
 } from "lucide-react";
 import Link from "next/link";
-import type { FinancialDashboardIndicators } from "@burgoos/types";
+import type { FinancialDashboardIndicators } from "@rrfive/types";
 import type { AdminTenant } from "../../lib/api";
 import { getAdminDailySummary, getAdminTenantSummary, getFinancialDashboard } from "../../lib/api";
 

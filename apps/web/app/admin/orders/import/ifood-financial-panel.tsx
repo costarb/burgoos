@@ -5,7 +5,7 @@ import type {
   IfoodFinancialReadiness,
   SalesImportRunView,
   SalesIntegrationView,
-} from "@burgoos/types";
+} from "@rrfive/types";
 import React, { FormEvent, useEffect, useState } from "react";
 import type { AdminProduct } from "../../../../lib/api";
 import type {

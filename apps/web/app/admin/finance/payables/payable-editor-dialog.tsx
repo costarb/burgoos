@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
-import type { FinancialCategory, Payable, PayableInput, Supplier } from "@burgoos/types";
+import type { FinancialCategory, Payable, PayableInput, Supplier } from "@rrfive/types";
 import { ModalShell } from "../../../../components/admin/modal-shell";
 import { PayableForm } from "./payable-form";
 

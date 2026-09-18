@@ -1,6 +1,6 @@
 "use client";
 
-import type { AccessAuditEvent, AccessStoreSummary } from "@burgoos/types";
+import type { AccessAuditEvent, AccessStoreSummary } from "@rrfive/types";
 import { useMemo, useState } from "react";
 
 interface AccessAuditClientProps {

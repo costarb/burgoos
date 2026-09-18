@@ -1,6 +1,6 @@
 "use client";
 
-import type { ImageAssetPurpose } from "@burgoos/types";
+import type { ImageAssetPurpose } from "@rrfive/types";
 import React, { useState } from "react";
 import { uploadImageAsset } from "../../lib/image-upload";
 

@@ -7,7 +7,7 @@ import type {
   Payable,
   PayableInput,
   Supplier,
-} from "@burgoos/types";
+} from "@rrfive/types";
 
 interface PayableFormProps {
   categories: FinancialCategory[];

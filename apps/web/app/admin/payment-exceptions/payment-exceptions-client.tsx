@@ -1,7 +1,7 @@
 "use client";
 
 import React, { FormEvent, useState } from "react";
-import type { PaymentException, PaymentExceptionDetail } from "@burgoos/types";
+import type { PaymentException, PaymentExceptionDetail } from "@rrfive/types";
 import { finishPaymentException, getPaymentException, getPaymentExceptions } from "../../../lib/api";
 
 const labels: Record<PaymentException["type"], string> = {

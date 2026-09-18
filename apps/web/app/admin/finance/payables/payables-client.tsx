@@ -12,7 +12,7 @@ import type {
   PayablesResponse,
   PayableStatus,
   ExportFormat,
-} from "@burgoos/types";
+} from "@rrfive/types";
 import { AsyncExportMenu } from "../../../../components/admin/async-export-menu";
 import { OperationFeedback } from "../../../../components/admin/operation-feedback";
 import { MultiSelectFilter } from "../../../../components/admin/multi-select-filter";

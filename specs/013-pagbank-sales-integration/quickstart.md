@@ -52,8 +52,8 @@ Fixtures must contain no real customer/store credentials. Adapter HTTP tests sho
 ```powershell
 npm.cmd run typecheck
 npm.cmd run lint
-npm.cmd run test --workspace @burgoos/api
-npm.cmd run test --workspace @burgoos/web
+npm.cmd run test --workspace @rrfive/api
+npm.cmd run test --workspace @rrfive/web
 .\node_modules\.bin\prisma.cmd validate --schema packages\database\prisma\schema.prisma
 ```
 
@@ -111,6 +111,6 @@ Fixture-driven implementation validation was completed without a real PagBank cr
 
 The fixture-driven operational flow was exercised through the HTTP and UI component suites: configure a tenant integration, store the write-only token, start and poll a preview, inspect ready/blocked outcomes, confirm twice and inspect history/result groups. No real PagBank endpoint was called.
 
-Known repository-wide validation note: `npm.cmd run lint --workspace=@burgoos/web` still reports three preexisting issues outside this feature (`orders-client.tsx`, `platform-users.spec.tsx` and `admin-shell.tsx`). The files added or changed for the sales integration pass typecheck and their focused tests.
+Known repository-wide validation note: `npm.cmd run lint --workspace=@rrfive/web` still reports three preexisting issues outside this feature (`orders-client.tsx`, `platform-users.spec.tsx` and `admin-shell.tsx`). The files added or changed for the sales integration pass typecheck and their focused tests.
 
 Production smoke remains intentionally pending until the EDI USER/TOKEN is available. When received, follow “Controlled production smoke test after token delivery” above using one closed D-1 date and compare the preview with the PagBank portal before confirmation.

@@ -37,7 +37,7 @@ describe("login page", () => {
       root.render(<LoginPage />);
     });
 
-    expect(container.textContent).toContain("BurgoOS");
+    expect(container.textContent).toContain("RRFive OS");
     expect(container.querySelector('input[name="email"]')).not.toBeNull();
     expect(container.querySelector('input[name="password"]')).not.toBeNull();
     expect(container.textContent).toContain("Entrar");
@@ -121,9 +121,9 @@ describe("login page", () => {
       accessTokenExpiresAt: "2026-06-10T22:15:00.000Z",
       user: {
         id: "platform-user-1",
-        login: "platform@burgoos.local",
+        login: "platform@rrfive.local",
         name: "Admin Plataforma",
-        email: "platform@burgoos.local",
+        email: "platform@rrfive.local",
         status: "ACTIVE",
         isMaster: true,
         isPlatformAdmin: true,
@@ -144,7 +144,7 @@ describe("login page", () => {
     await act(async () => {
       root.render(<LoginPage />);
     });
-    await fillAndSubmit("platform@burgoos.local", "admin123");
+    await fillAndSubmit("platform@rrfive.local", "admin123");
 
     expect(fetch).toHaveBeenNthCalledWith(
       1,

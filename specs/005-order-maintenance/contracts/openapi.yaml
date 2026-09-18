@@ -1,6 +1,6 @@
 openapi: 3.0.3
 info:
-  title: BurgoOS Order Maintenance API
+  title: RRFive OS Order Maintenance API
   version: 0.1.0
   description: Admin API contract for auditable order editing and logical deletion.
 paths:

@@ -86,7 +86,7 @@ import type {
   OperationalNotification,
   ManagementReportFilters,
   ManagementReportResponse,
-} from "@burgoos/types";
+} from "@rrfive/types";
 import type {
   CreateCounterOrderInput,
   CreateServiceTabInput,
@@ -117,12 +117,12 @@ import type {
   ResolvePaymentExceptionInput,
   ShiftCloseSummary,
   IfoodFinancialReadiness,
-} from "@burgoos/types";
+} from "@rrfive/types";
 import { clearAuthSession, readAuthSession } from "./auth-client";
 import { buildSalesReportSearchParams } from "./sales-report-query";
 
 const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? "http://127.0.0.1:3001";
-const AUTH_ACCESS_COOKIE = "burgoos.admin.access_token";
+const AUTH_ACCESS_COOKIE = "rrfive.admin.access_token";
 const PUBLIC_MENU_REVALIDATE_SECONDS = 30;
 const PUBLIC_MENU_STALE_FALLBACK_MS = 10 * 60 * 1000;
 const PUBLIC_MENU_TRANSIENT_STATUSES = new Set([429, 502, 503, 504]);

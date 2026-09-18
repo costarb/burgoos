@@ -1,6 +1,6 @@
 "use client";
 
-import type { AccessProfileDetail, AccessStoreSummary } from "@burgoos/types";
+import type { AccessProfileDetail, AccessStoreSummary } from "@rrfive/types";
 import { Copy, Power } from "lucide-react";
 import { useState } from "react";
 import { duplicateAccessProfile, updateAccessProfile } from "../../../lib/api";

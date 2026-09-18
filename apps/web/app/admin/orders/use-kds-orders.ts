@@ -1,7 +1,7 @@
 "use client";
 
 import { Dispatch, SetStateAction, useCallback, useEffect, useRef, useState } from "react";
-import type { KdsOrder } from "@burgoos/types";
+import type { KdsOrder } from "@rrfive/types";
 import { io } from "socket.io-client";
 import { getKdsOrders } from "../../../lib/api";
 import { useAdaptivePolling } from "../../../lib/adaptive-polling";

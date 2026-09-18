@@ -1,5 +1,5 @@
 {
-  "name": "@burgoos/database",
+  "name": "@rrfive/database",
   "version": "0.1.0",
   "private": true,
   "main": "src/index.ts",

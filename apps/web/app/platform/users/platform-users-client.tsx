@@ -7,7 +7,7 @@ import type {
   PlatformUserRole,
   PlatformUserSummary,
   UpdatePlatformUserInput,
-} from "@burgoos/types";
+} from "@rrfive/types";
 import { Pencil, Plus, Power, Search, X } from "lucide-react";
 import { OperationFeedback } from "../../../components/admin/operation-feedback";
 import { createPlatformUser, listPlatformUsers, updatePlatformUser } from "../../../lib/api";

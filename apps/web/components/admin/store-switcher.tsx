@@ -2,7 +2,7 @@
 
 import { Building2 } from "lucide-react";
 import { useEffect, useState } from "react";
-import type { AuthSession } from "@burgoos/types";
+import type { AuthSession } from "@rrfive/types";
 import { readAuthSession, writeAuthSession } from "../../lib/auth-client";
 
 const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? "http://127.0.0.1:3001";
@@ -66,7 +66,7 @@ export function invalidateStoreScopedState(
   target: Pick<Window, "dispatchEvent"> & { location: { reload(): void } },
   storeId: string | null,
 ) {
-  target.dispatchEvent(new CustomEvent("burgoos:store-changed", {
+  target.dispatchEvent(new CustomEvent("rrfive:store-changed", {
     detail: { storeId },
   }));
   target.location.reload();

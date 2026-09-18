@@ -1,6 +1,6 @@
 openapi: 3.0.3
 info:
-  title: BurgoOS Sales Reports API
+  title: RRFive OS Sales Reports API
   version: 0.1.0
   description: Admin API contract for sales/order reports.
 paths:

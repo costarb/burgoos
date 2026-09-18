@@ -3,7 +3,7 @@
 import React from "react";
 import type { ComponentProps, FormEvent, ReactNode } from "react";
 import { useState } from "react";
-import type { OperationState } from "@burgoos/types";
+import type { OperationState } from "@rrfive/types";
 import { idleOperationState } from "../../lib/operation-state";
 import { OperationFeedback } from "./operation-feedback";
 import { OperationPendingContext } from "./submit-button";

@@ -6,7 +6,7 @@ import { useState } from "react";
 import { ChevronRight, Menu, PanelLeftClose, PanelLeftOpen, X } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import type { AuthSession } from "@burgoos/types";
+import type { AuthSession } from "@rrfive/types";
 import { refreshAuthSessionIfNeeded } from "../../lib/auth-client";
 import { useAdaptivePolling } from "../../lib/adaptive-polling";
 import { AccessDenied } from "./access-denied";
@@ -130,7 +130,7 @@ export function AdminShell({ children }: { children: ReactNode }) {
                 <span className="truncate">{current?.label ?? "Pagina"}</span>
               </div>
               <p className="truncate text-sm font-semibold text-slate-950">
-                {current?.description ?? "BurgoOS"}
+                {current?.description ?? "RRFive OS"}
               </p>
             </div>
             <div className="ml-auto flex min-w-0 items-center justify-end gap-3">
@@ -173,7 +173,7 @@ function SidebarContent({
         </span>
         {!collapsed ? (
           <span>
-            <span className="block text-sm font-semibold">BurgoOS</span>
+            <span className="block text-sm font-semibold">RRFive OS</span>
             <span className="block text-xs text-slate-400">Gestao da loja</span>
           </span>
         ) : null}

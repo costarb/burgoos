@@ -34,7 +34,7 @@ function Test-WorkspaceApplication([object]$Process) {
   $normalized = $command.Replace("/", "\")
   $inWorkspace = $normalized.IndexOf($repoRoot, [StringComparison]::OrdinalIgnoreCase) -ge 0
   $appMarker = $normalized -match "apps[\\/](api|web)" -or
-    $normalized -match "@burgoos/(api|web)" -or
+    $normalized -match "@rrfive/(api|web)" -or
     $normalized -match "node_modules[\\/]next[\\/]" -or
     $normalized -match "[\\/]\.next[\\/]" -or
     $normalized -match "next-server" -or

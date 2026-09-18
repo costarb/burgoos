@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import type { OperationState } from "@burgoos/types";
+import type { OperationState } from "@rrfive/types";
 import { AlertCircle, CheckCircle2, LoaderCircle, X } from "lucide-react";
 
 interface OperationFeedbackProps {

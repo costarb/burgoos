@@ -9,7 +9,7 @@ import type {
   PaymentInstitution,
   PaymentInstitutionConfiguration,
   PaymentMethod,
-} from "@burgoos/types";
+} from "@rrfive/types";
 import { useRouter } from "next/navigation";
 import { OperationFeedback } from "../../../../components/admin/operation-feedback";
 import type { AdminProduct } from "../../../../lib/api";

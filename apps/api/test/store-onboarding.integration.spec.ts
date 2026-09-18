@@ -86,7 +86,7 @@ describe("store onboarding", () => {
       id: "99999999-9999-4999-8999-999999999999",
       role: "SUPER_ADMIN",
       name: "Admin Plataforma",
-      email: "platform@burgoos.local",
+      email: "platform@rrfive.local",
       passwordHash: platformPasswordHash,
       active: true,
     });
@@ -139,7 +139,7 @@ describe("store onboarding", () => {
 
     const login = await request(app.getHttpServer())
       .post("/api/auth/platform/login")
-      .send({ email: "platform@burgoos.local", password: "admin123" })
+      .send({ email: "platform@rrfive.local", password: "admin123" })
       .expect(201);
 
     platformToken = login.body.accessToken;

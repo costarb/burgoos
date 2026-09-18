@@ -6,7 +6,7 @@ import type {
   FinancialAuditRecord,
   Payable,
   PayablePaymentInput,
-} from "@burgoos/types";
+} from "@rrfive/types";
 import { ConfirmationDialog } from "../../../../components/admin/confirmation-dialog";
 
 interface PayableDetailDialogProps {

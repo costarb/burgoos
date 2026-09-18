@@ -17,9 +17,9 @@ ainda não realizada — produção permanece bloqueada pelo gate de US5 até ap
 | ------------------------------------------- | ------------------------------------------------------------------------------ |
 | `npm run typecheck` (todos os workspaces)   | OK — sem erros em api, web, database, types, ui.                             |
 | `npm run lint` (todos os workspaces)        | OK — sem erros após correção de 3 usos de `any` em testes iFood pré-existentes. |
-| `npm run test --workspace @burgoos/web`     | OK — 129 testes, 54 arquivos.                                                 |
-| `npm run test --workspace @burgoos/database`| OK — 10 testes (schema.spec.ts).                                             |
-| `npm run test --workspace @burgoos/api`     | Ver observações abaixo.                                                      |
+| `npm run test --workspace @rrfive/web`     | OK — 129 testes, 54 arquivos.                                                 |
+| `npm run test --workspace @rrfive/database`| OK — 10 testes (schema.spec.ts).                                             |
+| `npm run test --workspace @rrfive/api`     | Ver observações abaixo.                                                      |
 
 ## Regression suites (T084)
 
@@ -64,7 +64,7 @@ navegação manual em navegador neste ambiente):
    atualizados; os três testes voltaram a passar.
 5. **Regeneração do Prisma Client**: `prisma generate` atualizou com sucesso os tipos TypeScript
    (incluindo os modelos/enums iFood), mas não conseguiu substituir o binário do query engine
-   nativo porque o servidor de desenvolvimento local (`npm run dev --workspace @burgoos/api`)
+   nativo porque o servidor de desenvolvimento local (`npm run dev --workspace @rrfive/api`)
    mantinha o arquivo aberto. Não bloqueia o uso do client gerado; reiniciar o servidor de dev e
    rodar `prisma generate` novamente conclui a troca do binário quando necessário.
 

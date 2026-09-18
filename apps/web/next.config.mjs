@@ -3,7 +3,7 @@
 const nextConfig = {
   distDir: process.env.NEXT_DIST_DIR || ".next",
   output: "standalone",
-  transpilePackages: ["@burgoos/ui", "@burgoos/types"]
+  transpilePackages: ["@rrfive/ui", "@rrfive/types"]
 };
 
 export default nextConfig;

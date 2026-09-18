@@ -7,7 +7,7 @@ import type {
   PaymentInstitutionConfiguration,
   PaymentInstitutionConfigurationInput,
   PaymentInstitutionFilters,
-} from "@burgoos/types";
+} from "@rrfive/types";
 import { Pencil, Plus, Power, Search, X } from "lucide-react";
 import { OperationFeedback } from "../../../../components/admin/operation-feedback";
 import {

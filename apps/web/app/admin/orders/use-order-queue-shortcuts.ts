@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import type { KdsOrder, OrderStatus } from "@burgoos/types";
+import type { KdsOrder, OrderStatus } from "@rrfive/types";
 
 const CANCEL_CONFIRM_WINDOW_MS = 2000;
 

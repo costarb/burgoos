@@ -1,6 +1,6 @@
-# Manual de Utilização do BurgoOS
+# Manual de Utilização do RRFive OS
 
-Este manual apresenta as principais jornadas do BurgoOS para administradores e operadores de loja. Os menus disponíveis podem variar conforme o perfil de acesso.
+Este manual apresenta as principais jornadas do RRFive OS para administradores e operadores de loja. Os menus disponíveis podem variar conforme o perfil de acesso.
 
 ## 1. Acesso ao sistema
 
@@ -285,7 +285,7 @@ Não exclua os dois registros. Compare origem, identificador externo, horário e
 
 ### A data importada está diferente
 
-Registre a data exibida pelo provedor, o fuso horário, o identificador externo e a data apresentada pelo BurgoOS. Não altere manualmente antes de determinar se o problema é de origem, conversão ou exibição.
+Registre a data exibida pelo provedor, o fuso horário, o identificador externo e a data apresentada pelo RRFive OS. Não altere manualmente antes de determinar se o problema é de origem, conversão ou exibição.
 
 ### Uma integração parou
 

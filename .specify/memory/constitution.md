@@ -1,4 +1,4 @@
-# BurgoOS Constitution
+# RRFive OS Constitution
 
 ## Core Principles
 

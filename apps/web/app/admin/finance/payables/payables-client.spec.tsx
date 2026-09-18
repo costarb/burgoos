@@ -1,7 +1,7 @@
 import React, { act } from "react";
 import { createRoot, Root } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import type { Payable, PayableInput, PayableOptions, PayablesResponse } from "@burgoos/types";
+import type { Payable, PayableInput, PayableOptions, PayablesResponse } from "@rrfive/types";
 import { createPayable, getPayables, requestExportJob, updatePayable } from "../../../../lib/api";
 import { PayablesClient } from "./payables-client";
 

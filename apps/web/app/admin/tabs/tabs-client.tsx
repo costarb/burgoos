@@ -1,7 +1,7 @@
 "use client";
 
 import React, { FormEvent, useState } from "react";
-import type { ServiceTabDetail, ServiceTabSummary } from "@burgoos/types";
+import type { ServiceTabDetail, ServiceTabSummary } from "@rrfive/types";
 import {
   checkoutServiceTab,
   getServiceTab,

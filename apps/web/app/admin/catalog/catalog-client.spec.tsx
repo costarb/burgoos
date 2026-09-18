@@ -1,4 +1,4 @@
-import type { TechnicalSheetSummary } from "@burgoos/types";
+import type { TechnicalSheetSummary } from "@rrfive/types";
 import React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it, vi } from "vitest";

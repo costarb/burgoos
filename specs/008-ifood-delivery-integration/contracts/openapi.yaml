@@ -1,6 +1,6 @@
 openapi: 3.0.3
 info:
-  title: BurgoOS Delivery Integrations API
+  title: RRFive OS Delivery Integrations API
   version: 0.1.0
   description: Tenant-scoped admin contracts for configuring delivery integrations and operating iFood-origin orders.
 paths:

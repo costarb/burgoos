@@ -169,7 +169,7 @@ function parseArgs(args) {
     apiPid: integer(values.get("--api-pid"), "api pid"),
     webPid: integer(values.get("--web-pid"), "web pid"),
     apiLog: values.get("--api-log") ?? "tmp/memory-soak/api.log",
-    email: values.get("--email") ?? "admin@burgoos.local",
+    email: values.get("--email") ?? "admin@rrfive.local",
     password: values.get("--password") ?? "admin123",
     cycles: integer(values.get("--cycles") ?? "5", "cycles"),
     stabilizationMs: integer(values.get("--stabilization-ms") ?? "900000", "stabilization"),

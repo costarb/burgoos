@@ -1,18 +1,18 @@
 services:
   postgres:
     image: postgres:16-alpine
-    container_name: burgoos-postgres
+    container_name: rrfive-postgres
     restart: unless-stopped
     environment:
-      POSTGRES_USER: burgoos
-      POSTGRES_PASSWORD: burgoos
-      POSTGRES_DB: burgoos
+      POSTGRES_USER: rrfive
+      POSTGRES_PASSWORD: rrfive
+      POSTGRES_DB: rrfive
     ports:
       - "5432:5432"
     volumes:
       - postgres-data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U burgoos -d burgoos"]
+      test: ["CMD-SHELL", "pg_isready -U rrfive -d rrfive"]
       interval: 5s
       timeout: 5s
       retries: 10

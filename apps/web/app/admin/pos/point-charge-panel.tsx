@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useRef, useState } from "react";
-import type { PaymentCharge, PaymentTerminal } from "@burgoos/types";
+import type { PaymentCharge, PaymentTerminal } from "@rrfive/types";
 import {
   cancelPaymentCharge,
   createPaymentCharge,

@@ -10,7 +10,7 @@ import type {
   FinancialCategory,
   OperationState,
   PaymentInstitutionConfiguration,
-} from "@burgoos/types";
+} from "@rrfive/types";
 import { OperationFeedback } from "../../../../components/admin/operation-feedback";
 import { MultiSelectFilter } from "../../../../components/admin/multi-select-filter";
 import {
