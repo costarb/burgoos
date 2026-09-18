@@ -147,7 +147,7 @@ Projeto web deste monorepo: `apps/web/app/admin/orders/` (frontend afetado). Nen
 
 - [x] T031 [P] Rodar a suíte web (`apps/web`), incluindo `orders-client.spec.tsx` e `use-order-queue-shortcuts.spec.tsx`, typecheck e lint; corrigir regressões encontradas. **Resultado**: 157/157 testes da suíte web passando (13 em `orders-client.spec.tsx`, 12 em `use-order-queue-shortcuts.spec.tsx`), `tsc --noEmit` e `eslint` limpos. Nenhum arquivo de `apps/api` foi alterado (confirmado via `git status`).
 - [x] T032 Adicionar `aria-label` descritivo (ex. "Pedido #1234 de João Silva, selecionado") ao card focado em `orders-client.tsx`, reforçando para leitor de tela o destaque visual já implementado em US1.
-- [ ] T033 Executar o roteiro de `specs/023-orders-keyboard-shortcuts/quickstart.md` manualmente e registrar o resultado. **Pendente**: requer navegador/app rodando; os 15 passos do roteiro estão cobertos por equivalentes automatizados em `use-order-queue-shortcuts.spec.tsx` e `orders-client.spec.tsx`, mas a validação manual em ambiente real (incluindo comportamento de `scrollIntoView`/foco em navegador de verdade, não coberto pelo jsdom) ainda não foi executada.
+- [x] T033 Executar o roteiro de `specs/023-orders-keyboard-shortcuts/quickstart.md` manualmente e registrar o resultado. **Resultado**: validado manualmente pelo usuário em navegador real.
 
 ---
 
