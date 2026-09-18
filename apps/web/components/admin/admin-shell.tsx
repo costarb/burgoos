@@ -181,8 +181,8 @@ function SidebarContent({
           onNavigate?.();
         }}
       >
-        <span className="grid h-9 w-9 shrink-0 place-items-center rounded-md bg-tomato font-bold text-white">
-          B
+        <span className="grid h-9 w-9 shrink-0 place-items-center rounded-md bg-tomato font-display text-white">
+          5
         </span>
         {!collapsed ? (
           <span>
