@@ -17,9 +17,11 @@ import {
   findNavigationItem,
   secondaryNavigation,
 } from "./admin-navigation";
+import { NavigationProgressBar } from "./navigation-progress-bar";
 import { NotificationCenterButton } from "./notification-center-button";
 import { SessionActions } from "./session-actions";
 import { StoreSwitcher } from "./store-switcher";
+import { shouldTriggerNavigationStart, useNavigationProgress } from "./use-navigation-progress";
 
 export function AdminShell({ children }: { children: ReactNode }) {
   const pathname = usePathname();
@@ -29,6 +31,7 @@ export function AdminShell({ children }: { children: ReactNode }) {
   const [sessionChecked, setSessionChecked] = useState(false);
   const [session, setSession] = useState<AuthSession | null>(null);
   const current = findNavigationItem(pathname);
+  const { status: navigationProgressStatus, startNavigation } = useNavigationProgress();
   const navigation = filterNavigationBySession(adminNavigation, session);
   const secondary = secondaryNavigation.filter((item) => canAccessNavigationItem(item, session));
   const currentAllowed = current ? canAccessNavigationItem(current, session) : true;
@@ -58,6 +61,7 @@ export function AdminShell({ children }: { children: ReactNode }) {
 
   return (
     <div className="min-h-screen bg-slate-100 text-slate-950">
+      <NavigationProgressBar status={navigationProgressStatus} />
       <aside
         className={`fixed inset-y-0 left-0 z-40 hidden border-r border-slate-800 bg-slate-950 text-slate-100 lg:flex lg:flex-col ${
           collapsed ? "w-20" : "w-64"
@@ -65,6 +69,7 @@ export function AdminShell({ children }: { children: ReactNode }) {
       >
         <SidebarContent
           navigation={navigation}
+          onNavigateStart={startNavigation}
           pathname={pathname}
           secondary={secondary}
           collapsed={collapsed}
@@ -105,6 +110,7 @@ export function AdminShell({ children }: { children: ReactNode }) {
               collapsed={false}
               navigation={navigation}
               onNavigate={() => setMobileOpen(false)}
+              onNavigateStart={startNavigation}
               pathname={pathname}
               secondary={secondary}
             />
@@ -154,22 +160,29 @@ function SidebarContent({
   pathname,
   secondary,
   onNavigate,
+  onNavigateStart,
 }: {
   collapsed: boolean;
   navigation: typeof adminNavigation;
   pathname: string;
   secondary: typeof secondaryNavigation;
   onNavigate?: () => void;
+  onNavigateStart: () => void;
 }) {
   return (
     <>
       <Link
         className={`flex h-16 items-center border-b border-slate-800 px-4 ${collapsed ? "justify-center" : "gap-3"}`}
         href="/admin"
-        onClick={onNavigate}
+        onClick={(event) => {
+          if (shouldTriggerNavigationStart(event, "/admin", pathname)) {
+            onNavigateStart();
+          }
+          onNavigate?.();
+        }}
       >
-        <span className="grid h-9 w-9 shrink-0 place-items-center rounded-md bg-tomato font-bold text-white">
-          B
+        <span className="grid h-9 w-9 shrink-0 place-items-center rounded-md bg-tomato font-display text-white">
+          5
         </span>
         {!collapsed ? (
           <span>
@@ -196,6 +209,7 @@ function SidebarContent({
                   item={item}
                   key={item.href}
                   onNavigate={onNavigate}
+                  onNavigateStart={onNavigateStart}
                   pathname={pathname}
                 />
               ))}
@@ -209,6 +223,7 @@ function SidebarContent({
               item={item}
               key={item.href}
               onNavigate={onNavigate}
+              onNavigateStart={onNavigateStart}
               pathname={pathname}
             />
           ))}
@@ -223,11 +238,13 @@ function NavigationLink({
   item,
   pathname,
   onNavigate,
+  onNavigateStart,
 }: {
   collapsed: boolean;
   item: (typeof adminNavigation)[number]["items"][number];
   pathname: string;
   onNavigate?: () => void;
+  onNavigateStart: () => void;
 }) {
   const active =
     pathname === item.href || (item.href !== "/admin" && pathname.startsWith(`${item.href}/`));
@@ -240,7 +257,12 @@ function NavigationLink({
         collapsed ? "justify-center" : "gap-3"
       } ${active ? "bg-white text-slate-950" : "text-slate-300 hover:bg-slate-900 hover:text-white"}`}
       href={item.href}
-      onClick={onNavigate}
+      onClick={(event) => {
+        if (shouldTriggerNavigationStart(event, item.href, pathname)) {
+          onNavigateStart();
+        }
+        onNavigate?.();
+      }}
       title={collapsed ? item.label : undefined}
     >
       <Icon aria-hidden className="h-4 w-4 shrink-0" />
