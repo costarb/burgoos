@@ -9,6 +9,8 @@ import type {
   McpDataArea,
   McpToken,
   McpTokenExpiration,
+  McpUsagePage,
+  McpUsageQuery,
   OperationState,
 } from "@rrfive/types";
 import { Bot, KeyRound } from "lucide-react";
@@ -17,6 +19,7 @@ import { OperationFeedback } from "../../../../components/admin/operation-feedba
 import { idleOperationState } from "../../../../lib/operation-state";
 import type { McpActionState } from "./mcp-action-state";
 import { McpTokenCreatedDialog } from "./mcp-token-created-dialog";
+import { McpUsageTable } from "./mcp-usage-table";
 
 interface McpSettingsClientProps {
   configuration: McpConfiguration;
@@ -26,6 +29,8 @@ interface McpSettingsClientProps {
   ) => Promise<McpActionState<McpConfiguration>>;
   createTokenAction: (payload: CreateMcpTokenPayload) => Promise<McpActionState<CreatedMcpToken>>;
   revokeTokenAction: (id: string) => Promise<McpActionState<McpToken>>;
+  usage: McpUsagePage;
+  loadUsageAction: (query: McpUsageQuery) => Promise<McpActionState<McpUsagePage>>;
 }
 
 const EXPIRATION_OPTIONS: Array<{ value: string; label: string }> = [
@@ -47,7 +52,10 @@ export function McpSettingsClient({
   saveConfigurationAction,
   createTokenAction,
   revokeTokenAction,
+  usage,
+  loadUsageAction,
 }: McpSettingsClientProps) {
+  const [tab, setTab] = useState<"settings" | "usage">("settings");
   const [configuration, setConfiguration] = useState(initialConfiguration);
   const [tokens, setTokens] = useState(initialTokens);
   const [feedback, setFeedback] = useState<OperationState>(idleOperationState);
@@ -162,7 +170,9 @@ export function McpSettingsClient({
             </span>
             <button
               className={`rounded-md px-4 py-2 text-sm font-semibold text-white disabled:opacity-60 ${
-                configuration.enabled ? "bg-slate-700 hover:bg-slate-800" : "bg-tomato hover:opacity-90"
+                configuration.enabled
+                  ? "bg-slate-700 hover:bg-slate-800"
+                  : "bg-tomato hover:opacity-90"
               }`}
               disabled={busy}
               onClick={() =>
@@ -180,161 +190,195 @@ export function McpSettingsClient({
           </div>
         </header>
 
-        <OperationFeedback
-          onDismiss={() => setFeedback(idleOperationState)}
-          state={feedback}
-        />
+        <OperationFeedback onDismiss={() => setFeedback(idleOperationState)} state={feedback} />
 
-        <section className="rounded-md border border-slate-200 bg-white p-5 shadow-sm">
-          <h2 className="text-lg font-semibold">Areas de dados</h2>
-          <p className="mt-1 text-sm text-slate-600">
-            Escolha o que o assistente pode consultar. Mudancas valem na proxima chamada do
-            cliente.
-          </p>
-          <ul className="mt-4 grid gap-3 md:grid-cols-2">
-            {configuration.availableAreas.map((area) => {
-              const checked = configuration.enabledAreas.includes(area.area);
-              return (
-                <li
-                  className="flex items-start justify-between gap-3 rounded-md border border-slate-200 p-3"
-                  key={area.area}
-                >
-                  <div className="min-w-0">
-                    <p className="font-semibold">{area.label}</p>
-                    <p className="text-sm text-slate-600">{area.description}</p>
-                    <p className="mt-1 text-xs text-slate-500">{area.tools.join(", ")}</p>
-                  </div>
-                  <label className="inline-flex shrink-0 cursor-pointer items-center gap-2 text-sm">
-                    <input
-                      aria-label={`Area ${area.label}`}
-                      checked={checked}
-                      className="h-4 w-4"
-                      disabled={busy}
-                      onChange={() => toggleArea(area.area)}
-                      type="checkbox"
-                    />
-                    {checked ? "Ativa" : "Inativa"}
-                  </label>
-                </li>
-              );
-            })}
-          </ul>
-        </section>
-
-        <section className="rounded-md border border-slate-200 bg-white p-5 shadow-sm">
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <h2 className="flex items-center gap-2 text-lg font-semibold">
-              <KeyRound aria-hidden className="h-5 w-5" /> Tokens de acesso
-            </h2>
-            <span className="text-sm text-slate-500">{activeTokens} de 10 ativos</span>
-          </div>
-          <p className="mt-1 text-sm text-slate-600">
-            Cada token da acesso somente a esta loja. O valor completo aparece uma unica vez, ao
-            gerar; a coluna Identificador mostra apenas o inicio, para reconhecer o token. Endereco do
-            servidor:{" "}
-            <code className="rounded bg-slate-100 px-1.5 py-0.5 text-xs">
-              {configuration.serverUrl}
-            </code>
-          </p>
-
-          <form
-            className="mt-4 grid gap-3 md:grid-cols-[1fr_180px_auto]"
-            onSubmit={(event) => {
-              event.preventDefault();
-              void createToken();
-            }}
-          >
-            <input
-              aria-label="Nome do token"
-              className="rounded-md border border-slate-200 px-3 py-2 text-sm"
-              disabled={!configuration.enabled || busy}
-              maxLength={80}
-              onChange={(event) => setTokenName(event.target.value)}
-              placeholder="Ex.: Notebook do gerente"
-              value={tokenName}
-            />
-            <select
-              aria-label="Validade"
-              className="rounded-md border border-slate-200 px-3 py-2 text-sm"
-              disabled={!configuration.enabled || busy}
-              onChange={(event) => setExpiration(event.target.value)}
-              value={expiration}
-            >
-              {EXPIRATION_OPTIONS.map((option) => (
-                <option key={option.value} value={option.value}>
-                  {option.label}
-                </option>
-              ))}
-            </select>
+        <div className="flex gap-2 border-b border-slate-200" role="tablist">
+          {(
+            [
+              ["settings", "Configuracao"],
+              ["usage", "Uso"],
+            ] as const
+          ).map(([key, label]) => (
             <button
-              className="rounded-md bg-slate-900 px-4 py-2 text-sm font-semibold text-white disabled:opacity-60"
-              disabled={!configuration.enabled || busy}
-              type="submit"
+              aria-selected={tab === key}
+              className={`-mb-px border-b-2 px-4 py-2 text-sm font-semibold ${
+                tab === key
+                  ? "border-slate-900 text-slate-900"
+                  : "border-transparent text-slate-500 hover:text-slate-800"
+              }`}
+              key={key}
+              onClick={() => setTab(key)}
+              role="tab"
+              type="button"
             >
-              Gerar token
+              {label}
             </button>
-          </form>
-          {!configuration.enabled ? (
-            <p className="mt-2 text-sm text-slate-500">Habilite o MCP para gerar tokens.</p>
-          ) : null}
+          ))}
+        </div>
 
-          {tokens.length === 0 ? (
-            <p className="mt-6 text-sm text-slate-500">Nenhum token gerado.</p>
-          ) : (
-            <div className="mt-6 overflow-x-auto">
-              <table className="min-w-full text-left text-sm">
-                <thead className="border-b border-slate-200 text-xs uppercase text-slate-500">
-                  <tr>
-                    <th className="py-2 pr-4">Nome</th>
-                    <th className="py-2 pr-4" title="Inicio do token, apenas para identificacao. Nao serve para configurar clientes.">
-                      Identificador
-                    </th>
-                    <th className="py-2 pr-4">Status</th>
-                    <th className="py-2 pr-4">Validade</th>
-                    <th className="py-2 pr-4">Ultimo uso</th>
-                    <th className="py-2 pr-4">Gerado por</th>
-                    <th className="py-2" />
-                  </tr>
-                </thead>
-                <tbody>
-                  {tokens.map((token) => (
-                    <tr className="border-b border-slate-100" key={token.id}>
-                      <td className="py-2 pr-4 font-medium">{token.name}</td>
-                      <td
-                        className="py-2 pr-4 font-mono text-xs text-slate-500"
-                        title="Apenas identificacao. O token completo so e exibido ao ser gerado."
-                      >
-                        {token.tokenPrefix}…
-                      </td>
-                      <td className="py-2 pr-4">
-                        <span
-                          className={`rounded-full px-2 py-0.5 text-xs font-semibold ${STATUS_LABEL[token.status].classes}`}
-                        >
-                          {STATUS_LABEL[token.status].label}
-                        </span>
-                      </td>
-                      <td className="py-2 pr-4">{formatDate(token.expiresAt) ?? "Sem expiracao"}</td>
-                      <td className="py-2 pr-4">{formatDateTime(token.lastUsedAt) ?? "Nunca"}</td>
-                      <td className="py-2 pr-4">{token.createdBy ?? "-"}</td>
-                      <td className="py-2 text-right">
-                        {token.status !== "REVOKED" ? (
-                          <button
-                            className="rounded-md border border-red-200 px-3 py-1 text-xs font-semibold text-red-700 hover:bg-red-50 disabled:opacity-60"
-                            disabled={busy}
-                            onClick={() => setRevoking(token)}
-                            type="button"
-                          >
-                            Revogar
-                          </button>
-                        ) : null}
-                      </td>
-                    </tr>
+        {tab === "usage" ? (
+          <McpUsageTable initialPage={usage} loadUsageAction={loadUsageAction} tokens={tokens} />
+        ) : (
+          <>
+            <section className="rounded-md border border-slate-200 bg-white p-5 shadow-sm">
+              <h2 className="text-lg font-semibold">Areas de dados</h2>
+              <p className="mt-1 text-sm text-slate-600">
+                Escolha o que o assistente pode consultar. Mudancas valem na proxima chamada do
+                cliente.
+              </p>
+              <ul className="mt-4 grid gap-3 md:grid-cols-2">
+                {configuration.availableAreas.map((area) => {
+                  const checked = configuration.enabledAreas.includes(area.area);
+                  return (
+                    <li
+                      className="flex items-start justify-between gap-3 rounded-md border border-slate-200 p-3"
+                      key={area.area}
+                    >
+                      <div className="min-w-0">
+                        <p className="font-semibold">{area.label}</p>
+                        <p className="text-sm text-slate-600">{area.description}</p>
+                        <p className="mt-1 text-xs text-slate-500">{area.tools.join(", ")}</p>
+                      </div>
+                      <label className="inline-flex shrink-0 cursor-pointer items-center gap-2 text-sm">
+                        <input
+                          aria-label={`Area ${area.label}`}
+                          checked={checked}
+                          className="h-4 w-4"
+                          disabled={busy}
+                          onChange={() => toggleArea(area.area)}
+                          type="checkbox"
+                        />
+                        {checked ? "Ativa" : "Inativa"}
+                      </label>
+                    </li>
+                  );
+                })}
+              </ul>
+            </section>
+
+            <section className="rounded-md border border-slate-200 bg-white p-5 shadow-sm">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <h2 className="flex items-center gap-2 text-lg font-semibold">
+                  <KeyRound aria-hidden className="h-5 w-5" /> Tokens de acesso
+                </h2>
+                <span className="text-sm text-slate-500">{activeTokens} de 10 ativos</span>
+              </div>
+              <p className="mt-1 text-sm text-slate-600">
+                Cada token da acesso somente a esta loja. O valor completo aparece uma unica vez, ao
+                gerar; a coluna Identificador mostra apenas o inicio, para reconhecer o token.
+                Endereco do servidor:{" "}
+                <code className="rounded bg-slate-100 px-1.5 py-0.5 text-xs">
+                  {configuration.serverUrl}
+                </code>
+              </p>
+
+              <form
+                className="mt-4 grid gap-3 md:grid-cols-[1fr_180px_auto]"
+                onSubmit={(event) => {
+                  event.preventDefault();
+                  void createToken();
+                }}
+              >
+                <input
+                  aria-label="Nome do token"
+                  className="rounded-md border border-slate-200 px-3 py-2 text-sm"
+                  disabled={!configuration.enabled || busy}
+                  maxLength={80}
+                  onChange={(event) => setTokenName(event.target.value)}
+                  placeholder="Ex.: Notebook do gerente"
+                  value={tokenName}
+                />
+                <select
+                  aria-label="Validade"
+                  className="rounded-md border border-slate-200 px-3 py-2 text-sm"
+                  disabled={!configuration.enabled || busy}
+                  onChange={(event) => setExpiration(event.target.value)}
+                  value={expiration}
+                >
+                  {EXPIRATION_OPTIONS.map((option) => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
+                    </option>
                   ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </section>
+                </select>
+                <button
+                  className="rounded-md bg-slate-900 px-4 py-2 text-sm font-semibold text-white disabled:opacity-60"
+                  disabled={!configuration.enabled || busy}
+                  type="submit"
+                >
+                  Gerar token
+                </button>
+              </form>
+              {!configuration.enabled ? (
+                <p className="mt-2 text-sm text-slate-500">Habilite o MCP para gerar tokens.</p>
+              ) : null}
+
+              {tokens.length === 0 ? (
+                <p className="mt-6 text-sm text-slate-500">Nenhum token gerado.</p>
+              ) : (
+                <div className="mt-6 overflow-x-auto">
+                  <table className="min-w-full text-left text-sm">
+                    <thead className="border-b border-slate-200 text-xs uppercase text-slate-500">
+                      <tr>
+                        <th className="py-2 pr-4">Nome</th>
+                        <th
+                          className="py-2 pr-4"
+                          title="Inicio do token, apenas para identificacao. Nao serve para configurar clientes."
+                        >
+                          Identificador
+                        </th>
+                        <th className="py-2 pr-4">Status</th>
+                        <th className="py-2 pr-4">Validade</th>
+                        <th className="py-2 pr-4">Ultimo uso</th>
+                        <th className="py-2 pr-4">Gerado por</th>
+                        <th className="py-2" />
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {tokens.map((token) => (
+                        <tr className="border-b border-slate-100" key={token.id}>
+                          <td className="py-2 pr-4 font-medium">{token.name}</td>
+                          <td
+                            className="py-2 pr-4 font-mono text-xs text-slate-500"
+                            title="Apenas identificacao. O token completo so e exibido ao ser gerado."
+                          >
+                            {token.tokenPrefix}…
+                          </td>
+                          <td className="py-2 pr-4">
+                            <span
+                              className={`rounded-full px-2 py-0.5 text-xs font-semibold ${STATUS_LABEL[token.status].classes}`}
+                            >
+                              {STATUS_LABEL[token.status].label}
+                            </span>
+                          </td>
+                          <td className="py-2 pr-4">
+                            {formatDate(token.expiresAt) ?? "Sem expiracao"}
+                          </td>
+                          <td className="py-2 pr-4">
+                            {formatDateTime(token.lastUsedAt) ?? "Nunca"}
+                          </td>
+                          <td className="py-2 pr-4">{token.createdBy ?? "-"}</td>
+                          <td className="py-2 text-right">
+                            {token.status !== "REVOKED" ? (
+                              <button
+                                className="rounded-md border border-red-200 px-3 py-1 text-xs font-semibold text-red-700 hover:bg-red-50 disabled:opacity-60"
+                                disabled={busy}
+                                onClick={() => setRevoking(token)}
+                                type="button"
+                              >
+                                Revogar
+                              </button>
+                            ) : null}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </section>
+          </>
+        )}
       </section>
 
       {created ? (

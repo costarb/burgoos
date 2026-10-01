@@ -5,6 +5,8 @@ import type {
   McpConfiguration,
   McpConfigurationPayload,
   McpToken,
+  McpUsagePage,
+  McpUsageQuery,
   OperationState,
 } from "@rrfive/types";
 import { revalidatePath } from "next/cache";
@@ -12,6 +14,7 @@ import {
   createMcpToken,
   getAdminToken,
   getMcpConfiguration,
+  getMcpUsage,
   listMcpTokens,
   revokeMcpToken,
   updateMcpConfiguration,
@@ -27,9 +30,10 @@ function failure(error: unknown, fallback: string): OperationState {
 
 export default async function McpSettingsPage() {
   const token = await getAdminToken();
-  const [configuration, tokens] = await Promise.all([
+  const [configuration, tokens, usage] = await Promise.all([
     getMcpConfiguration(token),
     listMcpTokens(token),
+    getMcpUsage(token, { pageSize: 25 }),
   ]);
 
   async function saveConfiguration(
@@ -76,13 +80,26 @@ export default async function McpSettingsPage() {
     }
   }
 
+  async function loadUsage(query: McpUsageQuery): Promise<McpActionState<McpUsagePage>> {
+    "use server";
+
+    try {
+      const data = await getMcpUsage(await getAdminToken(), query);
+      return { status: "success", message: "Uso carregado.", data };
+    } catch (error) {
+      return failure(error, "Nao foi possivel carregar o uso do MCP.");
+    }
+  }
+
   return (
     <McpSettingsClient
       configuration={configuration}
       createTokenAction={createToken}
+      loadUsageAction={loadUsage}
       revokeTokenAction={revokeToken}
       saveConfigurationAction={saveConfiguration}
       tokens={tokens}
+      usage={usage}
     />
   );
 }

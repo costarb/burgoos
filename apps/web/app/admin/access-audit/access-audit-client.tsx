@@ -47,7 +47,7 @@ export function AccessAuditClient({ events, stores }: AccessAuditClientProps) {
             <option value="ALL">Todos os eventos</option>
             {eventTypes.map((type) => (
               <option key={type} value={type}>
-                {type}
+                {eventTypeLabel(type)}
               </option>
             ))}
           </select>
@@ -83,7 +83,12 @@ export function AccessAuditClient({ events, stores }: AccessAuditClientProps) {
                   <td className="px-4 py-3">
                     {new Date(event.occurredAt).toLocaleString("pt-BR")}
                   </td>
-                  <td className="px-4 py-3 font-medium">{event.eventType}</td>
+                  <td className="px-4 py-3">
+                    <span className="font-medium">{eventTypeLabel(event.eventType)}</span>
+                    <span className="block font-mono text-xs text-slate-500">
+                      {event.eventType}
+                    </span>
+                  </td>
                   <td className="px-4 py-3">{event.result}</td>
                   <td className="px-4 py-3">{storeName(stores, event.storeId)}</td>
                   <td className="px-4 py-3">{event.targetUserId ?? "-"}</td>
@@ -114,7 +119,7 @@ export function AccessAuditClient({ events, stores }: AccessAuditClientProps) {
             <section className="w-full max-w-2xl rounded-md bg-white p-5 shadow-xl">
               <div className="flex items-start justify-between gap-3">
                 <div>
-                  <h2 className="text-lg font-semibold">{selected.eventType}</h2>
+                  <h2 className="text-lg font-semibold">{eventTypeLabel(selected.eventType)}</h2>
                   <p className="mt-1 text-sm text-slate-600">
                     {selected.reason ?? "Sem motivo informado"}
                   </p>
@@ -136,6 +141,29 @@ export function AccessAuditClient({ events, stores }: AccessAuditClientProps) {
       </section>
     </main>
   );
+}
+
+const EVENT_TYPE_LABELS: Record<string, string> = {
+  LOGIN_SUCCESS: "Login realizado",
+  LOGIN_FAILURE: "Falha de login",
+  LOGOUT: "Logout",
+  USER_CREATED: "Usuario criado",
+  USER_UPDATED: "Usuario alterado",
+  USER_STATUS_CHANGED: "Status de usuario alterado",
+  PROFILE_CREATED: "Perfil criado",
+  PROFILE_UPDATED: "Perfil alterado",
+  PERMISSIONS_CHANGED: "Permissoes alteradas",
+  STORE_ASSIGNMENT_CHANGED: "Lojas do usuario alteradas",
+  ACCESS_DENIED: "Acesso negado",
+  PASSWORD_RESET_REQUESTED: "Redefinicao de senha solicitada",
+  PASSWORD_CHANGED: "Senha alterada",
+  MCP_CONFIGURATION_CHANGED: "MCP: configuracao alterada",
+  MCP_TOKEN_CREATED: "MCP: token gerado",
+  MCP_TOKEN_REVOKED: "MCP: token revogado",
+};
+
+export function eventTypeLabel(eventType: string): string {
+  return EVENT_TYPE_LABELS[eventType] ?? eventType;
 }
 
 function storeName(stores: AccessStoreSummary[], storeId: string | null) {

@@ -7,6 +7,8 @@ import { ManagementModule } from "../management.module";
 import { StoreMcpAdminController } from "./admin/store-mcp-admin.controller";
 import { StoreMcpConfigurationService } from "./admin/store-mcp-configuration.service";
 import { StoreMcpTokenService } from "./admin/store-mcp-token.service";
+import { McpUsageService } from "./admin/mcp-usage.service";
+import { McpCallRetentionService } from "./server/mcp-call-retention.service";
 import { McpResources } from "./resources/mcp-resources";
 import { McpCallLogService } from "./server/mcp-call-log.service";
 import { McpRateLimitGuard } from "./server/mcp-rate-limit.guard";
@@ -40,6 +42,12 @@ export const MCP_SERVER_PROVIDERS = [
 @Module({
   imports: [AuthModule, ManagementModule, OperationsModule, ObservabilityModule, BackgroundJobsModule],
   controllers: [StoreMcpAdminController, McpController],
-  providers: [StoreMcpConfigurationService, StoreMcpTokenService, ...MCP_SERVER_PROVIDERS],
+  providers: [
+    StoreMcpConfigurationService,
+    StoreMcpTokenService,
+    McpUsageService,
+    McpCallRetentionService,
+    ...MCP_SERVER_PROVIDERS,
+  ],
 })
 export class McpModule {}

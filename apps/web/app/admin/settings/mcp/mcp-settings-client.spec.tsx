@@ -1,7 +1,13 @@
 import React, { act } from "react";
 import { createRoot, Root } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import type { CreatedMcpToken, McpConfiguration, McpToken } from "@rrfive/types";
+import type {
+  CreatedMcpToken,
+  McpConfiguration,
+  McpToken,
+  McpUsageEntry,
+  McpUsagePage,
+} from "@rrfive/types";
 import { McpSettingsClient } from "./mcp-settings-client";
 
 describe("McpSettingsClient", () => {
@@ -10,6 +16,7 @@ describe("McpSettingsClient", () => {
   const saveConfigurationAction = vi.fn();
   const createTokenAction = vi.fn();
   const revokeTokenAction = vi.fn();
+  const loadUsageAction = vi.fn();
 
   beforeEach(() => {
     (
@@ -21,6 +28,7 @@ describe("McpSettingsClient", () => {
     saveConfigurationAction.mockReset();
     createTokenAction.mockReset();
     revokeTokenAction.mockReset();
+    loadUsageAction.mockReset();
   });
 
   afterEach(() => {
@@ -142,15 +150,44 @@ describe("McpSettingsClient", () => {
     expect(container.textContent).toContain("Mantenha ao menos uma area de dados ativa");
   });
 
-  async function render(config: McpConfiguration, tokens: McpToken[]) {
+  it("shows the usage log with refusals and filters by result", async () => {
+    loadUsageAction.mockResolvedValue({
+      status: "success",
+      message: "ok",
+      data: usagePage([usageEntry({ id: "call-2", result: "DENIED", errorCode: "TOKEN_REVOKED" })]),
+    });
+    await render(configuration({ enabled: true }), [token()], usagePage([usageEntry()]));
+
+    await click(button("Uso"));
+    expect(container.textContent).toContain("Uso do MCP");
+    expect(container.textContent).toContain("resumo_vendas");
+    expect(container.textContent).toContain("Sucesso");
+    expect(container.textContent).toContain("1 chamada(s)");
+
+    await select(input("Filtrar por resultado") as unknown as HTMLSelectElement, "DENIED");
+
+    expect(loadUsageAction).toHaveBeenCalledWith({ result: "DENIED", page: 1, pageSize: 25 });
+    expect(container.textContent).toContain("Recusada");
+    expect(container.textContent).toContain("Token revogado");
+  });
+
+  it("shows an empty usage state", async () => {
+    await render(configuration({ enabled: true }), [], usagePage([]));
+    await click(button("Uso"));
+    expect(container.textContent).toContain("Nenhuma chamada registrada.");
+  });
+
+  async function render(config: McpConfiguration, tokens: McpToken[], usage = usagePage([])) {
     await act(async () => {
       root.render(
         <McpSettingsClient
           configuration={config}
           createTokenAction={createTokenAction}
+          loadUsageAction={loadUsageAction}
           revokeTokenAction={revokeTokenAction}
           saveConfigurationAction={saveConfigurationAction}
           tokens={tokens}
+          usage={usage}
         />
       );
     });
@@ -243,4 +280,24 @@ function createdToken(): CreatedMcpToken {
       cursor: '{"mcpServers":{"rrfive":{"url":"https://api.example.com/api/mcp"}}}',
     },
   };
+}
+
+function usageEntry(overrides: Partial<McpUsageEntry> = {}): McpUsageEntry {
+  return {
+    id: "call-1",
+    occurredAt: "2026-10-01T12:00:00.000Z",
+    tokenName: "Notebook",
+    tokenPrefix: "rrf_mcp_abc123",
+    method: "tools/call",
+    target: "resumo_vendas",
+    arguments: { inicio: "2026-09-01" },
+    result: "SUCCESS",
+    errorCode: null,
+    durationMs: 120,
+    ...overrides,
+  };
+}
+
+function usagePage(items: McpUsageEntry[]): McpUsagePage {
+  return { page: 1, pageSize: 25, total: items.length, items };
 }

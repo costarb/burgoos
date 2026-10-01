@@ -154,17 +154,17 @@
 
 ### Tests for User Story 5
 
-- [ ] T050 [P] [US5] Testes unitários em `apps/api/src/management/mcp/server/mcp-call-log.service.spec.ts`: argumentos truncados em 1 KB; só argumentos declarados; throttle de `lastUsedAt` (uma escrita por minuto); falha ao gravar o log não quebra a resposta
-- [ ] T051 [P] [US5] Testes em `apps/api/src/management/mcp/server/mcp-call-retention.service.spec.ts`: apaga só registros > 90 dias, em lotes, apenas no papel `worker`/`all`
-- [ ] T052 [P] [US5] Em `apps/api/test/store-mcp-admin.integration.spec.ts`: `GET admin/mcp/usage` paginado, filtros `tokenId`/`start`/`end`/`result`, escopo por loja; recusa de token desconhecido não gera registro
+- [X] T050 [P] [US5] Testes unitários em `apps/api/src/management/mcp/server/mcp-call-log.service.spec.ts`: argumentos truncados em 1 KB; só argumentos declarados; throttle de `lastUsedAt` (uma escrita por minuto); falha ao gravar o log não quebra a resposta
+- [X] T051 [P] [US5] Testes em `apps/api/src/management/mcp/server/mcp-call-retention.service.spec.ts`: apaga só registros > 90 dias, em lotes, apenas no papel `worker`/`all`
+- [X] T052 [P] [US5] Em `apps/api/test/store-mcp-admin.integration.spec.ts`: `GET admin/mcp/usage` paginado, filtros `tokenId`/`start`/`end`/`result`, escopo por loja; recusa de token desconhecido não gera registro
 
 ### Implementation for User Story 5
 
-- [ ] T053 [US5] Implementar `apps/api/src/management/mcp/server/mcp-call-log.service.ts` (`record(ctx, call)` fire-and-forget em `mcp_tool_calls`; `touchToken(tokenId)` com `updateMany where lastUsedAt null or < now-60s`) e ligá-lo ao `onFinish` do `McpToolRunner` e às recusas `DENIED` do `McpTokenGuard`/`McpRateLimitGuard`
-- [ ] T054 [US5] Implementar `apps/api/src/management/mcp/server/mcp-call-retention.service.ts` (`@Cron` diário, `RuntimeRoleService`, lotes de `RETENTION_BATCH_SIZE`) e registrá-lo no `McpModule`
-- [ ] T055 [US5] Implementar `apps/api/src/management/mcp/admin/mcp-usage.service.ts` e a rota `GET admin/mcp/usage` em `store-mcp-admin.controller.ts` (contracts/store-mcp-admin.openapi.yaml)
-- [ ] T056 [US5] Adicionar `getMcpUsage` em `apps/web/lib/api.ts`, criar `apps/web/app/admin/settings/mcp/mcp-usage-table.tsx` (tabela paginada com filtros por token, período e resultado; badge "Recusada") e a aba "Uso" em `mcp-settings-client.tsx`, com casos em `mcp-settings-client.spec.tsx`
-- [ ] T057 [US5] Exibir rótulos legíveis para os eventos `MCP_*` na tela de auditoria de acessos (`apps/web/app/admin/access-audit/access-audit-client.tsx`)
+- [X] T053 [US5] Implementar `apps/api/src/management/mcp/server/mcp-call-log.service.ts` (`record(ctx, call)` fire-and-forget em `mcp_tool_calls`; `touchToken(tokenId)` com `updateMany where lastUsedAt null or < now-60s`) e ligá-lo ao `onFinish` do `McpToolRunner` e às recusas `DENIED` do `McpTokenGuard`/`McpRateLimitGuard`
+- [X] T054 [US5] Implementar `apps/api/src/management/mcp/server/mcp-call-retention.service.ts` (`@Cron` diário, `RuntimeRoleService`, lotes de `RETENTION_BATCH_SIZE`) e registrá-lo no `McpModule`
+- [X] T055 [US5] Implementar `apps/api/src/management/mcp/admin/mcp-usage.service.ts` e a rota `GET admin/mcp/usage` em `store-mcp-admin.controller.ts` (contracts/store-mcp-admin.openapi.yaml)
+- [X] T056 [US5] Adicionar `getMcpUsage` em `apps/web/lib/api.ts`, criar `apps/web/app/admin/settings/mcp/mcp-usage-table.tsx` (tabela paginada com filtros por token, período e resultado; badge "Recusada") e a aba "Uso" em `mcp-settings-client.tsx`, com casos em `mcp-settings-client.spec.tsx`
+- [X] T057 [US5] Exibir rótulos legíveis para os eventos `MCP_*` na tela de auditoria de acessos (`apps/web/app/admin/access-audit/access-audit-client.tsx`)
 
 **Checkpoint**: todas as user stories funcionais.
 

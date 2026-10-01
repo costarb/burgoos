@@ -3,6 +3,7 @@ import { AccessAuditEventType, McpDataArea, UserRole } from "@prisma/client";
 import request from "supertest";
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { AccessAuditService } from "../src/management/access/access-audit.service";
+import { McpUsageService } from "../src/management/mcp/admin/mcp-usage.service";
 import { StoreMcpAdminController } from "../src/management/mcp/admin/store-mcp-admin.controller";
 import { StoreMcpConfigurationService } from "../src/management/mcp/admin/store-mcp-configuration.service";
 import { StoreMcpTokenService } from "../src/management/mcp/admin/store-mcp-token.service";
@@ -24,7 +25,12 @@ describe("store MCP admin integration", () => {
       prisma,
       authService: authMock,
       controllers: [StoreMcpAdminController],
-      providers: [StoreMcpConfigurationService, StoreMcpTokenService, AccessAuditService],
+      providers: [
+        StoreMcpConfigurationService,
+        StoreMcpTokenService,
+        McpUsageService,
+        AccessAuditService,
+      ],
       env: { MCP_PUBLIC_URL: "https://api.example.com/api/mcp" },
     });
   });
@@ -220,6 +226,63 @@ describe("store MCP admin integration", () => {
       .set("Authorization", "Bearer platform")
       .expect(403);
   });
+
+  it("lists the store usage log, newest first, with filters and pagination", async () => {
+    const tokenA = seedToken(storeA, "Notebook");
+    const base = new Date("2026-09-20T15:00:00.000Z").getTime();
+    for (let index = 0; index < 30; index += 1) {
+      prisma.state.calls.push(call(storeA, tokenA.id, new Date(base + index * 60_000), index === 29 ? "DENIED" : "SUCCESS"));
+    }
+    prisma.state.calls.push(call(storeA, null, new Date("2026-08-01T12:00:00.000Z"), "ERROR"));
+    prisma.state.calls.push(call(storeB, null, new Date(base), "SUCCESS"));
+
+    const first = await http()
+      .get("/api/admin/mcp/usage?pageSize=10")
+      .set("Authorization", "Bearer admin")
+      .expect(200);
+    expect(first.body).toMatchObject({ page: 1, pageSize: 10, total: 31 });
+    expect(first.body.items).toHaveLength(10);
+    expect(first.body.items[0]).toMatchObject({
+      result: "DENIED",
+      tokenName: "Notebook",
+      tokenPrefix: "rrf_mcp_seeded",
+      target: "dre",
+    });
+
+    const denied = await http()
+      .get("/api/admin/mcp/usage?result=DENIED")
+      .set("Authorization", "Bearer admin")
+      .expect(200);
+    expect(denied.body.total).toBe(1);
+
+    const byToken = await http()
+      .get(`/api/admin/mcp/usage?tokenId=${tokenA.id}&start=2026-09-01&end=2026-09-30`)
+      .set("Authorization", "Bearer admin")
+      .expect(200);
+    expect(byToken.body.total).toBe(30);
+
+    const august = await http()
+      .get("/api/admin/mcp/usage?start=2026-08-01&end=2026-08-31")
+      .set("Authorization", "Bearer admin")
+      .expect(200);
+    expect(august.body.total).toBe(1);
+    expect(JSON.stringify(first.body)).not.toContain(storeB);
+  });
+
+  function call(tenantId: string, tokenId: string | null, occurredAt: Date, result: "SUCCESS" | "ERROR" | "DENIED") {
+    return {
+      id: crypto.randomUUID(),
+      tenantId,
+      tokenId,
+      method: "tools/call",
+      target: "dre",
+      arguments: { inicio: "2026-09-01" },
+      result,
+      errorCode: result === "DENIED" ? "TOKEN_REVOKED" : null,
+      durationMs: 25,
+      occurredAt,
+    } as const;
+  }
 
   function storeAdmin() {
     return {

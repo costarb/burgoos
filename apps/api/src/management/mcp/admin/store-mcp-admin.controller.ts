@@ -8,6 +8,7 @@ import {
   ParseUUIDPipe,
   Post,
   Put,
+  Query,
   Req,
   UseGuards,
 } from "@nestjs/common";
@@ -19,7 +20,8 @@ import { RequirePermission } from "../../../auth/guards/require-permission.decor
 import { AuthUser } from "../../../platform/auth/auth.types";
 import { CurrentUser } from "../../../platform/auth/current-user.decorator";
 import { JwtAuthGuard } from "../../../platform/auth/jwt-auth.guard";
-import { CreateMcpTokenDto, UpdateMcpConfigurationDto } from "./dto/store-mcp.dto";
+import { CreateMcpTokenDto, McpUsageQueryDto, UpdateMcpConfigurationDto } from "./dto/store-mcp.dto";
+import { McpUsageService } from "./mcp-usage.service";
 import { resolveMcpServerUrl } from "./mcp-server-url";
 import { StoreMcpConfigurationService } from "./store-mcp-configuration.service";
 import { StoreMcpTokenService } from "./store-mcp-token.service";
@@ -34,6 +36,7 @@ export class StoreMcpAdminController {
     @Inject(StoreMcpConfigurationService)
     private readonly configurationService: StoreMcpConfigurationService,
     @Inject(StoreMcpTokenService) private readonly tokenService: StoreMcpTokenService,
+    @Inject(McpUsageService) private readonly usageService: McpUsageService,
     @Inject(ConfigService) private readonly config: ConfigService
   ) {}
 
@@ -69,6 +72,11 @@ export class StoreMcpAdminController {
   @HttpCode(200)
   revokeToken(@CurrentUser() user: AuthUser, @Param("id", ParseUUIDPipe) id: string) {
     return this.tokenService.revoke(user, id);
+  }
+
+  @Get("usage")
+  listUsage(@CurrentUser() user: AuthUser, @Query() query: McpUsageQueryDto) {
+    return this.usageService.list(user.tenantId, query);
   }
 
   private serverUrl(request: Request): string {
