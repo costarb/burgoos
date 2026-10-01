@@ -254,6 +254,30 @@ A arquitetura privilegia paginação, streaming, seleção explícita de campos,
 
 Alertas devem ocorrer antes do limite do provedor. Crescimento contínuo depois do término das operações sugere retenção e deve ser investigado com snapshots de heap em ambiente controlado.
 
+### 10.1 Servidor MCP por loja
+
+O módulo `management/mcp` expõe os números da loja para assistentes de IA (Claude, Cursor e outros clientes MCP), sempre somente leitura.
+
+```mermaid
+flowchart LR
+    Client[Cliente MCP] -->|Bearer rrf_mcp_...| Guard[McpTokenGuard]
+    Guard -->|hash -> token -> loja| Limit[McpRateLimitGuard]
+    Limit --> Controller[McpController]
+    Controller --> Factory[McpServerFactory]
+    Factory -->|tools das áreas liberadas| Runner[McpToolRunner]
+    Runner --> Services[Services de relatório existentes]
+    Runner --> Log[(mcp_tool_calls)]
+```
+
+- **Transporte**: `POST /api/mcp`, protocolo MCP (JSON-RPC 2.0) em Streamable HTTP, modo stateless com respostas JSON. Cada requisição monta um servidor para a loja e o descarta, então revogação, desabilitação e mudança de áreas valem na chamada seguinte, sem estado em memória.
+- **Tenant**: vem exclusivamente do token. O token é opaco (`rrf_mcp_` + 32 bytes), guardado como SHA-256, e nenhuma tool aceita parâmetro de loja. Toda recusa responde o mesmo `401`.
+- **Dados**: as tools reutilizam os services das telas (vendas, gerencial, DRE, dashboard, engenharia de cardápio, caixa, contas a pagar, estoque) e passam a saída por mappers com lista de campos permitidos: agregados, valores em reais, no máximo 50 itens por lista e nenhum dado pessoal.
+- **Proteção**: limite de chamadas por token (`MCP_RATE_LIMIT_PER_MINUTE`), timeout (`MCP_TOOL_TIMEOUT_MS`), recusa sob pressão de memória e no máximo 92 dias por consulta.
+- **Auditoria**: configuração e tokens geram eventos em `AccessAuditEvent`; cada chamada e cada recusa de token conhecido vai para `mcp_tool_calls`, apagada após `MCP_TOOL_CALL_RETENTION_DAYS` por rotina diária no papel `worker`/`all`.
+- **Configuração**: `MCP_PUBLIC_URL` define o endereço exibido nos trechos de configuração; sem ela, o endereço é derivado da requisição.
+
+O contrato completo está em `specs/025-store-mcp-server/contracts/mcp-tools.md`. O endpoint MCP não segue o padrão REST/OpenAPI porque os clientes exigem o protocolo MCP; os endpoints de configuração em `/api/admin/mcp` continuam REST.
+
 ## 11. Segurança
 
 - validação estrita de entrada;
