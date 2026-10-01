@@ -7,6 +7,7 @@ export * from "./exports";
 export * from "./notifications";
 export * from "./payments";
 export * from "./pos";
+export * from "./mcp";
 
 export type AccessUserStatus = "INVITED" | "ACTIVE" | "INACTIVE" | "LOCKED";
 export type StoreUserRole = "OWNER" | "ADMIN" | "OPERATOR";
