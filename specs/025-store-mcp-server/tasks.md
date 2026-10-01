@@ -113,15 +113,15 @@
 
 ### Tests for User Story 3
 
-- [ ] T041 [P] [US3] Teste e2e em `apps/api/test/mcp-tenant-isolation.e2e.spec.ts`: banco de teste com duas lojas e dados distintos; chamar todas as tools e resources com o token A e verificar que nenhum id, nome de produto, plataforma ou valor da loja B aparece; confirmar que nenhuma tool aceita parâmetro de loja (schemas sem `storeId`/`tenantId`)
-- [ ] T042 [P] [US3] Teste de integração em `apps/api/test/mcp-token-auth.integration.spec.ts`: `401` com corpo idêntico para ausente, malformado, desconhecido, revogado, expirado, MCP desabilitado, loja inativa; reabilitar o MCP restaura tokens válidos; revogar durante uso bloqueia a chamada seguinte; tool de área desligada não é listada e a chamada direta retorna `AREA_DISABLED`
-- [ ] T043 [P] [US3] Teste de privacidade em `apps/api/test/mcp-privacy.spec.ts`: varredura recursiva das respostas de todas as tools e resources buscando chaves proibidas (`customer`, `phone`, `address`, `document`, `cpf`, `cnpj`, `email`, `token`, `secret`) e aplicando a regex de `IntegrationSecretService.redact`
+- [X] T041 [P] [US3] Teste e2e em `apps/api/test/mcp-tenant-isolation.e2e.spec.ts`: banco de teste com duas lojas e dados distintos; chamar todas as tools e resources com o token A e verificar que nenhum id, nome de produto, plataforma ou valor da loja B aparece; confirmar que nenhuma tool aceita parâmetro de loja (schemas sem `storeId`/`tenantId`)
+- [X] T042 [P] [US3] Teste de integração em `apps/api/test/mcp-token-auth.integration.spec.ts`: `401` com corpo idêntico para ausente, malformado, desconhecido, revogado, expirado, MCP desabilitado, loja inativa; reabilitar o MCP restaura tokens válidos; revogar durante uso bloqueia a chamada seguinte; tool de área desligada não é listada e a chamada direta retorna `AREA_DISABLED`
+- [X] T043 [P] [US3] Teste de privacidade em `apps/api/test/mcp-privacy.spec.ts`: varredura recursiva das respostas de todas as tools e resources buscando chaves proibidas (`customer`, `phone`, `address`, `document`, `cpf`, `cnpj`, `email`, `token`, `secret`) e aplicando a regex de `IntegrationSecretService.redact`
 
 ### Implementation for User Story 3
 
 - [X] T044 [US3] Adicionar o método protegido `bucketKey(request)` (padrão: IP, comportamento atual inalterado) em `apps/api/src/common/rate-limit/fixed-window-rate-limit.guard.ts`
-- [ ] T045 [US3] Criar `apps/api/src/management/mcp/server/mcp-rate-limit.guard.ts` estendendo `FixedWindowRateLimitGuard` com `bucketKey = mcp:<tokenId>` e `limit = MCP_RATE_LIMIT_PER_MINUTE`; aplicar depois do `McpTokenGuard` em `mcp.controller.ts`; teste de `429` em `apps/api/test/mcp-token-auth.integration.spec.ts`
-- [ ] T046 [US3] Em `mcp-token.guard.ts`, distinguir internamente o motivo da recusa (`TOKEN_REVOKED`, `TOKEN_EXPIRED`, `MCP_DISABLED`, `STORE_INACTIVE`) mantendo a resposta externa idêntica, e expor o motivo para o log (US5)
+- [X] T045 [US3] Criar `apps/api/src/management/mcp/server/mcp-rate-limit.guard.ts` estendendo `FixedWindowRateLimitGuard` com `bucketKey = mcp:<tokenId>` e `limit = MCP_RATE_LIMIT_PER_MINUTE`; aplicar depois do `McpTokenGuard` em `mcp.controller.ts`; teste de `429` em `apps/api/test/mcp-token-auth.integration.spec.ts`
+- [X] T046 [US3] Em `mcp-token.guard.ts`, distinguir internamente o motivo da recusa (`TOKEN_REVOKED`, `TOKEN_EXPIRED`, `MCP_DISABLED`, `STORE_INACTIVE`) mantendo a resposta externa idêntica, e expor o motivo para o log (US5)
 
 **Checkpoint**: requisito de segurança da feature coberto. Bloqueante para produção.
 
