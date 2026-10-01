@@ -116,6 +116,18 @@ import { StorageModule } from "../common/storage/storage.module";
     ManagementReportExportProvider,
     NotificationsService,
   ],
-  exports: [OrderProfitabilityService, DeliveryIntegrationsModule],
+  exports: [
+    OrderProfitabilityService,
+    DeliveryIntegrationsModule,
+    AccessAuditService,
+    ReportsService,
+    SalesReportService,
+    ManagementReportService,
+    DreService,
+    FinancialDashboardService,
+    MenuEngineeringService,
+    CashFlowService,
+    AccountsPayableService,
+  ],
 })
 export class ManagementModule {}

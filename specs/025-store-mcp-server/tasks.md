@@ -19,9 +19,9 @@
 
 **Purpose**: dependências e configuração de ambiente
 
-- [ ] T001 Adicionar `@modelcontextprotocol/sdk@^1.31` e `zod@^3.25` às dependências de `apps/api/package.json` e rodar `npm install` na raiz
-- [ ] T002 [P] Adicionar `MCP_PUBLIC_URL` (opcional, URL), `MCP_RATE_LIMIT_PER_MINUTE` (padrão 60) e `MCP_TOOL_TIMEOUT_MS` (padrão 20000) em `apps/api/src/config/env.validation.ts`, com casos em `apps/api/src/config/env.validation.spec.ts`
-- [ ] T003 [P] Documentar as três variáveis novas em `.env.example` e `apps/api/.env.example`
+- [X] T001 Adicionar `@modelcontextprotocol/sdk@^1.31` e `zod@^3.25` às dependências de `apps/api/package.json` e rodar `npm install` na raiz
+- [X] T002 [P] Adicionar `MCP_PUBLIC_URL` (opcional, URL), `MCP_RATE_LIMIT_PER_MINUTE` (padrão 60) e `MCP_TOOL_TIMEOUT_MS` (padrão 20000) em `apps/api/src/config/env.validation.ts`, com casos em `apps/api/src/config/env.validation.spec.ts`
+- [X] T003 [P] Documentar as três variáveis novas em `.env.example` e `apps/api/.env.example`
 
 ---
 
@@ -31,14 +31,14 @@
 
 **⚠️ CRITICAL**: nenhuma user story começa antes desta fase
 
-- [ ] T004 Adicionar ao `packages/database/prisma/schema.prisma` os enums `McpDataArea` e `McpToolCallResult`, os valores `MCP_CONFIGURATION_CHANGED`, `MCP_TOKEN_CREATED` e `MCP_TOKEN_REVOKED` em `AccessAuditEventType`, os models `StoreMcpConfiguration`, `StoreMcpToken` e `McpToolCall` (campos, índices e `@@map` conforme data-model.md) e as relações inversas em `Tenant` e `User`
-- [ ] T005 Gerar a migration `packages/database/prisma/migrations/20261001090000_store_mcp_server/migration.sql` com `npm run db:migrate` e conferir o SQL (índices únicos `tenant_id` e `token_hash`, índice de retenção em `occurred_at`); rodar `npm run db:generate`
-- [ ] T006 [P] Adicionar a permissão `mcp.manage` (área "Integracoes", tela "MCP / IA", ação `MANAGE`, `sensitive: true`) em `apps/api/src/management/access/permissions/permission-catalog.ts` e atualizar o teste de catálogo existente, se houver contagem fixa
-- [ ] T007 [P] Criar `apps/api/src/management/mcp/mcp-data-areas.ts` com o catálogo `McpDataArea → { label, description, tools[] }` e helpers `toolsForAreas(areas)` e `areaOfTool(name)`, com testes em `apps/api/src/management/mcp/mcp-data-areas.spec.ts`
-- [ ] T008 [P] Extrair `parseDate`, `endOfDay`, `addDays`, `firstDayOfCurrentMonth` e `lastDayOfCurrentMonth` para `apps/api/src/common/reporting/report-period.ts`, com testes em `apps/api/src/common/reporting/report-period.spec.ts`
-- [ ] T009 Substituir as funções locais de data por `report-period.ts` em `apps/api/src/management/reports/financial-reports.controller.ts`, `apps/api/src/management/reports/menu-engineering.controller.ts` e `apps/api/src/management/financial/cash-flow/cash-flow.controller.ts`, sem mudança de comportamento (rodar as suítes `dre`, `menu-engineering` e `cash-flow` existentes)
-- [ ] T010 [P] Criar `apps/api/src/management/mcp/admin/mcp-token.util.ts` (gerar `rrf_mcp_` + 32 bytes base64url, `hashToken` SHA-256 hex, `tokenPrefix` de 14 caracteres, `tokenStatus(token, now)` ATIVO/EXPIRADO/REVOGADO), com testes em `apps/api/src/management/mcp/admin/mcp-token.util.spec.ts`
-- [ ] T011 Criar `apps/api/src/management/mcp/mcp.module.ts` (imports: DatabaseModule, módulos que proveem os services de relatório, caixa, contas a pagar e estoque, ObservabilityModule) e registrá-lo em `apps/api/src/app.module.ts`; adicionar `exports` dos services necessários em `apps/api/src/management/management.module.ts` e `apps/api/src/operations/operations.module.ts` onde ainda faltarem
+- [X] T004 Adicionar ao `packages/database/prisma/schema.prisma` os enums `McpDataArea` e `McpToolCallResult`, os valores `MCP_CONFIGURATION_CHANGED`, `MCP_TOKEN_CREATED` e `MCP_TOKEN_REVOKED` em `AccessAuditEventType`, os models `StoreMcpConfiguration`, `StoreMcpToken` e `McpToolCall` (campos, índices e `@@map` conforme data-model.md) e as relações inversas em `Tenant` e `User`
+- [X] T005 Gerar a migration `packages/database/prisma/migrations/20261001090000_store_mcp_server/migration.sql` com `npm run db:migrate` e conferir o SQL (índices únicos `tenant_id` e `token_hash`, índice de retenção em `occurred_at`); rodar `npm run db:generate`
+- [X] T006 [P] Adicionar a permissão `mcp.manage` (área "Integracoes", tela "MCP / IA", ação `MANAGE`, `sensitive: true`) em `apps/api/src/management/access/permissions/permission-catalog.ts` e atualizar o teste de catálogo existente, se houver contagem fixa
+- [X] T007 [P] Criar `apps/api/src/management/mcp/mcp-data-areas.ts` com o catálogo `McpDataArea → { label, description, tools[] }` e helpers `toolsForAreas(areas)` e `areaOfTool(name)`, com testes em `apps/api/src/management/mcp/mcp-data-areas.spec.ts`
+- [X] T008 [P] Extrair `parseDate`, `endOfDay`, `addDays`, `firstDayOfCurrentMonth` e `lastDayOfCurrentMonth` para `apps/api/src/common/reporting/report-period.ts`, com testes em `apps/api/src/common/reporting/report-period.spec.ts`
+- [X] T009 Substituir as funções locais de data por `report-period.ts` em `apps/api/src/management/reports/financial-reports.controller.ts`, `apps/api/src/management/reports/menu-engineering.controller.ts` e `apps/api/src/management/financial/cash-flow/cash-flow.controller.ts`, sem mudança de comportamento (rodar as suítes `dre`, `menu-engineering` e `cash-flow` existentes)
+- [X] T010 [P] Criar `apps/api/src/management/mcp/admin/mcp-token.util.ts` (gerar `rrf_mcp_` + 32 bytes base64url, `hashToken` SHA-256 hex, `tokenPrefix` de 14 caracteres, `tokenStatus(token, now)` ATIVO/EXPIRADO/REVOGADO), com testes em `apps/api/src/management/mcp/admin/mcp-token.util.spec.ts`
+- [X] T011 Criar `apps/api/src/management/mcp/mcp.module.ts` (imports: DatabaseModule, módulos que proveem os services de relatório, caixa, contas a pagar e estoque, ObservabilityModule) e registrá-lo em `apps/api/src/app.module.ts`; adicionar `exports` dos services necessários em `apps/api/src/management/management.module.ts` e `apps/api/src/operations/operations.module.ts` onde ainda faltarem
 
 **Checkpoint**: schema migrado, permissão e catálogo prontos. As user stories podem começar.
 
