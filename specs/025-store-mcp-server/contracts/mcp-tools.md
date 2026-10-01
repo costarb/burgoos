@@ -9,20 +9,23 @@
 | Endpoint | `POST {MCP_PUBLIC_URL}` (padrão `/api/mcp`) |
 | Header obrigatório | `Authorization: Bearer rrf_mcp_<token>` |
 | Headers do cliente | `Content-Type: application/json`, `Accept: application/json, text/event-stream` |
-| `GET` / `DELETE /api/mcp` | `405 Method Not Allowed` |
-| Server info | `{ name: "rrfive-os", version: "<versão da API>" }`, `instructions` em português com o nome da loja e o fuso |
-| Capabilities | `tools`, `resources`, `prompts` (sem `listChanged`, porque o servidor é stateless) |
+| `GET` / `DELETE /api/mcp` | `405 Method Not Allowed` (`Allow: POST`) |
+| Server info | `{ name: "rrfive-os", version: "0.1.0" }`, `instructions` em português com o nome da loja, as áreas liberadas e as regras de período |
+| Capabilities | `tools`, `resources`, `prompts` |
+| Anotações das tools | `readOnlyHint: true`, `idempotentHint: true`, `openWorldHint: false` |
 
 ### Respostas HTTP de recusa (antes do JSON-RPC)
 
 | Situação | HTTP | Corpo |
 |---|---|---|
-| Token ausente, malformado, desconhecido, revogado, expirado; MCP desabilitado; loja inativa | `401` | `{ "error": "unauthorized", "message": "Token MCP invalido ou sem acesso." }` + `WWW-Authenticate: Bearer` |
-| Limite de taxa excedido | `429` | `{ "statusCode": 429, "code": "RATE_LIMITED", "message": "Muitas requisicoes. Tente novamente em instantes.", "retryAfterSeconds": n }` |
+| Token ausente, malformado, desconhecido, revogado, expirado; MCP desabilitado; loja inativa | `401` | `{ "error": "unauthorized", "message": "Token MCP invalido ou sem acesso." }` + `WWW-Authenticate: Bearer realm="rrfive-mcp"` |
+| Limite de taxa excedido (por token) | `429` | `{ "statusCode": 429, "code": "RATE_LIMITED", "message": "Muitas requisicoes. Tente novamente em instantes.", "retryAfterSeconds": n }` |
+
+Recusas de tokens **conhecidos** (revogado, expirado, MCP desabilitado, loja inativa, limite de taxa) são gravadas no log de uso com `result = DENIED` e o motivo em `errorCode`. Tokens desconhecidos ou malformados não geram registro.
 
 ### Erros dentro de uma tool
 
-Erros de negócio retornam resultado de tool com `isError: true` e um bloco `text` em português (o LLM consegue ler e corrigir os parâmetros). Códigos (também gravados em `McpToolCall.errorCode`):
+Erros de negócio retornam resultado de tool com `isError: true` e um bloco `text` em português (o LLM consegue ler e corrigir os parâmetros). Os códigos também ficam em `McpToolCall.errorCode`:
 
 | Código | Mensagem |
 |---|---|
@@ -33,138 +36,101 @@ Erros de negócio retornam resultado de tool com `isError: true` e um bloco `tex
 | `MEMORY_PRESSURE` | "O sistema esta sob carga no momento. Aguarde alguns instantes ou use um periodo menor." |
 | `INTERNAL` | "Nao foi possivel concluir a consulta." (detalhe só no log do servidor) |
 
-`AREA_DISABLED` ocorre apenas se o cliente chamar uma tool que não estava na listagem, já que tools de áreas desligadas não são registradas.
+Tools de áreas desligadas não são registradas: não aparecem em `tools/list`. Uma chamada direta a uma delas recebe `AREA_DISABLED`. Argumentos fora do schema (formato de data, valores de enum) são recusados pelo próprio SDK com erro de validação.
 
 ## Convenções de saída (todas as tools)
 
 - Retorno com `structuredContent` (objeto JSON) e `content: [{ type: "text", text: JSON.stringify(structuredContent) }]`.
-- `periodo: { inicio: "AAAA-MM-DD", fim: "AAAA-MM-DD", fuso: "America/Sao_Paulo", padraoAplicado: boolean }` em toda tool que usa período.
-- Valores monetários: `number` com 2 casas, campos com sufixo `Reais`. Percentuais: `number` de 0 a 100 com 1 casa, sufixo `Percentual`.
-- Listas: no máximo 50 itens, acompanhadas de `totalItens` e `truncado`.
+- `periodo: { inicio, fim, fuso: "America/Sao_Paulo", padraoAplicado }` em toda tool com período. `padraoAplicado = true` quando nenhuma data foi informada.
+- Valores monetários: `number` com 2 casas, sufixo `Reais`. Percentuais: `number` de 0 a 100 com 1 casa, sufixo `Percentual`.
+- Listas de entidades (produtos, contas, itens de estoque, categorias): no máximo 50 itens, com `totalItens` e `truncado`. Séries diárias são limitadas pelo próprio período (máximo de 92 dias).
 - `semMovimento: true` quando não há dados no período.
-- **Nunca** incluir nome, telefone, endereço, documento ou e-mail de cliente, nem segredos de integração.
+- **Nunca** incluir nome, telefone, endereço, documento ou e-mail de cliente, observações/documentos de contas, dados bancários, nem segredos de integração (mappers com lista de campos permitidos).
 
-Parâmetros de data: string `AAAA-MM-DD`. Os schemas abaixo usam notação zod simplificada.
+Parâmetros de data: string `AAAA-MM-DD`.
 
 ## Tools
 
 ### Área `SALES`
 
 #### `resumo_vendas`
-> Resumo de vendas da loja no período: faturamento, pedidos, ticket médio e quebras por dia, plataforma, meio de pagamento e status. Mesmos números da tela Relatório de Vendas.
+Entrada: `inicio?`, `fim?` (padrão: últimos 31 dias, como a tela), `plataformas?: uuid[]`, `meiosPagamento?: PaymentMethod[]`, `instituicoes?: PaymentInstitution[]`, `status?: OrderStatus[]` (padrão: apenas `DELIVERED`).
 
-```ts
-{
-  inicio?: string,             // padrão: janela móvel de 31 dias da tela
-  fim?: string,
-  plataformas?: string[],      // ids de plataforma (ver recurso perfil_loja)
-  meiosPagamento?: ("CASH"|"PIX_MANUAL"|"CARD_ON_DELIVERY"|"DEBIT_CARD"|"CREDIT_CARD"|"VOUCHER"|"PIX"|"DIGITAL_WALLET")[],
-  instituicoes?: ("PAGBANK"|"MERCADO_PAGO"|"IFOOD"|"DINHEIRO"|"CAIXA_LOCAL")[],
-  status?: ("PENDING"|"PREPARING"|"READY"|"SHIPPED"|"DELIVERED"|"CANCELLED")[]
-}
-```
-Saída: `periodo`, `totais { faturamentoReais, pedidos, ticketMedioReais, descontosReais, taxasReais, liquidoReais }`, `porDia[] { data, faturamentoReais, pedidos }`, `porPlataforma[] { plataforma, faturamentoReais, pedidos, participacaoPercentual }`, `porMeioPagamento[] {...}`, `porStatus[] {...}`, `semMovimento`. Sem lista de pedidos individuais.
-Fonte: `parseSalesReportQuery` + `SalesReportService.getReport`.
+Saída: `periodo`, `filtros`, `totais { pedidos, faturamentoBrutoReais, receitaLiquidaReais, liberadoReais, aReceberReais, taxasPagamentoReais, ticketMedioReais }`, `porDia[] { data, pedidos, faturamentoBrutoReais, receitaLiquidaReais }`, `porPlataforma[] { plataformaId, plataforma, pedidos, faturamentoBrutoReais, receitaLiquidaReais, ticketMedioReais, participacaoPercentual }`, `porMeioPagamento[] { meioPagamento, rotulo, pedidos, faturamentoBrutoReais, participacaoPercentual }`, `porInstituicao[] { instituicao, rotulo, pedidos, faturamentoBrutoReais, taxasPagamentoReais, participacaoPercentual }`, `recebiveis { pedidosPendentes, valorReais, proximaLiberacao }`, `ifoodFinanceiro { vendas, valorSacolaReais, pagoPeloClienteReais, aReceberDoIfoodReais, recebidoPelaLojaReais }`, `semMovimento`. Sem pedidos individuais.
+
+Fonte: `parseSalesReportQuery` + `SalesReportService.getReport` (com `pageSize = 1`; a lista analítica é descartada).
 
 #### `resumo_diario`
-> Resumo operacional de um dia: pedidos e faturamento bruto.
-
-```ts
-{ data?: string }              // padrão: hoje
-```
-Saída: `data`, `pedidos`, `faturamentoBrutoReais`, mais quebras disponíveis no service. Fonte: `ReportsService.getDailySummary`.
+Entrada: `data?` (padrão: hoje no fuso da loja). Saída: `data`, `fuso`, `pedidos`, `faturamentoBrutoReais`, `semMovimento`. Fonte: `ReportsService.getDailySummary`.
 
 #### `relatorio_gerencial`
-> Visão gerencial consolidada do período (vendas, custos e resultado), igual à tela Relatório Gerencial.
+Entrada: `inicio?`, `fim?` (padrão: últimos 31 dias). Saída: `periodo`, `resumoExecutivo { faturamentoBrutoReais, receitaLiquidaReais, caixaLiquidoReais, saldoFinalReais, contasEmAbertoReais, contasVencidasReais, aReceberReais }`, `vendas { pedidos, faturamentoBrutoReais, receitaLiquidaReais, liberadoReais, aReceberReais, taxasReais, ticketMedioReais }`, `caixa { entradasReais, saidasReais, liquidoReais, saldoFinalReais, saldosPorConta[] { conta, saldoReais } }`, `contasAPagar { previstoReais, pagoReais, abertoReais, vencidoReais, quantidadeAbertas, quantidadeVencidas, porCategoria[] }`, `semMovimento`.
 
-```ts
-{ inicio?: string, fim?: string }
-```
-Fonte: `parseManagementReportQuery` + `ManagementReportService.getReport`. O mapper mantém só agregados.
+Fonte: `parseManagementReportQuery` + `ManagementReportService.getReport`.
 
 ### Área `FINANCIAL`
 
 #### `dre`
-> DRE (Demonstração do Resultado) do período: receita bruta, deduções, CMV, margem de contribuição, despesas fixas e resultado líquido.
+Entrada: `inicio?`, `fim?` (padrão: mês corrente). Saída: `periodo`, `receitaBrutaReais`, `descontosReais`, `receitaLiquidaReais`, `receitaLiquidaAdquirenteReais`, `cmvReais`, `cmvPercentual`, `taxasEImpostosReais`, `lucroBrutoReais`, `margemContribuicaoPercentual`, `despesasFixasReais`, `lucroLiquidoEstimadoReais`, `margemLiquidaPercentual`, `pontoEquilibrioReais`, `semMovimento`. Percentuais calculados sobre a receita líquida.
 
-```ts
-{ inicio?: string, fim?: string }   // padrão: mês corrente
-```
-Saída: `periodo`, linhas da DRE em `Reais` e `Percentual` sobre a receita. Fonte: `DreService.getSummary`.
+Fonte: `DreService.getSummary` com `dayStart/dayEnd` (as mesmas fronteiras do controller da DRE). Observação: como a tela, o service cria a configuração financeira padrão da loja se ela ainda não existir.
 
 #### `dashboard_financeiro`
-> Indicadores financeiros do mês corrente: resultado, CMV, produtos com preço a revisar, ingredientes ativos e pedidos entregues.
-
-```ts
-{}
-```
-Fonte: `FinancialDashboardService.getIndicators`.
+Entrada: nenhuma. Saída: `mesReferencia`, `faturamentoBrutoReais`, `cmvReais`, `lucroBrutoReais`, `lucroLiquidoEstimadoReais`, `margemLiquidaPercentual`, `pedidosEntregues`, `produtosComPrecoARevisar`, `ingredientesEmAlerta`, `semMovimento`. Fonte: `FinancialDashboardService.getIndicators`.
 
 ### Área `MENU`
 
 #### `engenharia_cardapio`
-> Engenharia de cardápio do período: cada produto classificado por popularidade e margem (STAR = estrela, WORKHORSE = burro de carga, PUZZLE = quebra-cabeça, DOG = cão), com quantidade vendida e margem unitária.
+Entrada: `inicio?`, `fim?` (padrão: mês corrente), `classificacao?: ("STAR"|"WORKHORSE"|"PUZZLE"|"DOG")[]`. Classificações: STAR = estrela, WORKHORSE = burro de carga, PUZZLE = quebra-cabeça, DOG = cão.
 
-```ts
-{ inicio?: string, fim?: string, classificacao?: ("STAR"|"WORKHORSE"|"PUZZLE"|"DOG")[] }
-```
-Saída: `periodo`, `medias { popularidade, margemReais }`, `produtos[]` (até 50, ordenados por faturamento) `{ produto, categoria, quantidade, faturamentoReais, margemUnitariaReais, margemPercentual, classificacao }`, `contagemPorClassificacao`. Fonte: `MenuEngineeringService.getReport`.
+Saída: `periodo`, `dadosInsuficientes`, `medias { volumeMedio, margemMediaPercentual }`, `contagemPorClassificacao`, `produtos[]` (até 50, por faturamento) `{ produto, quantidade, faturamentoReais, cmvReais, lucroBrutoReais, margemPercentual, classificacao }`, `totalItens`, `truncado`, `semMovimento`.
+
+Fonte: `MenuEngineeringService.getReport`.
 
 ### Área `CASH`
 
 #### `posicao_caixa`
-> Saldo atual por conta financeira e projeção de entradas e saídas até a data informada.
+Entrada: `dataReferencia?` (padrão: agora), `projecaoAte?` (padrão: referência + 30 dias; máximo de 92 dias). Saída: `dataReferencia`, `projecaoAte`, `fuso`, `padraoAplicado`, `saldoAtualReais`, `entradasPrevistasReais`, `saidasPrevistasReais`, `saldoProjetadoReais`, `saldoNegativoPrevisto`, `contas[] { conta, saldoReais, naoAlocado }`, `projecaoDiaria[] { data, entradasReais, saidasReais, liquidoReais, saldoProjetadoReais }`.
 
-```ts
-{ dataReferencia?: string, projecaoAte?: string }   // padrão: hoje e hoje + 30 dias; projeção máx. 92 dias
-```
-Fonte: `CashFlowService.getPosition`. O `ledger` detalhado é omitido; mantém saldos por conta e totais projetados por dia/semana.
+Fonte: `CashFlowService.getPosition`. O `ledger`, a projeção por lançamento e as descrições livres são omitidos.
 
 #### `extrato_caixa`
-> Entradas e saídas consolidadas do período, por categoria e por conta.
+Entrada: `inicio?`, `fim?` (padrão: últimos 30 dias, como a tela). Saída: `periodo`, `saldoInicialReais`, `saldoFinalReais`, `entradasReais`, `saidasReais`, `liquidoReais`, `porDia[] { data, entradasReais, saidasReais, liquidoReais, saldoReais }`, `porOrigem[] { origem, rotulo, entradasReais, saidasReais }` (origens: `ORDER_RECEIPT`, `PAYABLE_PAYMENT`, `CASH_MOVEMENT`, `OPENING_BALANCE`), `semMovimento`.
 
-```ts
-{ inicio?: string, fim?: string }   // padrão: últimos 30 dias
-```
-Fonte: `CashFlowService.getStatement`. Movimentos individuais são agregados por categoria/dia. Descrições livres não são expostas.
+Fonte: `CashFlowService.getStatement`. Lançamentos individuais e descrições não são expostos.
 
 ### Área `PAYABLES`
 
 #### `contas_a_pagar`
-> Contas a pagar por situação, com totais: vencidas, em aberto, parcialmente pagas e pagas, por vencimento no período.
+Entrada: `inicio?`, `fim?` (vencimento; padrão: hoje − 30 até hoje + 30 dias), `status?: ("OPEN"|"PARTIALLY_PAID"|"OVERDUE"|"PAID"|"CANCELLED")[]`.
 
-```ts
-{
-  inicio?: string, fim?: string,     // filtro por vencimento; padrão: hoje-30 até hoje+30
-  status?: ("OPEN"|"PARTIALLY_PAID"|"OVERDUE"|"PAID"|"CANCELLED")[]
-}
-```
-Saída: `periodo`, `totais { previstoReais, pagoReais, restanteReais, vencidoReais }`, `porCategoria[]`, `porFornecedor[]` (nome do fornecedor, pessoa jurídica), `contas[]` (até 50) `{ descricao, fornecedor, categoria, vencimento, valorReais, restanteReais, status }`. Fonte: `AccountsPayableService.list` com `pageSize` 50. Dados bancários e documentos do fornecedor nunca são incluídos.
+Saída: `periodo`, `filtros`, `totais { previstoReais, pagoReais, restanteReais, vencidoReais, quantidadeAbertas, quantidadeVencidas }`, `porCategoria[] { categoria, previstoReais, pagoReais, abertoReais, vencidoReais }`, `contas[]` (até 50, por vencimento) `{ descricao, fornecedor, categoria, vencimento, valorReais, pagoReais, restanteReais, status }`, `totalItens`, `truncado`, `semMovimento`.
+
+Fonte: `AccountsPayableService.list` (página 1, 50 itens) + `summarizeByCategory`. Observações, referência de documento e pagamentos (contas bancárias) nunca são incluídos.
 
 ### Área `INVENTORY`
 
 #### `estoque`
-> Posição de estoque de ingredientes: saldo estimado, mínimo e situação (OK, comprar, insuficiente).
+Entrada: `situacao?: ("OK"|"BUY"|"INSUFFICIENT")[]`. Saída: `totais { ingredientes, ok, comprar, insuficiente }`, `itens[]` (até 50, críticos primeiro) `{ ingrediente, saldoEstimado, estoqueMinimo, consumidoOuReservado, situacao }`, `totalItens`, `truncado`, `semMovimento`.
 
-```ts
-{ situacao?: ("OK"|"BUY"|"INSUFFICIENT")[] }
-```
-Saída: `totais { ingredientes, ok, comprar, insuficiente }`, `itens[]` (até 50, críticos primeiro) `{ ingrediente, saldoEstimado, estoqueMinimo, situacao }`. Fonte: `InventoryService.listBalances`.
+Fonte: `InventoryService.listBalances`.
 
 ## Resources
 
 | URI | Nome | Conteúdo |
 |---|---|---|
-| `rrfive://loja/perfil` | `perfil_loja` | `{ nome, slug, fuso: "America/Sao_Paulo", plataformas[] { id, nome }, meiosPagamento[], instituicoes[], areasLiberadas[] }` |
-| `rrfive://glossario` | `glossario_metricas` | Markdown em português: faturamento, ticket médio, CMV, margem de contribuição, resultado líquido, classificação de engenharia de cardápio, status de contas a pagar, situação de estoque, regras de período (máx. 92 dias, fuso) |
+| `rrfive://loja/perfil` | `perfil_loja` | JSON: `{ nome, slug, fuso, moeda, plataformas[] { id, nome }, meiosPagamento[], instituicoes[], areasLiberadas[] { area, rotulo } }` |
+| `rrfive://glossario` | `glossario_metricas` | Markdown em português: regras gerais, vendas, DRE, engenharia de cardápio, caixa, contas a pagar e estoque |
+
+Recursos não dependem de área e ficam sempre disponíveis. Leituras são registradas no log de uso (`resources/read`).
 
 ## Prompts
 
 | Nome | Argumentos | Áreas exigidas | Orientação gerada |
 |---|---|---|---|
-| `analise_semanal` | `semanaTerminandoEm?: string` | `SALES` | Comparar a semana com a anterior: faturamento, pedidos, ticket, plataformas e dias. Apontar 3 destaques e 3 pontos de atenção |
-| `comparar_periodos` | `inicioA, fimA, inicioB, fimB` | `SALES`, `FINANCIAL` | Comparar vendas e DRE entre os dois períodos, com variação absoluta e percentual, e explicar as causas prováveis |
-| `diagnostico_margem_cardapio` | `inicio?, fim?` | `MENU` | Usar a engenharia de cardápio para sugerir ações por classificação (reprecificar, promover, revisar ficha técnica, retirar) |
-| `saude_caixa_30_dias` | (nenhum) | `CASH`, `PAYABLES` | Cruzar a posição de caixa projetada com as contas a vencer e apontar dias de risco de saldo negativo |
+| `analise_semanal` | `semanaTerminandoEm?` | `SALES` | Comparar a semana com a anterior (faturamento, pedidos, ticket, plataformas, dias); 3 destaques e 3 pontos de atenção |
+| `comparar_periodos` | `inicioA, fimA, inicioB, fimB` | `SALES`, `FINANCIAL` | Tabela de vendas e DRE dos dois períodos, com variação absoluta e percentual, e causas prováveis |
+| `diagnostico_margem_cardapio` | `inicio?, fim?` | `MENU` | Ações por classificação e simulação de +5% nos WORKHORSE de maior volume |
+| `saude_caixa_30_dias` | nenhum | `CASH`, `PAYABLES` | Cruzar a projeção de caixa com as contas a vencer e apontar dias de risco |
 
-Os prompts só orientam o LLM sobre quais tools chamar e como estruturar a análise. Eles não carregam dados.
+Os prompts só orientam o LLM sobre quais tools chamar e como estruturar a análise. Eles não carregam dados. Um prompt só aparece se **todas** as suas áreas estiverem liberadas.

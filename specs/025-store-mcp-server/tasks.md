@@ -135,12 +135,12 @@
 
 ### Tests for User Story 4
 
-- [ ] T047 [P] [US4] Em `apps/api/test/store-mcp-admin.integration.spec.ts`: `PUT` com `enabledAreas: []` e `enabled: true` → `400 AREAS_REQUIRED`; auditoria com `before/after` das áreas
-- [ ] T048 [P] [US4] Em `apps/api/test/mcp-protocol.e2e.spec.ts`: com áreas `[SALES]`, `tools/list` retorna só as 3 tools de vendas e `prompts/list` só `analise_semanal`
+- [X] T047 [P] [US4] Em `apps/api/test/store-mcp-admin.integration.spec.ts`: `PUT` com `enabledAreas: []` e `enabled: true` → `400 AREAS_REQUIRED`; auditoria com `before/after` das áreas
+- [X] T048 [P] [US4] Em `apps/api/test/mcp-protocol.e2e.spec.ts`: com áreas `[SALES]`, `tools/list` retorna só as 3 tools de vendas e `prompts/list` só `analise_semanal`
 
 ### Implementation for User Story 4
 
-- [ ] T049 [US4] Adicionar o cartão "Áreas de dados" em `apps/web/app/admin/settings/mcp/mcp-settings-client.tsx` (switch por área com rótulo, descrição e tools vindos de `availableAreas`; bloqueio e mensagem ao tentar desligar a última área com o MCP habilitado) e casos correspondentes em `mcp-settings-client.spec.tsx`
+- [X] T049 [US4] Adicionar o cartão "Áreas de dados" em `apps/web/app/admin/settings/mcp/mcp-settings-client.tsx` (switch por área com rótulo, descrição e tools vindos de `availableAreas`; bloqueio e mensagem ao tentar desligar a última área com o MCP habilitado) e casos correspondentes em `mcp-settings-client.spec.tsx`
 
 **Checkpoint**: controle granular de exposição disponível.
 

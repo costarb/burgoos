@@ -58,7 +58,7 @@ describe("MCP tenant isolation", () => {
 
   function serviceTenantIds(): string[] {
     return Object.values(services).flatMap((service) =>
-      Object.values(service).flatMap((method) => method.mock.calls.map((args) => args[0] as string))
+      Object.values(service).flatMap((method) => (method.mock.calls as unknown[][]).map((args) => args[0] as string))
     );
   }
 

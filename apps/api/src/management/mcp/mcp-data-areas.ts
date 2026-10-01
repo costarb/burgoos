@@ -35,7 +35,7 @@ export const MCP_DATA_AREAS: readonly McpDataAreaDefinition[] = [
   {
     area: McpDataArea.PAYABLES,
     label: "Contas a pagar",
-    description: "Contas vencidas, a vencer e pagas, com totais por categoria e fornecedor.",
+    description: "Contas vencidas, a vencer e pagas, com totais por categoria e a lista de contas.",
     tools: ["contas_a_pagar"],
   },
   {
