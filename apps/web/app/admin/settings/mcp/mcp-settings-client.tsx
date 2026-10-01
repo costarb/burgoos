@@ -229,7 +229,9 @@ export function McpSettingsClient({
             <span className="text-sm text-slate-500">{activeTokens} de 10 ativos</span>
           </div>
           <p className="mt-1 text-sm text-slate-600">
-            Cada token da acesso somente a esta loja. Endereco do servidor:{" "}
+            Cada token da acesso somente a esta loja. O valor completo aparece uma unica vez, ao
+            gerar; a coluna Identificador mostra apenas o inicio, para reconhecer o token. Endereco do
+            servidor:{" "}
             <code className="rounded bg-slate-100 px-1.5 py-0.5 text-xs">
               {configuration.serverUrl}
             </code>
@@ -284,7 +286,9 @@ export function McpSettingsClient({
                 <thead className="border-b border-slate-200 text-xs uppercase text-slate-500">
                   <tr>
                     <th className="py-2 pr-4">Nome</th>
-                    <th className="py-2 pr-4">Token</th>
+                    <th className="py-2 pr-4" title="Inicio do token, apenas para identificacao. Nao serve para configurar clientes.">
+                      Identificador
+                    </th>
                     <th className="py-2 pr-4">Status</th>
                     <th className="py-2 pr-4">Validade</th>
                     <th className="py-2 pr-4">Ultimo uso</th>
@@ -296,7 +300,12 @@ export function McpSettingsClient({
                   {tokens.map((token) => (
                     <tr className="border-b border-slate-100" key={token.id}>
                       <td className="py-2 pr-4 font-medium">{token.name}</td>
-                      <td className="py-2 pr-4 font-mono text-xs">{token.tokenPrefix}…</td>
+                      <td
+                        className="py-2 pr-4 font-mono text-xs text-slate-500"
+                        title="Apenas identificacao. O token completo so e exibido ao ser gerado."
+                      >
+                        {token.tokenPrefix}…
+                      </td>
                       <td className="py-2 pr-4">
                         <span
                           className={`rounded-full px-2 py-0.5 text-xs font-semibold ${STATUS_LABEL[token.status].classes}`}

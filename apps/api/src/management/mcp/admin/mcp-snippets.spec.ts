@@ -8,7 +8,7 @@ describe("buildMcpSnippets", () => {
     storeSlug: "loja-centro",
   });
 
-  it("fills the server url and token in every client snippet", () => {
+  it("fills the server url and the full token in every client snippet", () => {
     for (const snippet of Object.values(snippets)) {
       expect(snippet).toContain("https://api.example.com/api/mcp");
       expect(snippet).toContain("Bearer rrf_mcp_abc");
@@ -18,20 +18,29 @@ describe("buildMcpSnippets", () => {
     );
   });
 
-  it("produces valid JSON for Claude Desktop and Cursor", () => {
+  it("passes the Claude Desktop header through an environment variable", () => {
+    const header = ["--header", "Authorization:${AUTH_HEADER}"];
     expect(JSON.parse(snippets.claudeDesktop)).toEqual({
       mcpServers: {
         "rrfive-loja-centro": {
           command: "npx",
-          args: [
-            "mcp-remote",
-            "https://api.example.com/api/mcp",
-            "--header",
-            "Authorization: Bearer rrf_mcp_abc",
-          ],
+          args: ["-y", "mcp-remote", "https://api.example.com/api/mcp", ...header],
+          env: { AUTH_HEADER: "Bearer rrf_mcp_abc" },
         },
       },
     });
+    expect(JSON.parse(snippets.claudeDesktopWindows)).toEqual({
+      mcpServers: {
+        "rrfive-loja-centro": {
+          command: "cmd",
+          args: ["/c", "npx", "-y", "mcp-remote", "https://api.example.com/api/mcp", ...header],
+          env: { AUTH_HEADER: "Bearer rrf_mcp_abc" },
+        },
+      },
+    });
+  });
+
+  it("produces valid JSON for Cursor", () => {
     expect(JSON.parse(snippets.cursor)).toEqual({
       mcpServers: {
         "rrfive-loja-centro": {

@@ -40,6 +40,7 @@ export interface McpConfigurationSnippets {
   inspector: string;
   claudeCode: string;
   claudeDesktop: string;
+  claudeDesktopWindows: string;
   cursor: string;
 }
 

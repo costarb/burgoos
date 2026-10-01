@@ -12,9 +12,14 @@ const SNIPPET_TABS: Array<{ key: keyof McpConfigurationSnippets; label: string; 
     hint: "Execute no terminal. O servidor fica disponivel em todas as sessoes do Claude Code.",
   },
   {
+    key: "claudeDesktopWindows",
+    label: "Claude Desktop (Windows)",
+    hint: "Cole em claude_desktop_config.json (Configuracoes > Desenvolvedor > Editar configuracao) e reinicie o app pela bandeja do sistema. Se o arquivo ja tiver outros servidores, adicione apenas o bloco dentro de mcpServers.",
+  },
+  {
     key: "claudeDesktop",
-    label: "Claude Desktop",
-    hint: "Cole em claude_desktop_config.json (Configuracoes > Desenvolvedor > Editar configuracao) e reinicie o app.",
+    label: "Claude Desktop (macOS/Linux)",
+    hint: "Cole em claude_desktop_config.json (Configuracoes > Desenvolvedor > Editar configuracao) e reinicie o app. Se o arquivo ja tiver outros servidores, adicione apenas o bloco dentro de mcpServers.",
   },
   {
     key: "cursor",

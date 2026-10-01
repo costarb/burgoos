@@ -58,19 +58,24 @@ claude mcp add --transport http rrfive-loja-a http://localhost:3001/api/mcp \
 
 Perguntar: *"Compare as vendas de setembro com agosto e aponte os produtos com pior margem."*
 
-**Claude Desktop** (`claude_desktop_config.json`)
+**Claude Desktop** (`claude_desktop_config.json`, Windows)
 
 ```json
 {
   "mcpServers": {
     "rrfive-loja-a": {
-      "command": "npx",
-      "args": ["mcp-remote", "http://localhost:3001/api/mcp",
-               "--header", "Authorization: Bearer <token da Loja A>"]
+      "command": "cmd",
+      "args": ["/c", "npx", "-y", "mcp-remote", "http://localhost:3001/api/mcp",
+               "--header", "Authorization:${AUTH_HEADER}"],
+      "env": { "AUTH_HEADER": "Bearer <token completo da Loja A>" }
     }
   }
 }
 ```
+
+No macOS/Linux, use `"command": "npx"` e remova `"/c", "npx"` dos argumentos. O header vai pela variável `AUTH_HEADER` para que o espaço de `Bearer <token>` não quebre a linha de comando. Reinicie o Claude Desktop pela bandeja do sistema depois de editar.
+
+> **Erro "Connection closed" / "Request timed out"?** Quase sempre é token recusado (401): o `mcp-remote` tenta OAuth, falha em `/register` e cai para SSE (405). Confira se o `AUTH_HEADER` tem o token **completo** (`rrf_mcp_` + 43 caracteres), não o identificador da tabela, e se o MCP da loja está habilitado. O log fica em `%LOCALAPPDATA%\Claude\logs\mcp-server-<nome>.log`.
 
 **Cursor** (`~/.cursor/mcp.json`)
 
