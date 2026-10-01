@@ -147,7 +147,7 @@ Como administrador, eu quero ver quais consultas foram feitas pelo assistente, q
 - **FR-016**: O sistema MUST oferecer ferramentas de consulta, agrupadas por área de dados:
   - **Vendas**: resumo de vendas por período com filtros (plataforma, meio de pagamento, instituição, status) e quebras por dia, plataforma e meio de pagamento; resumo diário de uma data; relatório gerencial do período.
   - **Financeiro/DRE**: DRE do período; indicadores do dashboard financeiro.
-  - **Cardápio e Margem**: engenharia de cardápio do período (classificação dos produtos); lucratividade dos pedidos do período.
+  - **Cardápio e Margem**: engenharia de cardápio do período (classificação dos produtos por popularidade e margem).
   - **Caixa**: posição de caixa por conta e extrato consolidado do período.
   - **Contas a pagar**: contas vencidas, a vencer (próximos N dias) e pagas no período, com totais.
   - **Estoque**: posição atual e itens abaixo do mínimo.
