@@ -239,6 +239,7 @@ function createdToken(): CreatedMcpToken {
       inspector: "npx @modelcontextprotocol/inspector",
       claudeCode: "claude mcp add --transport http rrfive https://api.example.com/api/mcp",
       claudeDesktop: '{"mcpServers":{}}',
+      claudeDesktopWindows: '{"mcpServers":{}}',
       cursor: '{"mcpServers":{"rrfive":{"url":"https://api.example.com/api/mcp"}}}',
     },
   };
