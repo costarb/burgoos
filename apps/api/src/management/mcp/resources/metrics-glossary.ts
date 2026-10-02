@@ -17,13 +17,17 @@ export const METRICS_GLOSSARY = `# Glossario de metricas - RRFive OS
 - **Participacao**: fatia do faturamento bruto de uma plataforma, meio de pagamento ou instituicao.
 
 ## DRE
+O DRE e mensal, por competencia (AAAA-MM): vendas entregues no mes (fuso da loja) e contas a pagar lancadas para a competencia (sem competencia, vale o vencimento). Contas canceladas nao entram.
 - **Receita liquida (DRE)**: receita bruta menos descontos.
 - **CMV (custo da mercadoria vendida)**: custo dos ingredientes dos itens vendidos, pela ficha tecnica.
 - **Taxas e impostos**: taxa da plataforma, taxa de pagamento e impostos estimados.
 - **Lucro bruto / margem de contribuicao**: receita liquida menos CMV, taxas e impostos.
-- **Despesas fixas**: custo fixo mensal configurado pela loja.
-- **Lucro liquido estimado**: lucro bruto menos despesas fixas.
-- **Ponto de equilibrio**: receita necessaria para cobrir as despesas fixas com a margem de contribuicao atual.
+- **Classificacao no DRE**: cada categoria de despesa e Custo fixo, Despesa variavel ou Fora do DRE (insumos ja estao no CMV, taxas ja descontadas nos pedidos, investimentos). Uma conta pode ajustar a classificacao da sua categoria.
+- **Despesas variaveis**: contas da competencia classificadas como despesa variavel.
+- **Custos fixos**: contas da competencia classificadas como custo fixo.
+- **Custo fixo previsto**: valor configurado pela loja; so referencia, nao entra no resultado. A diferenca compara o lancado com o previsto.
+- **Lucro liquido estimado (resultado liquido)**: margem de contribuicao menos despesas variaveis e custos fixos.
+- **Ponto de equilibrio**: custos fixos divididos pela margem (apos despesas variaveis) sobre a receita liquida. Nulo quando essa margem e zero ou negativa (nao atingivel).
 
 ## Engenharia de cardapio
 Cada produto e comparado com a media de volume vendido e de margem do periodo:

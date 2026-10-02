@@ -48,7 +48,7 @@ export const ANALYSIS_PROMPTS: McpPromptDefinition[] = [
     build: (args) =>
       [
         `Compare o periodo A (${args.inicioA} a ${args.fimA}) com o periodo B (${args.inicioB} a ${args.fimB}).`,
-        "1. Chame resumo_vendas e dre para cada periodo.",
+        "1. Chame resumo_vendas para cada periodo e dre com mesCompetencia do mes de cada periodo (o DRE e mensal por competencia).",
         "2. Monte uma tabela com faturamento, receita liquida, pedidos, ticket medio, CMV, margem de contribuicao e lucro liquido estimado, com variacao absoluta e percentual.",
         "3. Explique as causas provaveis das maiores variacoes (mix de plataformas, ticket, custos).",
         COMMON_RULES,
