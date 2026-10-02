@@ -72,12 +72,14 @@ Fonte: `parseManagementReportQuery` + `ManagementReportService.getReport`.
 ### Área `FINANCIAL`
 
 #### `dre`
-Entrada: `inicio?`, `fim?` (padrão: mês corrente). Saída: `periodo`, `receitaBrutaReais`, `descontosReais`, `receitaLiquidaReais`, `receitaLiquidaAdquirenteReais`, `cmvReais`, `cmvPercentual`, `taxasEImpostosReais`, `lucroBrutoReais`, `margemContribuicaoPercentual`, `despesasFixasReais`, `lucroLiquidoEstimadoReais`, `margemLiquidaPercentual`, `pontoEquilibrioReais`, `semMovimento`. Percentuais calculados sobre a receita líquida.
+Entrada: `mesCompetencia?: "AAAA-MM"` (padrão: mês corrente no fuso da loja). Legado: `inicio?`/`fim?` viram o mês de `inicio`, e a saída traz `observacao` explicando (spec 027).
 
-Fonte: `DreService.getSummary` com `dayStart/dayEnd` (as mesmas fronteiras do controller da DRE). Observação: como a tela, o service cria a configuração financeira padrão da loja se ela ainda não existir.
+Saída: `mesCompetencia`, `periodo { inicio, fim, fuso, padraoAplicado }`, `observacao?`, `receitaBrutaReais`, `descontosReais`, `receitaLiquidaReais`, `receitaLiquidaAdquirenteReais`, `cmvReais`, `cmvPercentual`, `taxasEImpostosReais` (soma de taxas e impostos), `taxasVendaReais` (plataforma + pagamento: bruto − líquido do pedido quando houver valores reais, senão estimadas), `taxasVenda { reaisReais, pedidosComTaxaReal, estimadasReais, pedidosComTaxaEstimada }`, `impostosEstimadosReais`, `aliquotaImpostoPercentual`, `lucroBrutoReais`, `margemContribuicaoPercentual`, `despesasVariaveisReais`, `custosFixosReais` (`despesasFixasReais` mantido como alias), `lucroLiquidoEstimadoReais`, `margemLiquidaPercentual`, `pontoEquilibrioReais` (`null` quando não atingível), `pontoEquilibrioAtingivel`, `custoFixoPrevistoReais` (referência da configuração, fora do resultado), `diferencaCustoFixoReais` (lançado − previsto), `despesasPorCategoria[] { categoria, classificacao: "FIXED_COST"|"VARIABLE_EXPENSE", valorReais, quantidade }`, `semMovimento`. Percentuais calculados sobre a receita líquida.
+
+Fonte: `DreService.getMonthlySummary` (o mesmo da tela DRE e do dashboard): vendas entregues do mês e contas a pagar não canceladas com `COALESCE(competência, vencimento)` no mês, pela classificação efetiva (`ajuste da conta` ou `classificação da categoria`; `EXCLUDED` fica fora). Como a tela, o service cria a configuração financeira padrão da loja se ela ainda não existir.
 
 #### `dashboard_financeiro`
-Entrada: nenhuma. Saída: `mesReferencia`, `faturamentoBrutoReais`, `cmvReais`, `lucroBrutoReais`, `lucroLiquidoEstimadoReais`, `margemLiquidaPercentual`, `pedidosEntregues`, `produtosComPrecoARevisar`, `ingredientesEmAlerta`, `semMovimento`. Fonte: `FinancialDashboardService.getIndicators`.
+Entrada: nenhuma. Saída: `mesCompetencia`, `mesReferencia`, `faturamentoBrutoReais`, `receitaLiquidaReais`, `cmvReais`, `taxasVendaReais`, `impostosEstimadosReais`, `lucroBrutoReais`, `margemContribuicaoPercentual`, `despesasVariaveisReais`, `custosFixosReais`, `lucroLiquidoEstimadoReais`, `margemLiquidaPercentual`, `pedidosEntregues`, `produtosComPrecoARevisar`, `ingredientesEmAlerta`, `semMovimento`. Fonte: `FinancialDashboardService.getIndicators`.
 
 ### Área `MENU`
 
@@ -111,7 +113,7 @@ Entrada (todos os filtros são opcionais, como na tela de contas a pagar):
 
 Sem nenhuma data de vencimento e sem `mesCompetencia`, aplica a janela padrão de vencimento (hoje − 30 até hoje + 30 dias).
 
-Saída: `periodo { inicio|null, fim|null, fuso, criterio: "vencimento", padraoAplicado }`, `filtros { status, categorias, fornecedores, mesCompetencia }`, `totais { previstoReais, pagoReais, restanteReais, vencidoReais, quantidadeAbertas, quantidadeVencidas }`, `porCategoria[] { categoria, previstoReais, pagoReais, abertoReais, vencidoReais }`, `contas[]` (até 50, por vencimento) `{ descricao, fornecedor, categoria, competencia, vencimento, valorReais, pagoReais, restanteReais, status }`, `totalItens`, `truncado`, `semMovimento`. Totais, quebra por categoria e lista respeitam os mesmos filtros.
+Saída: `periodo { inicio|null, fim|null, fuso, criterio: "vencimento", padraoAplicado }`, `filtros { status, categorias, fornecedores, mesCompetencia }`, `totais { previstoReais, pagoReais, restanteReais, vencidoReais, quantidadeAbertas, quantidadeVencidas }`, `porCategoria[] { categoria, previstoReais, pagoReais, abertoReais, vencidoReais }`, `contas[]` (até 50, por vencimento) `{ descricao, fornecedor, categoria, competencia, classificacaoDre, classificacaoAjustada, vencimento, valorReais, pagoReais, restanteReais, status }` (`classificacaoDre`: `FIXED_COST|VARIABLE_EXPENSE|EXCLUDED`; `classificacaoAjustada`: a conta sobrescreve a categoria), `totalItens`, `truncado`, `semMovimento`. Totais, quebra por categoria e lista respeitam os mesmos filtros.
 
 Fonte: `AccountsPayableService.list` (página 1, 50 itens), `summarizeByCategory` e `getOptions` (resolução de nomes). Observações, referência de documento e pagamentos (contas bancárias) nunca são incluídos.
 

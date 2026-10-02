@@ -1,4 +1,4 @@
-import { Injectable } from "@nestjs/common";
+import { Inject, Injectable } from "@nestjs/common";
 import { FinancialAuditAction, Prisma } from "@prisma/client";
 import { PrismaService } from "../../platform/database/prisma.service";
 
@@ -14,7 +14,7 @@ interface FinancialAuditInput {
 
 @Injectable()
 export class FinancialAuditService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(@Inject(PrismaService) private readonly prisma: PrismaService) {}
 
   async record(input: FinancialAuditInput, tx: Prisma.TransactionClient = this.prisma) {
     return tx.financialAudit.create({

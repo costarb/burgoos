@@ -1000,7 +1000,18 @@ export interface StockMovementInput {
   reason?: string;
 }
 
+export type DreExpenseClass = "FIXED_COST" | "VARIABLE_EXPENSE" | "EXCLUDED";
+
+export interface FinancialDreCategoryExpense {
+  categoryId: string;
+  categoryName: string;
+  dreClass: Exclude<DreExpenseClass, "EXCLUDED">;
+  amount: string;
+  count: number;
+}
+
 export interface FinancialDreSummary {
+  competence: string;
   periodStart: string;
   periodEnd: string;
   grossRevenue: string;
@@ -1008,20 +1019,44 @@ export interface FinancialDreSummary {
   netRevenue: string;
   acquiredNetRevenue: string;
   cmv: string;
+  /** salesFees + taxes (kept for compatibility). */
   feesAndTaxes: string;
+  /** Platform + payment fees: real (gross - net) when the order has it, otherwise estimated. */
+  salesFees: string;
+  /** Always estimated by the configured tax rate. */
+  taxes: string;
+  taxRate: number;
+  realSalesFees: string;
+  estimatedSalesFees: string;
+  realFeeOrderCount: number;
+  estimatedFeeOrderCount: number;
   grossProfit: string;
+  contributionMarginRate: number;
+  variableExpenses: string;
   fixedExpenses: string;
   estimatedNetProfit: string;
   netMarginRate: number;
-  breakEvenRevenue: string;
+  breakEvenRevenue: string | null;
+  plannedFixedCost: string;
+  fixedCostVariance: string;
+  expensesByCategory: FinancialDreCategoryExpense[];
 }
 
 export interface FinancialDashboardIndicators {
+  /** Current competence month (AAAA-MM), store time zone. */
+  competence: string;
   periodStart: string;
   periodEnd: string;
   grossRevenue: string;
+  netRevenue: string;
   cmv: string;
+  salesFees: string;
+  taxes: string;
   grossProfit: string;
+  contributionMarginRate: number;
+  variableExpenses: string;
+  fixedExpenses: string;
+  plannedFixedCost: string;
   estimatedNetProfit: string;
   netMarginRate: number;
   deliveredOrderCount: number;
@@ -1100,6 +1135,7 @@ export interface FinancialCategory {
   id: string;
   name: string;
   active: boolean;
+  dreClass: DreExpenseClass;
 }
 
 export interface FinancialAccountInput {
@@ -1126,6 +1162,7 @@ export interface PaymentInstitutionFilters {
 export interface FinancialCategoryInput {
   name: string;
   active?: boolean;
+  dreClass?: DreExpenseClass;
 }
 
 export interface PayablePayment {
@@ -1150,6 +1187,9 @@ export interface Payable {
   description: string;
   documentReference: string | null;
   competenceDate: string | null;
+  dreClassOverride: DreExpenseClass | null;
+  categoryDreClass: DreExpenseClass;
+  effectiveDreClass: DreExpenseClass;
   dueDate: string;
   expectedAmount: string;
   paidAmount: string;
@@ -1187,6 +1227,8 @@ export interface PayablesFilters {
   categoryIds?: string[];
   supplierIds?: string[];
   competenceMonth?: string;
+  /** With competenceMonth, payables without competence count by due date (DRE link). */
+  competenceIncludesDueDate?: boolean;
 }
 
 export interface PayableOptions {
@@ -1339,6 +1381,7 @@ export interface PayableInput {
   description: string;
   documentReference?: string;
   competenceDate?: string;
+  dreClassOverride?: DreExpenseClass | null;
   dueDate: string;
   expectedAmount: number;
   notes?: string;

@@ -85,6 +85,10 @@ function normalizePayablesFilters(value: Prisma.JsonValue): PayablesQueryDto {
     categoryId: toOptionalStrings(source.categoryId),
     supplierId: toOptionalStrings(source.supplierId),
     competenceMonth: toOptionalString(source.competenceMonth),
+    competenceIncludesDueDate:
+      source.competenceIncludesDueDate === true || source.competenceIncludesDueDate === "true"
+        ? "true"
+        : undefined,
   };
 }
 

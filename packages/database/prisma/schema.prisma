@@ -325,6 +325,12 @@ enum CashMovementType {
   ADJUSTMENT
 }
 
+enum DreExpenseClass {
+  FIXED_COST
+  VARIABLE_EXPENSE
+  EXCLUDED
+}
+
 enum FinancialAuditAction {
   CREATE
   UPDATE
@@ -2157,13 +2163,14 @@ model PaymentInstitutionConfiguration {
 }
 
 model FinancialCategory {
-  id            String         @id @default(uuid()) @db.Uuid
-  tenantId      String         @map("tenant_id") @db.Uuid
+  id            String          @id @default(uuid()) @db.Uuid
+  tenantId      String          @map("tenant_id") @db.Uuid
   name          String
-  active        Boolean        @default(true)
-  createdAt     DateTime       @default(now()) @map("created_at")
-  updatedAt     DateTime       @updatedAt @map("updated_at")
-  tenant        Tenant         @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  active        Boolean         @default(true)
+  dreClass      DreExpenseClass @default(VARIABLE_EXPENSE) @map("dre_class")
+  createdAt     DateTime        @default(now()) @map("created_at")
+  updatedAt     DateTime        @updatedAt @map("updated_at")
+  tenant        Tenant          @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   payables      Payable[]
   cashMovements CashMovement[]
 
@@ -2199,6 +2206,7 @@ model Payable {
   description        String
   documentReference  String?            @map("document_reference")
   competenceDate     DateTime?          @map("competence_date")
+  dreClassOverride   DreExpenseClass?   @map("dre_class_override")
   dueDate            DateTime           @map("due_date")
   expectedAmount     Decimal            @map("expected_amount") @db.Decimal(12, 2)
   notes              String?
@@ -2215,6 +2223,7 @@ model Payable {
   payments           PayablePayment[]
 
   @@index([tenantId, dueDate])
+  @@index([tenantId, competenceDate])
   @@index([tenantId, supplierId, dueDate])
   @@index([tenantId, categoryId, dueDate])
   @@index([tenantId, recurrenceGroupId])

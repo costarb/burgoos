@@ -10,6 +10,8 @@ import Link from "next/link";
 import type { FinancialDashboardIndicators } from "@rrfive/types";
 import type { AdminTenant } from "../../lib/api";
 import { getAdminDailySummary, getAdminTenantSummary, getFinancialDashboard } from "../../lib/api";
+import { formatMoney, formatPercent } from "../../lib/finance-format";
+import { MonthResult } from "./month-result";
 
 export const dynamic = "force-dynamic";
 
@@ -63,12 +65,13 @@ export default async function AdminPage() {
           <Metric
             icon={DollarSign}
             label="Receita bruta hoje"
-            value={`R$ ${summary.grossRevenue}`}
+            value={formatMoney(summary.grossRevenue)}
           />
           <Metric
             icon={TrendingUp}
-            label="Margem liquida"
-            value={`${(financialDashboard.netMarginRate * 100).toFixed(1)}%`}
+            label="Margem liquida do mes"
+            value={formatPercent(financialDashboard.netMarginRate)}
+            warning={financialDashboard.netMarginRate < 0}
           />
           <Metric
             icon={AlertTriangle}
@@ -109,27 +112,23 @@ export default async function AdminPage() {
                 label="Relatorio de vendas"
               />
             </div>
-          </div>
 
-          <div>
-            <h2 className="text-base font-semibold">Resultado do periodo</h2>
+            <h2 className="mt-6 text-base font-semibold">Alertas</h2>
             <dl className="mt-3 divide-y divide-slate-200 rounded-md border border-slate-200 bg-white px-4">
-              <SummaryRow label="CMV" value={`R$ ${financialDashboard.cmv}`} />
-              <SummaryRow label="Lucro bruto" value={`R$ ${financialDashboard.grossProfit}`} />
-              <SummaryRow
-                label="Lucro liquido estimado"
-                value={`R$ ${financialDashboard.estimatedNetProfit}`}
-              />
-              <SummaryRow
+              <AlertRow
+                count={financialDashboard.priceReviewCount}
+                href="/admin/pricing"
                 label="Itens para revisar preco"
-                value={String(financialDashboard.priceReviewCount)}
               />
-              <SummaryRow
+              <AlertRow
+                count={financialDashboard.stockAlertCount}
+                href="/admin/inventory"
                 label="Alertas de estoque"
-                value={String(financialDashboard.stockAlertCount)}
               />
             </dl>
           </div>
+
+          <MonthResult indicators={financialDashboard} />
         </section>
       </section>
     </main>
@@ -140,11 +139,19 @@ function emptyFinancialDashboard(): FinancialDashboardIndicators {
   const today = new Date().toISOString().slice(0, 10);
 
   return {
+    competence: today.slice(0, 7),
     periodStart: today,
     periodEnd: today,
     grossRevenue: "0.00",
+    netRevenue: "0.00",
     cmv: "0.00",
+    salesFees: "0.00",
+    taxes: "0.00",
     grossProfit: "0.00",
+    contributionMarginRate: 0,
+    variableExpenses: "0.00",
+    fixedExpenses: "0.00",
+    plannedFixedCost: "0.00",
     estimatedNetProfit: "0.00",
     netMarginRate: 0,
     deliveredOrderCount: 0,
@@ -207,11 +214,18 @@ function QuickLink({
   );
 }
 
-function SummaryRow({ label, value }: { label: string; value: string }) {
+function AlertRow({ label, count, href }: { label: string; count: number; href: string }) {
   return (
     <div className="flex items-center justify-between gap-4 py-3 text-sm">
       <dt className="text-slate-600">{label}</dt>
-      <dd className="font-semibold text-slate-950">{value}</dd>
+      <dd>
+        <Link
+          className={`font-semibold ${count > 0 ? "text-amber-700" : "text-slate-950"} hover:underline`}
+          href={href}
+        >
+          {count}
+        </Link>
+      </dd>
     </div>
   );
 }

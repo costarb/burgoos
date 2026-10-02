@@ -90,7 +90,7 @@ export default async function SettingsPage() {
             value={configuration.averagePackagingCost}
           />
           <NumberField
-            label="Custo fixo mensal"
+            label="Custo fixo mensal previsto"
             name="monthlyFixedCost"
             step="0.01"
             value={configuration.monthlyFixedCost}
