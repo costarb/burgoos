@@ -107,8 +107,8 @@
 
 ## Phase 7: Polish & Cross-Cutting
 
-- [ ] T038 [P] `apps/api/src/management/mcp/oauth/oauth-retention.service.ts` (cron diário: pedidos expirados, tokens expirados há mais de 7 dias, clientes DCR sem conexão há 30 dias) com testes
-- [ ] T039 [P] Documentação: `docs/USER_GUIDE.md` (seção 11.1: conectar pelo endereço no Claude e ChatGPT, revogar conexões), `docs/ARCHITECTURE.md` (10.1: servidor de autorização), regenerar `docs/DATA_DICTIONARY.md` (domínio MCP com os modelos OAuth em `scripts/generate-data-dictionary.mjs`)
+- [X] T038 [P] `apps/api/src/management/mcp/oauth/oauth-retention.service.ts` (cron diário: pedidos expirados, tokens expirados há mais de 7 dias, clientes DCR sem conexão há 30 dias) com testes
+- [X] T039 [P] Documentação: `docs/USER_GUIDE.md` (seção 11.1: conectar pelo endereço no Claude e ChatGPT, revogar conexões), `docs/ARCHITECTURE.md` (10.1: servidor de autorização), regenerar `docs/DATA_DICTIONARY.md` (domínio MCP com os modelos OAuth em `scripts/generate-data-dictionary.mjs`)
 - [ ] T040 Rodar `npm run typecheck`, `npm run lint` e as suítes completas de API e web; comparar com o baseline do `develop`
 - [ ] T041 Roteiro do `quickstart.md`: local (Inspector, Claude Code) e produção (claude.ai, ChatGPT)
 

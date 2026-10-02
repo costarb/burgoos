@@ -15,6 +15,7 @@ import { OAuthAuthorizeController } from "./oauth/oauth-authorize.controller";
 import { OAuthClientService } from "./oauth/oauth-client.service";
 import { OAuthConnectionService } from "./oauth/oauth-connection.service";
 import { OAuthCredentialResolver } from "./oauth/oauth-credential.resolver";
+import { OAuthRetentionService } from "./oauth/oauth-retention.service";
 import { OAuthTokenController } from "./oauth/oauth-token.controller";
 import { OAuthTokenService } from "./oauth/oauth-token.service";
 import { OAuthUrlsProvider } from "./oauth/oauth-urls.provider";
@@ -72,6 +73,7 @@ export const MCP_SERVER_PROVIDERS = [
     StoreMcpTokenService,
     McpUsageService,
     McpCallRetentionService,
+    OAuthRetentionService,
     ...MCP_SERVER_PROVIDERS,
   ],
 })

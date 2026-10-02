@@ -278,6 +278,36 @@ flowchart LR
 
 O contrato completo está em `specs/025-store-mcp-server/contracts/mcp-tools.md`. O endpoint MCP não segue o padrão REST/OpenAPI porque os clientes exigem o protocolo MCP; os endpoints de configuração em `/api/admin/mcp` continuam REST.
 
+#### Conectores com login (OAuth 2.1)
+
+A API também atua como servidor de autorização OAuth conforme a especificação de autorização do MCP, usando as contas do RRFive OS. Com isso, claude.ai, ChatGPT e Claude Code se conectam informando apenas o endereço do servidor.
+
+```mermaid
+sequenceDiagram
+    participant C as Cliente MCP
+    participant A as API
+    participant W as Web (/conectar/mcp)
+    C->>A: POST /api/mcp (sem token)
+    A-->>C: 401 WWW-Authenticate resource_metadata
+    C->>A: GET /.well-known/oauth-protected-resource e oauth-authorization-server
+    C->>A: GET /api/oauth/authorize (client_id CIMD ou DCR, PKCE S256, resource)
+    A-->>W: 302 /conectar/mcp?pedido=id
+    W->>A: login + POST /api/oauth/requests/:id/approve { storeId }
+    A-->>C: 302 redirect_uri?code&state&iss
+    C->>A: POST /api/oauth/token (code + code_verifier)
+    A-->>C: rrf_oat_ (1h) + rrf_ort_ (30 dias, rotativo)
+    C->>A: POST /api/mcp Authorization: Bearer rrf_oat_
+```
+
+- **Descoberta**: `/.well-known/oauth-protected-resource` (RFC 9728) e `/.well-known/oauth-authorization-server` (RFC 8414) ficam fora do prefixo `/api`. O issuer é a origem de `MCP_PUBLIC_URL`, e a tela de consentimento é `WEB_PUBLIC_URL/conectar/mcp`.
+- **Clientes**: identificados por Client ID Metadata Document (busca HTTPS com bloqueio de IP privado, sem redirecionamento, 5s, 64 KB, cache de 24h) ou registro dinâmico (`/api/oauth/register`). Erros de cliente ou `redirect_uri` nunca redirecionam.
+- **Consentimento**: pedido persistido (10 min). O usuário escolhe uma loja elegível (acesso + MCP habilitado + permissão `mcp.connect`); a aprovação cria `McpOAuthConnection` e um código de uso único (60s).
+- **Tokens**: opacos, guardados como SHA-256 em `mcp_oauth_tokens` e vinculados ao `resource`. O refresh é rotacionado; reutilizar um refresh ou um código revoga a conexão.
+- **Servidor de recurso**: o `McpTokenGuard` aceita `rrf_mcp_` (fase 1) e `rrf_oat_` e produz o mesmo contexto de loja. Recusa quando a conexão foi revogada, o MCP está desabilitado, a loja ou o usuário está inativo, ou o usuário perdeu acesso à loja. O limite de chamadas e o log valem por conexão.
+- **Limpeza diária**: pedidos encerrados, tokens expirados há mais de 7 dias e clientes DCR sem conexão há 30 dias.
+
+Contratos: `specs/026-mcp-oauth-connectors/contracts/oauth.md`.
+
 ## 11. Segurança
 
 - validação estrita de entrada;
