@@ -1,0 +1,59 @@
+# Tasks: DRE por Competência com Despesas Lançadas
+
+**Input**: `/specs/027-dre-by-competence/` (plan.md, spec.md, research.md, data-model.md, contracts/dre.md, quickstart.md)
+
+**Tests**: incluídos (SC-001 a SC-003 exigem teste automatizado).
+
+## Phase 1: Foundational
+
+- [X] T001 Adicionar o enum `DreExpenseClass`, `FinancialCategory.dreClass` (default `VARIABLE_EXPENSE`), `Payable.dreClassOverride` e `@@index([tenantId, competenceDate])` em `packages/database/prisma/schema.prisma`
+- [X] T002 Gerar `packages/database/prisma/migrations/20261003090000_dre_expense_class/migration.sql` (diff do schema) e acrescentar o backfill por nome do research R3 (`translate`/`lower`/`LIKE`); `npm run db:generate`
+- [X] T003 [P] Criar `apps/api/src/management/financial/dre-expense-class.ts` (rótulos, `suggestDreClass(name)` com as mesmas listas do backfill, `effectiveDreClass`), com testes em `dre-expense-class.spec.ts`
+- [X] T004 [P] Criar `apps/api/src/management/reports/dre-competence.ts` (`parseCompetence`, mês corrente no fuso da loja, fronteiras `periodStart/periodEnd` via `localDayStart/localDayEnd` e intervalo de competência local), com testes
+- [X] T005 [P] Tipos em `packages/types/src/index.ts`: `DreExpenseClass`, `dreClass` em categoria, `dreClassOverride`/`categoryDreClass`/`effectiveDreClass` em conta, novos campos do DRE
+
+## Phase 2: User Story 1 - Classificar despesas (P1)
+
+- [X] T006 [US1] `FinancialCategoryDto.dreClass` opcional (`IsEnum`) e `financial-account.service.ts`: criar com padrão, alterar mantendo o atual quando ausente, auditar `financial_category` com `before/after`; categorias e opções devolvem `dreClass`
+- [X] T007 [US1] `PayableDto.dreClassOverride` (`IsEnum`, aceita `null`) e `accounts-payable.service.ts`: gravar na criação (todas as ocorrências da recorrência) e na edição; resposta com `dreClassOverride`, `categoryDreClass` e `effectiveDreClass` (incluir `category.dreClass` no `payableInclude`)
+- [X] T008 [P] [US1] Testes de integração (módulo focado + Prisma em memória) em `apps/api/test/dre-expense-class.integration.spec.ts`: categoria nova = variável; alteração auditada; override na recorrência; classe efetiva na resposta; mudar a categoria afeta só contas sem ajuste
+- [X] T009 [US1] Web: seletor de classificação com explicação no `financial-account-dialog.tsx` (e rótulo na lista de categorias); "Classificação no DRE" no `payable-form.tsx` (Seguir categoria (X) / Custo fixo / Despesa variável / Fora do DRE); badge da classificação efetiva (com "ajustada") em `payables-client.tsx`; testes nos specs existentes
+
+## Phase 3: User Story 2 - DRE por competência (P1) 🎯
+
+- [X] T010 [US2] `dre-calculator.ts`: aceitar `variableExpenses`, `fixedExpenses`, `plannedFixedCost`; calcular resultado, margem líquida, margem de contribuição %, ponto de equilíbrio (`null` quando não atingível) e diferença do previsto; testes unitários com o cenário da US2 e casos de borda
+- [X] T011 [US2] `dre.service.ts`: `getMonthlySummary(tenantId, competence)` (snapshots do mês no fuso da loja + agregação de despesas por categoria e classe com `COALESCE(competencia, vencimento)`, excluindo `EXCLUDED` e canceladas) devolvendo o contrato de `contracts/dre.md`; remover `getSummary(start, end)`
+- [X] T012 [US2] `financial-reports.controller.ts`: `?competence=AAAA-MM` (padrão: mês corrente; compatibilidade com `start`; `400` para formato inválido)
+- [X] T013 [P] [US2] Testes de integração em `apps/api/test/dre-competence.integration.spec.ts`: cenário da US2 (SC-001), `EXCLUDED` nunca altera o resultado (SC-002), conta sem competência cai no vencimento, cancelada fora, ajuste na conta, mês sem dados zerado, fronteira do fuso
+- [X] T014 [US2] `accounts-payable.service.ts` e DTO: `competenceIncludesDueDate=true` aplica `COALESCE(competence_date, due_date)` no filtro de competência (`list`, `querySummary`, `summarizeByCategory`); teste de que a lista filtrada soma igual à linha do DRE
+- [X] T015 [US2] Web: `apps/web/app/admin/reports/dre/` com seletor de mês (padrão: mês corrente), estrutura de linhas da US2-6 com sinais, margem líquida, ponto de equilíbrio ("não atingível"), prejuízo em destaque, detalhamento expansível de Custos fixos e Despesas variáveis por categoria com link para contas a pagar; `lib/api.ts` `getFinancialDre(competence)`; testes
+- [X] T016 [US2] Web: `finance/payables/page.tsx` lê `competenceMonth`, `categoryId` e `competenceIncludesDueDate` da URL como filtros iniciais em `payables-client.tsx`; teste
+
+## Phase 4: User Story 3 - Custo fixo previsto (P2)
+
+- [X] T017 [US3] DRE exibe "Custo fixo previsto (configuração)" e a diferença, e o aviso "Nenhum custo fixo lançado para esta competência" quando aplicável; Configurações renomeia para "Custo fixo mensal previsto" com a explicação; testes web
+
+## Phase 5: User Story 4 - Mesma regra nos consumidores (P2)
+
+- [X] T018 [US4] `financial-dashboard.service.ts` usa `getMonthlySummary` do mês corrente (fuso da loja)
+- [X] T019 [US4] Tool MCP `dre` (`financial.tools.ts`): `mesCompetencia` (padrão: mês corrente), `inicio` legado com `observacao`, saída com despesas variáveis, custos fixos (alias `despesasFixasReais`), previsto, diferença e `despesasPorCategoria`; tool `contas_a_pagar` com `classificacaoDre` e `classificacaoAjustada`; atualizar fixtures e testes de paridade
+- [X] T020 [P] [US4] Teste de paridade em `apps/api/test/dre-parity.integration.spec.ts`: endpoint do DRE × dashboard × tool `dre` mostram o mesmo resultado líquido para o mesmo mês (SC-003)
+
+## Phase 5b: User Story 5 - Taxas reais e Painel (P1)
+
+- [X] T024 [US5] `dre-calculator.ts`: `applyRealOrderFees` troca taxas de plataforma + pagamento do pedido por bruto − líquido (mín. 0) quando houver valores reais, distribuídas pelos itens; totais separados `salesFees`, `taxes`, parcelas real/estimada e contagens de pedidos (+ testes)
+- [X] T025 [US5] `dre.service.ts`: snapshots incluem bruto/líquido do pedido; resposta ganha `salesFees`, `taxes`, `realSalesFees`, `estimatedSalesFees`, `realFeeOrderCount`, `estimatedFeeOrderCount`, `taxRate`; dashboard repassa as linhas do DRE; testes de integração e paridade
+- [X] T026 [US5] MCP `dre`: `taxasVendaReais`, `impostosEstimadosReais`, `taxasVenda { reaisPedidos, estimadasPedidos, ... }`; `dashboard_financeiro` com as novas linhas; contrato e glossário
+- [X] T027 [US5] Web DRE: linhas "Taxas de plataforma e pagamento" (real x estimado) e "Impostos (estimados X%)"
+- [X] T028 [US4] Web Painel: bloco "Resultado de <mês>" com as linhas do DRE, prejuízo em destaque, aviso sem custo fixo, link "Ver DRE", card "Margem liquida do mes", alertas separados, moeda pt-BR (+ teste)
+- [X] T029 Docs (USER_GUIDE) e verificação (typecheck, lint, suítes)
+
+## Phase 6: Polish
+
+- [X] T021 [P] Docs: `docs/USER_GUIDE.md` (DRE por competência, classificação das categorias e contas), contrato MCP em `specs/025-store-mcp-server/contracts/mcp-tools.md`, regenerar `docs/DATA_DICTIONARY.md`
+- [X] T022 Typecheck, lint e suítes completas de API e web (comparar com o baseline do `develop`)
+- [ ] T023 Roteiro do `quickstart.md` no ambiente local e em produção
+
+## Dependencies
+
+Phase 1 → US1 → US2 → (US3, US4) → Polish. US3 e US4 podem andar em paralelo depois da US2. T014 é pré-requisito do link de detalhamento (T015/T016).

@@ -5,7 +5,7 @@
 
 ## Escopo e leitura
 
-Este catálogo descreve o modelo PostgreSQL atual exposto pelo Prisma: **85 entidades** e **83 enums**. Ele documenta nomes lógicos e físicos, tipos, nulabilidade, chaves, defaults, relacionamentos, índices e finalidade de negócio. Não registra valores de credenciais, dados pessoais reais nem conteúdo de produção.
+Este catálogo descreve o modelo PostgreSQL atual exposto pelo Prisma: **85 entidades** e **84 enums**. Ele documenta nomes lógicos e físicos, tipos, nulabilidade, chaves, defaults, relacionamentos, índices e finalidade de negócio. Não registra valores de credenciais, dados pessoais reais nem conteúdo de produção.
 
 ### Convenções
 
@@ -2082,6 +2082,7 @@ erDiagram
 | `tenantId` | `tenant_id` | `String` | sim | — | Tenant proprietário; obrigatório para isolamento dos dados. |
 | `name` | `name` | `String` | sim | — | Atributo name da entidade. |
 | `active` | `active` | `Boolean` | sim | default: true | Indicador verdadeiro/falso da condição nomeada. |
+| `dreClass` | `dre_class` | `DreExpenseClass` | sim | default: VARIABLE_EXPENSE | Valor controlado pelo enum DreExpenseClass. |
 | `createdAt` | `created_at` | `DateTime` | sim | default: now() | Data e hora de criação. |
 | `updatedAt` | `updated_at` | `DateTime` | sim | — | Data e hora da última atualização. |
 | `tenant` | `—` | `Tenant` | sim | FK/relação | Referência relacionada a Tenant. |
@@ -2136,6 +2137,7 @@ erDiagram
 | `description` | `description` | `String` | sim | — | Atributo description da entidade. |
 | `documentReference` | `document_reference` | `String?` | não | — | Atributo documentReference da entidade. |
 | `competenceDate` | `competence_date` | `DateTime?` | não | — | Data de competence. |
+| `dreClassOverride` | `dre_class_override` | `DreExpenseClass?` | não | — | Valor controlado pelo enum DreExpenseClass. |
 | `dueDate` | `due_date` | `DateTime` | sim | — | Data de due. |
 | `expectedAmount` | `expected_amount` | `Decimal` | sim | — | Atributo expectedAmount da entidade. |
 | `notes` | `notes` | `String?` | não | — | Atributo notes da entidade. |
@@ -2154,6 +2156,7 @@ erDiagram
 **Restrições e índices do modelo**:
 
 - `@@index([tenantId, dueDate])`
+- `@@index([tenantId, competenceDate])`
 - `@@index([tenantId, supplierId, dueDate])`
 - `@@index([tenantId, categoryId, dueDate])`
 - `@@index([tenantId, recurrenceGroupId])`
@@ -3093,6 +3096,10 @@ Valores permitidos: `WEEKLY`, `MONTHLY`, `YEARLY`.
 ### CashMovementType
 
 Valores permitidos: `MANUAL_INFLOW`, `MANUAL_OUTFLOW`, `TRANSFER`, `ADJUSTMENT`.
+
+### DreExpenseClass
+
+Valores permitidos: `FIXED_COST`, `VARIABLE_EXPENSE`, `EXCLUDED`.
 
 ### FinancialAuditAction
 

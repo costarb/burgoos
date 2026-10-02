@@ -1,4 +1,4 @@
-import { PaymentInstitution } from "@prisma/client";
+import { DreExpenseClass, PaymentInstitution } from "@prisma/client";
 import {
   IsBoolean,
   IsDateString,
@@ -44,6 +44,10 @@ export class FinancialCategoryDto {
   @IsOptional()
   @IsBoolean()
   active?: boolean;
+
+  @IsOptional()
+  @IsEnum(DreExpenseClass)
+  dreClass?: DreExpenseClass;
 }
 
 export class PaymentInstitutionConfigurationDto {

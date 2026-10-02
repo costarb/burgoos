@@ -7,7 +7,7 @@ import { AuthUser } from "../../platform/auth/auth.types";
 import { JwtAuthGuard } from "../../platform/auth/jwt-auth.guard";
 import { DreService } from "./dre.service";
 import { FinancialDashboardService } from "./financial-dashboard.service";
-import { currentMonthEnd, currentMonthStart, dayEnd, dayStart } from "../../common/reporting/report-period";
+import { competenceFromDate } from "./dre-competence";
 
 @ApiTags("admin financial reports")
 @ApiBearerAuth()
@@ -23,13 +23,10 @@ export class FinancialReportsController {
   @Get("dre")
   getDre(
     @CurrentUser() user: AuthUser,
-    @Query("start") start?: string,
-    @Query("end") end?: string
+    @Query("competence") competence?: string,
+    @Query("start") start?: string
   ) {
-    const periodStart = start ? dayStart(start) : currentMonthStart();
-    const periodEnd = end ? dayEnd(end) : currentMonthEnd();
-
-    return this.dreService.getSummary(user.tenantId, periodStart, periodEnd);
+    return this.dreService.getMonthlySummary(user.tenantId, competence || competenceFromDate(start));
   }
 
   @Get("dashboard")

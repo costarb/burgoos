@@ -617,8 +617,8 @@ describe("PayablesClient filters", () => {
 
 const options: PayableOptions = {
   categories: [
-    { id: "category-food", name: "Insumos", active: true },
-    { id: "category-rent", name: "Aluguel", active: true },
+    { id: "category-food", name: "Insumos", active: true, dreClass: "EXCLUDED" },
+    { id: "category-rent", name: "Aluguel", active: true, dreClass: "FIXED_COST" },
   ],
   accounts: [],
   suppliers: [
@@ -657,6 +657,9 @@ function payable(overrides: Partial<Payable> = {}): Payable {
     description: "Compra de insumos",
     documentReference: null,
     competenceDate: "2026-06-10",
+    dreClassOverride: null,
+    categoryDreClass: "EXCLUDED",
+    effectiveDreClass: "EXCLUDED",
     dueDate: "2026-06-20",
     expectedAmount: "120.00",
     paidAmount: "0.00",

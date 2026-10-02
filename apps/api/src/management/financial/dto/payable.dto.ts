@@ -1,7 +1,8 @@
-import { FinancialRecurrenceFrequency } from "@prisma/client";
+import { DreExpenseClass, FinancialRecurrenceFrequency } from "@prisma/client";
 import {
   IsDateString,
   IsEnum,
+  IsIn,
   IsInt,
   IsNumber,
   IsOptional,
@@ -56,6 +57,10 @@ export class PayableDto {
   @IsOptional()
   @IsDateString()
   competenceDate?: string;
+
+  @IsOptional()
+  @IsEnum(DreExpenseClass)
+  dreClassOverride?: DreExpenseClass | null;
 
   @IsDateString()
   dueDate!: string;
@@ -130,6 +135,11 @@ export class PayablesQueryDto {
   @IsString()
   @Matches(/^\d{4}-\d{2}$/)
   competenceMonth?: string;
+
+  /** With `competenceMonth`, payables without competence count by their due date (DRE link). */
+  @IsOptional()
+  @IsIn(["true", "false"])
+  competenceIncludesDueDate?: string;
 }
 
 export class PayableCancellationDto {

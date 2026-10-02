@@ -1595,23 +1595,10 @@ export async function getFinancialDashboard(): Promise<FinancialDashboardIndicat
   return fetchAdmin<FinancialDashboardIndicators>(token, "/api/admin/reports/financial/dashboard");
 }
 
-export async function getFinancialDre(start?: string, end?: string): Promise<FinancialDreSummary> {
+export async function getFinancialDre(competence?: string): Promise<FinancialDreSummary> {
   const token = await getAdminToken();
-  const params = new URLSearchParams();
-
-  if (start) {
-    params.set("start", start);
-  }
-
-  if (end) {
-    params.set("end", end);
-  }
-
-  const query = params.toString();
-  return fetchAdmin<FinancialDreSummary>(
-    token,
-    `/api/admin/reports/financial/dre${query ? `?${query}` : ""}`
-  );
+  const query = competence ? `?competence=${encodeURIComponent(competence)}` : "";
+  return fetchAdmin<FinancialDreSummary>(token, `/api/admin/reports/financial/dre${query}`);
 }
 
 export async function getMenuEngineeringReport(
@@ -1936,7 +1923,7 @@ export async function getPayables(
         )[key] ?? key;
       value.forEach((item) => params.append(queryKey, String(item)));
     } else if (value) {
-      params.set(key, value);
+      params.set(key, String(value));
     }
   });
 

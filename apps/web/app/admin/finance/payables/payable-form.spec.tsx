@@ -29,7 +29,7 @@ describe("PayableForm", () => {
     await act(async () => {
       root.render(
         <PayableForm
-          categories={[{ id: "category-1", name: "Insumos", active: true }]}
+          categories={[{ id: "category-1", name: "Insumos", active: true, dreClass: "EXCLUDED" }]}
           onSubmit={onSubmit}
           suppliers={[]}
         />
@@ -44,6 +44,41 @@ describe("PayableForm", () => {
     expect(select("categoryId").required).toBe(true);
     expect(form?.checkValidity()).toBe(false);
     expect(onSubmit).not.toHaveBeenCalled();
+  });
+
+  it("shows the category's DRE class and submits the payable adjustment", async () => {
+    const onSubmit = vi.fn(async () => undefined);
+    await act(async () => {
+      root.render(
+        <PayableForm
+          categories={[
+            { id: "category-1", name: "Insumos", active: true, dreClass: "EXCLUDED" },
+            { id: "category-2", name: "Prestador", active: true, dreClass: "VARIABLE_EXPENSE" },
+          ]}
+          onSubmit={onSubmit}
+          suppliers={[]}
+        />
+      );
+    });
+
+    await act(async () => {
+      const category = select("categoryId");
+      category.value = "category-2";
+      category.dispatchEvent(new Event("change", { bubbles: true }));
+    });
+    expect(select("dreClassOverride").options[0].textContent).toBe("Seguir a categoria (Despesa variavel)");
+
+    await act(async () => {
+      input("description").value = "Contador";
+      input("expectedAmount").value = "800";
+      input("dueDate").value = "2026-09-10";
+      select("dreClassOverride").value = "FIXED_COST";
+      container.querySelector("form")!.dispatchEvent(new Event("submit", { bubbles: true, cancelable: true }));
+    });
+
+    expect(onSubmit).toHaveBeenCalledWith(
+      expect.objectContaining({ categoryId: "category-2", dreClassOverride: "FIXED_COST" })
+    );
   });
 
   function input(name: string): HTMLInputElement {

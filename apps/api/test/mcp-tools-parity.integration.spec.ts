@@ -104,14 +104,22 @@ describe("MCP tools parity with admin screens", () => {
     expect(output).toMatchObject({ data: "2026-09-15", pedidos: 30, faturamentoBrutoReais: 1500.5 });
   });
 
-  it("dre and engenharia_cardapio use the same day boundaries as their controllers", async () => {
-    const dre = await call("dre", { inicio: "2026-09-01", fim: "2026-09-30" });
-    expect(services.dre.getSummary).toHaveBeenCalledWith(
-      STORE_A,
-      dayStart("2026-09-01"),
-      dayEnd("2026-09-30")
-    );
+  it("dre uses the competence month and engenharia_cardapio the controller day boundaries", async () => {
+    const dre = await call("dre", { mesCompetencia: "2026-09" });
+    expect(services.dre.getMonthlySummary).toHaveBeenCalledWith(STORE_A, "2026-09");
     expect(dre).toMatchObject({
+      mesCompetencia: "2026-09",
+      custosFixosReais: 500,
+      despesasFixasReais: 500,
+      taxasVendaReais: 58.02,
+      taxasVenda: { reaisReais: 50, pedidosComTaxaReal: 25, estimadasReais: 8.02, pedidosComTaxaEstimada: 5 },
+      impostosEstimadosReais: 87.03,
+      aliquotaImpostoPercentual: 6,
+      custoFixoPrevistoReais: 600,
+      diferencaCustoFixoReais: -100,
+      despesasPorCategoria: [
+        { categoria: "Aluguel", classificacao: "FIXED_COST", valorReais: 500, quantidade: 1 },
+      ],
       receitaBrutaReais: 1500.5,
       cmvReais: 435.15,
       lucroLiquidoEstimadoReais: 370.3,
@@ -129,7 +137,14 @@ describe("MCP tools parity with admin screens", () => {
 
   it("dre defaults to the current month like the DRE screen", async () => {
     const output = await call("dre");
+    expect(services.dre.getMonthlySummary).toHaveBeenCalledWith(STORE_A, undefined);
     expect(output.periodo).toMatchObject({ inicio: "2026-10-01", fim: "2026-10-31", padraoAplicado: true });
+  });
+
+  it("dre maps the legacy start date to its competence month", async () => {
+    const output = await call("dre", { inicio: "2026-09-10", fim: "2026-09-20" });
+    expect(services.dre.getMonthlySummary).toHaveBeenCalledWith(STORE_A, "2026-09");
+    expect(output.observacao).toContain("2026-09");
   });
 
   it("cash tools use the same date handling as the cash flow controller", async () => {
@@ -178,7 +193,12 @@ describe("MCP tools parity with admin screens", () => {
         fornecedores: ["Fornecedor Centro"],
         mesCompetencia: "2026-09",
       },
-      contas: [expect.objectContaining({ competencia: "2026-10-01", vencimento: "2026-10-10" })],
+      contas: [expect.objectContaining({
+          competencia: "2026-10-01",
+          classificacaoDre: "FIXED_COST",
+          classificacaoAjustada: false,
+          vencimento: "2026-10-10",
+        })],
     });
   });
 
