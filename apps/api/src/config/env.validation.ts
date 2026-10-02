@@ -103,6 +103,7 @@ export function validateEnvironment(input: Environment): Environment {
   validateHttpUrl(env, "PAGBANK_EDI_BASE_URL");
   validateHttpUrl(env, "IFOOD_FINANCIAL_BASE_URL");
   validateHttpUrl(env, "MCP_PUBLIC_URL");
+  validateHttpUrl(env, "WEB_PUBLIC_URL");
 
   return env;
 }

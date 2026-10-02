@@ -28,6 +28,9 @@ describe("validateEnvironment resource controls", () => {
     expect(() => validateEnvironment({ MCP_PUBLIC_URL: "api.example.com/mcp" })).toThrow(
       "MCP_PUBLIC_URL must be an absolute HTTP(S) URL"
     );
+    expect(() => validateEnvironment({ WEB_PUBLIC_URL: "app.example.com" })).toThrow(
+      "WEB_PUBLIC_URL must be an absolute HTTP(S) URL"
+    );
     expect(() => validateEnvironment({ MCP_RATE_LIMIT_PER_MINUTE: "0" })).toThrow(
       "MCP_RATE_LIMIT_PER_MINUTE must be a positive integer"
     );

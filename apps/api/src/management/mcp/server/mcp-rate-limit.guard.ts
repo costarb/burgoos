@@ -30,6 +30,7 @@ export class McpRateLimitGuard extends FixedWindowRateLimitGuard {
         void this.callLog.record({
           tenantId: request.mcpContext.tenantId,
           tokenId: request.mcpContext.tokenId,
+          connectionId: request.mcpContext.connectionId ?? null,
           method: rpcMethod(request.body),
           target: rpcTarget(request.body),
           result: McpToolCallResult.DENIED,
@@ -42,6 +43,7 @@ export class McpRateLimitGuard extends FixedWindowRateLimitGuard {
   }
 
   protected bucketKey(request: Request): string {
-    return (request as McpRequest).mcpContext?.tokenId ?? super.bucketKey(request);
+    const context = (request as McpRequest).mcpContext;
+    return context?.connectionId ?? context?.tokenId ?? super.bucketKey(request);
   }
 }

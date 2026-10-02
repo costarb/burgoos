@@ -4,6 +4,7 @@ import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { StreamableHTTPClientTransport } from "@modelcontextprotocol/sdk/client/streamableHttp.js";
 import { vi } from "vitest";
 import { MemoryPressureService } from "../../src/common/observability/memory-pressure.service";
+import { AccessAuditService } from "../../src/management/access/access-audit.service";
 import { AccountsPayableService } from "../../src/management/financial/accounts-payable/accounts-payable.service";
 import { CashFlowService } from "../../src/management/financial/cash-flow/cash-flow.service";
 import { hashMcpToken } from "../../src/management/mcp/admin/mcp-token.util";
@@ -449,6 +450,7 @@ export async function createMcpServerApp(
     env,
     providers: [
       ...MCP_SERVER_PROVIDERS,
+      AccessAuditService,
       { provide: MemoryPressureService, useValue: memoryPressureMock },
       { provide: SalesReportService, useValue: services.sales },
       { provide: ReportsService, useValue: services.reports },

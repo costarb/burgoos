@@ -9,6 +9,17 @@ import { StoreMcpConfigurationService } from "./admin/store-mcp-configuration.se
 import { StoreMcpTokenService } from "./admin/store-mcp-token.service";
 import { McpUsageService } from "./admin/mcp-usage.service";
 import { McpCallRetentionService } from "./server/mcp-call-retention.service";
+import { CimdFetcher } from "./oauth/cimd-fetcher";
+import { OAuthAuthorizationService } from "./oauth/oauth-authorization.service";
+import { OAuthAuthorizeController } from "./oauth/oauth-authorize.controller";
+import { OAuthClientService } from "./oauth/oauth-client.service";
+import { OAuthConnectionService } from "./oauth/oauth-connection.service";
+import { OAuthCredentialResolver } from "./oauth/oauth-credential.resolver";
+import { OAuthTokenController } from "./oauth/oauth-token.controller";
+import { OAuthTokenService } from "./oauth/oauth-token.service";
+import { OAuthUrlsProvider } from "./oauth/oauth-urls.provider";
+import { StoreEligibilityService } from "./oauth/store-eligibility";
+import { WellKnownController } from "./oauth/well-known.controller";
 import { McpResources } from "./resources/mcp-resources";
 import { McpCallLogService } from "./server/mcp-call-log.service";
 import { McpRateLimitGuard } from "./server/mcp-rate-limit.guard";
@@ -23,7 +34,21 @@ import { MenuTools } from "./tools/menu.tools";
 import { PayablesTools } from "./tools/payables.tools";
 import { SalesTools } from "./tools/sales.tools";
 
+export const MCP_OAUTH_PROVIDERS = [
+  OAuthUrlsProvider,
+  CimdFetcher,
+  OAuthClientService,
+  StoreEligibilityService,
+  OAuthConnectionService,
+  OAuthAuthorizationService,
+  OAuthTokenService,
+  OAuthCredentialResolver,
+];
+
+export const MCP_OAUTH_CONTROLLERS = [WellKnownController, OAuthAuthorizeController, OAuthTokenController];
+
 export const MCP_SERVER_PROVIDERS = [
+  ...MCP_OAUTH_PROVIDERS,
   McpCallLogService,
   McpTokenGuard,
   McpRateLimitGuard,
@@ -41,7 +66,7 @@ export const MCP_SERVER_PROVIDERS = [
 
 @Module({
   imports: [AuthModule, ManagementModule, OperationsModule, ObservabilityModule, BackgroundJobsModule],
-  controllers: [StoreMcpAdminController, McpController],
+  controllers: [StoreMcpAdminController, McpController, ...MCP_OAUTH_CONTROLLERS],
   providers: [
     StoreMcpConfigurationService,
     StoreMcpTokenService,

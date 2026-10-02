@@ -1,6 +1,7 @@
 import { INestApplication, Provider, Type, ValidationPipe } from "@nestjs/common";
 import { ConfigModule } from "@nestjs/config";
 import { Test } from "@nestjs/testing";
+import { GLOBAL_PREFIX, GLOBAL_PREFIX_EXCLUSIONS } from "../../src/config/bootstrap-policy";
 import { validateEnvironment } from "../../src/config/env.validation";
 import { AuthService } from "../../src/platform/auth/auth.service";
 import { PrismaService } from "../../src/platform/database/prisma.service";
@@ -37,7 +38,7 @@ export async function createMcpTestApp(input: {
   }).compile();
 
   const app = moduleRef.createNestApplication();
-  app.setGlobalPrefix("api");
+  app.setGlobalPrefix(GLOBAL_PREFIX, { exclude: GLOBAL_PREFIX_EXCLUSIONS });
   app.useGlobalPipes(
     new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true, transform: true })
   );

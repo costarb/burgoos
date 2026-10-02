@@ -1,6 +1,7 @@
 import { randomUUID } from "crypto";
 import { McpDataArea, McpToolCallResult } from "@prisma/client";
 import { vi } from "vitest";
+import { FakeAssignment, FakeOAuthUser, installOAuthModels } from "./mcp-oauth-fake";
 
 /**
  * In-memory stand-in for the Prisma models used by the MCP feature. It understands only the
@@ -16,10 +17,7 @@ export interface FakeTenant {
   deactivatedAt: Date | null;
 }
 
-export interface FakeUser {
-  id: string;
-  name: string;
-}
+export type FakeUser = FakeOAuthUser;
 
 export interface FakeMcpConfiguration {
   id: string;
@@ -77,6 +75,11 @@ export function createMcpFakePrisma() {
     tokens: [] as FakeMcpToken[],
     calls: [] as FakeMcpToolCall[],
     audits: [] as FakeAuditEvent[],
+    assignments: [] as FakeAssignment[],
+    oauthClients: [] as Array<Record<string, unknown> & { id: string }>,
+    oauthRequests: [] as Array<Record<string, unknown> & { id: string }>,
+    oauthConnections: [] as Array<Record<string, unknown> & { id: string }>,
+    oauthTokens: [] as Array<Record<string, unknown> & { id: string }>,
   };
 
   const userName = (id: string | null) =>
@@ -305,6 +308,8 @@ export function createMcpFakePrisma() {
     },
   };
 
+  installOAuthModels(prisma as unknown as Record<string, unknown>, state);
+
   // Other modules touch unrelated models on startup (schedulers, recovery loops); answer them
   // with empty results so the application boots.
   const inertModels = new Map<string, Record<string, unknown>>();
@@ -349,4 +354,9 @@ export function resetMcpFakePrisma(prisma: McpFakePrisma) {
   prisma.state.tokens = [];
   prisma.state.calls = [];
   prisma.state.audits = [];
+  prisma.state.assignments = [];
+  prisma.state.oauthClients = [];
+  prisma.state.oauthRequests = [];
+  prisma.state.oauthConnections = [];
+  prisma.state.oauthTokens = [];
 }
