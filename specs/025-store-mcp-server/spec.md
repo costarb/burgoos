@@ -4,7 +4,7 @@
 
 **Created**: 2026-10-01
 
-**Status**: Draft
+**Status**: Implemented (validado em produção em 2026-10-02)
 
 **Input**: User description: "Gostaria de entender se conseguimos expor um MCP Server da aplicação, com o objetivo que eu possa configurar o MCP acessando dados por loja, ou seja, poderia configurar MCP para cada loja configurada no sistema, tendo uma tela para habilitar ou não o MCP. O objetivo é conseguir interagir com LLM para gerar análises, insights sobre os números das lojas." Escopo desta spec: Fase 1 (MVP) da proposta aprovada, com acesso por token de loja, somente leitura, e testável via MCP Inspector, Claude Code, Claude Desktop e Cursor. OAuth (para conectores do claude.ai web e ChatGPT) fica para uma fase posterior.
 
