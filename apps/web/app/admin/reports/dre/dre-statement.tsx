@@ -1,18 +1,6 @@
 import React from "react";
 import type { FinancialDreCategoryExpense, FinancialDreSummary } from "@rrfive/types";
-
-const money = new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" });
-const percent = new Intl.NumberFormat("pt-BR", { style: "percent", maximumFractionDigits: 1 });
-const monthName = new Intl.DateTimeFormat("pt-BR", { month: "long", year: "numeric", timeZone: "UTC" });
-
-export function formatMoney(value: string | number): string {
-  return money.format(Number(value));
-}
-
-export function competenceLabel(competence: string): string {
-  const [year, month] = competence.split("-").map(Number);
-  return monthName.format(new Date(Date.UTC(year, month - 1, 1)));
-}
+import { formatMoney, formatPercent, salesFeesBreakdown } from "../../../../lib/finance-format";
 
 export function payablesLink(competence: string, categoryId: string): string {
   const params = new URLSearchParams({
@@ -67,11 +55,16 @@ function StatementLine({ sign, label, value, hint, categories, competence }: Lin
       <summary className={`${row} cursor-pointer list-none hover:bg-slate-50`}>{content}</summary>
       <div className="bg-slate-50 px-4 pb-3 pl-12">
         {categories.length === 0 ? (
-          <p className="py-2 text-xs text-slate-500">Nenhuma conta lancada para esta competencia.</p>
+          <p className="py-2 text-xs text-slate-500">
+            Nenhuma conta lancada para esta competencia.
+          </p>
         ) : (
           <ul className="divide-y divide-slate-200">
             {categories.map((category) => (
-              <li className="flex items-baseline justify-between gap-3 py-2 text-xs" key={category.categoryId}>
+              <li
+                className="flex items-baseline justify-between gap-3 py-2 text-xs"
+                key={category.categoryId}
+              >
                 <a
                   className="font-medium text-slate-700 underline-offset-2 hover:underline"
                   href={payablesLink(competence, category.categoryId)}
@@ -91,7 +84,15 @@ function StatementLine({ sign, label, value, hint, categories, competence }: Lin
   );
 }
 
-function Indicator({ label, value, tone }: { label: string; value: string; tone?: "loss" | "muted" }) {
+function Indicator({
+  label,
+  value,
+  tone,
+}: {
+  label: string;
+  value: string;
+  tone?: "loss" | "muted";
+}) {
   return (
     <article className="rounded-md border border-slate-200 bg-white p-4">
       <p className="text-sm text-slate-500">{label}</p>
@@ -121,19 +122,33 @@ export function DreStatement({ summary }: { summary: FinancialDreSummary }) {
           tone={loss ? "loss" : undefined}
           value={formatMoney(summary.estimatedNetProfit)}
         />
-        <Indicator label="Margem liquida" tone={loss ? "loss" : undefined} value={percent.format(summary.netMarginRate)} />
-        <Indicator label="Margem de contribuicao" value={percent.format(summary.contributionMarginRate)} />
+        <Indicator
+          label="Margem liquida"
+          tone={loss ? "loss" : undefined}
+          value={formatPercent(summary.netMarginRate)}
+        />
+        <Indicator
+          label="Margem de contribuicao"
+          value={formatPercent(summary.contributionMarginRate)}
+        />
         <Indicator
           label="Ponto de equilibrio"
           tone={summary.breakEvenRevenue === null ? "muted" : undefined}
-          value={summary.breakEvenRevenue === null ? "Nao atingivel" : formatMoney(summary.breakEvenRevenue)}
+          value={
+            summary.breakEvenRevenue === null
+              ? "Nao atingivel"
+              : formatMoney(summary.breakEvenRevenue)
+          }
         />
       </div>
 
       {noFixedCost ? (
-        <p className="mt-4 rounded-md border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900" role="status">
-          Nenhum custo fixo lancado para esta competencia. Lance as contas fixas (aluguel, salarios...) em Contas a
-          pagar ou confira a classificacao das categorias.
+        <p
+          className="mt-4 rounded-md border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900"
+          role="status"
+        >
+          Nenhum custo fixo lancado para esta competencia. Lance as contas fixas (aluguel,
+          salarios...) em Contas a pagar ou confira a classificacao das categorias.
         </p>
       ) : null}
 
@@ -142,9 +157,19 @@ export function DreStatement({ summary }: { summary: FinancialDreSummary }) {
         <StatementLine label="Descontos" sign="-" value={summary.discounts} />
         <StatementLine label="Receita liquida" sign="=" value={summary.netRevenue} />
         <StatementLine label="CMV" sign="-" value={summary.cmv} />
-        <StatementLine label="Taxas e impostos" sign="-" value={summary.feesAndTaxes} />
         <StatementLine
-          hint={percent.format(summary.contributionMarginRate)}
+          hint={salesFeesBreakdown(summary)}
+          label="Taxas de plataforma e pagamento"
+          sign="-"
+          value={summary.salesFees}
+        />
+        <StatementLine
+          label={`Impostos (estimados ${formatPercent(summary.taxRate)})`}
+          sign="-"
+          value={summary.taxes}
+        />
+        <StatementLine
+          hint={formatPercent(summary.contributionMarginRate)}
           label="Margem de contribuicao"
           sign="="
           value={summary.grossProfit}
@@ -164,7 +189,7 @@ export function DreStatement({ summary }: { summary: FinancialDreSummary }) {
           value={summary.fixedExpenses}
         />
         <StatementLine
-          hint={percent.format(summary.netMarginRate)}
+          hint={formatPercent(summary.netMarginRate)}
           label={loss ? "Resultado liquido (prejuizo)" : "Resultado liquido"}
           sign="="
           value={summary.estimatedNetProfit}
@@ -185,12 +210,14 @@ export function DreStatement({ summary }: { summary: FinancialDreSummary }) {
         </div>
         <div className="rounded-md border border-slate-200 bg-white p-4 text-sm">
           <p className="text-slate-500">Recebido liquido (adquirente)</p>
-          <p className="mt-1 font-semibold tabular-nums">{formatMoney(summary.acquiredNetRevenue)}</p>
+          <p className="mt-1 font-semibold tabular-nums">
+            {formatMoney(summary.acquiredNetRevenue)}
+          </p>
         </div>
       </div>
       <p className="mt-3 text-xs text-slate-500">
-        O custo fixo previsto e apenas referencia e nao entra no resultado. Insumos, taxas ja descontadas nos pedidos
-        e investimentos ficam fora do DRE pela classificacao das categorias.
+        O custo fixo previsto e apenas referencia e nao entra no resultado. Insumos, taxas ja
+        descontadas nos pedidos e investimentos ficam fora do DRE pela classificacao das categorias.
       </p>
     </>
   );

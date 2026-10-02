@@ -1,6 +1,7 @@
 import React from "react";
 import { getFinancialDre } from "../../../../lib/api";
-import { competenceLabel, DreStatement } from "./dre-statement";
+import { competenceLabel } from "../../../../lib/finance-format";
+import { DreStatement } from "./dre-statement";
 
 export const dynamic = "force-dynamic";
 
@@ -26,8 +27,8 @@ export default async function DrePage({ searchParams }: DrePageProps) {
               {competenceLabel(summary.competence)}
             </h1>
             <p className="mt-2 text-slate-600">
-              Vendas entregues no mes e despesas lancadas em contas a pagar para a competencia (sem competencia,
-              vale o vencimento).
+              Vendas entregues no mes e despesas lancadas em contas a pagar para a competencia (sem
+              competencia, vale o vencimento).
             </p>
           </div>
           <a

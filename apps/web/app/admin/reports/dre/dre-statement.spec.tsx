@@ -3,7 +3,8 @@ import { renderToStaticMarkup } from "react-dom/server";
 import type { FinancialDreSummary } from "@rrfive/types";
 import { describe, expect, it } from "vitest";
 import { filtersFromSearchParams } from "../../finance/payables/payables-url-filters";
-import { competenceLabel, DreStatement, payablesLink } from "./dre-statement";
+import { competenceLabel } from "../../../../lib/finance-format";
+import { DreStatement, payablesLink } from "./dre-statement";
 
 const summary: FinancialDreSummary = {
   competence: "2026-09",
@@ -15,6 +16,13 @@ const summary: FinancialDreSummary = {
   acquiredNetRevenue: "14100.00",
   cmv: "4410.00",
   feesAndTaxes: "1470.00",
+  salesFees: "1050.00",
+  taxes: "420.00",
+  taxRate: 0.06,
+  realSalesFees: "900.00",
+  estimatedSalesFees: "150.00",
+  realFeeOrderCount: 120,
+  estimatedFeeOrderCount: 1,
   grossProfit: "8820.00",
   contributionMarginRate: 0.6,
   variableExpenses: "500.00",
@@ -25,13 +33,27 @@ const summary: FinancialDreSummary = {
   plannedFixedCost: "5000.00",
   fixedCostVariance: "-2000.00",
   expensesByCategory: [
-    { categoryId: "cat-rent", categoryName: "Aluguel", dreClass: "FIXED_COST", amount: "3000.00", count: 1 },
-    { categoryId: "cat-svc", categoryName: "Prestador", dreClass: "VARIABLE_EXPENSE", amount: "500.00", count: 2 },
+    {
+      categoryId: "cat-rent",
+      categoryName: "Aluguel",
+      dreClass: "FIXED_COST",
+      amount: "3000.00",
+      count: 1,
+    },
+    {
+      categoryId: "cat-svc",
+      categoryName: "Prestador",
+      dreClass: "VARIABLE_EXPENSE",
+      amount: "500.00",
+      count: 2,
+    },
   ],
 };
 
 function render(value: FinancialDreSummary) {
-  return renderToStaticMarkup(<DreStatement summary={value} />).split(String.fromCharCode(160)).join(" ");
+  return renderToStaticMarkup(<DreStatement summary={value} />)
+    .split(String.fromCharCode(160))
+    .join(" ");
 }
 
 describe("DreStatement", () => {
@@ -39,6 +61,9 @@ describe("DreStatement", () => {
     const html = render(summary);
 
     expect(html).toContain("Margem de contribuicao");
+    expect(html).toContain("Taxas de plataforma e pagamento");
+    expect(html).toContain("R$ 900,00 reais em 120 pedidos · R$ 150,00 estimadas em 1 pedido");
+    expect(html).toContain("Impostos (estimados 6%)");
     expect(html).toContain("Despesas variaveis");
     expect(html).toContain("Custos fixos");
     expect(html).toContain("R$ 5.320,00");
@@ -76,7 +101,9 @@ describe("DreStatement", () => {
       categoryIds: ["cat-rent"],
       competenceIncludesDueDate: true,
     });
-    expect(filtersFromSearchParams({ competenceMonth: "2026-9", competenceIncludesDueDate: "true" })).toMatchObject({
+    expect(
+      filtersFromSearchParams({ competenceMonth: "2026-9", competenceIncludesDueDate: "true" })
+    ).toMatchObject({
       competenceMonth: "",
       competenceIncludesDueDate: false,
     });

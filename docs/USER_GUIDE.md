@@ -32,7 +32,7 @@ O cabeçalho mostra a loja ativa, as notificações e a sessão atual. Em telas 
 
 ## 3. Painel operacional
 
-O painel é a página inicial da administração. Ele resume pedidos entregues, receita, margem, alertas e resultados do período.
+O painel é a página inicial da administração. Ele resume os pedidos entregues e a receita do dia, a margem líquida do mês, os alertas e o **resultado do mês corrente**, com as mesmas linhas e números do DRE (receita líquida, CMV, taxas, impostos, margem de contribuição, despesas variáveis, custos fixos e resultado líquido). Use **Ver DRE** para abrir o detalhamento do mês. Se nenhum custo fixo foi lançado, o painel avisa que o resultado está maior do que o real.
 
 ![Painel operacional](assets/user-guide/painel.png)
 
@@ -216,7 +216,9 @@ Acesse **DRE** e escolha o **mês de competência** (padrão: mês corrente). O 
 - as vendas entregues no mês, no fuso da loja;
 - as contas a pagar lançadas para a competência (sem competência, pelo vencimento), conforme a classificação no DRE. Contas canceladas não entram; contas em aberto entram (regime de competência).
 
-Linhas: receita bruta, descontos, receita líquida, CMV, taxas e impostos, **margem de contribuição**, **despesas variáveis**, **custos fixos** e **resultado líquido** (em vermelho quando há prejuízo). Clique em despesas variáveis ou custos fixos para ver as categorias; cada categoria abre **Contas a pagar** já filtrada pelas contas somadas no DRE.
+Linhas: receita bruta, descontos, receita líquida, CMV, taxas de plataforma e pagamento, impostos, **margem de contribuição**, **despesas variáveis**, **custos fixos** e **resultado líquido** (em vermelho quando há prejuízo). Clique em despesas variáveis ou custos fixos para ver as categorias; cada categoria abre **Contas a pagar** já filtrada pelas contas somadas no DRE.
+
+**Taxas e impostos:** nos pedidos importados com valor bruto e líquido (Mercado Pago, PagBank, plataformas integradas), a taxa considerada é o que foi realmente descontado (bruto − líquido), inclusive parcelamento e antecipação. Nos demais pedidos, a taxa é estimada pelos percentuais da plataforma e da configuração. A linha mostra quanto foi real e quanto foi estimado. Os impostos são sempre estimados pela alíquota de **Configurações**.
 
 O **ponto de equilíbrio** é a receita necessária para cobrir os custos fixos com a margem do mês; aparece "Não atingível" quando a margem após despesas variáveis é zero ou negativa.
 
