@@ -1208,6 +1208,8 @@ export interface PayablesFilters {
   categoryIds?: string[];
   supplierIds?: string[];
   competenceMonth?: string;
+  /** With competenceMonth, payables without competence count by due date (DRE link). */
+  competenceIncludesDueDate?: boolean;
 }
 
 export interface PayableOptions {

@@ -32,6 +32,7 @@ import { PayableEditorDialog } from "./payable-editor-dialog";
 
 interface PayablesClientProps {
   token: string;
+  initialFilters?: PayablesFilters;
   initialPayables: PayablesResponse;
   options: PayableOptions;
 }
@@ -53,7 +54,12 @@ const emptyFilters: PayablesFilters = {
   competenceMonth: "",
 };
 
-export function PayablesClient({ token, initialPayables, options }: PayablesClientProps) {
+export function PayablesClient({
+  token,
+  initialFilters,
+  initialPayables,
+  options,
+}: PayablesClientProps) {
   const [payables, setPayables] = useState(initialPayables);
   const [creatingPayable, setCreatingPayable] = useState(false);
   const [selectedPayable, setSelectedPayable] = useState<Payable | null>(null);
@@ -61,7 +67,7 @@ export function PayablesClient({ token, initialPayables, options }: PayablesClie
   const [auditRecords, setAuditRecords] = useState<FinancialAuditRecord[]>([]);
   const [operation, setOperation] = useState<OperationState>({ status: "idle" });
   const [busy, setBusy] = useState(false);
-  const [filters, setFilters] = useState<PayablesFilters>(emptyFilters);
+  const [filters, setFilters] = useState<PayablesFilters>(initialFilters ?? emptyFilters);
   const [page, setPage] = useState(1);
 
   const total = payables.total ?? payables.items.length;
@@ -333,6 +339,20 @@ export function PayablesClient({ token, initialPayables, options }: PayablesClie
             type="month"
             value={filters.competenceMonth ?? ""}
           />
+          {filters.competenceIncludesDueDate && filters.competenceMonth ? (
+            <p className="flex flex-wrap items-center gap-2 text-xs text-slate-600 sm:col-span-2 xl:col-span-3">
+              Como no DRE: contas sem competencia entram pelo mes de vencimento.
+              <button
+                className="font-semibold text-slate-900 underline"
+                onClick={() =>
+                  setFilters((current) => ({ ...current, competenceIncludesDueDate: false }))
+                }
+                type="button"
+              >
+                Somente competencia informada
+              </button>
+            </p>
+          ) : null}
           <div className="flex flex-wrap justify-end gap-3 sm:col-span-2 xl:col-span-3">
             <button
               className="min-w-24 rounded-md bg-slate-950 px-4 py-2 text-sm font-semibold text-white disabled:opacity-60"

@@ -26,12 +26,12 @@
 - [X] T012 [US2] `financial-reports.controller.ts`: `?competence=AAAA-MM` (padrão: mês corrente; compatibilidade com `start`; `400` para formato inválido)
 - [X] T013 [P] [US2] Testes de integração em `apps/api/test/dre-competence.integration.spec.ts`: cenário da US2 (SC-001), `EXCLUDED` nunca altera o resultado (SC-002), conta sem competência cai no vencimento, cancelada fora, ajuste na conta, mês sem dados zerado, fronteira do fuso
 - [X] T014 [US2] `accounts-payable.service.ts` e DTO: `competenceIncludesDueDate=true` aplica `COALESCE(competence_date, due_date)` no filtro de competência (`list`, `querySummary`, `summarizeByCategory`); teste de que a lista filtrada soma igual à linha do DRE
-- [ ] T015 [US2] Web: `apps/web/app/admin/reports/dre/` com seletor de mês (padrão: mês corrente), estrutura de linhas da US2-6 com sinais, margem líquida, ponto de equilíbrio ("não atingível"), prejuízo em destaque, detalhamento expansível de Custos fixos e Despesas variáveis por categoria com link para contas a pagar; `lib/api.ts` `getFinancialDre(competence)`; testes
-- [ ] T016 [US2] Web: `finance/payables/page.tsx` lê `competenceMonth`, `categoryId` e `competenceIncludesDueDate` da URL como filtros iniciais em `payables-client.tsx`; teste
+- [X] T015 [US2] Web: `apps/web/app/admin/reports/dre/` com seletor de mês (padrão: mês corrente), estrutura de linhas da US2-6 com sinais, margem líquida, ponto de equilíbrio ("não atingível"), prejuízo em destaque, detalhamento expansível de Custos fixos e Despesas variáveis por categoria com link para contas a pagar; `lib/api.ts` `getFinancialDre(competence)`; testes
+- [X] T016 [US2] Web: `finance/payables/page.tsx` lê `competenceMonth`, `categoryId` e `competenceIncludesDueDate` da URL como filtros iniciais em `payables-client.tsx`; teste
 
 ## Phase 4: User Story 3 - Custo fixo previsto (P2)
 
-- [ ] T017 [US3] DRE exibe "Custo fixo previsto (configuração)" e a diferença, e o aviso "Nenhum custo fixo lançado para esta competência" quando aplicável; Configurações renomeia para "Custo fixo mensal previsto" com a explicação; testes web
+- [X] T017 [US3] DRE exibe "Custo fixo previsto (configuração)" e a diferença, e o aviso "Nenhum custo fixo lançado para esta competência" quando aplicável; Configurações renomeia para "Custo fixo mensal previsto" com a explicação; testes web
 
 ## Phase 5: User Story 4 - Mesma regra nos consumidores (P2)
 
