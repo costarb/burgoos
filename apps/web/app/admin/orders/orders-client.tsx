@@ -330,7 +330,7 @@ export function OrdersClient({
                           <span className="rounded bg-slate-900 px-2 py-1 text-[10px] font-bold uppercase text-white">
                             {sourceLabel(order.source)}
                           </span>
-                          <span className="rounded bg-slate-100 px-2 py-1 text-[10px] font-bold">
+                          <span className="rounded bg-slate-100 px-2 py-1 font-mono text-[10px] font-bold">
                             #{order.publicCode}
                           </span>
                           <span
@@ -369,7 +369,7 @@ export function OrdersClient({
                           </p>
                         ) : null}
                       </div>
-                      <p className="font-bold text-tomato">R$ {order.total}</p>
+                      <p className="font-mono font-bold text-tomato">R$ {order.total}</p>
                     </div>
                     <ul className="mt-3 space-y-1 text-sm text-slate-700">
                       {order.items.map((item) => (

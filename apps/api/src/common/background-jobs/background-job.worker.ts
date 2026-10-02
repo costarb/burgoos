@@ -54,13 +54,19 @@ export class BackgroundJobWorker implements OnModuleInit, OnModuleDestroy {
 
   async runOnce(now = new Date()): Promise<boolean> {
     const priorities = this.admittedPriorities();
-    const job = await this.repository.claimNext(
-      this.workerId,
-      this.leaseMs,
-      now,
-      priorities,
-      this.registry.listTypes()
-    );
+    let job: Awaited<ReturnType<BackgroundJobRepository["claimNext"]>>;
+    try {
+      job = await this.repository.claimNext(
+        this.workerId,
+        this.leaseMs,
+        now,
+        priorities,
+        this.registry.listTypes()
+      );
+    } catch (error) {
+      this.logger.error("background_job.claim_failed", error instanceof Error ? error.stack : error);
+      return false;
+    }
     if (!job) return false;
     const owner = { workerId: this.workerId, leaseVersion: job.leaseVersion };
     let handler: RuntimeBackgroundJobHandler;
@@ -135,7 +141,12 @@ export class BackgroundJobWorker implements OnModuleInit, OnModuleDestroy {
 
   private async loop(): Promise<void> {
     while (!this.controller.signal.aborted) {
-      const processed = await this.runOnce();
+      let processed = false;
+      try {
+        processed = await this.runOnce();
+      } catch (error) {
+        this.logger.error("background_job.run_once_failed", error instanceof Error ? error.stack : error);
+      }
       if (!processed) await abortableDelay(this.pollIntervalMs, this.controller.signal);
     }
   }

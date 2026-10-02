@@ -138,11 +138,11 @@ export class BackgroundJobRepository {
         data: { jobId: job.id, attempt: job.attempts, workerId },
       });
       return job;
-    });
+    }, { timeout: 15_000 });
   }
 
   async recoverExpiredLeases(now = new Date()): Promise<void> {
-    await this.prisma.$transaction((tx) => this.recoverExpired(tx, now));
+    await this.prisma.$transaction((tx) => this.recoverExpired(tx, now), { timeout: 15_000 });
   }
 
   async heartbeat(jobId: string, owner: JobLeaseOwner, leaseMs: number, now = new Date()): Promise<boolean> {

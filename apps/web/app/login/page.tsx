@@ -36,8 +36,8 @@ export default function LoginPage() {
     <main className="grid min-h-screen bg-slate-950 px-4 py-8 text-slate-950">
       <section className="mx-auto grid w-full max-w-md content-center">
         <div className="mb-8 text-white">
-          <div className="grid h-11 w-11 place-items-center rounded-md bg-tomato text-lg font-bold">
-            B
+          <div className="grid h-11 w-11 place-items-center rounded-md bg-tomato font-display text-lg">
+            5
           </div>
           <h1 className="mt-5 text-3xl font-semibold">RRFive OS</h1>
           <p className="mt-2 text-sm text-slate-300">Acesse a administracao da loja.</p>
