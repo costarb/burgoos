@@ -6,11 +6,11 @@
 
 ## Phase 1: Foundational
 
-- [ ] T001 Adicionar o enum `DreExpenseClass`, `FinancialCategory.dreClass` (default `VARIABLE_EXPENSE`), `Payable.dreClassOverride` e `@@index([tenantId, competenceDate])` em `packages/database/prisma/schema.prisma`
-- [ ] T002 Gerar `packages/database/prisma/migrations/20261003090000_dre_expense_class/migration.sql` (diff do schema) e acrescentar o backfill por nome do research R3 (`translate`/`lower`/`LIKE`); `npm run db:generate`
-- [ ] T003 [P] Criar `apps/api/src/management/financial/dre-expense-class.ts` (rótulos, `suggestDreClass(name)` com as mesmas listas do backfill, `effectiveDreClass`), com testes em `dre-expense-class.spec.ts`
-- [ ] T004 [P] Criar `apps/api/src/management/reports/dre-competence.ts` (`parseCompetence`, mês corrente no fuso da loja, fronteiras `periodStart/periodEnd` via `localDayStart/localDayEnd` e intervalo de competência local), com testes
-- [ ] T005 [P] Tipos em `packages/types/src/index.ts`: `DreExpenseClass`, `dreClass` em categoria, `dreClassOverride`/`categoryDreClass`/`effectiveDreClass` em conta, novos campos do DRE
+- [X] T001 Adicionar o enum `DreExpenseClass`, `FinancialCategory.dreClass` (default `VARIABLE_EXPENSE`), `Payable.dreClassOverride` e `@@index([tenantId, competenceDate])` em `packages/database/prisma/schema.prisma`
+- [X] T002 Gerar `packages/database/prisma/migrations/20261003090000_dre_expense_class/migration.sql` (diff do schema) e acrescentar o backfill por nome do research R3 (`translate`/`lower`/`LIKE`); `npm run db:generate`
+- [X] T003 [P] Criar `apps/api/src/management/financial/dre-expense-class.ts` (rótulos, `suggestDreClass(name)` com as mesmas listas do backfill, `effectiveDreClass`), com testes em `dre-expense-class.spec.ts`
+- [X] T004 [P] Criar `apps/api/src/management/reports/dre-competence.ts` (`parseCompetence`, mês corrente no fuso da loja, fronteiras `periodStart/periodEnd` via `localDayStart/localDayEnd` e intervalo de competência local), com testes
+- [X] T005 [P] Tipos em `packages/types/src/index.ts`: `DreExpenseClass`, `dreClass` em categoria, `dreClassOverride`/`categoryDreClass`/`effectiveDreClass` em conta, novos campos do DRE
 
 ## Phase 2: User Story 1 - Classificar despesas (P1)
 
