@@ -73,6 +73,10 @@ enum AccessAuditEventType {
   MCP_CONFIGURATION_CHANGED
   MCP_TOKEN_CREATED
   MCP_TOKEN_REVOKED
+  MCP_CONNECTION_AUTHORIZED
+  MCP_CONNECTION_DENIED
+  MCP_CONNECTION_REVOKED
+  MCP_CLIENT_REJECTED
 }
 
 enum McpDataArea {
@@ -88,6 +92,24 @@ enum McpToolCallResult {
   SUCCESS
   ERROR
   DENIED
+}
+
+enum McpOAuthClientKind {
+  CIMD
+  DCR
+}
+
+enum McpOAuthRequestStatus {
+  PENDING
+  APPROVED
+  DENIED
+  CONSUMED
+  EXPIRED
+}
+
+enum McpOAuthTokenKind {
+  ACCESS
+  REFRESH
 }
 
 enum AccessAuditResult {
@@ -711,6 +733,8 @@ model Tenant {
   mcpConfiguration            StoreMcpConfiguration?
   mcpTokens                   StoreMcpToken[]
   mcpToolCalls                McpToolCall[]
+  mcpOAuthConnections         McpOAuthConnection[]
+  mcpOAuthRequests            McpOAuthAuthorizationRequest[]
 
   @@index([createdByPlatformUserId])
   @@index([defaultLayoutPresetKey])
@@ -793,6 +817,9 @@ model User {
   mcpConfigurationsUpdated      StoreMcpConfiguration[]         @relation("McpConfigurationUpdatedBy")
   mcpTokensCreated              StoreMcpToken[]                 @relation("McpTokenCreatedBy")
   mcpTokensRevoked              StoreMcpToken[]                 @relation("McpTokenRevokedBy")
+  mcpOAuthConnections           McpOAuthConnection[]            @relation("McpOAuthConnectionUser")
+  mcpOAuthConnectionsRevoked    McpOAuthConnection[]            @relation("McpOAuthConnectionRevokedBy")
+  mcpOAuthRequests              McpOAuthAuthorizationRequest[]
 
   @@index([tenantId])
   @@index([status])
@@ -2699,21 +2726,104 @@ model StoreMcpToken {
 }
 
 model McpToolCall {
-  id         String            @id @default(uuid()) @db.Uuid
-  tenantId   String            @map("tenant_id") @db.Uuid
-  tokenId    String?           @map("token_id") @db.Uuid
-  method     String            @db.VarChar(40)
-  target     String?           @db.VarChar(80)
-  arguments  Json?
-  result     McpToolCallResult
-  errorCode  String?           @map("error_code") @db.VarChar(40)
-  durationMs Int               @map("duration_ms")
-  occurredAt DateTime          @default(now()) @map("occurred_at")
-  tenant     Tenant            @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  token      StoreMcpToken?    @relation(fields: [tokenId], references: [id], onDelete: SetNull)
+  id           String              @id @default(uuid()) @db.Uuid
+  tenantId     String              @map("tenant_id") @db.Uuid
+  tokenId      String?             @map("token_id") @db.Uuid
+  method       String              @db.VarChar(40)
+  target       String?             @db.VarChar(80)
+  arguments    Json?
+  result       McpToolCallResult
+  errorCode    String?             @map("error_code") @db.VarChar(40)
+  durationMs   Int                 @map("duration_ms")
+  occurredAt   DateTime            @default(now()) @map("occurred_at")
+  tenant       Tenant              @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  token        StoreMcpToken?      @relation(fields: [tokenId], references: [id], onDelete: SetNull)
+  connectionId String?             @map("connection_id") @db.Uuid
+  connection   McpOAuthConnection? @relation(fields: [connectionId], references: [id], onDelete: SetNull)
 
   @@index([tenantId, occurredAt(sort: Desc)])
   @@index([tenantId, tokenId, occurredAt])
   @@index([occurredAt])
+  @@index([tenantId, connectionId, occurredAt])
   @@map("mcp_tool_calls")
+}
+
+model McpOAuthClient {
+  id                String                         @id @default(uuid()) @db.Uuid
+  clientId          String                         @unique @map("client_id") @db.VarChar(512)
+  kind              McpOAuthClientKind
+  name              String                         @db.VarChar(120)
+  redirectUris      String[]                       @map("redirect_uris")
+  metadataFetchedAt DateTime?                      @map("metadata_fetched_at")
+  createdAt         DateTime                       @default(now()) @map("created_at")
+  updatedAt         DateTime                       @updatedAt @map("updated_at")
+  requests          McpOAuthAuthorizationRequest[]
+  connections       McpOAuthConnection[]
+
+  @@map("mcp_oauth_clients")
+}
+
+model McpOAuthAuthorizationRequest {
+  id            String                @id @default(uuid()) @db.Uuid
+  clientId      String                @map("client_id") @db.Uuid
+  redirectUri   String                @map("redirect_uri") @db.VarChar(2048)
+  state         String?               @db.VarChar(512)
+  codeChallenge String                @map("code_challenge") @db.VarChar(128)
+  scope         String                @db.VarChar(200)
+  resource      String                @db.VarChar(512)
+  status        McpOAuthRequestStatus @default(PENDING)
+  expiresAt     DateTime              @map("expires_at")
+  userId        String?               @map("user_id") @db.Uuid
+  tenantId      String?               @map("tenant_id") @db.Uuid
+  connectionId  String?               @map("connection_id") @db.Uuid
+  codeHash      String?               @unique @map("code_hash") @db.Char(64)
+  codeExpiresAt DateTime?             @map("code_expires_at")
+  createdAt     DateTime              @default(now()) @map("created_at")
+  client        McpOAuthClient        @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  user          User?                 @relation(fields: [userId], references: [id], onDelete: SetNull)
+  tenant        Tenant?               @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  connection    McpOAuthConnection?   @relation(fields: [connectionId], references: [id], onDelete: SetNull)
+
+  @@index([expiresAt])
+  @@map("mcp_oauth_authorization_requests")
+}
+
+model McpOAuthConnection {
+  id              String                         @id @default(uuid()) @db.Uuid
+  tenantId        String                         @map("tenant_id") @db.Uuid
+  userId          String                         @map("user_id") @db.Uuid
+  clientId        String                         @map("client_id") @db.Uuid
+  scope           String                         @db.VarChar(200)
+  resource        String                         @db.VarChar(512)
+  lastUsedAt      DateTime?                      @map("last_used_at")
+  revokedAt       DateTime?                      @map("revoked_at")
+  revokedByUserId String?                        @map("revoked_by_user_id") @db.Uuid
+  revokedReason   String?                        @map("revoked_reason") @db.VarChar(40)
+  createdAt       DateTime                       @default(now()) @map("created_at")
+  tenant          Tenant                         @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  user            User                           @relation("McpOAuthConnectionUser", fields: [userId], references: [id], onDelete: Cascade)
+  revokedByUser   User?                          @relation("McpOAuthConnectionRevokedBy", fields: [revokedByUserId], references: [id], onDelete: SetNull)
+  client          McpOAuthClient                 @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  tokens          McpOAuthToken[]
+  requests        McpOAuthAuthorizationRequest[]
+  toolCalls       McpToolCall[]
+
+  @@index([tenantId, revokedAt])
+  @@index([userId])
+  @@map("mcp_oauth_connections")
+}
+
+model McpOAuthToken {
+  id           String             @id @default(uuid()) @db.Uuid
+  connectionId String             @map("connection_id") @db.Uuid
+  kind         McpOAuthTokenKind
+  tokenHash    String             @unique @map("token_hash") @db.Char(64)
+  expiresAt    DateTime           @map("expires_at")
+  rotatedAt    DateTime?          @map("rotated_at")
+  createdAt    DateTime           @default(now()) @map("created_at")
+  connection   McpOAuthConnection @relation(fields: [connectionId], references: [id], onDelete: Cascade)
+
+  @@index([connectionId, kind])
+  @@index([expiresAt])
+  @@map("mcp_oauth_tokens")
 }

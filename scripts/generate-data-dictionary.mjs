@@ -16,7 +16,7 @@ const domains = [
   ["Financeiro", ["FinancialConfiguration", "PurchaseUnit", "Supplier", "FinancialAccount", "PaymentInstitutionConfiguration", "FinancialCategory", "PayableRecurrence", "Payable", "PayablePayment", "CashMovement", "FinancialAudit"]],
   ["Delivery e marketplaces", ["OrderPlatform", "DeliveryIntegration", "DeliveryIntegrationCredential", "DeliveryPlatformEvent", "PlatformOrderLink", "PlatformSyncAttempt", "PlatformCancellationReason", "PlatformDispute", "DeliveryIntegrationAudit"]],
   ["Jobs, exportações e notificações", ["ExportJob", "BackgroundJob", "BackgroundJobAttempt", "OperationalNotification"]],
-  ["MCP e assistentes de IA", ["StoreMcpConfiguration", "StoreMcpToken", "McpToolCall"]],
+  ["MCP e assistentes de IA", ["StoreMcpConfiguration", "StoreMcpToken", "McpToolCall", "McpOAuthClient", "McpOAuthAuthorizationRequest", "McpOAuthConnection", "McpOAuthToken"]],
 ];
 
 const purposes = {
@@ -94,6 +94,10 @@ const purposes = {
   StoreMcpConfiguration: "Habilitação do MCP da loja e áreas de dados expostas a assistentes de IA.",
   StoreMcpToken: "Token de acesso MCP da loja; guarda apenas o hash SHA-256 e um prefixo de identificação.",
   McpToolCall: "Registro de uso do MCP (consultas e recusas), retido por 90 dias.",
+  McpOAuthClient: "Aplicativo de IA identificado por Client ID Metadata Document (cache) ou registro dinâmico (DCR).",
+  McpOAuthAuthorizationRequest: "Pedido de autorização OAuth do authorize até a troca do código (PKCE, uso único).",
+  McpOAuthConnection: "Conexão autorizada entre aplicativo, usuário e uma loja; revogável e auditada.",
+  McpOAuthToken: "Tokens OAuth opacos (acesso 1h, renovação 30 dias com rotação), guardados apenas como SHA-256.",
 };
 
 function blocks(kind) {

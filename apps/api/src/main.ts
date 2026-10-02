@@ -3,7 +3,12 @@ import { NestFactory } from "@nestjs/core";
 import { DocumentBuilder, SwaggerModule } from "@nestjs/swagger";
 import { json, urlencoded } from "express";
 import { AppModule } from "./app.module";
-import { resolveAppRole, shouldEnableSwagger } from "./config/bootstrap-policy";
+import {
+  GLOBAL_PREFIX,
+  GLOBAL_PREFIX_EXCLUSIONS,
+  resolveAppRole,
+  shouldEnableSwagger,
+} from "./config/bootstrap-policy";
 
 export async function bootstrap(): Promise<void> {
   const role = resolveAppRole(process.env.APP_ROLE);
@@ -18,7 +23,7 @@ export async function bootstrap(): Promise<void> {
 
   app.use(json({ limit: bodyLimit }));
   app.use(urlencoded({ extended: true, limit: bodyLimit }));
-  app.setGlobalPrefix("api");
+  app.setGlobalPrefix(GLOBAL_PREFIX, { exclude: GLOBAL_PREFIX_EXCLUSIONS });
   app.enableCors({
     origin: allowedOrigins(),
     credentials: true,

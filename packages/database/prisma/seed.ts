@@ -240,6 +240,14 @@ async function main(): Promise<void> {
       sensitive: true,
     },
     {
+      key: "mcp.connect",
+      area: "Integracoes",
+      screen: "MCP / IA",
+      action: AccessPermissionAction.CREATE,
+      description: "Conectar assistentes de IA a loja pelo login (Claude, ChatGPT)",
+      sensitive: true,
+    },
+    {
       key: "pos.capture",
       area: "Operacao",
       screen: "Capturar pedido",
@@ -430,6 +438,7 @@ async function main(): Promise<void> {
       "integrations.sales.view",
       "integrations.sales.manage",
       "mcp.manage",
+      "mcp.connect",
     ],
   });
 

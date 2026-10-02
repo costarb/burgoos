@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { resolveAppRole, shouldEnableSwagger } from "./config/bootstrap-policy";
+import {
+  GLOBAL_PREFIX,
+  GLOBAL_PREFIX_EXCLUSIONS,
+  resolveAppRole,
+  shouldEnableSwagger,
+} from "./config/bootstrap-policy";
 
 describe("runtime bootstrap policy", () => {
   it.each(["api", "worker", "all"] as const)("resolves the %s role", (role) => {
@@ -17,5 +22,10 @@ describe("runtime bootstrap policy", () => {
   it("does not build the Swagger document in production", () => {
     expect(shouldEnableSwagger("production")).toBe(false);
     expect(shouldEnableSwagger("development")).toBe(true);
+  });
+
+  it("keeps discovery documents outside the api prefix", () => {
+    expect(GLOBAL_PREFIX).toBe("api");
+    expect(GLOBAL_PREFIX_EXCLUSIONS).toEqual([".well-known/(.*)"]);
   });
 });

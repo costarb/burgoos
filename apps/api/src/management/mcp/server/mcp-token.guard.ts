@@ -6,22 +6,34 @@ import {
   Logger,
   UnauthorizedException,
 } from "@nestjs/common";
+import { ConfigService } from "@nestjs/config";
 import { McpToolCallResult } from "@prisma/client";
 import type { Response } from "express";
 import { PrismaService } from "../../../platform/database/prisma.service";
 import { normalizeAreas } from "../mcp-data-areas";
 import { hashMcpToken, isWellFormedMcpToken, mcpTokenStatus } from "../admin/mcp-token.util";
+import { isOAuthAccessToken, OAuthCredentialResolver } from "../oauth/oauth-credential.resolver";
+import { MCP_OAUTH_SCOPE, McpOAuthUrls, resolveMcpOAuthUrls } from "../oauth/oauth-urls";
 import { McpCallLogService } from "./mcp-call-log.service";
-import { McpDeniedReason, McpRequest } from "./mcp-context";
+import { McpDeniedReason, McpRequest, McpRequestContext } from "./mcp-context";
 
 export const MCP_UNAUTHORIZED_BODY = {
   error: "unauthorized",
   message: "Token MCP invalido ou sem acesso.",
 } as const;
 
+interface DeniedCall {
+  tenantId: string;
+  tokenId?: string | null;
+  connectionId?: string | null;
+  reason: McpDeniedReason;
+  label: string;
+}
+
 /**
- * Resolves the store from the bearer token. Every refusal answers the same 401 so callers cannot
- * learn whether a token or store exists; refusals of known tokens are kept in the usage log.
+ * Resolves the store from the bearer credential: a phase-1 store token (`rrf_mcp_`) or an OAuth
+ * access token (`rrf_oat_`). Every refusal answers the same 401, pointing OAuth clients to the
+ * protected resource metadata; refusals of known credentials are kept in the usage log.
  */
 @Injectable()
 export class McpTokenGuard implements CanActivate {
@@ -29,16 +41,49 @@ export class McpTokenGuard implements CanActivate {
 
   constructor(
     @Inject(PrismaService) private readonly prisma: PrismaService,
-    @Inject(McpCallLogService) private readonly callLog: McpCallLogService
+    @Inject(McpCallLogService) private readonly callLog: McpCallLogService,
+    @Inject(OAuthCredentialResolver) private readonly oauth: OAuthCredentialResolver,
+    @Inject(ConfigService) private readonly config: ConfigService
   ) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
     const request = context.switchToHttp().getRequest<McpRequest>();
     const response = context.switchToHttp().getResponse<Response>();
-    const token = bearerToken(request.headers.authorization);
+    const urls = resolveMcpOAuthUrls(
+      {
+        mcpPublicUrl: this.config.get<string>("MCP_PUBLIC_URL"),
+        webPublicUrl: this.config.get<string>("WEB_PUBLIC_URL"),
+        webOrigin: this.config.get<string>("WEB_ORIGIN"),
+      },
+      request
+    );
+    const credential = bearerToken(request.headers.authorization);
 
-    if (!token || !isWellFormedMcpToken(token)) return this.reject(response);
+    let mcpContext: McpRequestContext | null = null;
+    if (credential && isWellFormedMcpToken(credential)) {
+      mcpContext = await this.resolveStoreToken(credential, request);
+    } else if (credential && isOAuthAccessToken(credential)) {
+      const result = await this.oauth.resolve(credential, urls.resource);
+      if (result.status === "ok") mcpContext = result.context;
+      else if (result.status === "denied") {
+        this.recordDenied(request, {
+          tenantId: result.tenantId,
+          connectionId: result.connectionId,
+          reason: result.reason,
+          label: `connectionId=${result.connectionId}`,
+        });
+      }
+    }
 
+    if (!mcpContext) return this.reject(response, urls);
+
+    request.mcpContext = mcpContext;
+    if (mcpContext.tokenId) void this.callLog.touchToken(mcpContext.tokenId);
+    if (mcpContext.connectionId) void this.callLog.touchConnection(mcpContext.connectionId);
+    return true;
+  }
+
+  private async resolveStoreToken(token: string, request: McpRequest): Promise<McpRequestContext | null> {
     const record = await this.prisma.storeMcpToken.findUnique({
       where: { tokenHash: hashMcpToken(token) },
       include: {
@@ -54,39 +99,48 @@ export class McpTokenGuard implements CanActivate {
         },
       },
     });
-
-    if (!record || !record.tenant) return this.reject(response);
+    if (!record || !record.tenant) return null;
 
     const reason = deniedReason(record);
     if (reason) {
-      void this.callLog.record({
+      this.recordDenied(request, {
         tenantId: record.tenantId,
         tokenId: record.id,
-        method: rpcMethod(request.body),
-        target: rpcTarget(request.body),
-        result: McpToolCallResult.DENIED,
-        errorCode: reason,
-        durationMs: 0,
+        reason,
+        label: `tokenPrefix=${record.tokenPrefix}`,
       });
-      this.logger.warn(
-        `mcp.denied tenantId=${record.tenantId} tokenPrefix=${record.tokenPrefix} reason=${reason}`
-      );
-      return this.reject(response);
+      return null;
     }
 
-    request.mcpContext = {
+    return {
       tenantId: record.tenantId,
       tokenId: record.id,
+      connectionId: null,
       enabledAreas: normalizeAreas(record.tenant.mcpConfiguration?.enabledAreas ?? []),
       storeName: record.tenant.name,
       storeSlug: record.tenant.slug,
     };
-    void this.callLog.touchToken(record.id);
-    return true;
   }
 
-  private reject(response: Response): never {
-    response.setHeader("WWW-Authenticate", 'Bearer realm="rrfive-mcp"');
+  private recordDenied(request: McpRequest, denied: DeniedCall): void {
+    void this.callLog.record({
+      tenantId: denied.tenantId,
+      tokenId: denied.tokenId ?? null,
+      connectionId: denied.connectionId ?? null,
+      method: rpcMethod(request.body),
+      target: rpcTarget(request.body),
+      result: McpToolCallResult.DENIED,
+      errorCode: denied.reason,
+      durationMs: 0,
+    });
+    this.logger.warn(`mcp.denied tenantId=${denied.tenantId} ${denied.label} reason=${denied.reason}`);
+  }
+
+  private reject(response: Response, urls: McpOAuthUrls): never {
+    response.setHeader(
+      "WWW-Authenticate",
+      `Bearer realm="rrfive-mcp", resource_metadata="${urls.protectedResourceMetadata}", scope="${MCP_OAUTH_SCOPE}"`
+    );
     throw new UnauthorizedException(MCP_UNAUTHORIZED_BODY);
   }
 }

@@ -1,10 +1,18 @@
 import type { McpDataArea } from "@prisma/client";
 import type { Request } from "express";
 
-/** Store resolved from the MCP token; the only source of tenant for every MCP call. */
+/**
+ * Store resolved from the credential (a phase-1 store token or an OAuth connection); the only
+ * source of tenant for every MCP call.
+ */
 export interface McpRequestContext {
   tenantId: string;
-  tokenId: string;
+  /** Phase-1 store token, when the call used `rrf_mcp_`. */
+  tokenId: string | null;
+  /** OAuth connection, when the call used `rrf_oat_`. */
+  connectionId?: string | null;
+  userId?: string | null;
+  clientName?: string | null;
   enabledAreas: McpDataArea[];
   storeName: string;
   storeSlug: string;
@@ -27,7 +35,10 @@ export type McpDeniedReason =
   | "TOKEN_EXPIRED"
   | "MCP_DISABLED"
   | "STORE_INACTIVE"
-  | "RATE_LIMITED";
+  | "RATE_LIMITED"
+  | "CONNECTION_REVOKED"
+  | "USER_INACTIVE"
+  | "STORE_ACCESS_LOST";
 
 /** Business error surfaced to the LLM as a tool result with `isError: true`. */
 export class McpToolError extends Error {

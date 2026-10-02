@@ -59,6 +59,9 @@ export interface McpUsageEntry {
   occurredAt: string;
   tokenName: string | null;
   tokenPrefix: string | null;
+  connectionId: string | null;
+  clientName: string | null;
+  userName: string | null;
   method: string;
   target: string | null;
   arguments: Record<string, unknown> | null;
@@ -81,4 +84,35 @@ export interface McpUsageQuery {
   result?: McpToolCallResult;
   page?: number;
   pageSize?: number;
+}
+
+export type McpAuthorizationBlockedReason = "MISSING_PERMISSION" | "NO_ELIGIBLE_STORE" | "PLATFORM_ADMIN";
+
+export interface McpAuthorizationStore {
+  id: string;
+  name: string;
+  areas: Array<{ area: McpDataArea; label: string }>;
+}
+
+export interface McpAuthorizationRequest {
+  id: string;
+  client: { name: string; redirectHost: string; kind: "CIMD" | "DCR"; loopbackOnly: boolean };
+  scopeDescription: string;
+  expiresAt: string;
+  canAuthorize: boolean;
+  blockedReason: McpAuthorizationBlockedReason | null;
+  stores: McpAuthorizationStore[];
+}
+
+export interface McpConnection {
+  id: string;
+  clientName: string;
+  clientKind: "CIMD" | "DCR";
+  redirectHost: string;
+  userName: string;
+  status: "ACTIVE" | "REVOKED";
+  createdAt: string;
+  lastUsedAt: string | null;
+  revokedAt: string | null;
+  revokedReason: string | null;
 }

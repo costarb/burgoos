@@ -107,6 +107,14 @@ export const ACCESS_PERMISSIONS = [
     sensitive: true,
   },
   {
+    key: "mcp.connect",
+    area: "Integracoes",
+    screen: "MCP / IA",
+    action: "CREATE",
+    description: "Conectar assistentes de IA a loja pelo login (Claude, ChatGPT)",
+    sensitive: true,
+  },
+  {
     key: "pos.capture",
     area: "Operacao",
     screen: "Capturar pedido",

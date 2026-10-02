@@ -63,6 +63,7 @@ export class McpToolRunner {
     void this.callLog.record({
       tenantId: context.tenantId,
       tokenId: context.tokenId,
+      connectionId: context.connectionId ?? null,
       method: target.method,
       target: target.target,
       arguments: target.args,
@@ -72,7 +73,7 @@ export class McpToolRunner {
     });
 
     this.logger.log(
-      `mcp.call tenantId=${context.tenantId} tokenId=${context.tokenId} ${target.method} ${target.target} result=${
+      `mcp.call tenantId=${context.tenantId} credential=${context.connectionId ?? context.tokenId} ${target.method} ${target.target} result=${
         outcome.ok ? "SUCCESS" : outcome.code
       } durationMs=${Date.now() - startedAt}`
     );

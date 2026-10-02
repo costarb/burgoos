@@ -4,6 +4,7 @@ import request from "supertest";
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { AccessAuditService } from "../src/management/access/access-audit.service";
 import { McpUsageService } from "../src/management/mcp/admin/mcp-usage.service";
+import { OAuthConnectionService } from "../src/management/mcp/oauth/oauth-connection.service";
 import { StoreMcpAdminController } from "../src/management/mcp/admin/store-mcp-admin.controller";
 import { StoreMcpConfigurationService } from "../src/management/mcp/admin/store-mcp-configuration.service";
 import { StoreMcpTokenService } from "../src/management/mcp/admin/store-mcp-token.service";
@@ -29,6 +30,7 @@ describe("store MCP admin integration", () => {
         StoreMcpConfigurationService,
         StoreMcpTokenService,
         McpUsageService,
+        OAuthConnectionService,
         AccessAuditService,
       ],
       env: { MCP_PUBLIC_URL: "https://api.example.com/api/mcp" },

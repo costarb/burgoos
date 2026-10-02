@@ -9,6 +9,9 @@ export interface McpUsageEntryView {
   occurredAt: string;
   tokenName: string | null;
   tokenPrefix: string | null;
+  connectionId: string | null;
+  clientName: string | null;
+  userName: string | null;
   method: string;
   target: string | null;
   arguments: Prisma.JsonValue | null;
@@ -48,7 +51,10 @@ export class McpUsageService {
     const [rows, total] = await Promise.all([
       this.prisma.mcpToolCall.findMany({
         where,
-        include: { token: { select: { name: true, tokenPrefix: true } } },
+        include: {
+          token: { select: { name: true, tokenPrefix: true } },
+          connection: { select: { client: { select: { name: true } }, user: { select: { name: true } } } },
+        },
         orderBy: { occurredAt: "desc" },
         skip: (page - 1) * pageSize,
         take: pageSize,
@@ -65,6 +71,9 @@ export class McpUsageService {
         occurredAt: row.occurredAt.toISOString(),
         tokenName: row.token?.name ?? null,
         tokenPrefix: row.token?.tokenPrefix ?? null,
+        connectionId: row.connectionId ?? null,
+        clientName: row.connection?.client.name ?? null,
+        userName: row.connection?.user.name ?? null,
         method: row.method,
         target: row.target,
         arguments: row.arguments ?? null,

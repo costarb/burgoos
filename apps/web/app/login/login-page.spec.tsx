@@ -111,6 +111,35 @@ describe("login page", () => {
     expect(locationAssign).toHaveBeenCalledWith("/admin");
   });
 
+  it.each([
+    ["?next=%2Fconectar%2Fmcp%3Fpedido%3Dabc", "/conectar/mcp?pedido=abc"],
+    ["?next=https%3A%2F%2Fevil.example.com", "/admin"],
+    ["?next=%2F%2Fevil.example.com", "/admin"],
+  ])("returns to a safe internal next path (%s)", async (search, expected) => {
+    vi.stubGlobal("location", { ...window.location, search, assign: locationAssign });
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => ({
+        ok: true,
+        json: async () => ({
+          accessToken: "access-token",
+          activeStoreId: null,
+          allowedStores: [],
+          permissions: [],
+          accessTokenExpiresAt: "2026-06-10T22:15:00.000Z",
+          user: { id: "u1", login: "a@b.c", name: "A", email: "a@b.c", status: "ACTIVE", isMaster: false },
+        }),
+      }))
+    );
+
+    await act(async () => {
+      root.render(<LoginPage />);
+    });
+    await fillAndSubmit();
+
+    expect(locationAssign).toHaveBeenCalledWith(expected);
+  });
+
   it("falls back to platform login and redirects platform admins to stores", async () => {
     const session = {
       accessToken: "platform-access-token",

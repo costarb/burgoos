@@ -1,6 +1,7 @@
 import { randomUUID } from "crypto";
 import { McpDataArea, McpToolCallResult } from "@prisma/client";
 import { vi } from "vitest";
+import { FakeAssignment, FakeOAuthUser, installOAuthModels } from "./mcp-oauth-fake";
 
 /**
  * In-memory stand-in for the Prisma models used by the MCP feature. It understands only the
@@ -16,10 +17,7 @@ export interface FakeTenant {
   deactivatedAt: Date | null;
 }
 
-export interface FakeUser {
-  id: string;
-  name: string;
-}
+export type FakeUser = FakeOAuthUser;
 
 export interface FakeMcpConfiguration {
   id: string;
@@ -77,6 +75,11 @@ export function createMcpFakePrisma() {
     tokens: [] as FakeMcpToken[],
     calls: [] as FakeMcpToolCall[],
     audits: [] as FakeAuditEvent[],
+    assignments: [] as FakeAssignment[],
+    oauthClients: [] as Array<Record<string, unknown> & { id: string }>,
+    oauthRequests: [] as Array<Record<string, unknown> & { id: string }>,
+    oauthConnections: [] as Array<Record<string, unknown> & { id: string }>,
+    oauthTokens: [] as Array<Record<string, unknown> & { id: string }>,
   };
 
   const userName = (id: string | null) =>
@@ -275,14 +278,20 @@ export function createMcpFakePrisma() {
             .sort((a, b) => b.occurredAt.getTime() - a.occurredAt.getTime())
             .slice(skip, take === undefined ? undefined : skip + take);
           if (select) return rows.map((row) => ({ id: row.id }));
-          return rows.map((call) =>
-            include?.token
-              ? {
-                  ...call,
-                  token: state.tokens.find((token) => token.id === call.tokenId) ?? null,
-                }
-              : call
-          );
+          return rows.map((call) => {
+            if (!include?.token) return call;
+            const connection = state.oauthConnections.find((item) => item.id === (call as { connectionId?: string }).connectionId);
+            return {
+              ...call,
+              token: state.tokens.find((token) => token.id === call.tokenId) ?? null,
+              connection: connection
+                ? {
+                    client: state.oauthClients.find((item) => item.id === connection.clientId) ?? null,
+                    user: state.users.find((item) => item.id === connection.userId) ?? null,
+                  }
+                : null,
+            };
+          });
         }
       ),
       count: vi.fn(
@@ -304,6 +313,8 @@ export function createMcpFakePrisma() {
       }),
     },
   };
+
+  installOAuthModels(prisma as unknown as Record<string, unknown>, state);
 
   // Other modules touch unrelated models on startup (schedulers, recovery loops); answer them
   // with empty results so the application boots.
@@ -349,4 +360,9 @@ export function resetMcpFakePrisma(prisma: McpFakePrisma) {
   prisma.state.tokens = [];
   prisma.state.calls = [];
   prisma.state.audits = [];
+  prisma.state.assignments = [];
+  prisma.state.oauthClients = [];
+  prisma.state.oauthRequests = [];
+  prisma.state.oauthConnections = [];
+  prisma.state.oauthTokens = [];
 }
