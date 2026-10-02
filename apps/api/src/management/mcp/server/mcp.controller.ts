@@ -88,6 +88,7 @@ export class McpController {
     void this.callLog.record({
       tenantId: context.tenantId,
       tokenId: context.tokenId,
+      connectionId: context.connectionId ?? null,
       method: "tools/call",
       target: tool.name,
       result: McpToolCallResult.ERROR,

@@ -11,7 +11,7 @@ export abstract class FixedWindowRateLimitGuard implements CanActivate {
   private readonly buckets = new Map<string, Bucket>();
 
   protected abstract readonly limit: number;
-  protected readonly windowMs = 60_000;
+  protected readonly windowMs: number = 60_000;
   protected readonly namespace: string = "default";
 
   canActivate(context: ExecutionContext): boolean {

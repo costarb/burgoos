@@ -4,6 +4,7 @@ import type {
   CreatedMcpToken,
   McpConfiguration,
   McpConfigurationPayload,
+  McpConnection,
   McpToken,
   McpUsagePage,
   McpUsageQuery,
@@ -15,7 +16,9 @@ import {
   getAdminToken,
   getMcpConfiguration,
   getMcpUsage,
+  listMcpConnections,
   listMcpTokens,
+  revokeMcpConnection,
   revokeMcpToken,
   updateMcpConfiguration,
 } from "../../../../lib/api";
@@ -30,10 +33,11 @@ function failure(error: unknown, fallback: string): OperationState {
 
 export default async function McpSettingsPage() {
   const token = await getAdminToken();
-  const [configuration, tokens, usage] = await Promise.all([
+  const [configuration, tokens, usage, connections] = await Promise.all([
     getMcpConfiguration(token),
     listMcpTokens(token),
     getMcpUsage(token, { pageSize: 25 }),
+    listMcpConnections(token),
   ]);
 
   async function saveConfiguration(
@@ -80,6 +84,18 @@ export default async function McpSettingsPage() {
     }
   }
 
+  async function revokeConnection(id: string): Promise<McpActionState<McpConnection>> {
+    "use server";
+
+    try {
+      const data = await revokeMcpConnection(await getAdminToken(), id);
+      revalidatePath("/admin/settings/mcp");
+      return { status: "success", message: "Conexao revogada.", data };
+    } catch (error) {
+      return failure(error, "Nao foi possivel revogar a conexao.");
+    }
+  }
+
   async function loadUsage(query: McpUsageQuery): Promise<McpActionState<McpUsagePage>> {
     "use server";
 
@@ -100,6 +116,8 @@ export default async function McpSettingsPage() {
       saveConfigurationAction={saveConfiguration}
       tokens={tokens}
       usage={usage}
+      connections={connections}
+      revokeConnectionAction={revokeConnection}
     />
   );
 }

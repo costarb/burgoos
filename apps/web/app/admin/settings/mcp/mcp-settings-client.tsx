@@ -6,6 +6,7 @@ import type {
   CreatedMcpToken,
   McpConfiguration,
   McpConfigurationPayload,
+  McpConnection,
   McpDataArea,
   McpToken,
   McpTokenExpiration,
@@ -18,6 +19,8 @@ import { ConfirmationDialog } from "../../../../components/admin/confirmation-di
 import { OperationFeedback } from "../../../../components/admin/operation-feedback";
 import { idleOperationState } from "../../../../lib/operation-state";
 import type { McpActionState } from "./mcp-action-state";
+import { McpConnectGuide } from "./mcp-connect-guide";
+import { McpConnectionsTable } from "./mcp-connections-table";
 import { McpTokenCreatedDialog } from "./mcp-token-created-dialog";
 import { McpUsageTable } from "./mcp-usage-table";
 
@@ -31,6 +34,8 @@ interface McpSettingsClientProps {
   revokeTokenAction: (id: string) => Promise<McpActionState<McpToken>>;
   usage: McpUsagePage;
   loadUsageAction: (query: McpUsageQuery) => Promise<McpActionState<McpUsagePage>>;
+  connections: McpConnection[];
+  revokeConnectionAction: (id: string) => Promise<McpActionState<McpConnection>>;
 }
 
 const EXPIRATION_OPTIONS: Array<{ value: string; label: string }> = [
@@ -54,6 +59,8 @@ export function McpSettingsClient({
   revokeTokenAction,
   usage,
   loadUsageAction,
+  connections: initialConnections,
+  revokeConnectionAction,
 }: McpSettingsClientProps) {
   const [tab, setTab] = useState<"settings" | "usage">("settings");
   const [configuration, setConfiguration] = useState(initialConfiguration);
@@ -64,9 +71,12 @@ export function McpSettingsClient({
   const [expiration, setExpiration] = useState("90");
   const [created, setCreated] = useState<CreatedMcpToken | null>(null);
   const [revoking, setRevoking] = useState<McpToken | null>(null);
+  const [connections, setConnections] = useState(initialConnections);
+  const [revokingConnection, setRevokingConnection] = useState<McpConnection | null>(null);
 
   useEffect(() => setConfiguration(initialConfiguration), [initialConfiguration]);
   useEffect(() => setTokens(initialTokens), [initialTokens]);
+  useEffect(() => setConnections(initialConnections), [initialConnections]);
 
   const activeTokens = tokens.filter((token) => token.status === "ACTIVE").length;
 
@@ -142,6 +152,18 @@ export function McpSettingsClient({
     );
   }
 
+  function confirmRevokeConnection() {
+    if (!revokingConnection) return;
+    const target = revokingConnection;
+    return run(
+      () => revokeConnectionAction(target.id),
+      (data) => {
+        setConnections((current) => current.map((item) => (item.id === data.id ? data : item)));
+        setRevokingConnection(null);
+      }
+    );
+  }
+
   return (
     <main className="min-h-screen bg-slate-50 px-6 py-8 text-slate-900">
       <section className="mx-auto max-w-5xl space-y-6">
@@ -153,8 +175,8 @@ export function McpSettingsClient({
             </h1>
             <p className="mt-2 max-w-2xl text-sm text-slate-600">
               Conecte assistentes de IA (Claude, Cursor e outros clientes MCP) aos numeros desta
-              loja para gerar analises e insights. O acesso e somente leitura, por token, e nunca
-              inclui dados pessoais de clientes.
+              loja para gerar analises e insights. O acesso e somente leitura e nunca inclui dados
+              pessoais de clientes.
             </p>
           </div>
           <div className="flex items-center gap-3">
@@ -220,6 +242,14 @@ export function McpSettingsClient({
           <McpUsageTable initialPage={usage} loadUsageAction={loadUsageAction} tokens={tokens} />
         ) : (
           <>
+            <McpConnectGuide enabled={configuration.enabled} serverUrl={configuration.serverUrl} />
+
+            <McpConnectionsTable
+              busy={busy}
+              connections={connections}
+              onRevoke={(connection) => setRevokingConnection(connection)}
+            />
+
             <section className="rounded-md border border-slate-200 bg-white p-5 shadow-sm">
               <h2 className="text-lg font-semibold">Areas de dados</h2>
               <p className="mt-1 text-sm text-slate-600">
@@ -259,12 +289,13 @@ export function McpSettingsClient({
             <section className="rounded-md border border-slate-200 bg-white p-5 shadow-sm">
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <h2 className="flex items-center gap-2 text-lg font-semibold">
-                  <KeyRound aria-hidden className="h-5 w-5" /> Tokens de acesso
+                  <KeyRound aria-hidden className="h-5 w-5" /> Tokens de acesso (avancado)
                 </h2>
                 <span className="text-sm text-slate-500">{activeTokens} de 10 ativos</span>
               </div>
               <p className="mt-1 text-sm text-slate-600">
-                Cada token da acesso somente a esta loja. O valor completo aparece uma unica vez, ao
+                Para clientes sem login (Cursor, Claude Desktop via mcp-remote, scripts). Cada token da
+                acesso somente a esta loja. O valor completo aparece uma unica vez, ao
                 gerar; a coluna Identificador mostra apenas o inicio, para reconhecer o token.
                 Endereco do servidor:{" "}
                 <code className="rounded bg-slate-100 px-1.5 py-0.5 text-xs">
@@ -384,6 +415,20 @@ export function McpSettingsClient({
       {created ? (
         <McpTokenCreatedDialog created={created} onClose={() => setCreated(null)} />
       ) : null}
+
+      <ConfirmationDialog
+        busy={busy}
+        confirmLabel="Revogar conexao"
+        description={
+          revokingConnection
+            ? `${revokingConnection.clientName}, autorizado por ${revokingConnection.userName}, perdera o acesso imediatamente.`
+            : ""
+        }
+        onCancel={() => setRevokingConnection(null)}
+        onConfirm={() => void confirmRevokeConnection()}
+        open={revokingConnection !== null}
+        title="Revogar conexao?"
+      />
 
       <ConfirmationDialog
         busy={busy}

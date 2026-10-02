@@ -1,0 +1,74 @@
+openapi: 3.0.3
+info:
+  title: RRFive OS - Conexoes OAuth do MCP
+  version: 0.2.0
+  description: >
+    Gestao das conexoes OAuth (assistentes conectados pelo login) da loja ativa.
+    Exige `mcp.manage` (OWNER, ADMIN e master passam automaticamente).
+servers:
+  - url: /api
+security:
+  - bearerAuth: []
+paths:
+  /admin/mcp/connections:
+    get:
+      summary: Lista as conexoes OAuth da loja ativa
+      responses:
+        "200":
+          description: Conexoes (ativas primeiro, depois revogadas)
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/McpConnection" }
+  /admin/mcp/connections/{id}/revoke:
+    post:
+      summary: Revoga uma conexao (efeito imediato, idempotente)
+      parameters:
+        - { in: path, name: id, required: true, schema: { type: string, format: uuid } }
+      responses:
+        "200":
+          description: Conexao revogada
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/McpConnection" }
+        "404":
+          description: Conexao inexistente ou de outra loja
+  /admin/mcp/usage:
+    get:
+      summary: (fase 1) Log de uso; itens passam a trazer origem OAuth
+      responses:
+        "200":
+          description: Pagina do log
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  items:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        tokenName: { type: string, nullable: true }
+                        tokenPrefix: { type: string, nullable: true }
+                        connectionId: { type: string, nullable: true }
+                        clientName: { type: string, nullable: true, example: Claude }
+                        userName: { type: string, nullable: true }
+components:
+  securitySchemes:
+    bearerAuth: { type: http, scheme: bearer, bearerFormat: JWT }
+  schemas:
+    McpConnection:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        clientName: { type: string, example: Claude }
+        clientKind: { type: string, enum: [CIMD, DCR] }
+        redirectHost: { type: string, example: claude.ai }
+        userName: { type: string }
+        status: { type: string, enum: [ACTIVE, REVOKED] }
+        createdAt: { type: string, format: date-time }
+        lastUsedAt: { type: string, format: date-time, nullable: true }
+        revokedAt: { type: string, format: date-time, nullable: true }
+        revokedReason: { type: string, nullable: true, enum: [MANUAL, REFRESH_REUSE, CODE_REUSE, null] }

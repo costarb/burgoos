@@ -8,6 +8,7 @@ const LAST_USED_THROTTLE_MS = 60_000;
 export interface McpCallRecord {
   tenantId: string;
   tokenId: string | null;
+  connectionId?: string | null;
   method: string;
   target?: string | null;
   arguments?: unknown;
@@ -29,6 +30,7 @@ export class McpCallLogService {
         data: {
           tenantId: call.tenantId,
           tokenId: call.tokenId,
+          connectionId: call.connectionId ?? null,
           method: call.method.slice(0, 40),
           target: call.target ? call.target.slice(0, 80) : null,
           arguments: sanitizeArguments(call.arguments),
@@ -43,6 +45,27 @@ export class McpCallLogService {
           `mcp.call_log_failed tenantId=${call.tenantId} method=${call.method} ${
             error instanceof Error ? error.message : String(error)
           }`
+        );
+      });
+  }
+
+  /** Updates the OAuth connection's `lastUsedAt` at most once per minute. */
+  touchConnection(connectionId: string, now = new Date()): Promise<void> {
+    return this.prisma.mcpOAuthConnection
+      .updateMany({
+        where: {
+          id: connectionId,
+          OR: [
+            { lastUsedAt: null },
+            { lastUsedAt: { lt: new Date(now.getTime() - LAST_USED_THROTTLE_MS) } },
+          ],
+        },
+        data: { lastUsedAt: now },
+      })
+      .then(() => undefined)
+      .catch((error: unknown) => {
+        this.logger.warn(
+          `mcp.touch_connection_failed connectionId=${connectionId} ${error instanceof Error ? error.message : String(error)}`
         );
       });
   }

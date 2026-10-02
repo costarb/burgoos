@@ -4,6 +4,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type {
   CreatedMcpToken,
   McpConfiguration,
+  McpConnection,
   McpToken,
   McpUsageEntry,
   McpUsagePage,
@@ -17,6 +18,7 @@ describe("McpSettingsClient", () => {
   const createTokenAction = vi.fn();
   const revokeTokenAction = vi.fn();
   const loadUsageAction = vi.fn();
+  const revokeConnectionAction = vi.fn();
 
   beforeEach(() => {
     (
@@ -29,6 +31,7 @@ describe("McpSettingsClient", () => {
     createTokenAction.mockReset();
     revokeTokenAction.mockReset();
     loadUsageAction.mockReset();
+    revokeConnectionAction.mockReset();
   });
 
   afterEach(() => {
@@ -177,7 +180,53 @@ describe("McpSettingsClient", () => {
     expect(container.textContent).toContain("Nenhuma chamada registrada.");
   });
 
-  async function render(config: McpConfiguration, tokens: McpToken[], usage = usagePage([])) {
+  it("shows the server address and the steps per client", async () => {
+    await render(configuration({ enabled: true }), []);
+
+    expect(text("mcp-server-url")).toBe("https://api.example.com/api/mcp");
+    expect(text("mcp-connect-steps")).toContain("Adicionar conector personalizado");
+    await click(button("ChatGPT"));
+    expect(text("mcp-connect-steps")).toContain("autenticacao OAuth");
+    expect(container.textContent).toContain("Tokens de acesso (avancado)");
+  });
+
+  it("lists authorized connections and revokes one after confirmation", async () => {
+    revokeConnectionAction.mockResolvedValue({
+      status: "success",
+      message: "Conexao revogada.",
+      data: connection({ status: "REVOKED", revokedAt: "2026-10-02T12:00:00.000Z", revokedReason: "MANUAL" }),
+    });
+    await render(configuration({ enabled: true }), [], usagePage([]), [connection()]);
+
+    expect(container.textContent).toContain("Conexoes autorizadas");
+    expect(container.textContent).toContain("1 de 20 ativas");
+    expect(container.textContent).toContain("Dono Centro");
+    await click(button("Revogar"));
+    expect(container.textContent).toContain("Revogar conexao?");
+    await click(button("Revogar conexao"));
+
+    expect(revokeConnectionAction).toHaveBeenCalledWith("conn-1");
+    expect(container.textContent).toContain("Revogada na tela");
+    expect(container.textContent).not.toContain("Revogar conexao?");
+  });
+
+  it("shows OAuth calls in the usage log by app and user", async () => {
+    await render(
+      configuration({ enabled: true }),
+      [],
+      usagePage([usageEntry({ tokenName: null, connectionId: "conn-1", clientName: "Claude", userName: "Dono Centro" })])
+    );
+    await click(button("Uso"));
+    expect(container.textContent).toContain("Claude");
+    expect(container.textContent).toContain("Dono Centro");
+  });
+
+  async function render(
+    config: McpConfiguration,
+    tokens: McpToken[],
+    usage = usagePage([]),
+    connections: McpConnection[] = []
+  ) {
     await act(async () => {
       root.render(
         <McpSettingsClient
@@ -188,6 +237,8 @@ describe("McpSettingsClient", () => {
           saveConfigurationAction={saveConfigurationAction}
           tokens={tokens}
           usage={usage}
+          connections={connections}
+          revokeConnectionAction={revokeConnectionAction}
         />
       );
     });
@@ -288,6 +339,9 @@ function usageEntry(overrides: Partial<McpUsageEntry> = {}): McpUsageEntry {
     occurredAt: "2026-10-01T12:00:00.000Z",
     tokenName: "Notebook",
     tokenPrefix: "rrf_mcp_abc123",
+    connectionId: null,
+    clientName: null,
+    userName: null,
     method: "tools/call",
     target: "resumo_vendas",
     arguments: { inicio: "2026-09-01" },
@@ -300,4 +354,20 @@ function usageEntry(overrides: Partial<McpUsageEntry> = {}): McpUsageEntry {
 
 function usagePage(items: McpUsageEntry[]): McpUsagePage {
   return { page: 1, pageSize: 25, total: items.length, items };
+}
+
+function connection(overrides: Partial<McpConnection> = {}): McpConnection {
+  return {
+    id: "conn-1",
+    clientName: "Claude",
+    clientKind: "CIMD",
+    redirectHost: "claude.ai",
+    userName: "Dono Centro",
+    status: "ACTIVE",
+    createdAt: "2026-10-02T10:00:00.000Z",
+    lastUsedAt: null,
+    revokedAt: null,
+    revokedReason: null,
+    ...overrides,
+  };
 }

@@ -11,3 +11,8 @@ export function resolveAppRole(value: string | undefined): AppRole {
 export function shouldEnableSwagger(nodeEnv: string | undefined): boolean {
   return nodeEnv !== "production";
 }
+
+export const GLOBAL_PREFIX = "api";
+
+/** OAuth/MCP discovery documents (RFC 8414, RFC 9728) must live at the origin root. */
+export const GLOBAL_PREFIX_EXCLUSIONS = [".well-known/(.*)"];

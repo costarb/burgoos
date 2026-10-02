@@ -5,7 +5,7 @@
 
 ## Escopo e leitura
 
-Este catálogo descreve o modelo PostgreSQL atual exposto pelo Prisma: **81 entidades** e **80 enums**. Ele documenta nomes lógicos e físicos, tipos, nulabilidade, chaves, defaults, relacionamentos, índices e finalidade de negócio. Não registra valores de credenciais, dados pessoais reais nem conteúdo de produção.
+Este catálogo descreve o modelo PostgreSQL atual exposto pelo Prisma: **85 entidades** e **83 enums**. Ele documenta nomes lógicos e físicos, tipos, nulabilidade, chaves, defaults, relacionamentos, índices e finalidade de negócio. Não registra valores de credenciais, dados pessoais reais nem conteúdo de produção.
 
 ### Convenções
 
@@ -30,7 +30,7 @@ Este catálogo descreve o modelo PostgreSQL atual exposto pelo Prisma: **81 enti
 | Financeiro | `FinancialConfiguration`, `PurchaseUnit`, `Supplier`, `FinancialAccount`, `PaymentInstitutionConfiguration`, `FinancialCategory`, `PayableRecurrence`, `Payable`, `PayablePayment`, `CashMovement`, `FinancialAudit` |
 | Delivery e marketplaces | `OrderPlatform`, `DeliveryIntegration`, `DeliveryIntegrationCredential`, `DeliveryPlatformEvent`, `PlatformOrderLink`, `PlatformSyncAttempt`, `PlatformCancellationReason`, `PlatformDispute`, `DeliveryIntegrationAudit` |
 | Jobs, exportações e notificações | `ExportJob`, `BackgroundJob`, `BackgroundJobAttempt`, `OperationalNotification` |
-| MCP e assistentes de IA | `StoreMcpConfiguration`, `StoreMcpToken`, `McpToolCall` |
+| MCP e assistentes de IA | `StoreMcpConfiguration`, `StoreMcpToken`, `McpToolCall`, `McpOAuthClient`, `McpOAuthAuthorizationRequest`, `McpOAuthConnection`, `McpOAuthToken` |
 
 ## Relações centrais
 
@@ -153,6 +153,8 @@ erDiagram
 | `mcpConfiguration` | `—` | `StoreMcpConfiguration?` | não | FK/relação | Referência relacionada a StoreMcpConfiguration. |
 | `mcpTokens` | `—` | `StoreMcpToken[]` | coleção | relação 1:N/N:N | Coleção relacionada de StoreMcpToken. |
 | `mcpToolCalls` | `—` | `McpToolCall[]` | coleção | relação 1:N/N:N | Coleção relacionada de McpToolCall. |
+| `mcpOAuthConnections` | `—` | `McpOAuthConnection[]` | coleção | relação 1:N/N:N | Coleção relacionada de McpOAuthConnection. |
+| `mcpOAuthRequests` | `—` | `McpOAuthAuthorizationRequest[]` | coleção | relação 1:N/N:N | Coleção relacionada de McpOAuthAuthorizationRequest. |
 
 **Restrições e índices do modelo**:
 
@@ -234,6 +236,9 @@ erDiagram
 | `mcpConfigurationsUpdated` | `—` | `StoreMcpConfiguration[]` | coleção | relação 1:N/N:N | Coleção relacionada de StoreMcpConfiguration. |
 | `mcpTokensCreated` | `—` | `StoreMcpToken[]` | coleção | relação 1:N/N:N | Coleção relacionada de StoreMcpToken. |
 | `mcpTokensRevoked` | `—` | `StoreMcpToken[]` | coleção | relação 1:N/N:N | Coleção relacionada de StoreMcpToken. |
+| `mcpOAuthConnections` | `—` | `McpOAuthConnection[]` | coleção | relação 1:N/N:N | Coleção relacionada de McpOAuthConnection. |
+| `mcpOAuthConnectionsRevoked` | `—` | `McpOAuthConnection[]` | coleção | relação 1:N/N:N | Coleção relacionada de McpOAuthConnection. |
+| `mcpOAuthRequests` | `—` | `McpOAuthAuthorizationRequest[]` | coleção | relação 1:N/N:N | Coleção relacionada de McpOAuthAuthorizationRequest. |
 
 **Restrições e índices do modelo**:
 
@@ -2794,14 +2799,126 @@ erDiagram
 | `occurredAt` | `occurred_at` | `DateTime` | sim | default: now() | Data e hora de occurred. |
 | `tenant` | `—` | `Tenant` | sim | FK/relação | Referência relacionada a Tenant. |
 | `token` | `—` | `StoreMcpToken?` | não | FK/relação | Referência relacionada a StoreMcpToken. |
+| `connectionId` | `connection_id` | `String?` | não | — | Identificador associado a connection. |
+| `connection` | `—` | `McpOAuthConnection?` | não | FK/relação | Referência relacionada a McpOAuthConnection. |
 
 **Restrições e índices do modelo**:
 
 - `@@index([tenantId, occurredAt(sort: Desc)])`
 - `@@index([tenantId, tokenId, occurredAt])`
 - `@@index([occurredAt])`
+- `@@index([tenantId, connectionId, occurredAt])`
 
 **Escopo de tenant**: próprio (`tenantId`).
+
+#### McpOAuthClient
+
+**Tabela física**: `mcp_oauth_clients`  
+**Finalidade**: Aplicativo de IA identificado por Client ID Metadata Document (cache) ou registro dinâmico (DCR).
+
+| Campo lógico | Coluna física | Tipo Prisma | Obrigatório | Regra/Chave | Descrição |
+|---|---|---|---|---|---|
+| `id` | `id` | `String` | sim | PK; default: uuid() | Identificador único do registro. |
+| `clientId` | `client_id` | `String` | sim | UNIQUE | Identificador associado a client. |
+| `kind` | `kind` | `McpOAuthClientKind` | sim | — | Valor controlado pelo enum McpOAuthClientKind. |
+| `name` | `name` | `String` | sim | — | Atributo name da entidade. |
+| `redirectUris` | `redirect_uris` | `String[]` | coleção | — | Atributo redirectUris da entidade. |
+| `metadataFetchedAt` | `metadata_fetched_at` | `DateTime?` | não | — | Data e hora de metadataFetched. |
+| `createdAt` | `created_at` | `DateTime` | sim | default: now() | Data e hora de criação. |
+| `updatedAt` | `updated_at` | `DateTime` | sim | — | Data e hora da última atualização. |
+| `requests` | `—` | `McpOAuthAuthorizationRequest[]` | coleção | relação 1:N/N:N | Coleção relacionada de McpOAuthAuthorizationRequest. |
+| `connections` | `—` | `McpOAuthConnection[]` | coleção | relação 1:N/N:N | Coleção relacionada de McpOAuthConnection. |
+
+**Escopo de tenant**: global ou derivado por relacionamento.
+
+#### McpOAuthAuthorizationRequest
+
+**Tabela física**: `mcp_oauth_authorization_requests`  
+**Finalidade**: Pedido de autorização OAuth do authorize até a troca do código (PKCE, uso único).
+
+| Campo lógico | Coluna física | Tipo Prisma | Obrigatório | Regra/Chave | Descrição |
+|---|---|---|---|---|---|
+| `id` | `id` | `String` | sim | PK; default: uuid() | Identificador único do registro. |
+| `clientId` | `client_id` | `String` | sim | — | Identificador associado a client. |
+| `redirectUri` | `redirect_uri` | `String` | sim | — | Atributo redirectUri da entidade. |
+| `state` | `state` | `String?` | não | — | Atributo state da entidade. |
+| `codeChallenge` | `code_challenge` | `String` | sim | — | Atributo codeChallenge da entidade. |
+| `scope` | `scope` | `String` | sim | — | Atributo scope da entidade. |
+| `resource` | `resource` | `String` | sim | — | Atributo resource da entidade. |
+| `status` | `status` | `McpOAuthRequestStatus` | sim | default: PENDING | Estado atual no ciclo de vida da entidade. |
+| `expiresAt` | `expires_at` | `DateTime` | sim | — | Data e hora de expires. |
+| `userId` | `user_id` | `String?` | não | — | Identificador associado a user. |
+| `tenantId` | `tenant_id` | `String?` | não | — | Tenant proprietário; obrigatório para isolamento dos dados. |
+| `connectionId` | `connection_id` | `String?` | não | — | Identificador associado a connection. |
+| `codeHash` | `code_hash` | `String?` | não | UNIQUE | Atributo codeHash da entidade. |
+| `codeExpiresAt` | `code_expires_at` | `DateTime?` | não | — | Data e hora de codeExpires. |
+| `createdAt` | `created_at` | `DateTime` | sim | default: now() | Data e hora de criação. |
+| `client` | `—` | `McpOAuthClient` | sim | FK/relação | Referência relacionada a McpOAuthClient. |
+| `user` | `—` | `User?` | não | FK/relação | Referência relacionada a User. |
+| `tenant` | `—` | `Tenant?` | não | FK/relação | Referência relacionada a Tenant. |
+| `connection` | `—` | `McpOAuthConnection?` | não | FK/relação | Referência relacionada a McpOAuthConnection. |
+
+**Restrições e índices do modelo**:
+
+- `@@index([expiresAt])`
+
+**Escopo de tenant**: próprio (`tenantId`).
+
+#### McpOAuthConnection
+
+**Tabela física**: `mcp_oauth_connections`  
+**Finalidade**: Conexão autorizada entre aplicativo, usuário e uma loja; revogável e auditada.
+
+| Campo lógico | Coluna física | Tipo Prisma | Obrigatório | Regra/Chave | Descrição |
+|---|---|---|---|---|---|
+| `id` | `id` | `String` | sim | PK; default: uuid() | Identificador único do registro. |
+| `tenantId` | `tenant_id` | `String` | sim | — | Tenant proprietário; obrigatório para isolamento dos dados. |
+| `userId` | `user_id` | `String` | sim | — | Identificador associado a user. |
+| `clientId` | `client_id` | `String` | sim | — | Identificador associado a client. |
+| `scope` | `scope` | `String` | sim | — | Atributo scope da entidade. |
+| `resource` | `resource` | `String` | sim | — | Atributo resource da entidade. |
+| `lastUsedAt` | `last_used_at` | `DateTime?` | não | — | Data e hora de lastUsed. |
+| `revokedAt` | `revoked_at` | `DateTime?` | não | — | Data e hora de revoked. |
+| `revokedByUserId` | `revoked_by_user_id` | `String?` | não | — | Identificador associado a revokedByUser. |
+| `revokedReason` | `revoked_reason` | `String?` | não | — | Atributo revokedReason da entidade. |
+| `createdAt` | `created_at` | `DateTime` | sim | default: now() | Data e hora de criação. |
+| `tenant` | `—` | `Tenant` | sim | FK/relação | Referência relacionada a Tenant. |
+| `user` | `—` | `User` | sim | FK/relação | Referência relacionada a User. |
+| `revokedByUser` | `—` | `User?` | não | FK/relação | Referência relacionada a User. |
+| `client` | `—` | `McpOAuthClient` | sim | FK/relação | Referência relacionada a McpOAuthClient. |
+| `tokens` | `—` | `McpOAuthToken[]` | coleção | relação 1:N/N:N | Coleção relacionada de McpOAuthToken. |
+| `requests` | `—` | `McpOAuthAuthorizationRequest[]` | coleção | relação 1:N/N:N | Coleção relacionada de McpOAuthAuthorizationRequest. |
+| `toolCalls` | `—` | `McpToolCall[]` | coleção | relação 1:N/N:N | Coleção relacionada de McpToolCall. |
+
+**Restrições e índices do modelo**:
+
+- `@@index([tenantId, revokedAt])`
+- `@@index([userId])`
+
+**Escopo de tenant**: próprio (`tenantId`).
+
+#### McpOAuthToken
+
+**Tabela física**: `mcp_oauth_tokens`  
+**Finalidade**: Tokens OAuth opacos (acesso 1h, renovação 30 dias com rotação), guardados apenas como SHA-256.
+
+| Campo lógico | Coluna física | Tipo Prisma | Obrigatório | Regra/Chave | Descrição |
+|---|---|---|---|---|---|
+| `id` | `id` | `String` | sim | PK; default: uuid() | Identificador único do registro. |
+| `connectionId` | `connection_id` | `String` | sim | — | Identificador associado a connection. |
+| `kind` | `kind` | `McpOAuthTokenKind` | sim | — | Valor controlado pelo enum McpOAuthTokenKind. |
+| `tokenHash` | `token_hash` | `String` | sim | UNIQUE | Atributo tokenHash da entidade. |
+| `expiresAt` | `expires_at` | `DateTime` | sim | — | Data e hora de expires. |
+| `rotatedAt` | `rotated_at` | `DateTime?` | não | — | Data e hora de rotated. |
+| `createdAt` | `created_at` | `DateTime` | sim | default: now() | Data e hora de criação. |
+| `connection` | `—` | `McpOAuthConnection` | sim | FK/relação | Referência relacionada a McpOAuthConnection. |
+
+**Restrições e índices do modelo**:
+
+- `@@index([connectionId, kind])`
+- `@@index([expiresAt])`
+
+**Escopo de tenant**: global ou derivado por relacionamento.
 
 ## Catálogo de enums
 
@@ -2839,7 +2956,7 @@ Valores permitidos: `ACTIVE`, `USED`, `EXPIRED`.
 
 ### AccessAuditEventType
 
-Valores permitidos: `LOGIN_SUCCESS`, `LOGIN_FAILURE`, `LOGOUT`, `USER_CREATED`, `USER_UPDATED`, `USER_STATUS_CHANGED`, `PROFILE_CREATED`, `PROFILE_UPDATED`, `PERMISSIONS_CHANGED`, `STORE_ASSIGNMENT_CHANGED`, `ACCESS_DENIED`, `PASSWORD_RESET_REQUESTED`, `PASSWORD_CHANGED`, `MCP_CONFIGURATION_CHANGED`, `MCP_TOKEN_CREATED`, `MCP_TOKEN_REVOKED`.
+Valores permitidos: `LOGIN_SUCCESS`, `LOGIN_FAILURE`, `LOGOUT`, `USER_CREATED`, `USER_UPDATED`, `USER_STATUS_CHANGED`, `PROFILE_CREATED`, `PROFILE_UPDATED`, `PERMISSIONS_CHANGED`, `STORE_ASSIGNMENT_CHANGED`, `ACCESS_DENIED`, `PASSWORD_RESET_REQUESTED`, `PASSWORD_CHANGED`, `MCP_CONFIGURATION_CHANGED`, `MCP_TOKEN_CREATED`, `MCP_TOKEN_REVOKED`, `MCP_CONNECTION_AUTHORIZED`, `MCP_CONNECTION_DENIED`, `MCP_CONNECTION_REVOKED`, `MCP_CLIENT_REJECTED`.
 
 ### McpDataArea
 
@@ -2848,6 +2965,18 @@ Valores permitidos: `SALES`, `FINANCIAL`, `MENU`, `CASH`, `PAYABLES`, `INVENTORY
 ### McpToolCallResult
 
 Valores permitidos: `SUCCESS`, `ERROR`, `DENIED`.
+
+### McpOAuthClientKind
+
+Valores permitidos: `CIMD`, `DCR`.
+
+### McpOAuthRequestStatus
+
+Valores permitidos: `PENDING`, `APPROVED`, `DENIED`, `CONSUMED`, `EXPIRED`.
+
+### McpOAuthTokenKind
+
+Valores permitidos: `ACCESS`, `REFRESH`.
 
 ### AccessAuditResult
 
@@ -3202,6 +3331,8 @@ Valores permitidos: `INFO`, `SUCCESS`, `WARNING`, `ERROR`.
 | `Tenant` | `mcpConfiguration` | `StoreMcpConfiguration` | zero ou um | `—` |
 | `Tenant` | `mcpTokens` | `StoreMcpToken` | muitos | `—` |
 | `Tenant` | `mcpToolCalls` | `McpToolCall` | muitos | `—` |
+| `Tenant` | `mcpOAuthConnections` | `McpOAuthConnection` | muitos | `—` |
+| `Tenant` | `mcpOAuthRequests` | `McpOAuthAuthorizationRequest` | muitos | `—` |
 | `PlatformUser` | `createdTenants` | `Tenant` | muitos | `—` |
 | `LayoutPreset` | `tenantsUsingDefault` | `Tenant` | muitos | `—` |
 | `LayoutPreset` | `visualConfigurations` | `StoreVisualConfiguration` | muitos | `—` |
@@ -3240,6 +3371,9 @@ Valores permitidos: `INFO`, `SUCCESS`, `WARNING`, `ERROR`.
 | `User` | `mcpConfigurationsUpdated` | `StoreMcpConfiguration` | muitos | `@relation("McpConfigurationUpdatedBy")` |
 | `User` | `mcpTokensCreated` | `StoreMcpToken` | muitos | `@relation("McpTokenCreatedBy")` |
 | `User` | `mcpTokensRevoked` | `StoreMcpToken` | muitos | `@relation("McpTokenRevokedBy")` |
+| `User` | `mcpOAuthConnections` | `McpOAuthConnection` | muitos | `@relation("McpOAuthConnectionUser")` |
+| `User` | `mcpOAuthConnectionsRevoked` | `McpOAuthConnection` | muitos | `@relation("McpOAuthConnectionRevokedBy")` |
+| `User` | `mcpOAuthRequests` | `McpOAuthAuthorizationRequest` | muitos | `—` |
 | `UserStoreAssignment` | `user` | `User` | um | `@relation(fields: [userId], references: [id], onDelete: Cascade)` |
 | `UserStoreAssignment` | `tenant` | `Tenant` | um | `@relation(fields: [tenantId], references: [id], onDelete: Cascade)` |
 | `UserStoreAssignment` | `profile` | `AccessProfile` | um | `@relation(fields: [profileId], references: [id], onDelete: Restrict)` |
@@ -3525,6 +3659,21 @@ Valores permitidos: `INFO`, `SUCCESS`, `WARNING`, `ERROR`.
 | `StoreMcpToken` | `toolCalls` | `McpToolCall` | muitos | `—` |
 | `McpToolCall` | `tenant` | `Tenant` | um | `@relation(fields: [tenantId], references: [id], onDelete: Cascade)` |
 | `McpToolCall` | `token` | `StoreMcpToken` | zero ou um | `@relation(fields: [tokenId], references: [id], onDelete: SetNull)` |
+| `McpToolCall` | `connection` | `McpOAuthConnection` | zero ou um | `@relation(fields: [connectionId], references: [id], onDelete: SetNull)` |
+| `McpOAuthClient` | `requests` | `McpOAuthAuthorizationRequest` | muitos | `—` |
+| `McpOAuthClient` | `connections` | `McpOAuthConnection` | muitos | `—` |
+| `McpOAuthAuthorizationRequest` | `client` | `McpOAuthClient` | um | `@relation(fields: [clientId], references: [id], onDelete: Cascade)` |
+| `McpOAuthAuthorizationRequest` | `user` | `User` | zero ou um | `@relation(fields: [userId], references: [id], onDelete: SetNull)` |
+| `McpOAuthAuthorizationRequest` | `tenant` | `Tenant` | zero ou um | `@relation(fields: [tenantId], references: [id], onDelete: Cascade)` |
+| `McpOAuthAuthorizationRequest` | `connection` | `McpOAuthConnection` | zero ou um | `@relation(fields: [connectionId], references: [id], onDelete: SetNull)` |
+| `McpOAuthConnection` | `tenant` | `Tenant` | um | `@relation(fields: [tenantId], references: [id], onDelete: Cascade)` |
+| `McpOAuthConnection` | `user` | `User` | um | `@relation("McpOAuthConnectionUser", fields: [userId], references: [id], onDelete: Cascade)` |
+| `McpOAuthConnection` | `revokedByUser` | `User` | zero ou um | `@relation("McpOAuthConnectionRevokedBy", fields: [revokedByUserId], references: [id], onDelete: SetNull)` |
+| `McpOAuthConnection` | `client` | `McpOAuthClient` | um | `@relation(fields: [clientId], references: [id], onDelete: Cascade)` |
+| `McpOAuthConnection` | `tokens` | `McpOAuthToken` | muitos | `—` |
+| `McpOAuthConnection` | `requests` | `McpOAuthAuthorizationRequest` | muitos | `—` |
+| `McpOAuthConnection` | `toolCalls` | `McpToolCall` | muitos | `—` |
+| `McpOAuthToken` | `connection` | `McpOAuthConnection` | um | `@relation(fields: [connectionId], references: [id], onDelete: Cascade)` |
 
 ## Governança e manutenção
 
