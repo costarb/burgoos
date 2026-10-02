@@ -70,6 +70,24 @@ enum AccessAuditEventType {
   ACCESS_DENIED
   PASSWORD_RESET_REQUESTED
   PASSWORD_CHANGED
+  MCP_CONFIGURATION_CHANGED
+  MCP_TOKEN_CREATED
+  MCP_TOKEN_REVOKED
+}
+
+enum McpDataArea {
+  SALES
+  FINANCIAL
+  MENU
+  CASH
+  PAYABLES
+  INVENTORY
+}
+
+enum McpToolCallResult {
+  SUCCESS
+  ERROR
+  DENIED
 }
 
 enum AccessAuditResult {
@@ -690,6 +708,9 @@ model Tenant {
   paymentExceptions           PaymentException[]
   orderOperationalEvents      OrderOperationalEvent[]
   idempotencyRecords          IdempotencyRecord[]
+  mcpConfiguration            StoreMcpConfiguration?
+  mcpTokens                   StoreMcpToken[]
+  mcpToolCalls                McpToolCall[]
 
   @@index([createdByPlatformUserId])
   @@index([defaultLayoutPresetKey])
@@ -769,6 +790,9 @@ model User {
   financialReconciliationRuns   FinancialReconciliationRun[]
   oauthAttemptsRequested        OAuthAuthorizationAttempt[]     @relation("OAuthAttemptRequestedBy")
   integrationAuditEvents        IntegrationAuditEvent[]         @relation("IntegrationAuditActor")
+  mcpConfigurationsUpdated      StoreMcpConfiguration[]         @relation("McpConfigurationUpdatedBy")
+  mcpTokensCreated              StoreMcpToken[]                 @relation("McpTokenCreatedBy")
+  mcpTokensRevoked              StoreMcpToken[]                 @relation("McpTokenRevokedBy")
 
   @@index([tenantId])
   @@index([status])
@@ -2637,4 +2661,59 @@ model PlatformIntegrationConfiguration {
   updatedAt               DateTime      @updatedAt @map("updated_at")
 
   @@map("platform_integration_configurations")
+}
+
+model StoreMcpConfiguration {
+  id              String        @id @default(uuid()) @db.Uuid
+  tenantId        String        @unique @map("tenant_id") @db.Uuid
+  enabled         Boolean       @default(false)
+  enabledAreas    McpDataArea[] @default([SALES, FINANCIAL, MENU, CASH, PAYABLES, INVENTORY]) @map("enabled_areas")
+  updatedByUserId String?       @map("updated_by_user_id") @db.Uuid
+  createdAt       DateTime      @default(now()) @map("created_at")
+  updatedAt       DateTime      @updatedAt @map("updated_at")
+  tenant          Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  updatedByUser   User?         @relation("McpConfigurationUpdatedBy", fields: [updatedByUserId], references: [id], onDelete: SetNull)
+
+  @@map("store_mcp_configurations")
+}
+
+model StoreMcpToken {
+  id              String        @id @default(uuid()) @db.Uuid
+  tenantId        String        @map("tenant_id") @db.Uuid
+  name            String        @db.VarChar(80)
+  tokenHash       String        @unique @map("token_hash") @db.Char(64)
+  tokenPrefix     String        @map("token_prefix") @db.VarChar(16)
+  expiresAt       DateTime?     @map("expires_at")
+  revokedAt       DateTime?     @map("revoked_at")
+  revokedByUserId String?       @map("revoked_by_user_id") @db.Uuid
+  lastUsedAt      DateTime?     @map("last_used_at")
+  createdByUserId String?       @map("created_by_user_id") @db.Uuid
+  createdAt       DateTime      @default(now()) @map("created_at")
+  tenant          Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  createdByUser   User?         @relation("McpTokenCreatedBy", fields: [createdByUserId], references: [id], onDelete: SetNull)
+  revokedByUser   User?         @relation("McpTokenRevokedBy", fields: [revokedByUserId], references: [id], onDelete: SetNull)
+  toolCalls       McpToolCall[]
+
+  @@index([tenantId, revokedAt])
+  @@map("store_mcp_tokens")
+}
+
+model McpToolCall {
+  id         String            @id @default(uuid()) @db.Uuid
+  tenantId   String            @map("tenant_id") @db.Uuid
+  tokenId    String?           @map("token_id") @db.Uuid
+  method     String            @db.VarChar(40)
+  target     String?           @db.VarChar(80)
+  arguments  Json?
+  result     McpToolCallResult
+  errorCode  String?           @map("error_code") @db.VarChar(40)
+  durationMs Int               @map("duration_ms")
+  occurredAt DateTime          @default(now()) @map("occurred_at")
+  tenant     Tenant            @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  token      StoreMcpToken?    @relation(fields: [tokenId], references: [id], onDelete: SetNull)
+
+  @@index([tenantId, occurredAt(sort: Desc)])
+  @@index([tenantId, tokenId, occurredAt])
+  @@index([occurredAt])
+  @@map("mcp_tool_calls")
 }

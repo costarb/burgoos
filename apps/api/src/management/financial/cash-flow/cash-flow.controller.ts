@@ -16,6 +16,7 @@ import {
   PaymentInstitutionConfigurationDto,
 } from "../dto/financial-account.dto";
 import { FinancialAccountService } from "./financial-account.service";
+import { addDays, endOfDay, parseDate } from "../../../common/reporting/report-period";
 
 @ApiTags("admin cash flow")
 @ApiBearerAuth()
@@ -190,24 +191,6 @@ export class CashFlowController {
   getMovementAudit(@CurrentUser() user: AuthUser, @Param("id") id: string) {
     return this.cashFlowService.getAuditHistory(user.tenantId, "cash_movement", id);
   }
-}
-
-function parseDate(value: string): Date {
-  const [year, month, day] = value.slice(0, 10).split("-").map(Number);
-  return new Date(year, month - 1, day);
-}
-
-function endOfDay(value: Date): Date {
-  const end = new Date(value);
-  end.setHours(23, 59, 59, 999);
-  return end;
-}
-
-function addDays(value: Date, days: number): Date {
-  const next = new Date(value);
-  next.setDate(next.getDate() + days);
-  next.setHours(23, 59, 59, 999);
-  return next;
 }
 
 export function normalizeQueryValues(value?: string | string[]): string[] {

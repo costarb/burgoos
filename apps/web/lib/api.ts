@@ -86,6 +86,13 @@ import type {
   OperationalNotification,
   ManagementReportFilters,
   ManagementReportResponse,
+  CreatedMcpToken,
+  CreateMcpTokenPayload,
+  McpConfiguration,
+  McpConfigurationPayload,
+  McpToken,
+  McpUsagePage,
+  McpUsageQuery,
 } from "@rrfive/types";
 import type {
   CreateCounterOrderInput,
@@ -2653,4 +2660,45 @@ export function revalidateIfoodFinancialReadiness(
   return fetchAdmin(token, `/api/admin/sales-integrations/${integrationId}/ifood/readiness`, {
     method: "POST",
   });
+}
+
+export async function getMcpConfiguration(token: string): Promise<McpConfiguration> {
+  return fetchAdmin<McpConfiguration>(token, "/api/admin/mcp/configuration");
+}
+
+export async function updateMcpConfiguration(
+  token: string,
+  payload: McpConfigurationPayload
+): Promise<McpConfiguration> {
+  return fetchAdmin<McpConfiguration>(token, "/api/admin/mcp/configuration", {
+    method: "PUT",
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function listMcpTokens(token: string): Promise<McpToken[]> {
+  return fetchAdmin<McpToken[]>(token, "/api/admin/mcp/tokens");
+}
+
+export async function createMcpToken(
+  token: string,
+  payload: CreateMcpTokenPayload
+): Promise<CreatedMcpToken> {
+  return fetchAdmin<CreatedMcpToken>(token, "/api/admin/mcp/tokens", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function revokeMcpToken(token: string, id: string): Promise<McpToken> {
+  return fetchAdmin<McpToken>(token, `/api/admin/mcp/tokens/${id}/revoke`, { method: "POST" });
+}
+
+export async function getMcpUsage(token: string, query: McpUsageQuery = {}): Promise<McpUsagePage> {
+  const params = new URLSearchParams();
+  for (const [key, value] of Object.entries(query)) {
+    if (value !== undefined && value !== null && value !== "") params.set(key, String(value));
+  }
+  const search = params.toString();
+  return fetchAdmin<McpUsagePage>(token, `/api/admin/mcp/usage${search ? `?${search}` : ""}`);
 }

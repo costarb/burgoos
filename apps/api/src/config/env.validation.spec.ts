@@ -14,7 +14,22 @@ describe("validateEnvironment resource controls", () => {
         BACKGROUND_JOB_CONCURRENCY: 1,
         EXPORT_DURABLE_JOBS_ENABLED: "false",
         RETENTION_DURABLE_JOBS_ENABLED: "false",
+        MCP_RATE_LIMIT_PER_MINUTE: 60,
+        MCP_TOOL_TIMEOUT_MS: 20_000,
+        MCP_TOOL_CALL_RETENTION_DAYS: 90,
       })
+    );
+  });
+
+  it("validates the public MCP url when configured", () => {
+    expect(validateEnvironment({ MCP_PUBLIC_URL: "https://api.example.com/api/mcp" })).toEqual(
+      expect.objectContaining({ MCP_PUBLIC_URL: "https://api.example.com/api/mcp" })
+    );
+    expect(() => validateEnvironment({ MCP_PUBLIC_URL: "api.example.com/mcp" })).toThrow(
+      "MCP_PUBLIC_URL must be an absolute HTTP(S) URL"
+    );
+    expect(() => validateEnvironment({ MCP_RATE_LIMIT_PER_MINUTE: "0" })).toThrow(
+      "MCP_RATE_LIMIT_PER_MINUTE must be a positive integer"
     );
   });
 

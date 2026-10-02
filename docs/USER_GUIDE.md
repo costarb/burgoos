@@ -264,6 +264,25 @@ Usuários com permissão administrativa também podem gerenciar:
 
 Conceda somente as permissões necessárias. Ao desligar um colaborador, inative o acesso em vez de reutilizar a conta.
 
+### 11.1 Assistentes de IA (MCP)
+
+Em **Configurações → MCP / IA** você conecta assistentes de IA, como Claude Desktop, Claude Code e Cursor, aos números da loja para pedir análises: comparar períodos, avaliar a margem do cardápio, prever o caixa, entre outras. O acesso é **somente leitura**, vale para **uma loja por token** e nunca inclui dados pessoais de clientes. A tela exige a permissão **MCP / IA** (`mcp.manage`), que proprietários, administradores e o usuário master já têm.
+
+1. Clique em **Habilitar**. O MCP nasce desabilitado em toda loja.
+2. Em **Áreas de dados**, deixe ligado apenas o que o assistente pode consultar: Vendas, Financeiro/DRE, Cardápio e Margem, Caixa, Contas a pagar e Estoque.
+3. Em **Tokens de acesso**, informe um nome (ex.: "Notebook do gerente"), escolha a validade e clique em **Gerar token**.
+4. Na janela que abre, copie o **token completo** e o trecho de configuração do seu cliente. O token não é exibido novamente; a coluna **Identificador** da tabela mostra só o início dele e não serve para configurar clientes.
+5. Cole o trecho no cliente e reinicie-o. No Claude Desktop, feche pela bandeja do sistema antes de abrir de novo.
+
+Para várias lojas, gere um token em cada loja e cadastre um servidor por loja no cliente. Cada loja pode ter até 10 tokens ativos.
+
+- **Revogar**: o token para de funcionar imediatamente em todos os clientes.
+- **Desabilitar o MCP**: bloqueia todos os tokens da loja; ao reabilitar, os tokens não revogados e não expirados voltam a funcionar.
+- **Aba Uso**: mostra cada consulta feita pelo assistente e as tentativas recusadas (token revogado, expirado, limite de chamadas), com filtros por token, período e resultado. O histórico é mantido por 90 dias.
+- Habilitação, geração e revogação de tokens aparecem em **Auditoria de acessos**.
+
+Trate o token como uma senha: não envie por mensagem nem o coloque em chamados. Se ele for exposto, revogue e gere outro.
+
 ## 12. Notificações
 
 O sino no cabeçalho reúne notificações operacionais. Acesse a central para consultar itens anteriores quando disponível.
@@ -290,6 +309,10 @@ Registre a data exibida pelo provedor, o fuso horário, o identificador externo 
 ### Uma integração parou
 
 Confira a loja e o status da conexão. Tente reconectar somente quando a tela indicar credencial expirada ou ação necessária. Evite sincronizações repetidas em sequência.
+
+### O assistente de IA não conecta
+
+Erros como "Connection closed" ou "Request timed out" no Claude Desktop quase sempre indicam token recusado. Confira se o MCP da loja está habilitado, se o token não foi revogado ou expirou e se foi colado o **token completo** (começa com `rrf_mcp_` e tem 51 caracteres), não o identificador da tabela. Na aba **Uso**, tentativas com token revogado ou expirado aparecem como **Recusada**. Na dúvida, revogue e gere um novo token.
 
 ### A aplicação está lenta
 

@@ -36,6 +36,7 @@ describe("access audit page", () => {
     expect(html).toContain("Todas as lojas");
     expect(html).toContain("Loja Centro");
     expect(html).toContain("ACCESS_DENIED");
+    expect(html).toContain("Acesso negado");
     expect(html).toContain("DENIED");
     expect(html).toContain("Ver");
   });

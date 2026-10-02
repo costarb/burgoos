@@ -40,6 +40,9 @@ const INTEGER_DEFAULTS = {
   RETENTION_DEADLINE_MS: 5_000,
   IFOOD_FINANCIAL_TIMEOUT_MS: 15_000,
   IFOOD_FINANCIAL_RAW_PAYLOAD_RETENTION_DAYS: 180,
+  MCP_RATE_LIMIT_PER_MINUTE: 60,
+  MCP_TOOL_TIMEOUT_MS: 20_000,
+  MCP_TOOL_CALL_RETENTION_DAYS: 90,
 } as const;
 
 export function validateEnvironment(input: Environment): Environment {
@@ -99,6 +102,7 @@ export function validateEnvironment(input: Environment): Environment {
   validateHttpUrl(env, "MERCADO_PAGO_API_BASE_URL");
   validateHttpUrl(env, "PAGBANK_EDI_BASE_URL");
   validateHttpUrl(env, "IFOOD_FINANCIAL_BASE_URL");
+  validateHttpUrl(env, "MCP_PUBLIC_URL");
 
   return env;
 }

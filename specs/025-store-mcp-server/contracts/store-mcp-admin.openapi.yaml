@@ -1,0 +1,202 @@
+openapi: 3.0.3
+info:
+  title: RRFive OS - Configuracao MCP da Loja
+  version: 0.1.0
+  description: >
+    Endpoints do admin para habilitar o MCP da loja, gerenciar areas de dados,
+    tokens e consultar o log de uso. A loja e sempre a loja ativa do JWT (tenantId).
+    Todos exigem a permissao `mcp.manage` (OWNER, ADMIN e master passam automaticamente).
+servers:
+  - url: /api
+security:
+  - bearerAuth: []
+paths:
+  /admin/mcp/configuration:
+    get:
+      summary: Configuracao MCP da loja ativa
+      responses:
+        "200":
+          description: Configuracao (ou padrao desabilitado se nunca configurada)
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/McpConfiguration" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+    put:
+      summary: Habilita/desabilita o MCP e define as areas de dados
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/UpdateMcpConfiguration" }
+      responses:
+        "200":
+          description: Configuracao atualizada
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/McpConfiguration" }
+        "400":
+          description: "AREAS_REQUIRED - ao menos uma area precisa estar ativa com o MCP habilitado"
+        "403": { $ref: "#/components/responses/Forbidden" }
+  /admin/mcp/tokens:
+    get:
+      summary: Lista tokens da loja (nunca retorna o valor completo)
+      responses:
+        "200":
+          description: Tokens
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/McpToken" }
+    post:
+      summary: Gera um token novo (valor completo retornado uma unica vez)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/CreateMcpToken" }
+      responses:
+        "201":
+          description: Token criado
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/CreatedMcpToken" }
+        "400":
+          description: "Validacao do nome ou validade"
+        "409":
+          description: "MCP_DISABLED (habilite antes de gerar) ou TOKEN_LIMIT_REACHED (10 tokens ativos)"
+  /admin/mcp/tokens/{id}/revoke:
+    post:
+      summary: Revoga um token (efeito imediato, idempotente)
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        "200":
+          description: Token revogado
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/McpToken" }
+        "404":
+          description: Token inexistente ou de outra loja
+  /admin/mcp/usage:
+    get:
+      summary: Log de uso do MCP da loja, mais recentes primeiro
+      parameters:
+        - { in: query, name: tokenId, schema: { type: string, format: uuid } }
+        - { in: query, name: start, schema: { type: string, format: date } }
+        - { in: query, name: end, schema: { type: string, format: date } }
+        - { in: query, name: result, schema: { type: string, enum: [SUCCESS, ERROR, DENIED] } }
+        - { in: query, name: page, schema: { type: integer, minimum: 1, default: 1 } }
+        - { in: query, name: pageSize, schema: { type: integer, minimum: 1, maximum: 100, default: 25 } }
+      responses:
+        "200":
+          description: Pagina do log
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/McpUsagePage" }
+components:
+  securitySchemes:
+    bearerAuth: { type: http, scheme: bearer, bearerFormat: JWT }
+  responses:
+    Forbidden:
+      description: Permissao insuficiente ou platform admin
+  schemas:
+    McpDataArea:
+      type: string
+      enum: [SALES, FINANCIAL, MENU, CASH, PAYABLES, INVENTORY]
+    McpConfiguration:
+      type: object
+      required: [enabled, enabledAreas, availableAreas, serverUrl]
+      properties:
+        enabled: { type: boolean }
+        enabledAreas:
+          type: array
+          items: { $ref: "#/components/schemas/McpDataArea" }
+        availableAreas:
+          type: array
+          description: Catalogo de areas com rotulo e descricao para a tela
+          items:
+            type: object
+            properties:
+              area: { $ref: "#/components/schemas/McpDataArea" }
+              label: { type: string, example: "Vendas" }
+              description: { type: string }
+              tools: { type: array, items: { type: string } }
+        serverUrl:
+          type: string
+          example: https://api.rrfive.com.br/api/mcp
+        updatedAt: { type: string, format: date-time, nullable: true }
+        updatedBy: { type: string, nullable: true, description: Nome do usuario }
+    UpdateMcpConfiguration:
+      type: object
+      required: [enabled, enabledAreas]
+      properties:
+        enabled: { type: boolean }
+        enabledAreas:
+          type: array
+          uniqueItems: true
+          items: { $ref: "#/components/schemas/McpDataArea" }
+    CreateMcpToken:
+      type: object
+      required: [name, expiresInDays]
+      properties:
+        name: { type: string, minLength: 1, maxLength: 80 }
+        expiresInDays:
+          type: integer
+          nullable: true
+          enum: [30, 90, 365, null]
+          description: null = sem expiracao
+    McpToken:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        name: { type: string }
+        tokenPrefix: { type: string, example: "rrf_mcp_ab12cd" }
+        status: { type: string, enum: [ACTIVE, EXPIRED, REVOKED] }
+        expiresAt: { type: string, format: date-time, nullable: true }
+        lastUsedAt: { type: string, format: date-time, nullable: true }
+        createdAt: { type: string, format: date-time }
+        createdBy: { type: string, nullable: true }
+        revokedAt: { type: string, format: date-time, nullable: true }
+    CreatedMcpToken:
+      allOf:
+        - $ref: "#/components/schemas/McpToken"
+        - type: object
+          required: [token, snippets]
+          properties:
+            token:
+              type: string
+              description: Valor completo. Exibido apenas nesta resposta.
+              example: rrf_mcp_ab12cdEFgh...
+            snippets:
+              type: object
+              description: Trechos prontos de configuracao
+              properties:
+                inspector: { type: string }
+                claudeCode: { type: string }
+                claudeDesktop: { type: string }
+                cursor: { type: string }
+    McpUsagePage:
+      type: object
+      properties:
+        page: { type: integer }
+        pageSize: { type: integer }
+        total: { type: integer }
+        items:
+          type: array
+          items:
+            type: object
+            properties:
+              id: { type: string, format: uuid }
+              occurredAt: { type: string, format: date-time }
+              tokenName: { type: string, nullable: true }
+              tokenPrefix: { type: string, nullable: true }
+              method: { type: string }
+              target: { type: string, nullable: true }
+              arguments: { type: object, nullable: true }
+              result: { type: string, enum: [SUCCESS, ERROR, DENIED] }
+              errorCode: { type: string, nullable: true }
+              durationMs: { type: integer }

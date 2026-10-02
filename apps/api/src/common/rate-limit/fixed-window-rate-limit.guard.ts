@@ -17,8 +17,7 @@ export abstract class FixedWindowRateLimitGuard implements CanActivate {
   canActivate(context: ExecutionContext): boolean {
     const request = context.switchToHttp().getRequest<Request>();
     const now = Date.now();
-    const client = request.ip || request.socket.remoteAddress || "unknown";
-    const key = `${this.namespace}:${client}`;
+    const key = `${this.namespace}:${this.bucketKey(request)}`;
     const current = this.buckets.get(key);
     const bucket = !current || current.resetsAt <= now
       ? { count: 0, resetsAt: now + this.windowMs }
@@ -38,6 +37,11 @@ export abstract class FixedWindowRateLimitGuard implements CanActivate {
       );
     }
     return true;
+  }
+
+  /** Identifies the caller sharing a bucket; defaults to the client IP. */
+  protected bucketKey(request: Request): string {
+    return request.ip || request.socket.remoteAddress || "unknown";
   }
 
   private prune(now: number) {

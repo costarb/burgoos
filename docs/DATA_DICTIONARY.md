@@ -5,7 +5,7 @@
 
 ## Escopo e leitura
 
-Este catálogo descreve o modelo PostgreSQL atual exposto pelo Prisma: **71 entidades** e **73 enums**. Ele documenta nomes lógicos e físicos, tipos, nulabilidade, chaves, defaults, relacionamentos, índices e finalidade de negócio. Não registra valores de credenciais, dados pessoais reais nem conteúdo de produção.
+Este catálogo descreve o modelo PostgreSQL atual exposto pelo Prisma: **81 entidades** e **80 enums**. Ele documenta nomes lógicos e físicos, tipos, nulabilidade, chaves, defaults, relacionamentos, índices e finalidade de negócio. Não registra valores de credenciais, dados pessoais reais nem conteúdo de produção.
 
 ### Convenções
 
@@ -26,10 +26,11 @@ Este catálogo descreve o modelo PostgreSQL atual exposto pelo Prisma: **71 enti
 | Configuração visual e catálogo | `LayoutPreset`, `StoreVisualConfiguration`, `Category`, `Product`, `ProductExternalMapping`, `ProductComplement`, `ProductComplementAssignment`, `Ingredient`, `TechnicalSheet`, `TechnicalSheetLine`, `ProductCostSnapshot` |
 | Pedidos, comandas e operação | `Order`, `OrderItem`, `OrderItemModification`, `ServiceTab`, `OrderMaintenance`, `OrderOperationalEvent`, `OrderProfitabilitySnapshot`, `StockMovement` |
 | Pagamentos | `PaymentTerminal`, `PaymentCharge`, `Payment`, `PaymentAllocation`, `PaymentProviderEvent`, `PaymentException`, `IdempotencyRecord` |
-| Integrações de vendas | `SalesIntegration`, `SalesIntegrationCredential`, `SalesImportRun`, `SalesImportDay`, `ExternalSalesMovement`, `ExternalSaleIdentity`, `OAuthAuthorizationAttempt`, `ProviderTransactionState`, `ProviderNotification`, `IntegrationAuditEvent`, `PlatformIntegrationConfiguration` |
+| Integrações de vendas | `SalesIntegration`, `SalesIntegrationCredential`, `SalesImportRun`, `SalesImportDay`, `ExternalSalesMovement`, `ExternalSaleIdentity`, `OAuthAuthorizationAttempt`, `ProviderTransactionState`, `ProviderNotification`, `IntegrationAuditEvent`, `PlatformIntegrationConfiguration`, `ExternalFinancialSale`, `ExternalSalePayment`, `ExternalSaleInstallment`, `ExternalFinancialEvent`, `ExternalSettlement`, `ExternalReconciliationFile`, `FinancialReconciliationRun` |
 | Financeiro | `FinancialConfiguration`, `PurchaseUnit`, `Supplier`, `FinancialAccount`, `PaymentInstitutionConfiguration`, `FinancialCategory`, `PayableRecurrence`, `Payable`, `PayablePayment`, `CashMovement`, `FinancialAudit` |
 | Delivery e marketplaces | `OrderPlatform`, `DeliveryIntegration`, `DeliveryIntegrationCredential`, `DeliveryPlatformEvent`, `PlatformOrderLink`, `PlatformSyncAttempt`, `PlatformCancellationReason`, `PlatformDispute`, `DeliveryIntegrationAudit` |
 | Jobs, exportações e notificações | `ExportJob`, `BackgroundJob`, `BackgroundJobAttempt`, `OperationalNotification` |
+| MCP e assistentes de IA | `StoreMcpConfiguration`, `StoreMcpToken`, `McpToolCall` |
 
 ## Relações centrais
 
@@ -131,6 +132,13 @@ erDiagram
 | `providerTransactionStates` | `—` | `ProviderTransactionState[]` | coleção | relação 1:N/N:N | Coleção relacionada de ProviderTransactionState. |
 | `providerNotifications` | `—` | `ProviderNotification[]` | coleção | relação 1:N/N:N | Coleção relacionada de ProviderNotification. |
 | `integrationAuditEvents` | `—` | `IntegrationAuditEvent[]` | coleção | relação 1:N/N:N | Coleção relacionada de IntegrationAuditEvent. |
+| `externalFinancialSales` | `—` | `ExternalFinancialSale[]` | coleção | relação 1:N/N:N | Coleção relacionada de ExternalFinancialSale. |
+| `externalSalePayments` | `—` | `ExternalSalePayment[]` | coleção | relação 1:N/N:N | Coleção relacionada de ExternalSalePayment. |
+| `externalSaleInstallments` | `—` | `ExternalSaleInstallment[]` | coleção | relação 1:N/N:N | Coleção relacionada de ExternalSaleInstallment. |
+| `externalFinancialEvents` | `—` | `ExternalFinancialEvent[]` | coleção | relação 1:N/N:N | Coleção relacionada de ExternalFinancialEvent. |
+| `externalSettlements` | `—` | `ExternalSettlement[]` | coleção | relação 1:N/N:N | Coleção relacionada de ExternalSettlement. |
+| `externalReconciliationFiles` | `—` | `ExternalReconciliationFile[]` | coleção | relação 1:N/N:N | Coleção relacionada de ExternalReconciliationFile. |
+| `financialReconciliationRuns` | `—` | `FinancialReconciliationRun[]` | coleção | relação 1:N/N:N | Coleção relacionada de FinancialReconciliationRun. |
 | `serviceTabs` | `—` | `ServiceTab[]` | coleção | relação 1:N/N:N | Coleção relacionada de ServiceTab. |
 | `productComplements` | `—` | `ProductComplement[]` | coleção | relação 1:N/N:N | Coleção relacionada de ProductComplement. |
 | `orderItemModifications` | `—` | `OrderItemModification[]` | coleção | relação 1:N/N:N | Coleção relacionada de OrderItemModification. |
@@ -142,6 +150,9 @@ erDiagram
 | `paymentExceptions` | `—` | `PaymentException[]` | coleção | relação 1:N/N:N | Coleção relacionada de PaymentException. |
 | `orderOperationalEvents` | `—` | `OrderOperationalEvent[]` | coleção | relação 1:N/N:N | Coleção relacionada de OrderOperationalEvent. |
 | `idempotencyRecords` | `—` | `IdempotencyRecord[]` | coleção | relação 1:N/N:N | Coleção relacionada de IdempotencyRecord. |
+| `mcpConfiguration` | `—` | `StoreMcpConfiguration?` | não | FK/relação | Referência relacionada a StoreMcpConfiguration. |
+| `mcpTokens` | `—` | `StoreMcpToken[]` | coleção | relação 1:N/N:N | Coleção relacionada de StoreMcpToken. |
+| `mcpToolCalls` | `—` | `McpToolCall[]` | coleção | relação 1:N/N:N | Coleção relacionada de McpToolCall. |
 
 **Restrições e índices do modelo**:
 
@@ -217,8 +228,12 @@ erDiagram
 | `salesIntegrationsUpdated` | `—` | `SalesIntegration[]` | coleção | relação 1:N/N:N | Coleção relacionada de SalesIntegration. |
 | `salesCredentialsCreated` | `—` | `SalesIntegrationCredential[]` | coleção | relação 1:N/N:N | Coleção relacionada de SalesIntegrationCredential. |
 | `salesImportRunsRequested` | `—` | `SalesImportRun[]` | coleção | relação 1:N/N:N | Coleção relacionada de SalesImportRun. |
+| `financialReconciliationRuns` | `—` | `FinancialReconciliationRun[]` | coleção | relação 1:N/N:N | Coleção relacionada de FinancialReconciliationRun. |
 | `oauthAttemptsRequested` | `—` | `OAuthAuthorizationAttempt[]` | coleção | relação 1:N/N:N | Coleção relacionada de OAuthAuthorizationAttempt. |
 | `integrationAuditEvents` | `—` | `IntegrationAuditEvent[]` | coleção | relação 1:N/N:N | Coleção relacionada de IntegrationAuditEvent. |
+| `mcpConfigurationsUpdated` | `—` | `StoreMcpConfiguration[]` | coleção | relação 1:N/N:N | Coleção relacionada de StoreMcpConfiguration. |
+| `mcpTokensCreated` | `—` | `StoreMcpToken[]` | coleção | relação 1:N/N:N | Coleção relacionada de StoreMcpToken. |
+| `mcpTokensRevoked` | `—` | `StoreMcpToken[]` | coleção | relação 1:N/N:N | Coleção relacionada de StoreMcpToken. |
 
 **Restrições e índices do modelo**:
 
@@ -782,6 +797,7 @@ erDiagram
 | `providerTransactionStates` | `—` | `ProviderTransactionState[]` | coleção | relação 1:N/N:N | Coleção relacionada de ProviderTransactionState. |
 | `paymentCharges` | `—` | `PaymentCharge[]` | coleção | relação 1:N/N:N | Coleção relacionada de PaymentCharge. |
 | `paymentAllocations` | `—` | `PaymentAllocation[]` | coleção | relação 1:N/N:N | Coleção relacionada de PaymentAllocation. |
+| `externalFinancialSales` | `—` | `ExternalFinancialSale[]` | coleção | relação 1:N/N:N | Coleção relacionada de ExternalFinancialSale. |
 | `operationalEvents` | `—` | `OrderOperationalEvent[]` | coleção | relação 1:N/N:N | Coleção relacionada de OrderOperationalEvent. |
 
 **Restrições e índices do modelo**:
@@ -1298,6 +1314,9 @@ erDiagram
 | `updatedByUserId` | `updated_by_user_id` | `String?` | não | — | Identificador associado a updatedByUser. |
 | `createdAt` | `created_at` | `DateTime` | sim | default: now() | Data e hora de criação. |
 | `updatedAt` | `updated_at` | `DateTime` | sim | — | Data e hora da última atualização. |
+| `deliveryIntegrationId` | `delivery_integration_id` | `String?` | não | UNIQUE | Identificador associado a deliveryIntegration. |
+| `financialReadiness` | `financial_readiness` | `IfoodFinancialReadinessStatus?` | não | — | Valor controlado pelo enum IfoodFinancialReadinessStatus. |
+| `homologationEvidence` | `homologation_evidence` | `Json` | sim | default: "{}" | Atributo homologationEvidence da entidade. |
 | `tenant` | `—` | `Tenant` | sim | FK/relação | Referência relacionada a Tenant. |
 | `createdByUser` | `—` | `User?` | não | FK/relação | Referência relacionada a User. |
 | `updatedByUser` | `—` | `User?` | não | FK/relação | Referência relacionada a User. |
@@ -1309,6 +1328,12 @@ erDiagram
 | `notifications` | `—` | `ProviderNotification[]` | coleção | relação 1:N/N:N | Coleção relacionada de ProviderNotification. |
 | `auditEvents` | `—` | `IntegrationAuditEvent[]` | coleção | relação 1:N/N:N | Coleção relacionada de IntegrationAuditEvent. |
 | `externalIdentities` | `—` | `ExternalSaleIdentity[]` | coleção | relação 1:N/N:N | Coleção relacionada de ExternalSaleIdentity. |
+| `deliveryIntegration` | `—` | `DeliveryIntegration?` | não | FK/relação | Referência relacionada a DeliveryIntegration. |
+| `financialSales` | `—` | `ExternalFinancialSale[]` | coleção | relação 1:N/N:N | Coleção relacionada de ExternalFinancialSale. |
+| `financialEvents` | `—` | `ExternalFinancialEvent[]` | coleção | relação 1:N/N:N | Coleção relacionada de ExternalFinancialEvent. |
+| `settlements` | `—` | `ExternalSettlement[]` | coleção | relação 1:N/N:N | Coleção relacionada de ExternalSettlement. |
+| `reconciliationFiles` | `—` | `ExternalReconciliationFile[]` | coleção | relação 1:N/N:N | Coleção relacionada de ExternalReconciliationFile. |
+| `reconciliationRuns` | `—` | `FinancialReconciliationRun[]` | coleção | relação 1:N/N:N | Coleção relacionada de FinancialReconciliationRun. |
 
 **Restrições e índices do modelo**:
 
@@ -1497,6 +1522,253 @@ erDiagram
 - `@@unique([tenantId, provider, environment, externalSaleId])`
 - `@@index([tenantId, orderId])`
 - `@@index([integrationId])`
+
+**Escopo de tenant**: próprio (`tenantId`).
+
+#### ExternalFinancialSale
+
+**Tabela física**: `external_financial_sales`  
+**Finalidade**: Entidade persistente do domínio.
+
+| Campo lógico | Coluna física | Tipo Prisma | Obrigatório | Regra/Chave | Descrição |
+|---|---|---|---|---|---|
+| `id` | `id` | `String` | sim | PK; default: uuid() | Identificador único do registro. |
+| `tenantId` | `tenant_id` | `String` | sim | — | Tenant proprietário; obrigatório para isolamento dos dados. |
+| `integrationId` | `integration_id` | `String` | sim | — | Identificador associado a integration. |
+| `environment` | `environment` | `SalesIntegrationEnvironment` | sim | — | Valor controlado pelo enum SalesIntegrationEnvironment. |
+| `provider` | `provider` | `SalesProvider` | sim | — | Valor controlado pelo enum SalesProvider. |
+| `externalSaleId` | `external_sale_id` | `String` | sim | — | Identificador associado a externalSale. |
+| `externalMerchantId` | `external_merchant_id` | `String` | sim | — | Identificador associado a externalMerchant. |
+| `shortId` | `short_id` | `String?` | não | — | Identificador associado a short. |
+| `orderId` | `order_id` | `String?` | não | — | Identificador associado a order. |
+| `status` | `status` | `String` | sim | — | Estado atual no ciclo de vida da entidade. |
+| `category` | `category` | `String?` | não | — | Atributo category da entidade. |
+| `salesChannel` | `sales_channel` | `String?` | não | — | Atributo salesChannel da entidade. |
+| `occurredAt` | `occurred_at` | `DateTime` | sim | — | Data e hora de occurred. |
+| `merchantTimezone` | `merchant_timezone` | `String` | sim | — | Atributo merchantTimezone da entidade. |
+| `bagAmount` | `bag_amount` | `Decimal` | sim | — | Atributo bagAmount da entidade. |
+| `deliveryFeeAmount` | `delivery_fee_amount` | `Decimal` | sim | — | Atributo deliveryFeeAmount da entidade. |
+| `serviceFeeAmount` | `service_fee_amount` | `Decimal` | sim | — | Atributo serviceFeeAmount da entidade. |
+| `benefitsAmount` | `benefits_amount` | `Decimal` | sim | — | Atributo benefitsAmount da entidade. |
+| `customerPaidAmount` | `customer_paid_amount` | `Decimal` | sim | — | Atributo customerPaidAmount da entidade. |
+| `saleBalanceAmount` | `sale_balance_amount` | `Decimal` | sim | — | Atributo saleBalanceAmount da entidade. |
+| `rawPayload` | `raw_payload` | `Json` | sim | — | Estrutura JSON com dados complementares controlados pelo domínio. |
+| `providerUpdatedAt` | `provider_updated_at` | `DateTime?` | não | — | Data e hora de providerUpdated. |
+| `lastSyncedAt` | `last_synced_at` | `DateTime` | sim | — | Data e hora de lastSynced. |
+| `createdAt` | `created_at` | `DateTime` | sim | default: now() | Data e hora de criação. |
+| `updatedAt` | `updated_at` | `DateTime` | sim | — | Data e hora da última atualização. |
+| `tenant` | `—` | `Tenant` | sim | FK/relação | Referência relacionada a Tenant. |
+| `integration` | `—` | `SalesIntegration` | sim | FK/relação | Referência relacionada a SalesIntegration. |
+| `order` | `—` | `Order?` | não | FK/relação | Referência relacionada a Order. |
+| `payments` | `—` | `ExternalSalePayment[]` | coleção | relação 1:N/N:N | Coleção relacionada de ExternalSalePayment. |
+| `events` | `—` | `ExternalFinancialEvent[]` | coleção | relação 1:N/N:N | Coleção relacionada de ExternalFinancialEvent. |
+
+**Restrições e índices do modelo**:
+
+- `@@unique([tenantId, provider, environment, externalSaleId])`
+- `@@index([tenantId, occurredAt])`
+- `@@index([tenantId, integrationId, status])`
+- `@@index([tenantId, orderId])`
+
+**Escopo de tenant**: próprio (`tenantId`).
+
+#### ExternalSalePayment
+
+**Tabela física**: `external_sale_payments`  
+**Finalidade**: Entidade persistente do domínio.
+
+| Campo lógico | Coluna física | Tipo Prisma | Obrigatório | Regra/Chave | Descrição |
+|---|---|---|---|---|---|
+| `id` | `id` | `String` | sim | PK; default: uuid() | Identificador único do registro. |
+| `tenantId` | `tenant_id` | `String` | sim | — | Tenant proprietário; obrigatório para isolamento dos dados. |
+| `saleId` | `sale_id` | `String` | sim | — | Identificador associado a sale. |
+| `providerPaymentKey` | `provider_payment_key` | `String` | sim | — | Atributo providerPaymentKey da entidade. |
+| `providerMethod` | `provider_method` | `String` | sim | — | Atributo providerMethod da entidade. |
+| `mappedMethod` | `mapped_method` | `PaymentMethod?` | não | — | Valor controlado pelo enum PaymentMethod. |
+| `paymentType` | `payment_type` | `String?` | não | — | Atributo paymentType da entidade. |
+| `liability` | `liability` | `String` | sim | — | Atributo liability da entidade. |
+| `amount` | `amount` | `Decimal` | sim | — | Atributo amount da entidade. |
+| `currency` | `currency` | `String` | sim | — | Atributo currency da entidade. |
+| `brand` | `brand` | `String?` | não | — | Atributo brand da entidade. |
+| `nsu` | `nsu` | `String?` | não | — | Atributo nsu da entidade. |
+| `acquirerDocumentMasked` | `acquirer_document_masked` | `String?` | não | — | Atributo acquirerDocumentMasked da entidade. |
+| `installmentCount` | `installment_count` | `Int?` | não | — | Atributo installmentCount da entidade. |
+| `createdAt` | `created_at` | `DateTime` | sim | default: now() | Data e hora de criação. |
+| `updatedAt` | `updated_at` | `DateTime` | sim | — | Data e hora da última atualização. |
+| `tenant` | `—` | `Tenant` | sim | FK/relação | Referência relacionada a Tenant. |
+| `sale` | `—` | `ExternalFinancialSale` | sim | FK/relação | Referência relacionada a ExternalFinancialSale. |
+| `installments` | `—` | `ExternalSaleInstallment[]` | coleção | relação 1:N/N:N | Coleção relacionada de ExternalSaleInstallment. |
+
+**Restrições e índices do modelo**:
+
+- `@@unique([saleId, providerPaymentKey])`
+- `@@index([tenantId, mappedMethod, liability])`
+
+**Escopo de tenant**: próprio (`tenantId`).
+
+#### ExternalSaleInstallment
+
+**Tabela física**: `external_sale_installments`  
+**Finalidade**: Entidade persistente do domínio.
+
+| Campo lógico | Coluna física | Tipo Prisma | Obrigatório | Regra/Chave | Descrição |
+|---|---|---|---|---|---|
+| `id` | `id` | `String` | sim | PK; default: uuid() | Identificador único do registro. |
+| `tenantId` | `tenant_id` | `String` | sim | — | Tenant proprietário; obrigatório para isolamento dos dados. |
+| `paymentId` | `payment_id` | `String` | sim | — | Identificador associado a payment. |
+| `reference` | `reference` | `String` | sim | — | Atributo reference da entidade. |
+| `sequence` | `sequence` | `Int?` | não | — | Atributo sequence da entidade. |
+| `amount` | `amount` | `Decimal` | sim | — | Atributo amount da entidade. |
+| `expectedPaymentDate` | `expected_payment_date` | `DateTime?` | não | — | Data de expectedPayment. |
+| `status` | `status` | `String?` | não | — | Estado atual no ciclo de vida da entidade. |
+| `settledAt` | `settled_at` | `DateTime?` | não | — | Data e hora de settled. |
+| `tenant` | `—` | `Tenant` | sim | FK/relação | Referência relacionada a Tenant. |
+| `payment` | `—` | `ExternalSalePayment` | sim | FK/relação | Referência relacionada a ExternalSalePayment. |
+
+**Restrições e índices do modelo**:
+
+- `@@unique([paymentId, reference])`
+- `@@index([tenantId, expectedPaymentDate])`
+
+**Escopo de tenant**: próprio (`tenantId`).
+
+#### ExternalFinancialEvent
+
+**Tabela física**: `external_financial_events`  
+**Finalidade**: Entidade persistente do domínio.
+
+| Campo lógico | Coluna física | Tipo Prisma | Obrigatório | Regra/Chave | Descrição |
+|---|---|---|---|---|---|
+| `id` | `id` | `String` | sim | PK; default: uuid() | Identificador único do registro. |
+| `tenantId` | `tenant_id` | `String` | sim | — | Tenant proprietário; obrigatório para isolamento dos dados. |
+| `integrationId` | `integration_id` | `String` | sim | — | Identificador associado a integration. |
+| `saleId` | `sale_id` | `String?` | não | — | Identificador associado a sale. |
+| `providerEventKey` | `provider_event_key` | `String` | sim | — | Atributo providerEventKey da entidade. |
+| `externalOrderId` | `external_order_id` | `String?` | não | — | Identificador associado a externalOrder. |
+| `name` | `name` | `String` | sim | — | Atributo name da entidade. |
+| `trigger` | `trigger` | `String?` | não | — | Atributo trigger da entidade. |
+| `description` | `description` | `String?` | não | — | Atributo description da entidade. |
+| `competence` | `competence` | `String?` | não | — | Atributo competence da entidade. |
+| `amount` | `amount` | `Decimal` | sim | — | Atributo amount da entidade. |
+| `hasTransferImpact` | `has_transfer_impact` | `Boolean` | sim | — | Indicador verdadeiro/falso da condição nomeada. |
+| `baseAmount` | `base_amount` | `Decimal?` | não | — | Atributo baseAmount da entidade. |
+| `feePercentage` | `fee_percentage` | `Decimal?` | não | — | Atributo feePercentage da entidade. |
+| `expectedPaymentDate` | `expected_payment_date` | `DateTime?` | não | — | Data de expectedPayment. |
+| `occurredAt` | `occurred_at` | `DateTime` | sim | — | Data e hora de occurred. |
+| `settlementExternalId` | `settlement_external_id` | `String?` | não | — | Identificador associado a settlementExternal. |
+| `rawPayload` | `raw_payload` | `Json` | sim | — | Estrutura JSON com dados complementares controlados pelo domínio. |
+| `createdAt` | `created_at` | `DateTime` | sim | default: now() | Data e hora de criação. |
+| `tenant` | `—` | `Tenant` | sim | FK/relação | Referência relacionada a Tenant. |
+| `integration` | `—` | `SalesIntegration` | sim | FK/relação | Referência relacionada a SalesIntegration. |
+| `sale` | `—` | `ExternalFinancialSale?` | não | FK/relação | Referência relacionada a ExternalFinancialSale. |
+
+**Restrições e índices do modelo**:
+
+- `@@unique([tenantId, integrationId, providerEventKey])`
+- `@@index([tenantId, saleId])`
+- `@@index([tenantId, competence])`
+- `@@index([tenantId, expectedPaymentDate])`
+
+**Escopo de tenant**: próprio (`tenantId`).
+
+#### ExternalSettlement
+
+**Tabela física**: `external_settlements`  
+**Finalidade**: Entidade persistente do domínio.
+
+| Campo lógico | Coluna física | Tipo Prisma | Obrigatório | Regra/Chave | Descrição |
+|---|---|---|---|---|---|
+| `id` | `id` | `String` | sim | PK; default: uuid() | Identificador único do registro. |
+| `tenantId` | `tenant_id` | `String` | sim | — | Tenant proprietário; obrigatório para isolamento dos dados. |
+| `integrationId` | `integration_id` | `String` | sim | — | Identificador associado a integration. |
+| `externalSettlementId` | `external_settlement_id` | `String` | sim | — | Identificador associado a externalSettlement. |
+| `product` | `product` | `String?` | não | — | Atributo product da entidade. |
+| `type` | `type` | `String` | sim | — | Atributo type da entidade. |
+| `status` | `status` | `String` | sim | — | Estado atual no ciclo de vida da entidade. |
+| `calculationStart` | `calculation_start` | `DateTime?` | não | — | Atributo calculationStart da entidade. |
+| `calculationEnd` | `calculation_end` | `DateTime?` | não | — | Atributo calculationEnd da entidade. |
+| `expectedPaymentDate` | `expected_payment_date` | `DateTime?` | não | — | Data de expectedPayment. |
+| `paidAt` | `paid_at` | `DateTime?` | não | — | Data e hora de paid. |
+| `grossAmount` | `gross_amount` | `Decimal?` | não | — | Atributo grossAmount da entidade. |
+| `netAmount` | `net_amount` | `Decimal` | sim | — | Atributo netAmount da entidade. |
+| `reconciliationStatus` | `reconciliation_status` | `ExternalSettlementReconciliationStatus` | sim | default: PENDING | Valor controlado pelo enum ExternalSettlementReconciliationStatus. |
+| `divergenceAmount` | `divergence_amount` | `Decimal?` | não | — | Atributo divergenceAmount da entidade. |
+| `rawPayload` | `raw_payload` | `Json` | sim | — | Estrutura JSON com dados complementares controlados pelo domínio. |
+| `lastSyncedAt` | `last_synced_at` | `DateTime` | sim | — | Data e hora de lastSynced. |
+| `tenant` | `—` | `Tenant` | sim | FK/relação | Referência relacionada a Tenant. |
+| `integration` | `—` | `SalesIntegration` | sim | FK/relação | Referência relacionada a SalesIntegration. |
+
+**Restrições e índices do modelo**:
+
+- `@@unique([tenantId, integrationId, externalSettlementId])`
+- `@@index([tenantId, expectedPaymentDate])`
+
+**Escopo de tenant**: próprio (`tenantId`).
+
+#### ExternalReconciliationFile
+
+**Tabela física**: `external_reconciliation_files`  
+**Finalidade**: Entidade persistente do domínio.
+
+| Campo lógico | Coluna física | Tipo Prisma | Obrigatório | Regra/Chave | Descrição |
+|---|---|---|---|---|---|
+| `id` | `id` | `String` | sim | PK; default: uuid() | Identificador único do registro. |
+| `tenantId` | `tenant_id` | `String` | sim | — | Tenant proprietário; obrigatório para isolamento dos dados. |
+| `integrationId` | `integration_id` | `String` | sim | — | Identificador associado a integration. |
+| `competence` | `competence` | `String` | sim | — | Atributo competence da entidade. |
+| `providerRequestId` | `provider_request_id` | `String` | sim | — | Identificador associado a providerRequest. |
+| `status` | `status` | `ExternalReconciliationFileStatus` | sim | default: REQUESTED | Estado atual no ciclo de vida da entidade. |
+| `orderCount` | `order_count` | `Int?` | não | — | Atributo orderCount da entidade. |
+| `lineCount` | `line_count` | `Int?` | não | — | Atributo lineCount da entidade. |
+| `downloadUrlCiphertext` | `download_url_ciphertext` | `String?` | não | — | Atributo downloadUrlCiphertext da entidade. |
+| `expiresAt` | `expires_at` | `DateTime?` | não | — | Data e hora de expires. |
+| `errorCode` | `error_code` | `String?` | não | — | Atributo errorCode da entidade. |
+| `errorMessage` | `error_message` | `String?` | não | — | Atributo errorMessage da entidade. |
+| `requestedAt` | `requested_at` | `DateTime` | sim | default: now() | Data e hora de requested. |
+| `completedAt` | `completed_at` | `DateTime?` | não | — | Data e hora de completed. |
+| `tenant` | `—` | `Tenant` | sim | FK/relação | Referência relacionada a Tenant. |
+| `integration` | `—` | `SalesIntegration` | sim | FK/relação | Referência relacionada a SalesIntegration. |
+
+**Restrições e índices do modelo**:
+
+- `@@unique([tenantId, integrationId, providerRequestId])`
+- `@@index([tenantId, integrationId, competence, requestedAt])`
+
+**Escopo de tenant**: próprio (`tenantId`).
+
+#### FinancialReconciliationRun
+
+**Tabela física**: `financial_reconciliation_runs`  
+**Finalidade**: Entidade persistente do domínio.
+
+| Campo lógico | Coluna física | Tipo Prisma | Obrigatório | Regra/Chave | Descrição |
+|---|---|---|---|---|---|
+| `id` | `id` | `String` | sim | PK; default: uuid() | Identificador único do registro. |
+| `tenantId` | `tenant_id` | `String` | sim | — | Tenant proprietário; obrigatório para isolamento dos dados. |
+| `integrationId` | `integration_id` | `String` | sim | — | Identificador associado a integration. |
+| `requestedByUserId` | `requested_by_user_id` | `String?` | não | — | Identificador associado a requestedByUser. |
+| `trigger` | `trigger` | `FinancialReconciliationTrigger` | sim | default: MANUAL | Valor controlado pelo enum FinancialReconciliationTrigger. |
+| `startDate` | `start_date` | `DateTime` | sim | — | Data de start. |
+| `endDate` | `end_date` | `DateTime` | sim | — | Data de end. |
+| `status` | `status` | `FinancialReconciliationStatus` | sim | default: PENDING | Estado atual no ciclo de vida da entidade. |
+| `salesCount` | `sales_count` | `Int` | sim | default: 0 | Atributo salesCount da entidade. |
+| `eventCount` | `event_count` | `Int` | sim | default: 0 | Atributo eventCount da entidade. |
+| `settlementCount` | `settlement_count` | `Int` | sim | default: 0 | Atributo settlementCount da entidade. |
+| `divergentCount` | `divergent_count` | `Int` | sim | default: 0 | Atributo divergentCount da entidade. |
+| `cursor` | `cursor` | `Json?` | não | — | Atributo cursor da entidade. |
+| `errorCode` | `error_code` | `String?` | não | — | Atributo errorCode da entidade. |
+| `errorMessage` | `error_message` | `String?` | não | — | Atributo errorMessage da entidade. |
+| `startedAt` | `started_at` | `DateTime?` | não | — | Data e hora de started. |
+| `completedAt` | `completed_at` | `DateTime?` | não | — | Data e hora de completed. |
+| `createdAt` | `created_at` | `DateTime` | sim | default: now() | Data e hora de criação. |
+| `tenant` | `—` | `Tenant` | sim | FK/relação | Referência relacionada a Tenant. |
+| `integration` | `—` | `SalesIntegration` | sim | FK/relação | Referência relacionada a SalesIntegration. |
+| `requestedByUser` | `—` | `User?` | não | FK/relação | Referência relacionada a User. |
+
+**Restrições e índices do modelo**:
+
+- `@@index([tenantId, integrationId, status])`
+- `@@index([tenantId, createdAt])`
 
 **Escopo de tenant**: próprio (`tenantId`).
 
@@ -2024,6 +2296,7 @@ erDiagram
 | `id` | `id` | `String` | sim | PK; default: uuid() | Identificador único do registro. |
 | `tenantId` | `tenant_id` | `String` | sim | — | Tenant proprietário; obrigatório para isolamento dos dados. |
 | `provider` | `provider` | `DeliveryProvider` | sim | — | Valor controlado pelo enum DeliveryProvider. |
+| `environment` | `environment` | `SalesIntegrationEnvironment` | sim | default: PRODUCTION | Valor controlado pelo enum SalesIntegrationEnvironment. |
 | `orderPlatformId` | `order_platform_id` | `String` | sim | — | Identificador associado a orderPlatform. |
 | `status` | `status` | `DeliveryIntegrationStatus` | sim | default: DRAFT | Estado atual no ciclo de vida da entidade. |
 | `displayName` | `display_name` | `String` | sim | — | Atributo displayName da entidade. |
@@ -2051,10 +2324,11 @@ erDiagram
 | `cancellationReasons` | `—` | `PlatformCancellationReason[]` | coleção | relação 1:N/N:N | Coleção relacionada de PlatformCancellationReason. |
 | `disputes` | `—` | `PlatformDispute[]` | coleção | relação 1:N/N:N | Coleção relacionada de PlatformDispute. |
 | `audits` | `—` | `DeliveryIntegrationAudit[]` | coleção | relação 1:N/N:N | Coleção relacionada de DeliveryIntegrationAudit. |
+| `financialSalesIntegration` | `—` | `SalesIntegration?` | não | FK/relação | Referência relacionada a SalesIntegration. |
 
 **Restrições e índices do modelo**:
 
-- `@@unique([tenantId, provider])`
+- `@@unique([tenantId, provider, environment])`
 - `@@index([tenantId, status])`
 - `@@index([tenantId, orderPlatformId])`
 - `@@index([createdByUserId])`
@@ -2451,6 +2725,84 @@ erDiagram
 
 **Escopo de tenant**: próprio (`tenantId`).
 
+### MCP e assistentes de IA
+
+#### StoreMcpConfiguration
+
+**Tabela física**: `store_mcp_configurations`  
+**Finalidade**: Habilitação do MCP da loja e áreas de dados expostas a assistentes de IA.
+
+| Campo lógico | Coluna física | Tipo Prisma | Obrigatório | Regra/Chave | Descrição |
+|---|---|---|---|---|---|
+| `id` | `id` | `String` | sim | PK; default: uuid() | Identificador único do registro. |
+| `tenantId` | `tenant_id` | `String` | sim | UNIQUE | Tenant proprietário; obrigatório para isolamento dos dados. |
+| `enabled` | `enabled` | `Boolean` | sim | default: false | Indicador verdadeiro/falso da condição nomeada. |
+| `enabledAreas` | `enabled_areas` | `McpDataArea[]` | coleção | default: [SALES, FINANCIAL, MENU, CASH, PAYABLES, INVENTORY] | Valor controlado pelo enum McpDataArea. |
+| `updatedByUserId` | `updated_by_user_id` | `String?` | não | — | Identificador associado a updatedByUser. |
+| `createdAt` | `created_at` | `DateTime` | sim | default: now() | Data e hora de criação. |
+| `updatedAt` | `updated_at` | `DateTime` | sim | — | Data e hora da última atualização. |
+| `tenant` | `—` | `Tenant` | sim | FK/relação | Referência relacionada a Tenant. |
+| `updatedByUser` | `—` | `User?` | não | FK/relação | Referência relacionada a User. |
+
+**Escopo de tenant**: próprio (`tenantId`).
+
+#### StoreMcpToken
+
+**Tabela física**: `store_mcp_tokens`  
+**Finalidade**: Token de acesso MCP da loja; guarda apenas o hash SHA-256 e um prefixo de identificação.
+
+| Campo lógico | Coluna física | Tipo Prisma | Obrigatório | Regra/Chave | Descrição |
+|---|---|---|---|---|---|
+| `id` | `id` | `String` | sim | PK; default: uuid() | Identificador único do registro. |
+| `tenantId` | `tenant_id` | `String` | sim | — | Tenant proprietário; obrigatório para isolamento dos dados. |
+| `name` | `name` | `String` | sim | — | Atributo name da entidade. |
+| `tokenHash` | `token_hash` | `String` | sim | UNIQUE | Atributo tokenHash da entidade. |
+| `tokenPrefix` | `token_prefix` | `String` | sim | — | Atributo tokenPrefix da entidade. |
+| `expiresAt` | `expires_at` | `DateTime?` | não | — | Data e hora de expires. |
+| `revokedAt` | `revoked_at` | `DateTime?` | não | — | Data e hora de revoked. |
+| `revokedByUserId` | `revoked_by_user_id` | `String?` | não | — | Identificador associado a revokedByUser. |
+| `lastUsedAt` | `last_used_at` | `DateTime?` | não | — | Data e hora de lastUsed. |
+| `createdByUserId` | `created_by_user_id` | `String?` | não | — | Identificador associado a createdByUser. |
+| `createdAt` | `created_at` | `DateTime` | sim | default: now() | Data e hora de criação. |
+| `tenant` | `—` | `Tenant` | sim | FK/relação | Referência relacionada a Tenant. |
+| `createdByUser` | `—` | `User?` | não | FK/relação | Referência relacionada a User. |
+| `revokedByUser` | `—` | `User?` | não | FK/relação | Referência relacionada a User. |
+| `toolCalls` | `—` | `McpToolCall[]` | coleção | relação 1:N/N:N | Coleção relacionada de McpToolCall. |
+
+**Restrições e índices do modelo**:
+
+- `@@index([tenantId, revokedAt])`
+
+**Escopo de tenant**: próprio (`tenantId`).
+
+#### McpToolCall
+
+**Tabela física**: `mcp_tool_calls`  
+**Finalidade**: Registro de uso do MCP (consultas e recusas), retido por 90 dias.
+
+| Campo lógico | Coluna física | Tipo Prisma | Obrigatório | Regra/Chave | Descrição |
+|---|---|---|---|---|---|
+| `id` | `id` | `String` | sim | PK; default: uuid() | Identificador único do registro. |
+| `tenantId` | `tenant_id` | `String` | sim | — | Tenant proprietário; obrigatório para isolamento dos dados. |
+| `tokenId` | `token_id` | `String?` | não | — | Identificador associado a token. |
+| `method` | `method` | `String` | sim | — | Atributo method da entidade. |
+| `target` | `target` | `String?` | não | — | Atributo target da entidade. |
+| `arguments` | `arguments` | `Json?` | não | — | Atributo arguments da entidade. |
+| `result` | `result` | `McpToolCallResult` | sim | — | Valor controlado pelo enum McpToolCallResult. |
+| `errorCode` | `error_code` | `String?` | não | — | Atributo errorCode da entidade. |
+| `durationMs` | `duration_ms` | `Int` | sim | — | Atributo durationMs da entidade. |
+| `occurredAt` | `occurred_at` | `DateTime` | sim | default: now() | Data e hora de occurred. |
+| `tenant` | `—` | `Tenant` | sim | FK/relação | Referência relacionada a Tenant. |
+| `token` | `—` | `StoreMcpToken?` | não | FK/relação | Referência relacionada a StoreMcpToken. |
+
+**Restrições e índices do modelo**:
+
+- `@@index([tenantId, occurredAt(sort: Desc)])`
+- `@@index([tenantId, tokenId, occurredAt])`
+- `@@index([occurredAt])`
+
+**Escopo de tenant**: próprio (`tenantId`).
+
 ## Catálogo de enums
 
 ### UserRole
@@ -2487,7 +2839,15 @@ Valores permitidos: `ACTIVE`, `USED`, `EXPIRED`.
 
 ### AccessAuditEventType
 
-Valores permitidos: `LOGIN_SUCCESS`, `LOGIN_FAILURE`, `LOGOUT`, `USER_CREATED`, `USER_UPDATED`, `USER_STATUS_CHANGED`, `PROFILE_CREATED`, `PROFILE_UPDATED`, `PERMISSIONS_CHANGED`, `STORE_ASSIGNMENT_CHANGED`, `ACCESS_DENIED`, `PASSWORD_RESET_REQUESTED`, `PASSWORD_CHANGED`.
+Valores permitidos: `LOGIN_SUCCESS`, `LOGIN_FAILURE`, `LOGOUT`, `USER_CREATED`, `USER_UPDATED`, `USER_STATUS_CHANGED`, `PROFILE_CREATED`, `PROFILE_UPDATED`, `PERMISSIONS_CHANGED`, `STORE_ASSIGNMENT_CHANGED`, `ACCESS_DENIED`, `PASSWORD_RESET_REQUESTED`, `PASSWORD_CHANGED`, `MCP_CONFIGURATION_CHANGED`, `MCP_TOKEN_CREATED`, `MCP_TOKEN_REVOKED`.
+
+### McpDataArea
+
+Valores permitidos: `SALES`, `FINANCIAL`, `MENU`, `CASH`, `PAYABLES`, `INVENTORY`.
+
+### McpToolCallResult
+
+Valores permitidos: `SUCCESS`, `ERROR`, `DENIED`.
 
 ### AccessAuditResult
 
@@ -2575,7 +2935,7 @@ Valores permitidos: `CASH`, `PIX_MANUAL`, `CARD_ON_DELIVERY`, `DEBIT_CARD`, `CRE
 
 ### PaymentInstitution
 
-Valores permitidos: `PAGBANK`, `MERCADO_PAGO`, `DINHEIRO`, `CAIXA_LOCAL`.
+Valores permitidos: `PAGBANK`, `MERCADO_PAGO`, `IFOOD`, `DINHEIRO`, `CAIXA_LOCAL`.
 
 ### PaymentReleaseSource
 
@@ -2647,7 +3007,7 @@ Valores permitidos: `CONFIG_CREATED`, `CONFIG_UPDATED`, `CONFIG_ACTIVATED`, `CON
 
 ### SalesProvider
 
-Valores permitidos: `PAGBANK`, `MERCADO_PAGO`.
+Valores permitidos: `PAGBANK`, `MERCADO_PAGO`, `IFOOD`.
 
 ### SalesInputChannel
 
@@ -2680,6 +3040,26 @@ Valores permitidos: `PAYMENT`, `ORDER`, `CLAIM`, `CHARGEBACK`.
 ### ProviderNotificationSignatureStatus
 
 Valores permitidos: `VALID`, `INVALID`.
+
+### IfoodFinancialReadinessStatus
+
+Valores permitidos: `PENDING_PERMISSION`, `READY_TEST`, `READY_PRODUCTION`, `REQUIRES_ATTENTION`.
+
+### FinancialReconciliationStatus
+
+Valores permitidos: `PENDING`, `FETCHING`, `COMPLETED`, `PARTIAL`, `FAILED`.
+
+### FinancialReconciliationTrigger
+
+Valores permitidos: `MANUAL`, `DAILY`, `HOMOLOGATION`.
+
+### ExternalSettlementReconciliationStatus
+
+Valores permitidos: `MATCHED`, `DIVERGENT`, `PENDING`, `NOT_APPLICABLE`.
+
+### ExternalReconciliationFileStatus
+
+Valores permitidos: `REQUESTED`, `PROCESSING`, `READY`, `EXPIRED`, `FAILED`.
 
 ### ProviderNotificationStatus
 
@@ -2719,7 +3099,7 @@ Valores permitidos: `PENDING`, `PROCESSING`, `COMPLETED`, `FAILED`, `EXPIRED`.
 
 ### BackgroundJobType
 
-Valores permitidos: `EXPORT`, `SALES_IMPORT_PREVIEW`, `SALES_IMPORT_CONFIRM`, `PROVIDER_WEBHOOK`, `PAYMENT_WEBHOOK`, `IFOOD_POLL`, `MP_RECONCILIATION`, `MP_TOKEN_REFRESH`, `POINT_RECONCILIATION`, `RETENTION`.
+Valores permitidos: `EXPORT`, `SALES_IMPORT_PREVIEW`, `SALES_IMPORT_CONFIRM`, `IFOOD_FINANCIAL_RECONCILIATION`, `PROVIDER_WEBHOOK`, `PAYMENT_WEBHOOK`, `IFOOD_POLL`, `MP_RECONCILIATION`, `MP_TOKEN_REFRESH`, `POINT_RECONCILIATION`, `RETENTION`.
 
 ### BackgroundJobPriority
 
@@ -2801,6 +3181,13 @@ Valores permitidos: `INFO`, `SUCCESS`, `WARNING`, `ERROR`.
 | `Tenant` | `providerTransactionStates` | `ProviderTransactionState` | muitos | `—` |
 | `Tenant` | `providerNotifications` | `ProviderNotification` | muitos | `—` |
 | `Tenant` | `integrationAuditEvents` | `IntegrationAuditEvent` | muitos | `—` |
+| `Tenant` | `externalFinancialSales` | `ExternalFinancialSale` | muitos | `—` |
+| `Tenant` | `externalSalePayments` | `ExternalSalePayment` | muitos | `—` |
+| `Tenant` | `externalSaleInstallments` | `ExternalSaleInstallment` | muitos | `—` |
+| `Tenant` | `externalFinancialEvents` | `ExternalFinancialEvent` | muitos | `—` |
+| `Tenant` | `externalSettlements` | `ExternalSettlement` | muitos | `—` |
+| `Tenant` | `externalReconciliationFiles` | `ExternalReconciliationFile` | muitos | `—` |
+| `Tenant` | `financialReconciliationRuns` | `FinancialReconciliationRun` | muitos | `—` |
 | `Tenant` | `serviceTabs` | `ServiceTab` | muitos | `—` |
 | `Tenant` | `productComplements` | `ProductComplement` | muitos | `—` |
 | `Tenant` | `orderItemModifications` | `OrderItemModification` | muitos | `—` |
@@ -2812,6 +3199,9 @@ Valores permitidos: `INFO`, `SUCCESS`, `WARNING`, `ERROR`.
 | `Tenant` | `paymentExceptions` | `PaymentException` | muitos | `—` |
 | `Tenant` | `orderOperationalEvents` | `OrderOperationalEvent` | muitos | `—` |
 | `Tenant` | `idempotencyRecords` | `IdempotencyRecord` | muitos | `—` |
+| `Tenant` | `mcpConfiguration` | `StoreMcpConfiguration` | zero ou um | `—` |
+| `Tenant` | `mcpTokens` | `StoreMcpToken` | muitos | `—` |
+| `Tenant` | `mcpToolCalls` | `McpToolCall` | muitos | `—` |
 | `PlatformUser` | `createdTenants` | `Tenant` | muitos | `—` |
 | `LayoutPreset` | `tenantsUsingDefault` | `Tenant` | muitos | `—` |
 | `LayoutPreset` | `visualConfigurations` | `StoreVisualConfiguration` | muitos | `—` |
@@ -2844,8 +3234,12 @@ Valores permitidos: `INFO`, `SUCCESS`, `WARNING`, `ERROR`.
 | `User` | `salesIntegrationsUpdated` | `SalesIntegration` | muitos | `@relation("SalesIntegrationUpdatedBy")` |
 | `User` | `salesCredentialsCreated` | `SalesIntegrationCredential` | muitos | `@relation("SalesCredentialCreatedBy")` |
 | `User` | `salesImportRunsRequested` | `SalesImportRun` | muitos | `@relation("SalesImportRunRequestedBy")` |
+| `User` | `financialReconciliationRuns` | `FinancialReconciliationRun` | muitos | `—` |
 | `User` | `oauthAttemptsRequested` | `OAuthAuthorizationAttempt` | muitos | `@relation("OAuthAttemptRequestedBy")` |
 | `User` | `integrationAuditEvents` | `IntegrationAuditEvent` | muitos | `@relation("IntegrationAuditActor")` |
+| `User` | `mcpConfigurationsUpdated` | `StoreMcpConfiguration` | muitos | `@relation("McpConfigurationUpdatedBy")` |
+| `User` | `mcpTokensCreated` | `StoreMcpToken` | muitos | `@relation("McpTokenCreatedBy")` |
+| `User` | `mcpTokensRevoked` | `StoreMcpToken` | muitos | `@relation("McpTokenRevokedBy")` |
 | `UserStoreAssignment` | `user` | `User` | um | `@relation(fields: [userId], references: [id], onDelete: Cascade)` |
 | `UserStoreAssignment` | `tenant` | `Tenant` | um | `@relation(fields: [tenantId], references: [id], onDelete: Cascade)` |
 | `UserStoreAssignment` | `profile` | `AccessProfile` | um | `@relation(fields: [profileId], references: [id], onDelete: Restrict)` |
@@ -2904,6 +3298,7 @@ Valores permitidos: `INFO`, `SUCCESS`, `WARNING`, `ERROR`.
 | `Order` | `providerTransactionStates` | `ProviderTransactionState` | muitos | `—` |
 | `Order` | `paymentCharges` | `PaymentCharge` | muitos | `—` |
 | `Order` | `paymentAllocations` | `PaymentAllocation` | muitos | `—` |
+| `Order` | `externalFinancialSales` | `ExternalFinancialSale` | muitos | `—` |
 | `Order` | `operationalEvents` | `OrderOperationalEvent` | muitos | `—` |
 | `SalesIntegration` | `tenant` | `Tenant` | um | `@relation(fields: [tenantId], references: [id], onDelete: Cascade)` |
 | `SalesIntegration` | `createdByUser` | `User` | zero ou um | `@relation("SalesIntegrationCreatedBy", fields: [createdByUserId], references: [id], onDelete: SetNull)` |
@@ -2916,6 +3311,12 @@ Valores permitidos: `INFO`, `SUCCESS`, `WARNING`, `ERROR`.
 | `SalesIntegration` | `notifications` | `ProviderNotification` | muitos | `—` |
 | `SalesIntegration` | `auditEvents` | `IntegrationAuditEvent` | muitos | `—` |
 | `SalesIntegration` | `externalIdentities` | `ExternalSaleIdentity` | muitos | `—` |
+| `SalesIntegration` | `deliveryIntegration` | `DeliveryIntegration` | zero ou um | `@relation(fields: [deliveryIntegrationId], references: [id], onDelete: SetNull)` |
+| `SalesIntegration` | `financialSales` | `ExternalFinancialSale` | muitos | `—` |
+| `SalesIntegration` | `financialEvents` | `ExternalFinancialEvent` | muitos | `—` |
+| `SalesIntegration` | `settlements` | `ExternalSettlement` | muitos | `—` |
+| `SalesIntegration` | `reconciliationFiles` | `ExternalReconciliationFile` | muitos | `—` |
+| `SalesIntegration` | `reconciliationRuns` | `FinancialReconciliationRun` | muitos | `—` |
 | `SalesIntegrationCredential` | `tenant` | `Tenant` | um | `@relation(fields: [tenantId], references: [id], onDelete: Cascade)` |
 | `SalesIntegrationCredential` | `integration` | `SalesIntegration` | um | `@relation(fields: [integrationId], references: [id], onDelete: Cascade)` |
 | `SalesIntegrationCredential` | `createdByUser` | `User` | zero ou um | `@relation("SalesCredentialCreatedBy", fields: [createdByUserId], references: [id], onDelete: SetNull)` |
@@ -2936,6 +3337,26 @@ Valores permitidos: `INFO`, `SUCCESS`, `WARNING`, `ERROR`.
 | `ExternalSaleIdentity` | `tenant` | `Tenant` | um | `@relation(fields: [tenantId], references: [id], onDelete: Cascade)` |
 | `ExternalSaleIdentity` | `integration` | `SalesIntegration` | zero ou um | `@relation(fields: [integrationId], references: [id], onDelete: SetNull)` |
 | `ExternalSaleIdentity` | `order` | `Order` | zero ou um | `@relation(fields: [orderId], references: [id], onDelete: SetNull)` |
+| `ExternalFinancialSale` | `tenant` | `Tenant` | um | `@relation(fields: [tenantId], references: [id], onDelete: Cascade)` |
+| `ExternalFinancialSale` | `integration` | `SalesIntegration` | um | `@relation(fields: [integrationId], references: [id], onDelete: Cascade)` |
+| `ExternalFinancialSale` | `order` | `Order` | zero ou um | `@relation(fields: [orderId], references: [id], onDelete: SetNull)` |
+| `ExternalFinancialSale` | `payments` | `ExternalSalePayment` | muitos | `—` |
+| `ExternalFinancialSale` | `events` | `ExternalFinancialEvent` | muitos | `—` |
+| `ExternalSalePayment` | `tenant` | `Tenant` | um | `@relation(fields: [tenantId], references: [id], onDelete: Cascade)` |
+| `ExternalSalePayment` | `sale` | `ExternalFinancialSale` | um | `@relation(fields: [saleId], references: [id], onDelete: Cascade)` |
+| `ExternalSalePayment` | `installments` | `ExternalSaleInstallment` | muitos | `—` |
+| `ExternalSaleInstallment` | `tenant` | `Tenant` | um | `@relation(fields: [tenantId], references: [id], onDelete: Cascade)` |
+| `ExternalSaleInstallment` | `payment` | `ExternalSalePayment` | um | `@relation(fields: [paymentId], references: [id], onDelete: Cascade)` |
+| `ExternalFinancialEvent` | `tenant` | `Tenant` | um | `@relation(fields: [tenantId], references: [id], onDelete: Cascade)` |
+| `ExternalFinancialEvent` | `integration` | `SalesIntegration` | um | `@relation(fields: [integrationId], references: [id], onDelete: Cascade)` |
+| `ExternalFinancialEvent` | `sale` | `ExternalFinancialSale` | zero ou um | `@relation(fields: [saleId], references: [id], onDelete: SetNull)` |
+| `ExternalSettlement` | `tenant` | `Tenant` | um | `@relation(fields: [tenantId], references: [id], onDelete: Cascade)` |
+| `ExternalSettlement` | `integration` | `SalesIntegration` | um | `@relation(fields: [integrationId], references: [id], onDelete: Cascade)` |
+| `ExternalReconciliationFile` | `tenant` | `Tenant` | um | `@relation(fields: [tenantId], references: [id], onDelete: Cascade)` |
+| `ExternalReconciliationFile` | `integration` | `SalesIntegration` | um | `@relation(fields: [integrationId], references: [id], onDelete: Cascade)` |
+| `FinancialReconciliationRun` | `tenant` | `Tenant` | um | `@relation(fields: [tenantId], references: [id], onDelete: Cascade)` |
+| `FinancialReconciliationRun` | `integration` | `SalesIntegration` | um | `@relation(fields: [integrationId], references: [id], onDelete: Cascade)` |
+| `FinancialReconciliationRun` | `requestedByUser` | `User` | zero ou um | `@relation(fields: [requestedByUserId], references: [id], onDelete: SetNull)` |
 | `OAuthAuthorizationAttempt` | `tenant` | `Tenant` | um | `@relation(fields: [tenantId], references: [id], onDelete: Cascade)` |
 | `OAuthAuthorizationAttempt` | `integration` | `SalesIntegration` | um | `@relation(fields: [integrationId], references: [id], onDelete: Cascade)` |
 | `OAuthAuthorizationAttempt` | `requestedByUser` | `User` | um | `@relation("OAuthAttemptRequestedBy", fields: [requestedByUserId], references: [id], onDelete: Restrict)` |
@@ -3050,6 +3471,7 @@ Valores permitidos: `INFO`, `SUCCESS`, `WARNING`, `ERROR`.
 | `DeliveryIntegration` | `cancellationReasons` | `PlatformCancellationReason` | muitos | `—` |
 | `DeliveryIntegration` | `disputes` | `PlatformDispute` | muitos | `—` |
 | `DeliveryIntegration` | `audits` | `DeliveryIntegrationAudit` | muitos | `—` |
+| `DeliveryIntegration` | `financialSalesIntegration` | `SalesIntegration` | zero ou um | `—` |
 | `DeliveryIntegrationCredential` | `tenant` | `Tenant` | um | `@relation(fields: [tenantId], references: [id], onDelete: Cascade)` |
 | `DeliveryIntegrationCredential` | `integration` | `DeliveryIntegration` | um | `@relation(fields: [integrationId], references: [id], onDelete: Cascade)` |
 | `DeliveryIntegrationCredential` | `createdByUser` | `User` | zero ou um | `@relation("DeliveryCredentialCreatedBy", fields: [createdByUserId], references: [id], onDelete: SetNull)` |
@@ -3095,6 +3517,14 @@ Valores permitidos: `INFO`, `SUCCESS`, `WARNING`, `ERROR`.
 | `OrderProfitabilitySnapshot` | `order` | `Order` | um | `@relation(fields: [orderId], references: [id], onDelete: Cascade)` |
 | `OrderProfitabilitySnapshot` | `orderItem` | `OrderItem` | zero ou um | `@relation(fields: [orderItemId], references: [id], onDelete: SetNull)` |
 | `OrderProfitabilitySnapshot` | `orderPlatform` | `OrderPlatform` | zero ou um | `@relation(fields: [orderPlatformId], references: [id], onDelete: SetNull)` |
+| `StoreMcpConfiguration` | `tenant` | `Tenant` | um | `@relation(fields: [tenantId], references: [id], onDelete: Cascade)` |
+| `StoreMcpConfiguration` | `updatedByUser` | `User` | zero ou um | `@relation("McpConfigurationUpdatedBy", fields: [updatedByUserId], references: [id], onDelete: SetNull)` |
+| `StoreMcpToken` | `tenant` | `Tenant` | um | `@relation(fields: [tenantId], references: [id], onDelete: Cascade)` |
+| `StoreMcpToken` | `createdByUser` | `User` | zero ou um | `@relation("McpTokenCreatedBy", fields: [createdByUserId], references: [id], onDelete: SetNull)` |
+| `StoreMcpToken` | `revokedByUser` | `User` | zero ou um | `@relation("McpTokenRevokedBy", fields: [revokedByUserId], references: [id], onDelete: SetNull)` |
+| `StoreMcpToken` | `toolCalls` | `McpToolCall` | muitos | `—` |
+| `McpToolCall` | `tenant` | `Tenant` | um | `@relation(fields: [tenantId], references: [id], onDelete: Cascade)` |
+| `McpToolCall` | `token` | `StoreMcpToken` | zero ou um | `@relation(fields: [tokenId], references: [id], onDelete: SetNull)` |
 
 ## Governança e manutenção
 

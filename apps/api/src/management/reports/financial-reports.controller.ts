@@ -7,6 +7,7 @@ import { AuthUser } from "../../platform/auth/auth.types";
 import { JwtAuthGuard } from "../../platform/auth/jwt-auth.guard";
 import { DreService } from "./dre.service";
 import { FinancialDashboardService } from "./financial-dashboard.service";
+import { currentMonthEnd, currentMonthStart, dayEnd, dayStart } from "../../common/reporting/report-period";
 
 @ApiTags("admin financial reports")
 @ApiBearerAuth()
@@ -25,8 +26,8 @@ export class FinancialReportsController {
     @Query("start") start?: string,
     @Query("end") end?: string
   ) {
-    const periodStart = start ? localDayStart(start) : firstDayOfCurrentMonth();
-    const periodEnd = end ? localDayEnd(end) : lastDayOfCurrentMonth();
+    const periodStart = start ? dayStart(start) : currentMonthStart();
+    const periodEnd = end ? dayEnd(end) : currentMonthEnd();
 
     return this.dreService.getSummary(user.tenantId, periodStart, periodEnd);
   }
@@ -35,24 +36,4 @@ export class FinancialReportsController {
   getDashboard(@CurrentUser() user: AuthUser) {
     return this.dashboardService.getIndicators(user.tenantId);
   }
-}
-
-function firstDayOfCurrentMonth(): Date {
-  const now = new Date();
-  return new Date(now.getFullYear(), now.getMonth(), 1, 0, 0, 0, 0);
-}
-
-function lastDayOfCurrentMonth(): Date {
-  const now = new Date();
-  return new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
-}
-
-function localDayStart(date: string): Date {
-  const [year, month, day] = date.split("-").map(Number);
-  return new Date(year, month - 1, day, 0, 0, 0, 0);
-}
-
-function localDayEnd(date: string): Date {
-  const [year, month, day] = date.split("-").map(Number);
-  return new Date(year, month - 1, day, 23, 59, 59, 999);
 }

@@ -2,6 +2,7 @@ import type { LucideIcon } from "lucide-react";
 import {
   BarChart3,
   BookOpenText,
+  Bot,
   Boxes,
   Building2,
   Calculator,
@@ -236,6 +237,13 @@ export const adminNavigation: AdminNavigationGroup[] = [
         icon: Settings,
         description: "Parametros financeiros",
         permissions: ["finance.manage"],
+      },
+      {
+        href: "/admin/settings/mcp",
+        label: "MCP / IA",
+        icon: Bot,
+        description: "Assistentes de IA",
+        permissions: ["mcp.manage"],
       },
     ],
   },
