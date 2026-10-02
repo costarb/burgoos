@@ -154,6 +154,41 @@ describe("MCP tools parity with admin screens", () => {
     });
   });
 
+  it("contas_a_pagar applies the screen filters (category, supplier, competence) by name", async () => {
+    const output = await call("contas_a_pagar", {
+      categorias: ["aluguel centro"],
+      fornecedores: ["FORNECEDOR CENTRO"],
+      mesCompetencia: "2026-09",
+      status: ["OPEN"],
+    });
+
+    const filters = { categoryId: ["cat-1"], supplierId: ["supplier-1"], competenceMonth: "2026-09" };
+    expect(services.payables.list).toHaveBeenCalledWith(STORE_A, {
+      ...filters,
+      status: ["OPEN"],
+      page: 1,
+      pageSize: 50,
+    });
+    expect(services.payables.summarizeByCategory).toHaveBeenCalledWith(STORE_A, filters);
+    expect(output).toMatchObject({
+      periodo: { inicio: null, fim: null, criterio: "vencimento", padraoAplicado: false },
+      filtros: {
+        status: ["OPEN"],
+        categorias: ["Aluguel Centro"],
+        fornecedores: ["Fornecedor Centro"],
+        mesCompetencia: "2026-09",
+      },
+      contas: [expect.objectContaining({ competencia: "2026-10-01", vencimento: "2026-10-10" })],
+    });
+  });
+
+  it("contas_a_pagar rejects unknown categories listing the valid names", async () => {
+    await expect(call("contas_a_pagar", { categorias: ["Marketing"] })).rejects.toThrow(
+      "Categoria nao encontrada: Marketing. Opcoes: Aluguel Centro."
+    );
+    expect(services.payables.list).not.toHaveBeenCalled();
+  });
+
   it("contas_a_pagar and estoque call the payables and inventory services", async () => {
     const payables = await call("contas_a_pagar", {
       inicio: "2026-09-01",

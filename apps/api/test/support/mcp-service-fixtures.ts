@@ -395,6 +395,11 @@ export function createServiceMocks() {
       pageSize: 50,
       total: 1,
     })),
+    getOptions: vi.fn(async (tenantId: string) => ({
+      categories: [{ id: "cat-1", name: data(tenantId).category, active: true }],
+      accounts: [],
+      suppliers: [{ id: "supplier-1", name: data(tenantId).supplier, active: true }],
+    })),
     summarizeByCategory: vi.fn(async (tenantId: string) => [
       {
         categoryId: "cat-1",
