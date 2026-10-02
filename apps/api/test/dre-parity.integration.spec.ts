@@ -9,10 +9,17 @@ const tenantId = "11111111-1111-4111-8111-111111111111";
 
 describe("DRE parity (screen x dashboard x MCP)", () => {
   const prisma = {
-    financialConfiguration: { upsert: vi.fn(async () => ({ tenantId, monthlyFixedCost: decimal("5000.00") })) },
+    financialConfiguration: {
+      upsert: vi.fn(async () => ({
+        tenantId,
+        monthlyFixedCost: decimal("5000.00"),
+        taxRate: decimal("0.06"),
+      })),
+    },
     orderProfitabilitySnapshot: {
       findMany: vi.fn(async () => [
         {
+          orderId: "order-1",
           grossRevenue: decimal("15000.00"),
           discount: decimal("300.00"),
           netRevenue: decimal("14700.00"),
@@ -26,7 +33,13 @@ describe("DRE parity (screen x dashboard x MCP)", () => {
       ]),
     },
     $queryRaw: vi.fn(async () => [
-      { categoryId: "c1", categoryName: "Aluguel", dreClass: DreExpenseClass.FIXED_COST, amount: decimal("3000.00"), count: 1n },
+      {
+        categoryId: "c1",
+        categoryName: "Aluguel",
+        dreClass: DreExpenseClass.FIXED_COST,
+        amount: decimal("3000.00"),
+        count: 1n,
+      },
       {
         categoryId: "c2",
         categoryName: "Prestador",
@@ -66,6 +79,9 @@ describe("DRE parity (screen x dashboard x MCP)", () => {
       periodStart: screen.periodStart,
       periodEnd: screen.periodEnd,
       grossRevenue: screen.grossRevenue,
+      netRevenue: screen.netRevenue,
+      salesFees: screen.salesFees,
+      taxes: screen.taxes,
       grossProfit: screen.grossProfit,
       variableExpenses: screen.variableExpenses,
       fixedExpenses: screen.fixedExpenses,

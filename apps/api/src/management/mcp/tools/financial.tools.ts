@@ -39,7 +39,7 @@ export class FinancialTools {
         area: McpDataArea.FINANCIAL,
         title: "DRE da competencia",
         description:
-          "DRE (Demonstracao do Resultado) de um mes de competencia: receita bruta, descontos, receita liquida, CMV, taxas e impostos, margem de contribuicao, despesas variaveis e custos fixos lancados em contas a pagar para a competencia, resultado liquido, margem liquida, ponto de equilibrio, custo fixo previsto (referencia) e despesas por categoria. Mesmos numeros da tela DRE. Sem mes, usa o mes corrente.",
+          "DRE (Demonstracao do Resultado) de um mes de competencia: receita bruta, descontos, receita liquida, CMV, taxas de plataforma e pagamento (reais = bruto - liquido quando o pedido traz esses valores, senao estimadas), impostos (estimados pela aliquota configurada), margem de contribuicao, despesas variaveis e custos fixos lancados em contas a pagar para a competencia, resultado liquido, margem liquida, ponto de equilibrio, custo fixo previsto (referencia) e despesas por categoria. Mesmos numeros da tela DRE. Sem mes, usa o mes corrente.",
         inputSchema: {
           mesCompetencia: z
             .string()
@@ -70,19 +70,26 @@ export class FinancialTools {
         area: McpDataArea.FINANCIAL,
         title: "Dashboard financeiro",
         description:
-          "Indicadores financeiros do mes corrente: faturamento, CMV, lucro bruto, lucro liquido estimado, margem liquida, pedidos entregues, produtos com preco a revisar e ingredientes em alerta de estoque.",
+          "Indicadores financeiros do mes corrente (mesma regra da tela DRE): faturamento, receita liquida, CMV, taxas, impostos, margem de contribuicao, despesas variaveis, custos fixos, lucro liquido estimado, margem liquida, pedidos entregues, produtos com preco a revisar e ingredientes em alerta de estoque.",
         inputSchema: {},
         handler: async (context) => {
           const indicators = await this.dashboard.getIndicators(context.tenantId);
           return {
+            mesCompetencia: indicators.competence,
             mesReferencia: {
               inicio: indicators.periodStart.slice(0, 10),
               fim: indicators.periodEnd.slice(0, 10),
               fuso: BUSINESS_TIME_ZONE,
             },
             faturamentoBrutoReais: reais(indicators.grossRevenue),
+            receitaLiquidaReais: reais(indicators.netRevenue),
             cmvReais: reais(indicators.cmv),
+            taxasVendaReais: reais(indicators.salesFees),
+            impostosEstimadosReais: reais(indicators.taxes),
             lucroBrutoReais: reais(indicators.grossProfit),
+            margemContribuicaoPercentual: percentual(indicators.contributionMarginRate),
+            despesasVariaveisReais: reais(indicators.variableExpenses),
+            custosFixosReais: reais(indicators.fixedExpenses),
             lucroLiquidoEstimadoReais: reais(indicators.estimatedNetProfit),
             margemLiquidaPercentual: percentual(indicators.netMarginRate),
             pedidosEntregues: indicators.deliveredOrderCount,
@@ -116,6 +123,15 @@ export function mapDre(
     cmvReais: reais(summary.cmv),
     cmvPercentual: ratio(summary.cmv, summary.netRevenue),
     taxasEImpostosReais: reais(summary.feesAndTaxes),
+    taxasVendaReais: reais(summary.salesFees),
+    taxasVenda: {
+      reaisReais: reais(summary.realSalesFees),
+      pedidosComTaxaReal: summary.realFeeOrderCount,
+      estimadasReais: reais(summary.estimatedSalesFees),
+      pedidosComTaxaEstimada: summary.estimatedFeeOrderCount,
+    },
+    impostosEstimadosReais: reais(summary.taxes),
+    aliquotaImpostoPercentual: percentual(summary.taxRate),
     lucroBrutoReais: reais(summary.grossProfit),
     margemContribuicaoPercentual: percentual(summary.contributionMarginRate),
     despesasVariaveisReais: reais(summary.variableExpenses),

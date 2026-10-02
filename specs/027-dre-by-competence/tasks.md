@@ -39,6 +39,15 @@
 - [X] T019 [US4] Tool MCP `dre` (`financial.tools.ts`): `mesCompetencia` (padrão: mês corrente), `inicio` legado com `observacao`, saída com despesas variáveis, custos fixos (alias `despesasFixasReais`), previsto, diferença e `despesasPorCategoria`; tool `contas_a_pagar` com `classificacaoDre` e `classificacaoAjustada`; atualizar fixtures e testes de paridade
 - [X] T020 [P] [US4] Teste de paridade em `apps/api/test/dre-parity.integration.spec.ts`: endpoint do DRE × dashboard × tool `dre` mostram o mesmo resultado líquido para o mesmo mês (SC-003)
 
+## Phase 5b: User Story 5 - Taxas reais e Painel (P1)
+
+- [X] T024 [US5] `dre-calculator.ts`: `applyRealOrderFees` troca taxas de plataforma + pagamento do pedido por bruto − líquido (mín. 0) quando houver valores reais, distribuídas pelos itens; totais separados `salesFees`, `taxes`, parcelas real/estimada e contagens de pedidos (+ testes)
+- [X] T025 [US5] `dre.service.ts`: snapshots incluem bruto/líquido do pedido; resposta ganha `salesFees`, `taxes`, `realSalesFees`, `estimatedSalesFees`, `realFeeOrderCount`, `estimatedFeeOrderCount`, `taxRate`; dashboard repassa as linhas do DRE; testes de integração e paridade
+- [X] T026 [US5] MCP `dre`: `taxasVendaReais`, `impostosEstimadosReais`, `taxasVenda { reaisPedidos, estimadasPedidos, ... }`; `dashboard_financeiro` com as novas linhas; contrato e glossário
+- [ ] T027 [US5] Web DRE: linhas "Taxas de plataforma e pagamento" (real x estimado) e "Impostos (estimados X%)"
+- [ ] T028 [US4] Web Painel: bloco "Resultado de <mês>" com as linhas do DRE, prejuízo em destaque, aviso sem custo fixo, link "Ver DRE", card "Margem liquida do mes", alertas separados, moeda pt-BR (+ teste)
+- [ ] T029 Docs (USER_GUIDE) e verificação (typecheck, lint, suítes)
+
 ## Phase 6: Polish
 
 - [X] T021 [P] Docs: `docs/USER_GUIDE.md` (DRE por competência, classificação das categorias e contas), contrato MCP em `specs/025-store-mcp-server/contracts/mcp-tools.md`, regenerar `docs/DATA_DICTIONARY.md`

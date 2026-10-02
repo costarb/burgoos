@@ -1019,7 +1019,17 @@ export interface FinancialDreSummary {
   netRevenue: string;
   acquiredNetRevenue: string;
   cmv: string;
+  /** salesFees + taxes (kept for compatibility). */
   feesAndTaxes: string;
+  /** Platform + payment fees: real (gross - net) when the order has it, otherwise estimated. */
+  salesFees: string;
+  /** Always estimated by the configured tax rate. */
+  taxes: string;
+  taxRate: number;
+  realSalesFees: string;
+  estimatedSalesFees: string;
+  realFeeOrderCount: number;
+  estimatedFeeOrderCount: number;
   grossProfit: string;
   contributionMarginRate: number;
   variableExpenses: string;
@@ -1033,11 +1043,20 @@ export interface FinancialDreSummary {
 }
 
 export interface FinancialDashboardIndicators {
+  /** Current competence month (AAAA-MM), store time zone. */
+  competence: string;
   periodStart: string;
   periodEnd: string;
   grossRevenue: string;
+  netRevenue: string;
   cmv: string;
+  salesFees: string;
+  taxes: string;
   grossProfit: string;
+  contributionMarginRate: number;
+  variableExpenses: string;
+  fixedExpenses: string;
+  plannedFixedCost: string;
   estimatedNetProfit: string;
   netMarginRate: number;
   deliveredOrderCount: number;

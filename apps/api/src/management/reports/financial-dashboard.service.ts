@@ -42,13 +42,19 @@ export class FinancialDashboardService {
     ]);
 
     return {
+      competence: dre.competence,
       periodStart: dre.periodStart,
       periodEnd: dre.periodEnd,
       grossRevenue: dre.grossRevenue,
+      netRevenue: dre.netRevenue,
       cmv: dre.cmv,
+      salesFees: dre.salesFees,
+      taxes: dre.taxes,
       grossProfit: dre.grossProfit,
+      contributionMarginRate: dre.contributionMarginRate,
       variableExpenses: dre.variableExpenses,
       fixedExpenses: dre.fixedExpenses,
+      plannedFixedCost: dre.plannedFixedCost,
       estimatedNetProfit: dre.estimatedNetProfit,
       netMarginRate: dre.netMarginRate,
       deliveredOrderCount,

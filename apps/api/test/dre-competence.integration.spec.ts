@@ -23,9 +23,11 @@ describe("DRE by competence", () => {
     prismaMock.financialConfiguration.upsert.mockResolvedValue({
       tenantId,
       monthlyFixedCost: decimal("5000.00"),
+      taxRate: decimal("0.06"),
     });
     prismaMock.orderProfitabilitySnapshot.findMany.mockResolvedValue([
       {
+        orderId: "order-1",
         grossRevenue: decimal("15000.00"),
         discount: decimal("300.00"),
         netRevenue: decimal("14700.00"),
@@ -56,7 +58,7 @@ describe("DRE by competence", () => {
         },
         order: { status: OrderStatus.DELIVERED, deletedAt: null },
       },
-      include: { order: { select: { paymentNetAmount: true } } },
+      include: { order: { select: { paymentGrossAmount: true, paymentNetAmount: true } } },
     });
 
     const sql = prismaMock.$queryRaw.mock.calls[0][0] as Prisma.Sql;
@@ -73,6 +75,14 @@ describe("DRE by competence", () => {
       grossRevenue: "15000.00",
       netRevenue: "14700.00",
       acquiredNetRevenue: "14100.00",
+      feesAndTaxes: "1470.00",
+      salesFees: "1050.00",
+      taxes: "420.00",
+      taxRate: 0.06,
+      realSalesFees: "0.00",
+      estimatedSalesFees: "1050.00",
+      realFeeOrderCount: 0,
+      estimatedFeeOrderCount: 1,
       grossProfit: "8820.00",
       contributionMarginRate: 0.6,
       variableExpenses: "500.00",
@@ -86,6 +96,38 @@ describe("DRE by competence", () => {
         { categoryName: "Aluguel", dreClass: "FIXED_COST", amount: "3000.00", count: 1 },
         { categoryName: "Prestador de Servico", dreClass: "VARIABLE_EXPENSE", amount: "500.00", count: 2 },
       ],
+    });
+  });
+
+  it("uses gross - net of imported orders as their sales fee and keeps taxes estimated", async () => {
+    prismaMock.orderProfitabilitySnapshot.findMany.mockResolvedValue([
+      {
+        orderId: "imported",
+        grossRevenue: decimal("139.00"),
+        discount: decimal("0.00"),
+        netRevenue: decimal("139.00"),
+        cmv: decimal("40.00"),
+        platformFee: decimal("0.00"),
+        taxAmount: decimal("8.34"),
+        paymentFee: decimal("0.00"),
+        grossProfit: decimal("90.66"),
+        order: { paymentGrossAmount: decimal("139.00"), paymentNetAmount: decimal("134.69") },
+      },
+    ]);
+    prismaMock.$queryRaw.mockResolvedValue([]);
+
+    const summary = await service.getMonthlySummary(tenantId, "2026-09", now);
+
+    expect(summary).toMatchObject({
+      salesFees: "4.31",
+      realSalesFees: "4.31",
+      estimatedSalesFees: "0.00",
+      realFeeOrderCount: 1,
+      estimatedFeeOrderCount: 0,
+      taxes: "8.34",
+      feesAndTaxes: "12.65",
+      grossProfit: "86.35",
+      acquiredNetRevenue: "134.69",
     });
   });
 

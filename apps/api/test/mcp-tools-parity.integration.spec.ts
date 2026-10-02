@@ -111,6 +111,10 @@ describe("MCP tools parity with admin screens", () => {
       mesCompetencia: "2026-09",
       custosFixosReais: 500,
       despesasFixasReais: 500,
+      taxasVendaReais: 58.02,
+      taxasVenda: { reaisReais: 50, pedidosComTaxaReal: 25, estimadasReais: 8.02, pedidosComTaxaEstimada: 5 },
+      impostosEstimadosReais: 87.03,
+      aliquotaImpostoPercentual: 6,
       custoFixoPrevistoReais: 600,
       diferencaCustoFixoReais: -100,
       despesasPorCategoria: [

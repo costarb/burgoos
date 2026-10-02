@@ -20,7 +20,8 @@ export const METRICS_GLOSSARY = `# Glossario de metricas - RRFive OS
 O DRE e mensal, por competencia (AAAA-MM): vendas entregues no mes (fuso da loja) e contas a pagar lancadas para a competencia (sem competencia, vale o vencimento). Contas canceladas nao entram.
 - **Receita liquida (DRE)**: receita bruta menos descontos.
 - **CMV (custo da mercadoria vendida)**: custo dos ingredientes dos itens vendidos, pela ficha tecnica.
-- **Taxas e impostos**: taxa da plataforma, taxa de pagamento e impostos estimados.
+- **Taxas de plataforma e pagamento**: quando o pedido traz bruto e liquido reais (importados de adquirentes e plataformas), vale bruto - liquido; senao, estimativa pelos percentuais da plataforma e da configuracao. "taxasVenda" separa a parcela real da estimada.
+- **Impostos**: sempre estimados pela aliquota configurada pela loja, sobre a receita liquida.
 - **Lucro bruto / margem de contribuicao**: receita liquida menos CMV, taxas e impostos.
 - **Classificacao no DRE**: cada categoria de despesa e Custo fixo, Despesa variavel ou Fora do DRE (insumos ja estao no CMV, taxas ja descontadas nos pedidos, investimentos). Uma conta pode ajustar a classificacao da sua categoria.
 - **Despesas variaveis**: contas da competencia classificadas como despesa variavel.

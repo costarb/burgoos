@@ -102,6 +102,24 @@ Como usuário do dashboard financeiro e dos assistentes de IA (MCP), eu quero qu
 1. **Given** o dashboard financeiro, **When** exibido, **Then** os indicadores de resultado do mês corrente usam a mesma regra do DRE por competência.
 2. **Given** a tool `dre` do MCP, **When** chamada, **Then** aceita `mesCompetencia` (`AAAA-MM`, padrão: mês corrente) e devolve as novas linhas (despesas variáveis, custos fixos por categoria). Chamadas antigas com `inicio`/`fim` passam a usar o mês de `inicio`, informando isso na resposta.
 3. **Given** a tool `contas_a_pagar` do MCP, **When** devolve contas, **Then** inclui a classificação para o DRE de cada conta.
+4. **Given** o Painel (tela principal), **When** exibido, **Then** o bloco de resultado indica o mês de competência, mostra as mesmas linhas do DRE (receita líquida, CMV, taxas, impostos, margem de contribuição, despesas variáveis, custos fixos, resultado líquido), destaca prejuízo, avisa quando não há custo fixo lançado e leva ao DRE do mês.
+
+---
+
+### User Story 5 - Taxas reais dos pedidos (Priority: P1)
+
+Como gestor, eu quero que o DRE use as taxas que as plataformas e adquirentes realmente cobraram em cada pedido, para não superestimar o resultado.
+
+**Why this priority**: Pedidos importados (Mercado Pago, PagBank, Food Truck) trazem bruto e líquido reais, mas o DRE estimava as taxas por percentual — e essas plataformas estão a 0%, então nenhuma taxa era descontada. No Mercado Pago o campo de taxa ainda omite o custo de parcelamento; o custo real é bruto − líquido.
+
+**Independent Test**: Mês com um pedido importado (bruto R$ 139,00, líquido R$ 134,69) e um pedido de balcão no cartão (R$ 100,00, taxa de cartão configurada 3,5%, imposto 6%). Taxas de venda = 4,31 (real) + 3,50 (estimada) = R$ 7,81; impostos = 6% sobre a receita líquida dos dois.
+
+**Acceptance Scenarios**:
+
+1. **Given** um pedido entregue com bruto e líquido de pagamento reais, **When** o DRE é calculado, **Then** as taxas de plataforma e de pagamento desse pedido são substituídas por bruto − líquido (nunca negativo).
+2. **Given** um pedido sem esses valores, **When** o DRE é calculado, **Then** continua a estimativa pelos percentuais da plataforma e da configuração.
+3. **Given** o DRE, **When** exibido, **Then** "Taxas de plataforma e pagamento" e "Impostos (estimados)" aparecem em linhas separadas, informando quanto das taxas é real e quanto é estimado (valor e quantidade de pedidos).
+4. **Given** meses anteriores, **When** consultados, **Then** a regra vale também para eles (é aplicada no cálculo, sem alterar os snapshots).
 
 ---
 
@@ -129,11 +147,12 @@ Como usuário do dashboard financeiro e dos assistentes de IA (MCP), eu quero qu
 **DRE**
 
 - **FR-005**: A tela de DRE MUST usar um **mês de competência** como filtro, com padrão no mês corrente.
-- **FR-006**: Receita, descontos, CMV e taxas e impostos MUST seguir as regras atuais, restritas aos pedidos entregues do mês no fuso da loja.
+- **FR-006**: Receita, descontos, CMV e impostos MUST seguir as regras atuais, restritas aos pedidos entregues do mês no fuso da loja. Taxas de plataforma e pagamento seguem a FR-011.
+- **FR-011**: Para pedidos com bruto e líquido de pagamento reais, as taxas de venda MUST ser bruto − líquido (mínimo zero), no lugar das taxas estimadas; sem esses valores, MUST seguir a estimativa por percentual. Impostos continuam estimados pelo percentual configurado. O DRE, o Painel e o MCP MUST exibir taxas e impostos separados, com a parcela real e a estimada das taxas.
 - **FR-007**: Custos fixos e despesas variáveis MUST somar o valor previsto das contas a pagar não canceladas cuja competência, ou na falta dela o vencimento, cai no mês, conforme a classificação.
 - **FR-008**: O DRE MUST exibir as linhas de US2-6, com margem líquida e ponto de equilíbrio, e o detalhamento por categoria com acesso às contas.
 - **FR-009**: O custo fixo mensal parametrizado MUST deixar de entrar no cálculo do resultado e ser exibido no DRE como "previsto", com a diferença para o realizado.
-- **FR-010**: O dashboard financeiro e a tool `dre` do MCP MUST usar a mesma regra de cálculo. A tool `contas_a_pagar` MUST expor a classificação.
+- **FR-010**: O dashboard financeiro, o Painel e a tool `dre` do MCP MUST usar a mesma regra de cálculo. A tool `contas_a_pagar` MUST expor a classificação.
 
 ### Key Entities
 

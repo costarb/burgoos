@@ -17,6 +17,13 @@ Query: `competence=AAAA-MM` (opcional; padrão: mês corrente no fuso da loja). 
   "acquiredNetRevenue": "14100.00",
   "cmv": "4410.00",
   "feesAndTaxes": "1470.00",
+  "salesFees": "1050.00",
+  "taxes": "420.00",
+  "taxRate": 0.06,
+  "realSalesFees": "900.00",
+  "estimatedSalesFees": "150.00",
+  "realFeeOrderCount": 120,
+  "estimatedFeeOrderCount": 15,
   "grossProfit": "8820.00",
   "contributionMarginRate": 0.6,
   "variableExpenses": "500.00",
@@ -32,6 +39,8 @@ Query: `competence=AAAA-MM` (opcional; padrão: mês corrente no fuso da loja). 
   ]
 }
 ```
+
+`salesFees` = taxas de plataforma + pagamento: bruto − líquido do pedido quando houver valores reais (`realSalesFees`, `realFeeOrderCount`), senão a estimativa por percentual (`estimatedSalesFees`, `estimatedFeeOrderCount`). `taxes` é sempre estimado (`taxRate` da configuração). `feesAndTaxes` = `salesFees` + `taxes` (mantido por compatibilidade).
 
 `breakEvenRevenue` é `null` quando a margem após despesas variáveis é ≤ 0 ("não atingível"). `estimatedNetProfit` mantém o nome atual (resultado líquido).
 
