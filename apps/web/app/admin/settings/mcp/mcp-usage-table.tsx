@@ -18,6 +18,9 @@ const RESULT_LABEL: Record<McpToolCallResult, { label: string; classes: string }
 
 const ERROR_LABEL: Record<string, string> = {
   TOKEN_REVOKED: "Token revogado",
+  CONNECTION_REVOKED: "Conexao revogada",
+  USER_INACTIVE: "Usuario inativo",
+  STORE_ACCESS_LOST: "Usuario sem acesso a loja",
   TOKEN_EXPIRED: "Token expirado",
   MCP_DISABLED: "MCP desabilitado",
   STORE_INACTIVE: "Loja inativa",
@@ -128,7 +131,7 @@ export function McpUsageTable({ initialPage, tokens, loadUsageAction }: McpUsage
             <thead className="border-b border-slate-200 text-xs uppercase text-slate-500">
               <tr>
                 <th className="py-2 pr-4">Data</th>
-                <th className="py-2 pr-4">Token</th>
+                <th className="py-2 pr-4">Origem</th>
                 <th className="py-2 pr-4">Consulta</th>
                 <th className="py-2 pr-4">Parametros</th>
                 <th className="py-2 pr-4">Resultado</th>
@@ -144,7 +147,16 @@ export function McpUsageTable({ initialPage, tokens, loadUsageAction }: McpUsage
                       timeStyle: "medium",
                     })}
                   </td>
-                  <td className="py-2 pr-4">{entry.tokenName ?? "-"}</td>
+                  <td className="py-2 pr-4">
+                    {entry.clientName ? (
+                      <>
+                        <span className="font-medium">{entry.clientName}</span>
+                        <span className="block text-xs text-slate-500">{entry.userName ?? "-"}</span>
+                      </>
+                    ) : (
+                      (entry.tokenName ?? "-")
+                    )}
+                  </td>
                   <td className="py-2 pr-4">
                     <span className="font-medium">{entry.target ?? entry.method}</span>
                     <span className="block text-xs text-slate-500">{entry.method}</span>

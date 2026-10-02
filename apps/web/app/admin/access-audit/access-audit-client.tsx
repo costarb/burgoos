@@ -160,6 +160,10 @@ const EVENT_TYPE_LABELS: Record<string, string> = {
   MCP_CONFIGURATION_CHANGED: "MCP: configuracao alterada",
   MCP_TOKEN_CREATED: "MCP: token gerado",
   MCP_TOKEN_REVOKED: "MCP: token revogado",
+  MCP_CONNECTION_AUTHORIZED: "MCP: assistente conectado",
+  MCP_CONNECTION_DENIED: "MCP: conexao cancelada pelo usuario",
+  MCP_CONNECTION_REVOKED: "MCP: conexao revogada",
+  MCP_CLIENT_REJECTED: "MCP: aplicativo recusado",
 };
 
 export function eventTypeLabel(eventType: string): string {

@@ -22,6 +22,7 @@ import { CurrentUser } from "../../../platform/auth/current-user.decorator";
 import { JwtAuthGuard } from "../../../platform/auth/jwt-auth.guard";
 import { CreateMcpTokenDto, McpUsageQueryDto, UpdateMcpConfigurationDto } from "./dto/store-mcp.dto";
 import { McpUsageService } from "./mcp-usage.service";
+import { OAuthConnectionService } from "../oauth/oauth-connection.service";
 import { resolveMcpServerUrl } from "./mcp-server-url";
 import { StoreMcpConfigurationService } from "./store-mcp-configuration.service";
 import { StoreMcpTokenService } from "./store-mcp-token.service";
@@ -37,6 +38,7 @@ export class StoreMcpAdminController {
     private readonly configurationService: StoreMcpConfigurationService,
     @Inject(StoreMcpTokenService) private readonly tokenService: StoreMcpTokenService,
     @Inject(McpUsageService) private readonly usageService: McpUsageService,
+    @Inject(OAuthConnectionService) private readonly connectionService: OAuthConnectionService,
     @Inject(ConfigService) private readonly config: ConfigService
   ) {}
 
@@ -72,6 +74,17 @@ export class StoreMcpAdminController {
   @HttpCode(200)
   revokeToken(@CurrentUser() user: AuthUser, @Param("id", ParseUUIDPipe) id: string) {
     return this.tokenService.revoke(user, id);
+  }
+
+  @Get("connections")
+  listConnections(@CurrentUser() user: AuthUser) {
+    return this.connectionService.list(user.tenantId);
+  }
+
+  @Post("connections/:id/revoke")
+  @HttpCode(200)
+  revokeConnection(@CurrentUser() user: AuthUser, @Param("id", ParseUUIDPipe) id: string) {
+    return this.connectionService.revokeForStore(user.tenantId, id, user.id);
   }
 
   @Get("usage")

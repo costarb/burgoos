@@ -90,6 +90,7 @@ import type {
   CreateMcpTokenPayload,
   McpConfiguration,
   McpConfigurationPayload,
+  McpConnection,
   McpToken,
   McpUsagePage,
   McpUsageQuery,
@@ -2701,4 +2702,12 @@ export async function getMcpUsage(token: string, query: McpUsageQuery = {}): Pro
   }
   const search = params.toString();
   return fetchAdmin<McpUsagePage>(token, `/api/admin/mcp/usage${search ? `?${search}` : ""}`);
+}
+
+export async function listMcpConnections(token: string): Promise<McpConnection[]> {
+  return fetchAdmin<McpConnection[]>(token, "/api/admin/mcp/connections");
+}
+
+export async function revokeMcpConnection(token: string, id: string): Promise<McpConnection> {
+  return fetchAdmin<McpConnection>(token, `/api/admin/mcp/connections/${id}/revoke`, { method: "POST" });
 }

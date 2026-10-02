@@ -278,14 +278,20 @@ export function createMcpFakePrisma() {
             .sort((a, b) => b.occurredAt.getTime() - a.occurredAt.getTime())
             .slice(skip, take === undefined ? undefined : skip + take);
           if (select) return rows.map((row) => ({ id: row.id }));
-          return rows.map((call) =>
-            include?.token
-              ? {
-                  ...call,
-                  token: state.tokens.find((token) => token.id === call.tokenId) ?? null,
-                }
-              : call
-          );
+          return rows.map((call) => {
+            if (!include?.token) return call;
+            const connection = state.oauthConnections.find((item) => item.id === (call as { connectionId?: string }).connectionId);
+            return {
+              ...call,
+              token: state.tokens.find((token) => token.id === call.tokenId) ?? null,
+              connection: connection
+                ? {
+                    client: state.oauthClients.find((item) => item.id === connection.clientId) ?? null,
+                    user: state.users.find((item) => item.id === connection.userId) ?? null,
+                  }
+                : null,
+            };
+          });
         }
       ),
       count: vi.fn(

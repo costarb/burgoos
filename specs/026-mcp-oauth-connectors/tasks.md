@@ -70,9 +70,9 @@
 
 **Independent Test**: quickstart §6 em produção
 
-- [ ] T027 [P] [US2] `apps/api/test/mcp-oauth-register.integration.spec.ts`: DCR válido 201 (RFC 7591); redirect inválido `invalid_redirect_uri`; `token_endpoint_auth_method` ≠ `none` recusado; limite por IP; cliente DCR completa o fluxo do authorize
-- [ ] T028 [US2] `apps/api/src/management/mcp/oauth/oauth-register.controller.ts` + `dto/oauth.dto.ts` (`POST /oauth/register` JSON, `client_id` `mcpc_…`, rate limit por IP com `FixedWindowRateLimitGuard`)
-- [ ] T029 [US2] Teste em `mcp-oauth-flow.e2e.spec.ts` com duas conexões (dois clientes) para a mesma loja: revogar uma não afeta a outra
+- [X] T027 [P] [US2] `apps/api/test/mcp-oauth-register.integration.spec.ts`: DCR válido 201 (RFC 7591); redirect inválido `invalid_redirect_uri`; `token_endpoint_auth_method` ≠ `none` recusado; limite por IP; cliente DCR completa o fluxo do authorize
+- [X] T028 [US2] `apps/api/src/management/mcp/oauth/oauth-register.controller.ts` + `dto/oauth.dto.ts` (`POST /oauth/register` JSON, `client_id` `mcpc_…`, rate limit por IP com `FixedWindowRateLimitGuard`)
+- [X] T029 [US2] Teste em `mcp-oauth-flow.e2e.spec.ts` com duas conexões (dois clientes) para a mesma loja: revogar uma não afeta a outra
 
 ---
 
@@ -84,15 +84,15 @@
 
 ### Tests for User Story 3
 
-- [ ] T030 [P] [US3] `apps/api/test/mcp-oauth-isolation.e2e.spec.ts`: usuário com acesso às lojas A e B autoriza A e nenhuma resposta contém dados de B (SC-004); revogação, MCP desabilitado, loja inativa, usuário inativado e vínculo removido recusam com o mesmo 401 e registram `DENIED` com motivo; reabilitar o MCP restaura
-- [ ] T031 [P] [US3] Casos em `apps/api/test/store-mcp-admin.integration.spec.ts`: `GET /admin/mcp/connections` só da loja ativa; revoke idempotente com auditoria `MCP_CONNECTION_REVOKED`; 404 para conexão de outra loja; uso com `clientName` e `userName`
+- [X] T030 [P] [US3] `apps/api/test/mcp-oauth-isolation.e2e.spec.ts`: usuário com acesso às lojas A e B autoriza A e nenhuma resposta contém dados de B (SC-004); revogação, MCP desabilitado, loja inativa, usuário inativado e vínculo removido recusam com o mesmo 401 e registram `DENIED` com motivo; reabilitar o MCP restaura
+- [X] T031 [P] [US3] Casos em `apps/api/test/store-mcp-admin.integration.spec.ts`: `GET /admin/mcp/connections` só da loja ativa; revoke idempotente com auditoria `MCP_CONNECTION_REVOKED`; 404 para conexão de outra loja; uso com `clientName` e `userName`
 
 ### Implementation for User Story 3
 
-- [ ] T032 [US3] `apps/api/src/management/mcp/admin/mcp-connections.service.ts` + rotas em `admin/store-mcp-admin.controller.ts` (listar; revogar com auditoria)
-- [ ] T033 [US3] `admin/mcp-usage.service.ts`: incluir `connectionId`, `clientName` e `userName`; filtro existente por token mantido
-- [ ] T034 [US3] Web: `apps/web/app/admin/settings/mcp/mcp-connections-table.tsx` (aplicativo, domínio, usuário, desde, último uso, status, revogar com confirmação) integrado em `mcp-settings-client.tsx`/`page.tsx`; coluna de origem em `mcp-usage-table.tsx`; testes em `mcp-settings-client.spec.tsx`
-- [ ] T035 [US3] Rótulos dos eventos `MCP_CONNECTION_*` e `MCP_CLIENT_REJECTED` em `apps/web/app/admin/access-audit/access-audit-client.tsx`
+- [X] T032 [US3] `apps/api/src/management/mcp/admin/mcp-connections.service.ts` + rotas em `admin/store-mcp-admin.controller.ts` (listar; revogar com auditoria)
+- [X] T033 [US3] `admin/mcp-usage.service.ts`: incluir `connectionId`, `clientName` e `userName`; filtro existente por token mantido
+- [X] T034 [US3] Web: `apps/web/app/admin/settings/mcp/mcp-connections-table.tsx` (aplicativo, domínio, usuário, desde, último uso, status, revogar com confirmação) integrado em `mcp-settings-client.tsx`/`page.tsx`; coluna de origem em `mcp-usage-table.tsx`; testes em `mcp-settings-client.spec.tsx`
+- [X] T035 [US3] Rótulos dos eventos `MCP_CONNECTION_*` e `MCP_CLIENT_REJECTED` em `apps/web/app/admin/access-audit/access-audit-client.tsx`
 
 ---
 
@@ -100,8 +100,8 @@
 
 **Goal**: não regressão e tela com "Conectar pelo endereço" como opção principal
 
-- [ ] T036 [US4] Rodar e manter verdes as suítes da fase 1 (`mcp-protocol`, `mcp-token-auth`, `mcp-tenant-isolation`, `mcp-privacy`, `mcp-tools-parity`, `store-mcp-admin`), ajustando só a expectativa do header `WWW-Authenticate` (agora com `resource_metadata`)
-- [ ] T037 [US4] Web: seção "Conectar pelo endereço" no topo de `mcp-settings-client.tsx` (URL do servidor com copiar + passo a passo para claude.ai/Desktop/mobile, Claude Code e ChatGPT) e "Tokens de acesso" como "Avançado"; testes
+- [X] T036 [US4] Rodar e manter verdes as suítes da fase 1 (`mcp-protocol`, `mcp-token-auth`, `mcp-tenant-isolation`, `mcp-privacy`, `mcp-tools-parity`, `store-mcp-admin`), ajustando só a expectativa do header `WWW-Authenticate` (agora com `resource_metadata`)
+- [X] T037 [US4] Web: seção "Conectar pelo endereço" no topo de `mcp-settings-client.tsx` (URL do servidor com copiar + passo a passo para claude.ai/Desktop/mobile, Claude Code e ChatGPT) e "Tokens de acesso" como "Avançado"; testes
 
 ---
 

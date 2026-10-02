@@ -59,6 +59,9 @@ export interface McpUsageEntry {
   occurredAt: string;
   tokenName: string | null;
   tokenPrefix: string | null;
+  connectionId: string | null;
+  clientName: string | null;
+  userName: string | null;
   method: string;
   target: string | null;
   arguments: Record<string, unknown> | null;
