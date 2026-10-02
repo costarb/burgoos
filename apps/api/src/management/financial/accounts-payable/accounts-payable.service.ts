@@ -94,7 +94,10 @@ export class AccountsPayableService {
 
   async summarizeByCategory(
     tenantId: string,
-    query: Pick<PayablesQueryDto, "start" | "end" | "categoryId" | "supplierId" | "competenceMonth">
+    query: Pick<
+      PayablesQueryDto,
+      "start" | "end" | "categoryId" | "supplierId" | "competenceMonth" | "competenceIncludesDueDate"
+    >
   ): Promise<PayableCategoryAggregate[]> {
     const rows = await this.prisma.$queryRaw<
       Array<{
@@ -117,7 +120,7 @@ export class AccountsPayableService {
       ${query.end ? Prisma.sql`AND p.due_date <= ${endOfDay(parseDate(query.end))}` : Prisma.empty}
       ${uuidInSql("p.category_id", queryValues(query.categoryId))}
       ${uuidInSql("p.supplier_id", queryValues(query.supplierId))}
-      ${query.competenceMonth ? competenceSql(query.competenceMonth) : Prisma.empty}
+      ${query.competenceMonth ? competenceSql(query.competenceMonth, includesDueDate(query)) : Prisma.empty}
       GROUP BY p.category_id, c.name ORDER BY expected DESC`);
     return rows.map((row) => ({
       ...row,
@@ -450,15 +453,21 @@ export class AccountsPayableService {
     const categoryIds = queryValues(query.categoryId);
     const supplierIds = queryValues(query.supplierId);
 
+    const competenceWindow = competenceRange
+      ? { gte: competenceRange.start, lt: competenceRange.end }
+      : undefined;
+    const byDueDate = competenceRange !== null && includesDueDate(query);
+
     return {
       tenantId,
       categoryId: prismaSelection(categoryIds),
       supplierId: prismaSelection(supplierIds),
-      competenceDate: competenceRange
-        ? {
-            gte: competenceRange.start,
-            lt: competenceRange.end,
-          }
+      competenceDate: byDueDate ? undefined : competenceWindow,
+      OR: byDueDate
+        ? [
+            { competenceDate: competenceWindow },
+            { competenceDate: null, dueDate: competenceWindow },
+          ]
         : undefined,
       dueDate: {
         gte: query.start ? parseDate(query.start) : undefined,
@@ -490,7 +499,7 @@ export class AccountsPayableService {
       ${uuidInSql("p.supplier_id", queryValues(query.supplierId))}
       ${query.start ? Prisma.sql`AND p.due_date >= ${parseDate(query.start)}` : Prisma.empty}
       ${query.end ? Prisma.sql`AND p.due_date <= ${endOfDay(parseDate(query.end))}` : Prisma.empty}
-      ${query.competenceMonth ? competenceSql(query.competenceMonth) : Prisma.empty}
+      ${query.competenceMonth ? competenceSql(query.competenceMonth, includesDueDate(query)) : Prisma.empty}
     ) SELECT COUNT(*)::bigint AS total,
       COALESCE(SUM(expected_amount) FILTER (WHERE status <> 'CANCELLED'), 0) AS "totalExpected",
       COALESCE(SUM(paid) FILTER (WHERE status <> 'CANCELLED'), 0) AS "totalPaid",
@@ -521,7 +530,7 @@ export class AccountsPayableService {
       ${uuidInSql("p.supplier_id", queryValues(query.supplierId))}
       ${query.start ? Prisma.sql`AND p.due_date >= ${parseDate(query.start)}` : Prisma.empty}
       ${query.end ? Prisma.sql`AND p.due_date <= ${endOfDay(parseDate(query.end))}` : Prisma.empty}
-      ${query.competenceMonth ? competenceSql(query.competenceMonth) : Prisma.empty}
+      ${query.competenceMonth ? competenceSql(query.competenceMonth, includesDueDate(query)) : Prisma.empty}
     ) filtered WHERE status IN (${Prisma.join(queryValues(query.status).map((status) => status.toUpperCase()))})
     ORDER BY due_date, created_at OFFSET ${(page - 1) * pageSize} LIMIT ${pageSize}`);
     return rows.map((row) => row.id);
@@ -700,9 +709,16 @@ function parseMonthRange(value: string): { start: Date; end: Date } {
   };
 }
 
-function competenceSql(value: string): Prisma.Sql {
+function competenceSql(value: string, includeDueDate = false): Prisma.Sql {
   const range = parseMonthRange(value);
-  return Prisma.sql`AND p.competence_date >= ${range.start} AND p.competence_date < ${range.end}`;
+  const column = includeDueDate
+    ? Prisma.sql`COALESCE(p.competence_date, p.due_date)`
+    : Prisma.sql`p.competence_date`;
+  return Prisma.sql`AND ${column} >= ${range.start} AND ${column} < ${range.end}`;
+}
+
+function includesDueDate(query: Pick<PayablesQueryDto, "competenceIncludesDueDate">): boolean {
+  return query.competenceIncludesDueDate === "true";
 }
 
 function endOfDay(value: Date): Date {

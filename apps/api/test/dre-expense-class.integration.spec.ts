@@ -172,4 +172,28 @@ describe("DRE expense classification", () => {
     const reset = await payables.update(user, payable.id, { ...base, dreClassOverride: null } as never);
     expect(reset).toMatchObject({ dreClassOverride: null, effectiveDreClass: "EXCLUDED" });
   });
+
+  it("filters by competence or, for the DRE link, by due date when there is no competence", async () => {
+    const findMany = vi.fn(async (_args: unknown) => []);
+    const queryRaw = vi.fn(async (_sql: Prisma.Sql) => []);
+    Object.assign(prisma, { $queryRaw: queryRaw });
+    (prisma.payable as Record<string, unknown>).findMany = findMany;
+    const window = { gte: new Date(2026, 8, 1), lt: new Date(2026, 9, 1) };
+
+    await payables.list(TENANT, { competenceMonth: "2026-09" } as never);
+    expect(findMany.mock.calls[0][0]).toMatchObject({ where: { competenceDate: window, OR: undefined } });
+    expect(queryRaw.mock.calls[0][0].sql).not.toContain("COALESCE(p.competence_date, p.due_date)");
+
+    await payables.list(TENANT, { competenceMonth: "2026-09", competenceIncludesDueDate: "true" } as never);
+    expect(findMany.mock.calls[1][0]).toMatchObject({
+      where: {
+        competenceDate: undefined,
+        OR: [{ competenceDate: window }, { competenceDate: null, dueDate: window }],
+      },
+    });
+    expect(queryRaw.mock.calls[1][0].sql).toContain("COALESCE(p.competence_date, p.due_date) >=");
+
+    await payables.summarizeByCategory(TENANT, { competenceMonth: "2026-09", competenceIncludesDueDate: "true" });
+    expect(queryRaw.mock.calls[2][0].sql).toContain("COALESCE(p.competence_date, p.due_date) >=");
+  });
 });
