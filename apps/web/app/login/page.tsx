@@ -5,6 +5,7 @@ import { LogIn } from "lucide-react";
 import Link from "next/link";
 import { FormEvent, useState } from "react";
 import { writeAuthSession } from "../../lib/auth-client";
+import { safeNextPath } from "../../lib/safe-next";
 
 const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? "http://127.0.0.1:3001";
 
@@ -21,7 +22,8 @@ export default function LoginPage() {
 
     try {
       const session = await authenticate(email, password);
-      const targetPath = isPlatformAdminSession(session) ? "/platform/stores" : "/admin";
+      const next = safeNextPath(new URLSearchParams(window.location.search).get("next"));
+      const targetPath = isPlatformAdminSession(session) ? "/platform/stores" : (next ?? "/admin");
 
       writeAuthSession(session);
       window.location.assign(targetPath);
