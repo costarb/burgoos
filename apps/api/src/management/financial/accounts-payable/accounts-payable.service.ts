@@ -93,7 +93,7 @@ export class AccountsPayableService {
 
   async summarizeByCategory(
     tenantId: string,
-    query: Pick<PayablesQueryDto, "start" | "end">
+    query: Pick<PayablesQueryDto, "start" | "end" | "categoryId" | "supplierId" | "competenceMonth">
   ): Promise<PayableCategoryAggregate[]> {
     const rows = await this.prisma.$queryRaw<
       Array<{
@@ -114,6 +114,9 @@ export class AccountsPayableService {
       WHERE p.tenant_id = ${tenantId}::uuid AND p.cancelled_at IS NULL
       ${query.start ? Prisma.sql`AND p.due_date >= ${parseDate(query.start)}` : Prisma.empty}
       ${query.end ? Prisma.sql`AND p.due_date <= ${endOfDay(parseDate(query.end))}` : Prisma.empty}
+      ${uuidInSql("p.category_id", queryValues(query.categoryId))}
+      ${uuidInSql("p.supplier_id", queryValues(query.supplierId))}
+      ${query.competenceMonth ? competenceSql(query.competenceMonth) : Prisma.empty}
       GROUP BY p.category_id, c.name ORDER BY expected DESC`);
     return rows.map((row) => ({
       ...row,
