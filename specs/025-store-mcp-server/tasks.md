@@ -175,7 +175,7 @@
 - [X] T058 [P] Adicionar a seção "MCP / IA" em `docs/USER_GUIDE.md` (habilitar, gerar token, configurar clientes, revogar) e o módulo `management/mcp` em `docs/ARCHITECTURE.md`; tabelas novas em `docs/DATA_DICTIONARY.md`
 - [X] T059 [P] Logs estruturados no `McpTokenGuard` e no `McpToolRunner` (tenantId, tokenPrefix, tool, resultado, duração; nunca o token) seguindo `common/observability`
 - [X] T060 Rodar `npm run typecheck`, `npm run lint` e `npm run test` na raiz e corrigir regressões
-- [ ] T061 Executar o roteiro completo de `specs/025-store-mcp-server/quickstart.md` (Inspector + Claude Code) e registrar o resultado
+- [X] T061 Executar o roteiro completo de `specs/025-store-mcp-server/quickstart.md` (Inspector + Claude Code) e registrar o resultado
 
 ---
 
