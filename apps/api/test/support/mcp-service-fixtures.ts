@@ -224,9 +224,10 @@ export function createServiceMocks() {
   };
 
   const dre = {
-    getSummary: vi.fn(async (tenantId: string, periodStart: Date, periodEnd: Date) => ({
-      periodStart: periodStart.toISOString(),
-      periodEnd: periodEnd.toISOString(),
+    getMonthlySummary: vi.fn(async (tenantId: string, competence?: string) => ({
+      competence: competence ?? "2026-10",
+      periodStart: `${competence ?? "2026-10"}-01`,
+      periodEnd: competence === "2026-09" ? "2026-09-30" : `${competence ?? "2026-10"}-31`,
       grossRevenue: data(tenantId).gross,
       discounts: "50.00",
       netRevenue: "1450.50",
@@ -234,10 +235,23 @@ export function createServiceMocks() {
       cmv: "435.15",
       feesAndTaxes: "145.05",
       grossProfit: "870.30",
+      contributionMarginRate: 0.6,
+      variableExpenses: "0.00",
       fixedExpenses: "500.00",
       estimatedNetProfit: "370.30",
       netMarginRate: 0.2553,
-      breakEvenRevenue: "833.33",
+      breakEvenRevenue: "833.33" as string | null,
+      plannedFixedCost: "600.00",
+      fixedCostVariance: "-100.00",
+      expensesByCategory: [
+        {
+          categoryId: "category-rent",
+          categoryName: "Aluguel",
+          dreClass: "FIXED_COST" as const,
+          amount: "500.00",
+          count: 1,
+        },
+      ],
     })),
   };
 
@@ -372,6 +386,9 @@ export function createServiceMocks() {
           description: "Aluguel do mes",
           documentReference: "NF 123 CNPJ 12.345.678/0001-90",
           competenceDate: "2026-10-01",
+          dreClassOverride: null,
+          categoryDreClass: "FIXED_COST" as const,
+          effectiveDreClass: "FIXED_COST" as const,
           dueDate: "2026-10-10",
           expectedAmount: "1000.00",
           paidAmount: "200.00",

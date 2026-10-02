@@ -23,7 +23,7 @@ Query: `competence=AAAA-MM` (opcional; padrão: mês corrente no fuso da loja). 
   "fixedExpenses": "3000.00",
   "estimatedNetProfit": "5320.00",
   "netMarginRate": 0.3619,
-  "breakEvenRevenue": "5250.00",
+  "breakEvenRevenue": "5300.48",
   "plannedFixedCost": "5000.00",
   "fixedCostVariance": "-2000.00",
   "expensesByCategory": [

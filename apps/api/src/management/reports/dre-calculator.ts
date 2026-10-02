@@ -11,9 +11,17 @@ export interface DreSnapshotInput {
   grossProfit: Prisma.Decimal;
 }
 
+const ZERO = new Prisma.Decimal(0);
+
+/**
+ * Monthly DRE: sales lines come from the delivered-order snapshots; variable expenses and fixed
+ * costs are the payables launched for the competence. The planned fixed cost is reference only.
+ */
 export function calculateDreSummary(input: {
   snapshots: DreSnapshotInput[];
+  variableExpenses?: Prisma.Decimal;
   fixedExpenses: Prisma.Decimal;
+  plannedFixedCost?: Prisma.Decimal;
 }) {
   const totals = input.snapshots.reduce(
     (current, snapshot) => ({
@@ -28,30 +36,38 @@ export function calculateDreSummary(input: {
       grossProfit: current.grossProfit.add(snapshot.grossProfit),
     }),
     {
-      grossRevenue: new Prisma.Decimal(0),
-      discounts: new Prisma.Decimal(0),
-      netRevenue: new Prisma.Decimal(0),
-      cmv: new Prisma.Decimal(0),
-      feesAndTaxes: new Prisma.Decimal(0),
-      grossProfit: new Prisma.Decimal(0),
+      grossRevenue: ZERO,
+      discounts: ZERO,
+      netRevenue: ZERO,
+      cmv: ZERO,
+      feesAndTaxes: ZERO,
+      grossProfit: ZERO,
     }
   );
-  const estimatedNetProfit = totals.grossProfit.sub(input.fixedExpenses);
-  const netMarginRate = totals.netRevenue.gt(0)
-    ? estimatedNetProfit.div(totals.netRevenue)
-    : new Prisma.Decimal(0);
-  const contributionRate = totals.netRevenue.gt(0)
-    ? totals.grossProfit.div(totals.netRevenue)
-    : new Prisma.Decimal(0);
-  const breakEvenRevenue = contributionRate.gt(0)
-    ? input.fixedExpenses.div(contributionRate)
-    : new Prisma.Decimal(0);
+  const variableExpenses = input.variableExpenses ?? ZERO;
+  const fixedExpenses = input.fixedExpenses;
+  const plannedFixedCost = input.plannedFixedCost ?? ZERO;
+
+  const estimatedNetProfit = totals.grossProfit.sub(variableExpenses).sub(fixedExpenses);
+  const hasRevenue = totals.netRevenue.gt(0);
+  const netMarginRate = hasRevenue ? estimatedNetProfit.div(totals.netRevenue) : ZERO;
+  const contributionMarginRate = hasRevenue ? totals.grossProfit.div(totals.netRevenue) : ZERO;
+  const marginAfterVariableRate = hasRevenue
+    ? totals.grossProfit.sub(variableExpenses).div(totals.netRevenue)
+    : ZERO;
+  const breakEvenRevenue = marginAfterVariableRate.gt(0)
+    ? fixedExpenses.div(marginAfterVariableRate)
+    : null;
 
   return {
     ...totals,
-    fixedExpenses: input.fixedExpenses,
+    variableExpenses,
+    fixedExpenses,
     estimatedNetProfit,
     netMarginRate,
+    contributionMarginRate,
     breakEvenRevenue,
+    plannedFixedCost,
+    fixedCostVariance: fixedExpenses.sub(plannedFixedCost),
   };
 }

@@ -1,13 +1,14 @@
 import { Inject, Injectable } from "@nestjs/common";
 import { McpDataArea } from "@prisma/client";
+import { z } from "zod";
 import {
   currentMonthEnd,
   currentMonthStart,
-  dayEnd,
-  dayStart,
   formatDate,
 } from "../../../common/reporting/report-period";
+import { competenceFromDate, isCompetence } from "../../reports/dre-competence";
 import { DreService } from "../../reports/dre.service";
+import { McpToolError } from "../server/mcp-context";
 import { FinancialDashboardService } from "../../reports/financial-dashboard.service";
 import {
   BUSINESS_TIME_ZONE,
@@ -16,10 +17,9 @@ import {
   percentual,
   ratio,
   reais,
-  resolvePeriod,
 } from "./tool-output";
 
-type DreSummary = Awaited<ReturnType<DreService["getSummary"]>>;
+type DreSummary = Awaited<ReturnType<DreService["getMonthlySummary"]>>;
 
 export function currentMonthRange(now = new Date()) {
   return { start: formatDate(currentMonthStart(now)), end: formatDate(currentMonthEnd(now)) };
@@ -37,21 +37,32 @@ export class FinancialTools {
       {
         name: "dre",
         area: McpDataArea.FINANCIAL,
-        title: "DRE do periodo",
+        title: "DRE da competencia",
         description:
-          "DRE (Demonstracao do Resultado) do periodo com base nos pedidos entregues: receita bruta, descontos, receita liquida, CMV, taxas e impostos, lucro bruto (margem de contribuicao), despesas fixas, lucro liquido estimado, margem liquida e ponto de equilibrio. Mesmos numeros da tela DRE. Sem datas, usa o mes corrente.",
+          "DRE (Demonstracao do Resultado) de um mes de competencia: receita bruta, descontos, receita liquida, CMV, taxas e impostos, margem de contribuicao, despesas variaveis e custos fixos lancados em contas a pagar para a competencia, resultado liquido, margem liquida, ponto de equilibrio, custo fixo previsto (referencia) e despesas por categoria. Mesmos numeros da tela DRE. Sem mes, usa o mes corrente.",
         inputSchema: {
-          inicio: dateArg("Data inicial (AAAA-MM-DD)."),
-          fim: dateArg("Data final (AAAA-MM-DD)."),
+          mesCompetencia: z
+            .string()
+            .regex(/^\d{4}-(0[1-9]|1[0-2])$/, "Use o formato AAAA-MM")
+            .optional()
+            .describe("Mes de competencia (AAAA-MM)."),
+          inicio: dateArg("Legado: o DRE usa o mes desta data (AAAA-MM-DD)."),
+          fim: dateArg("Legado: ignorado; o DRE e sempre mensal."),
         },
         handler: async (context, args) => {
-          const periodo = resolvePeriod(args, currentMonthRange());
-          const summary = await this.dre.getSummary(
-            context.tenantId,
-            dayStart(periodo.inicio),
-            dayEnd(periodo.fim)
-          );
-          return mapDre(summary, periodo);
+          const mes = typeof args.mesCompetencia === "string" ? args.mesCompetencia : undefined;
+          const inicio = typeof args.inicio === "string" ? args.inicio : undefined;
+          let observacao: string | undefined;
+          let competence = mes;
+          if (!competence && inicio) {
+            competence = competenceFromDate(inicio);
+            observacao = `O DRE e mensal por competencia; usado o mes de inicio (${competence}).`;
+          }
+          if (competence && !isCompetence(competence)) {
+            throw new McpToolError("INVALID_PERIOD", "Competencia invalida. Use o formato AAAA-MM.");
+          }
+          const summary = await this.dre.getMonthlySummary(context.tenantId, competence);
+          return mapDre(summary, { padraoAplicado: competence === undefined, observacao });
         },
       },
       {
@@ -85,9 +96,19 @@ export class FinancialTools {
   }
 }
 
-export function mapDre(summary: DreSummary, periodo: ReturnType<typeof resolvePeriod>) {
+export function mapDre(
+  summary: DreSummary,
+  options: { padraoAplicado: boolean; observacao?: string }
+) {
   return {
-    periodo,
+    mesCompetencia: summary.competence,
+    periodo: {
+      inicio: summary.periodStart,
+      fim: summary.periodEnd,
+      fuso: BUSINESS_TIME_ZONE,
+      padraoAplicado: options.padraoAplicado,
+    },
+    ...(options.observacao ? { observacao: options.observacao } : {}),
     receitaBrutaReais: reais(summary.grossRevenue),
     descontosReais: reais(summary.discounts),
     receitaLiquidaReais: reais(summary.netRevenue),
@@ -96,11 +117,23 @@ export function mapDre(summary: DreSummary, periodo: ReturnType<typeof resolvePe
     cmvPercentual: ratio(summary.cmv, summary.netRevenue),
     taxasEImpostosReais: reais(summary.feesAndTaxes),
     lucroBrutoReais: reais(summary.grossProfit),
-    margemContribuicaoPercentual: ratio(summary.grossProfit, summary.netRevenue),
+    margemContribuicaoPercentual: percentual(summary.contributionMarginRate),
+    despesasVariaveisReais: reais(summary.variableExpenses),
+    custosFixosReais: reais(summary.fixedExpenses),
     despesasFixasReais: reais(summary.fixedExpenses),
     lucroLiquidoEstimadoReais: reais(summary.estimatedNetProfit),
     margemLiquidaPercentual: percentual(summary.netMarginRate),
-    pontoEquilibrioReais: reais(summary.breakEvenRevenue),
+    pontoEquilibrioReais:
+      summary.breakEvenRevenue === null ? null : reais(summary.breakEvenRevenue),
+    pontoEquilibrioAtingivel: summary.breakEvenRevenue !== null,
+    custoFixoPrevistoReais: reais(summary.plannedFixedCost),
+    diferencaCustoFixoReais: reais(summary.fixedCostVariance),
+    despesasPorCategoria: summary.expensesByCategory.map((row) => ({
+      categoria: row.categoryName,
+      classificacao: row.dreClass,
+      valorReais: reais(row.amount),
+      quantidade: row.count,
+    })),
     semMovimento: reais(summary.grossRevenue) === 0,
   };
 }

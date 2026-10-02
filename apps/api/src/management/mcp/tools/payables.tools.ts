@@ -77,7 +77,7 @@ export class PayablesTools {
         area: McpDataArea.PAYABLES,
         title: "Contas a pagar",
         description:
-          "Contas a pagar com os mesmos filtros da tela, todos opcionais: vencimento (inicio/fim), status (OPEN, PARTIALLY_PAID, OVERDUE, PAID, CANCELLED), categorias e fornecedores (pelo nome) e mes de competencia (AAAA-MM). Retorna totais previsto, pago, restante e vencido, quebra por categoria e ate 50 contas com descricao, fornecedor, categoria, competencia, vencimento, valores e situacao. Sem nenhum filtro de data ou competencia, considera vencimentos de 30 dias atras ate 30 dias a frente.",
+          "Contas a pagar com os mesmos filtros da tela, todos opcionais: vencimento (inicio/fim), status (OPEN, PARTIALLY_PAID, OVERDUE, PAID, CANCELLED), categorias e fornecedores (pelo nome) e mes de competencia (AAAA-MM). Retorna totais previsto, pago, restante e vencido, quebra por categoria e ate 50 contas com descricao, fornecedor, categoria, competencia, classificacao no DRE (classificacaoDre; classificacaoAjustada indica ajuste na propria conta), vencimento, valores e situacao. Sem nenhum filtro de data ou competencia, considera vencimentos de 30 dias atras ate 30 dias a frente.",
         inputSchema: {
           inicio: dateArg("Vencimento inicial (AAAA-MM-DD)."),
           fim: dateArg("Vencimento final (AAAA-MM-DD)."),
@@ -177,6 +177,8 @@ export function mapPayables(
     fornecedor: item.supplierName,
     categoria: item.categoryName,
     competencia: item.competenceDate,
+    classificacaoDre: item.effectiveDreClass,
+    classificacaoAjustada: item.dreClassOverride !== null,
     vencimento: item.dueDate,
     valorReais: reais(item.expectedAmount),
     pagoReais: reais(item.paidAmount),

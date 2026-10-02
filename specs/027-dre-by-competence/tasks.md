@@ -21,10 +21,10 @@
 
 ## Phase 3: User Story 2 - DRE por competência (P1) 🎯
 
-- [ ] T010 [US2] `dre-calculator.ts`: aceitar `variableExpenses`, `fixedExpenses`, `plannedFixedCost`; calcular resultado, margem líquida, margem de contribuição %, ponto de equilíbrio (`null` quando não atingível) e diferença do previsto; testes unitários com o cenário da US2 e casos de borda
-- [ ] T011 [US2] `dre.service.ts`: `getMonthlySummary(tenantId, competence)` (snapshots do mês no fuso da loja + agregação de despesas por categoria e classe com `COALESCE(competencia, vencimento)`, excluindo `EXCLUDED` e canceladas) devolvendo o contrato de `contracts/dre.md`; remover `getSummary(start, end)`
-- [ ] T012 [US2] `financial-reports.controller.ts`: `?competence=AAAA-MM` (padrão: mês corrente; compatibilidade com `start`; `400` para formato inválido)
-- [ ] T013 [P] [US2] Testes de integração em `apps/api/test/dre-competence.integration.spec.ts`: cenário da US2 (SC-001), `EXCLUDED` nunca altera o resultado (SC-002), conta sem competência cai no vencimento, cancelada fora, ajuste na conta, mês sem dados zerado, fronteira do fuso
+- [X] T010 [US2] `dre-calculator.ts`: aceitar `variableExpenses`, `fixedExpenses`, `plannedFixedCost`; calcular resultado, margem líquida, margem de contribuição %, ponto de equilíbrio (`null` quando não atingível) e diferença do previsto; testes unitários com o cenário da US2 e casos de borda
+- [X] T011 [US2] `dre.service.ts`: `getMonthlySummary(tenantId, competence)` (snapshots do mês no fuso da loja + agregação de despesas por categoria e classe com `COALESCE(competencia, vencimento)`, excluindo `EXCLUDED` e canceladas) devolvendo o contrato de `contracts/dre.md`; remover `getSummary(start, end)`
+- [X] T012 [US2] `financial-reports.controller.ts`: `?competence=AAAA-MM` (padrão: mês corrente; compatibilidade com `start`; `400` para formato inválido)
+- [X] T013 [P] [US2] Testes de integração em `apps/api/test/dre-competence.integration.spec.ts`: cenário da US2 (SC-001), `EXCLUDED` nunca altera o resultado (SC-002), conta sem competência cai no vencimento, cancelada fora, ajuste na conta, mês sem dados zerado, fronteira do fuso
 - [ ] T014 [US2] `accounts-payable.service.ts` e DTO: `competenceIncludesDueDate=true` aplica `COALESCE(competence_date, due_date)` no filtro de competência (`list`, `querySummary`, `summarizeByCategory`); teste de que a lista filtrada soma igual à linha do DRE
 - [ ] T015 [US2] Web: `apps/web/app/admin/reports/dre/` com seletor de mês (padrão: mês corrente), estrutura de linhas da US2-6 com sinais, margem líquida, ponto de equilíbrio ("não atingível"), prejuízo em destaque, detalhamento expansível de Custos fixos e Despesas variáveis por categoria com link para contas a pagar; `lib/api.ts` `getFinancialDre(competence)`; testes
 - [ ] T016 [US2] Web: `finance/payables/page.tsx` lê `competenceMonth`, `categoryId` e `competenceIncludesDueDate` da URL como filtros iniciais em `payables-client.tsx`; teste
@@ -35,8 +35,8 @@
 
 ## Phase 5: User Story 4 - Mesma regra nos consumidores (P2)
 
-- [ ] T018 [US4] `financial-dashboard.service.ts` usa `getMonthlySummary` do mês corrente (fuso da loja)
-- [ ] T019 [US4] Tool MCP `dre` (`financial.tools.ts`): `mesCompetencia` (padrão: mês corrente), `inicio` legado com `observacao`, saída com despesas variáveis, custos fixos (alias `despesasFixasReais`), previsto, diferença e `despesasPorCategoria`; tool `contas_a_pagar` com `classificacaoDre` e `classificacaoAjustada`; atualizar fixtures e testes de paridade
+- [X] T018 [US4] `financial-dashboard.service.ts` usa `getMonthlySummary` do mês corrente (fuso da loja)
+- [X] T019 [US4] Tool MCP `dre` (`financial.tools.ts`): `mesCompetencia` (padrão: mês corrente), `inicio` legado com `observacao`, saída com despesas variáveis, custos fixos (alias `despesasFixasReais`), previsto, diferença e `despesasPorCategoria`; tool `contas_a_pagar` com `classificacaoDre` e `classificacaoAjustada`; atualizar fixtures e testes de paridade
 - [ ] T020 [P] [US4] Teste de paridade em `apps/api/test/dre-parity.integration.spec.ts`: endpoint do DRE × dashboard × tool `dre` mostram o mesmo resultado líquido para o mesmo mês (SC-003)
 
 ## Phase 6: Polish

@@ -1,6 +1,7 @@
 import { Inject, Injectable } from "@nestjs/common";
 import { OrderStatus, ProductCostStatus } from "@prisma/client";
 import { PrismaService } from "../../platform/database/prisma.service";
+import { parseCompetence } from "./dre-competence";
 import { DreService } from "./dre.service";
 
 @Injectable()
@@ -12,12 +13,9 @@ export class FinancialDashboardService {
 
   async getIndicators(tenantId: string) {
     const now = new Date();
-    const periodStart = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1));
-    const periodEnd = new Date(
-      Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + 1, 0, 23, 59, 59, 999)
-    );
+    const competence = parseCompetence(undefined, now);
     const [dre, priceReviewCount, ingredients, deliveredOrderCount] = await Promise.all([
-      this.dreService.getSummary(tenantId, periodStart, periodEnd),
+      this.dreService.getMonthlySummary(tenantId, competence.competence, now),
       this.prisma.productCostSnapshot.count({
         where: {
           tenantId,
@@ -36,8 +34,8 @@ export class FinancialDashboardService {
           status: OrderStatus.DELIVERED,
           deletedAt: null,
           createdAt: {
-            gte: periodStart,
-            lte: periodEnd,
+            gte: competence.salesStart,
+            lte: competence.salesEnd,
           },
         },
       }),
@@ -49,6 +47,8 @@ export class FinancialDashboardService {
       grossRevenue: dre.grossRevenue,
       cmv: dre.cmv,
       grossProfit: dre.grossProfit,
+      variableExpenses: dre.variableExpenses,
+      fixedExpenses: dre.fixedExpenses,
       estimatedNetProfit: dre.estimatedNetProfit,
       netMarginRate: dre.netMarginRate,
       deliveredOrderCount,
