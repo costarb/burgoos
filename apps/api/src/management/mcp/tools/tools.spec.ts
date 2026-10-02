@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { McpToolError } from "../server/mcp-context";
 import { mapInventory } from "./inventory.tools";
 import { mapMenuEngineering } from "./menu.tools";
-import { mapPayables } from "./payables.tools";
+import { mapPayables, resolveDueDateFilter, resolveNamed } from "./payables.tools";
 import { mapSalesReport } from "./sales.tools";
 import { percentual, ratio, reais, resolvePeriod, truncate } from "./tool-output";
 
@@ -118,6 +118,7 @@ describe("mappers", () => {
             description: "Aluguel",
             supplierName: "Imobiliaria",
             categoryName: "Aluguel",
+            competenceDate: "2026-09-01",
             dueDate: "2026-10-10",
             expectedAmount: "1000.00",
             paidAmount: "0.00",
@@ -139,20 +140,49 @@ describe("mappers", () => {
         total: 1,
       } as never,
       [],
-      periodo,
-      []
+      { ...periodo, criterio: "vencimento" },
+      { status: [], categorias: [], fornecedores: [], mesCompetencia: null }
     );
     expect(JSON.stringify(output)).not.toMatch(/CNPJ|Agencia|conta 1234|Banco X/);
     expect(output.contas[0]).toEqual({
       descricao: "Aluguel",
       fornecedor: "Imobiliaria",
       categoria: "Aluguel",
+      competencia: "2026-09-01",
       vencimento: "2026-10-10",
       valorReais: 1000,
       pagoReais: 0,
       restanteReais: 1000,
       status: "OPEN",
     });
+  });
+
+  it("applies the default due-date window only without any date or competence", () => {
+    const now = new Date(2026, 9, 2, 12);
+    expect(resolveDueDateFilter({}, false, now)).toMatchObject({
+      inicio: "2026-09-02",
+      fim: "2026-11-01",
+      padraoAplicado: true,
+      criterio: "vencimento",
+    });
+    expect(resolveDueDateFilter({}, true, now)).toMatchObject({ inicio: null, fim: null, padraoAplicado: false });
+    expect(resolveDueDateFilter({ inicio: "2026-10-01" }, false, now)).toMatchObject({ inicio: "2026-10-01", fim: null });
+    expect(() => resolveDueDateFilter({ inicio: "2026-01-01", fim: "2026-12-31" }, false, now)).toThrow("92 dias");
+  });
+
+  it("resolves categories and suppliers by name or id, case and accent insensitive", () => {
+    const options = [
+      { id: "cat-1", name: "Água e Luz", active: true },
+      { id: "cat-2", name: "Aluguel", active: true },
+    ];
+    expect(resolveNamed(["agua e luz", "cat-2"], options, "categoria")).toEqual({
+      ids: ["cat-1", "cat-2"],
+      names: ["Água e Luz", "Aluguel"],
+    });
+    expect(() => resolveNamed(["Marketing"], options, "categoria")).toThrow(
+      "Categoria nao encontrada: Marketing. Opcoes: Água e Luz, Aluguel."
+    );
+    expect(resolveNamed([], options, "fornecedor")).toEqual({ ids: [], names: [] });
   });
 
   it("lists critical inventory first", () => {

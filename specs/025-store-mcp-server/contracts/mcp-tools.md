@@ -30,6 +30,7 @@ Erros de negócio retornam resultado de tool com `isError: true` e um bloco `tex
 | Código | Mensagem |
 |---|---|
 | `INVALID_PERIOD` | "Periodo invalido: a data inicial deve ser anterior ou igual a final, no formato AAAA-MM-DD." |
+| `INVALID_FILTER` | "Categoria nao encontrada: <nome>. Opcoes: <lista>." (idem para fornecedor) |
 | `PERIOD_TOO_LONG` | "O periodo maximo por consulta e de 92 dias. Divida a analise em periodos menores." |
 | `AREA_DISABLED` | "A area de dados <área> nao esta liberada para esta loja." |
 | `TIMEOUT` | "A consulta demorou demais. Tente um periodo menor." |
@@ -102,11 +103,17 @@ Fonte: `CashFlowService.getStatement`. Lançamentos individuais e descrições n
 ### Área `PAYABLES`
 
 #### `contas_a_pagar`
-Entrada: `inicio?`, `fim?` (vencimento; padrão: hoje − 30 até hoje + 30 dias), `status?: ("OPEN"|"PARTIALLY_PAID"|"OVERDUE"|"PAID"|"CANCELLED")[]`.
+Entrada (todos os filtros são opcionais, como na tela de contas a pagar):
+- `inicio?`, `fim?`: vencimento (`AAAA-MM-DD`). Pode informar só um dos lados; com os dois, máximo de 92 dias.
+- `status?: ("OPEN"|"PARTIALLY_PAID"|"OVERDUE"|"PAID"|"CANCELLED")[]`.
+- `categorias?: string[]` e `fornecedores?: string[]`: nomes (sem diferenciar maiúsculas e acentos) ou ids. Um nome desconhecido gera o erro `INVALID_FILTER`, com a lista de opções válidas da loja.
+- `mesCompetencia?`: `AAAA-MM`.
 
-Saída: `periodo`, `filtros`, `totais { previstoReais, pagoReais, restanteReais, vencidoReais, quantidadeAbertas, quantidadeVencidas }`, `porCategoria[] { categoria, previstoReais, pagoReais, abertoReais, vencidoReais }`, `contas[]` (até 50, por vencimento) `{ descricao, fornecedor, categoria, vencimento, valorReais, pagoReais, restanteReais, status }`, `totalItens`, `truncado`, `semMovimento`.
+Sem nenhuma data de vencimento e sem `mesCompetencia`, aplica a janela padrão de vencimento (hoje − 30 até hoje + 30 dias).
 
-Fonte: `AccountsPayableService.list` (página 1, 50 itens) + `summarizeByCategory`. Observações, referência de documento e pagamentos (contas bancárias) nunca são incluídos.
+Saída: `periodo { inicio|null, fim|null, fuso, criterio: "vencimento", padraoAplicado }`, `filtros { status, categorias, fornecedores, mesCompetencia }`, `totais { previstoReais, pagoReais, restanteReais, vencidoReais, quantidadeAbertas, quantidadeVencidas }`, `porCategoria[] { categoria, previstoReais, pagoReais, abertoReais, vencidoReais }`, `contas[]` (até 50, por vencimento) `{ descricao, fornecedor, categoria, competencia, vencimento, valorReais, pagoReais, restanteReais, status }`, `totalItens`, `truncado`, `semMovimento`. Totais, quebra por categoria e lista respeitam os mesmos filtros.
+
+Fonte: `AccountsPayableService.list` (página 1, 50 itens), `summarizeByCategory` e `getOptions` (resolução de nomes). Observações, referência de documento e pagamentos (contas bancárias) nunca são incluídos.
 
 ### Área `INVENTORY`
 

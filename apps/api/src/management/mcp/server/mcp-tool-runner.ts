@@ -18,6 +18,7 @@ const MESSAGES: Record<McpErrorCode, string> = {
     "Periodo invalido: a data inicial deve ser anterior ou igual a final, no formato AAAA-MM-DD.",
   PERIOD_TOO_LONG:
     "O periodo maximo por consulta e de 92 dias. Divida a analise em periodos menores.",
+  INVALID_FILTER: "Filtro invalido. Revise os valores informados.",
   AREA_DISABLED: "Esta area de dados nao esta liberada para esta loja.",
   TIMEOUT: "A consulta demorou demais. Tente um periodo menor.",
   MEMORY_PRESSURE:

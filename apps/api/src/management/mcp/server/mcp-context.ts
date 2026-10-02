@@ -25,6 +25,7 @@ export interface McpRequest extends Request {
 export type McpErrorCode =
   | "INVALID_PERIOD"
   | "PERIOD_TOO_LONG"
+  | "INVALID_FILTER"
   | "AREA_DISABLED"
   | "TIMEOUT"
   | "MEMORY_PRESSURE"
