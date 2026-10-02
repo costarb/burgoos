@@ -37,7 +37,7 @@
 
 - [X] T018 [US4] `financial-dashboard.service.ts` usa `getMonthlySummary` do mês corrente (fuso da loja)
 - [X] T019 [US4] Tool MCP `dre` (`financial.tools.ts`): `mesCompetencia` (padrão: mês corrente), `inicio` legado com `observacao`, saída com despesas variáveis, custos fixos (alias `despesasFixasReais`), previsto, diferença e `despesasPorCategoria`; tool `contas_a_pagar` com `classificacaoDre` e `classificacaoAjustada`; atualizar fixtures e testes de paridade
-- [ ] T020 [P] [US4] Teste de paridade em `apps/api/test/dre-parity.integration.spec.ts`: endpoint do DRE × dashboard × tool `dre` mostram o mesmo resultado líquido para o mesmo mês (SC-003)
+- [X] T020 [P] [US4] Teste de paridade em `apps/api/test/dre-parity.integration.spec.ts`: endpoint do DRE × dashboard × tool `dre` mostram o mesmo resultado líquido para o mesmo mês (SC-003)
 
 ## Phase 6: Polish
 
