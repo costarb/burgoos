@@ -153,6 +153,29 @@ describe("McpSettingsClient", () => {
     expect(container.textContent).toContain("Mantenha ao menos uma area de dados ativa");
   });
 
+  it("refreshes the usage log keeping the current filters and page", async () => {
+    loadUsageAction
+      .mockResolvedValueOnce({ status: "success", message: "ok", data: usagePage([usageEntry({ result: "DENIED" })]) })
+      .mockResolvedValueOnce({
+        status: "success",
+        message: "ok",
+        data: usagePage([
+          usageEntry({ id: "call-new", target: "dre", result: "DENIED" }),
+          usageEntry({ result: "DENIED" }),
+        ]),
+      });
+    await render(configuration({ enabled: true }), [], usagePage([usageEntry()]));
+    await click(button("Uso"));
+    await select(input("Filtrar por resultado") as unknown as HTMLSelectElement, "DENIED");
+
+    expect(container.textContent).toContain("Atualizado as");
+    await click(button("Atualizar"));
+
+    expect(loadUsageAction).toHaveBeenLastCalledWith({ result: "DENIED", page: 1, pageSize: 25 });
+    expect(container.textContent).toContain("dre");
+    expect(container.textContent).toContain("2 chamada(s)");
+  });
+
   it("shows the usage log with refusals and filters by result", async () => {
     loadUsageAction.mockResolvedValue({
       status: "success",
