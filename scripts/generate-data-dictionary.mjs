@@ -12,10 +12,11 @@ const domains = [
   ["Configuração visual e catálogo", ["LayoutPreset", "StoreVisualConfiguration", "Category", "Product", "ProductExternalMapping", "ProductComplement", "ProductComplementAssignment", "Ingredient", "TechnicalSheet", "TechnicalSheetLine", "ProductCostSnapshot"]],
   ["Pedidos, comandas e operação", ["Order", "OrderItem", "OrderItemModification", "ServiceTab", "OrderMaintenance", "OrderOperationalEvent", "OrderProfitabilitySnapshot", "StockMovement"]],
   ["Pagamentos", ["PaymentTerminal", "PaymentCharge", "Payment", "PaymentAllocation", "PaymentProviderEvent", "PaymentException", "IdempotencyRecord"]],
-  ["Integrações de vendas", ["SalesIntegration", "SalesIntegrationCredential", "SalesImportRun", "SalesImportDay", "ExternalSalesMovement", "ExternalSaleIdentity", "OAuthAuthorizationAttempt", "ProviderTransactionState", "ProviderNotification", "IntegrationAuditEvent", "PlatformIntegrationConfiguration"]],
+  ["Integrações de vendas", ["SalesIntegration", "SalesIntegrationCredential", "SalesImportRun", "SalesImportDay", "ExternalSalesMovement", "ExternalSaleIdentity", "OAuthAuthorizationAttempt", "ProviderTransactionState", "ProviderNotification", "IntegrationAuditEvent", "PlatformIntegrationConfiguration", "ExternalFinancialSale", "ExternalSalePayment", "ExternalSaleInstallment", "ExternalFinancialEvent", "ExternalSettlement", "ExternalReconciliationFile", "FinancialReconciliationRun"]],
   ["Financeiro", ["FinancialConfiguration", "PurchaseUnit", "Supplier", "FinancialAccount", "PaymentInstitutionConfiguration", "FinancialCategory", "PayableRecurrence", "Payable", "PayablePayment", "CashMovement", "FinancialAudit"]],
   ["Delivery e marketplaces", ["OrderPlatform", "DeliveryIntegration", "DeliveryIntegrationCredential", "DeliveryPlatformEvent", "PlatformOrderLink", "PlatformSyncAttempt", "PlatformCancellationReason", "PlatformDispute", "DeliveryIntegrationAudit"]],
   ["Jobs, exportações e notificações", ["ExportJob", "BackgroundJob", "BackgroundJobAttempt", "OperationalNotification"]],
+  ["MCP e assistentes de IA", ["StoreMcpConfiguration", "StoreMcpToken", "McpToolCall"]],
 ];
 
 const purposes = {
@@ -90,6 +91,9 @@ const purposes = {
   BackgroundJob: "Fila durável de trabalho, com prioridade, lease e retry.",
   BackgroundJobAttempt: "Histórico de cada tentativa de execução de job.",
   OperationalNotification: "Notificação operacional com severidade, leitura e expiração.",
+  StoreMcpConfiguration: "Habilitação do MCP da loja e áreas de dados expostas a assistentes de IA.",
+  StoreMcpToken: "Token de acesso MCP da loja; guarda apenas o hash SHA-256 e um prefixo de identificação.",
+  McpToolCall: "Registro de uso do MCP (consultas e recusas), retido por 90 dias.",
 };
 
 function blocks(kind) {

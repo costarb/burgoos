@@ -99,6 +99,14 @@ export const ACCESS_PERMISSIONS = [
     sensitive: true,
   },
   {
+    key: "mcp.manage",
+    area: "Integracoes",
+    screen: "MCP / IA",
+    action: "MANAGE",
+    description: "Habilitar o MCP da loja, gerar e revogar tokens de acesso para assistentes de IA",
+    sensitive: true,
+  },
+  {
     key: "pos.capture",
     area: "Operacao",
     screen: "Capturar pedido",

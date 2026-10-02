@@ -231,6 +231,15 @@ async function main(): Promise<void> {
       sensitive: true,
     },
     {
+      key: "mcp.manage",
+      area: "Integracoes",
+      screen: "MCP / IA",
+      action: AccessPermissionAction.MANAGE,
+      description:
+        "Habilitar o MCP da loja, gerar e revogar tokens de acesso para assistentes de IA",
+      sensitive: true,
+    },
+    {
       key: "pos.capture",
       area: "Operacao",
       screen: "Capturar pedido",
@@ -420,6 +429,7 @@ async function main(): Promise<void> {
       "integrations.delivery.manage",
       "integrations.sales.view",
       "integrations.sales.manage",
+      "mcp.manage",
     ],
   });
 
