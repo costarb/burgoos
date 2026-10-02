@@ -2,6 +2,7 @@
 
 import React, { useState } from "react";
 import type { McpToken, McpToolCallResult, McpUsagePage, McpUsageQuery } from "@rrfive/types";
+import { RefreshCw } from "lucide-react";
 import type { McpActionState } from "./mcp-action-state";
 
 interface McpUsageTableProps {
@@ -40,6 +41,7 @@ export function McpUsageTable({ initialPage, tokens, loadUsageAction }: McpUsage
   const [filters, setFilters] = useState<McpUsageQuery>({});
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [updatedAt, setUpdatedAt] = useState<Date>(() => new Date());
   const totalPages = Math.max(1, Math.ceil(usage.total / usage.pageSize));
 
   async function load(query: McpUsageQuery) {
@@ -47,7 +49,10 @@ export function McpUsageTable({ initialPage, tokens, loadUsageAction }: McpUsage
     setError(null);
     try {
       const result = await loadUsageAction({ ...query, pageSize: PAGE_SIZE });
-      if (result.status === "success" && result.data) setUsage(result.data);
+      if (result.status === "success" && result.data) {
+        setUsage(result.data);
+        setUpdatedAt(new Date());
+      }
       else setError(result.message ?? "Nao foi possivel carregar o uso.");
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : "Nao foi possivel carregar o uso.");
@@ -63,7 +68,23 @@ export function McpUsageTable({ initialPage, tokens, loadUsageAction }: McpUsage
 
   return (
     <section className="rounded-md border border-slate-200 bg-white p-5 shadow-sm">
-      <h2 className="text-lg font-semibold">Uso do MCP</h2>
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <h2 className="text-lg font-semibold">Uso do MCP</h2>
+        <div className="flex items-center gap-3">
+          <span className="text-xs text-slate-500" data-testid="mcp-usage-updated-at">
+            Atualizado as {updatedAt.toLocaleTimeString("pt-BR")}
+          </span>
+          <button
+            className="inline-flex items-center gap-1.5 rounded-md border border-slate-300 px-3 py-1.5 text-sm font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-60"
+            disabled={loading}
+            onClick={() => void load({ ...filters, page: usage.page })}
+            type="button"
+          >
+            <RefreshCw aria-hidden className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} />
+            {loading ? "Atualizando..." : "Atualizar"}
+          </button>
+        </div>
+      </div>
       <p className="mt-1 text-sm text-slate-600">
         Consultas feitas pelos assistentes de IA e tentativas recusadas. O historico e mantido por
         90 dias.

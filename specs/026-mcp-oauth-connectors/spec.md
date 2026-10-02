@@ -4,7 +4,7 @@
 
 **Created**: 2026-10-02
 
-**Status**: Draft
+**Status**: Implemented (validado em produção em 2026-10-02 com Claude Code, ChatGPT e claude.ai)
 
 **Input**: User description: "Fase 2 do MCP por loja: OAuth para usar o MCP pelos conectores do claude.ai web e do ChatGPT, sem precisar do mcp-remote nem de token no arquivo de configuração." Continuação da spec `025-store-mcp-server` (implementada e validada em produção em 2026-10-02).
 
