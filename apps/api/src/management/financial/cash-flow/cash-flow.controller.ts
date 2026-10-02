@@ -102,7 +102,7 @@ export class CashFlowController {
     @Param("id") id: string,
     @Body() dto: FinancialCategoryDto
   ) {
-    return this.financialAccountService.updateCategory(user.tenantId, id, dto);
+    return this.financialAccountService.updateCategory(user, id, dto);
   }
 
   @Get("cash-flow/position")

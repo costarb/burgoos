@@ -1,6 +1,8 @@
-import { BadRequestException, Injectable, NotFoundException } from "@nestjs/common";
-import { PaymentInstitution, Prisma } from "@prisma/client";
+import { BadRequestException, Inject, Injectable, NotFoundException } from "@nestjs/common";
+import { DreExpenseClass, FinancialAuditAction, PaymentInstitution, Prisma } from "@prisma/client";
+import { AuthUser } from "../../../platform/auth/auth.types";
 import { PrismaService } from "../../../platform/database/prisma.service";
+import { FinancialAuditService } from "../financial-audit.service";
 import {
   FinancialAccountDto,
   FinancialCategoryDto,
@@ -8,9 +10,14 @@ import {
 } from "../dto/financial-account.dto";
 import { toDecimal, toMoneyString } from "../money";
 
+const CATEGORY_SELECT = { id: true, name: true, active: true, dreClass: true } as const;
+
 @Injectable()
 export class FinancialAccountService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    @Inject(PrismaService) private readonly prisma: PrismaService,
+    @Inject(FinancialAuditService) private readonly auditService: FinancialAuditService
+  ) {}
 
   async listAccounts(tenantId: string) {
     const accounts = await this.prisma.financialAccount.findMany({
@@ -151,7 +158,7 @@ export class FinancialAccountService {
     return this.prisma.financialCategory.findMany({
       where: { tenantId },
       orderBy: [{ active: "desc" }, { name: "asc" }],
-      select: { id: true, name: true, active: true },
+      select: CATEGORY_SELECT,
     });
   }
 
@@ -162,25 +169,48 @@ export class FinancialAccountService {
           tenantId,
           name: dto.name.trim(),
           active: dto.active ?? true,
+          dreClass: dto.dreClass ?? DreExpenseClass.VARIABLE_EXPENSE,
         },
-        select: { id: true, name: true, active: true },
+        select: CATEGORY_SELECT,
       });
     } catch (error) {
       handleUniqueError(error, "Categoria financeira ja cadastrada");
     }
   }
 
-  async updateCategory(tenantId: string, categoryId: string, dto: FinancialCategoryDto) {
-    await this.ensureCategory(tenantId, categoryId);
+  async updateCategory(user: AuthUser, categoryId: string, dto: FinancialCategoryDto) {
+    const before = await this.prisma.financialCategory.findFirst({
+      where: { id: categoryId, tenantId: user.tenantId },
+      select: CATEGORY_SELECT,
+    });
+    if (!before) throw new NotFoundException("Categoria financeira nao encontrada");
 
     try {
-      return await this.prisma.financialCategory.update({
-        where: { id: categoryId },
-        data: {
-          name: dto.name.trim(),
-          active: dto.active ?? true,
-        },
-        select: { id: true, name: true, active: true },
+      return await this.prisma.$transaction(async (tx) => {
+        const updated = await tx.financialCategory.update({
+          where: { id: categoryId },
+          data: {
+            name: dto.name.trim(),
+            active: dto.active ?? true,
+            dreClass: dto.dreClass ?? before.dreClass,
+          },
+          select: CATEGORY_SELECT,
+        });
+        if (updated.dreClass !== before.dreClass) {
+          await this.auditService.record(
+            {
+              tenantId: user.tenantId,
+              actorUserId: user.id,
+              entityType: "financial_category",
+              entityId: categoryId,
+              action: FinancialAuditAction.UPDATE,
+              beforeSnapshot: { dreClass: before.dreClass },
+              afterSnapshot: { dreClass: updated.dreClass },
+            },
+            tx
+          );
+        }
+        return updated;
       });
     } catch (error) {
       handleUniqueError(error, "Categoria financeira ja cadastrada");

@@ -26,6 +26,7 @@ import {
   reversePayablePayment,
   updatePayable,
 } from "../../../../lib/api";
+import { DRE_CLASS_BADGE, dreClassLabel } from "../../../../lib/dre-expense-class";
 import { PayableDetailDialog } from "./payable-detail-dialog";
 import { PayableEditorDialog } from "./payable-editor-dialog";
 
@@ -372,7 +373,16 @@ export function PayablesClient({ token, initialPayables, options }: PayablesClie
             >
               <div>
                 <p className="font-semibold">{payable.description}</p>
-                <p className="text-xs text-slate-500">{payable.categoryName}</p>
+                <p className="text-xs text-slate-500">
+                  {payable.categoryName}{" "}
+                  <span
+                    className={`ml-1 rounded-full px-1.5 py-0.5 text-[10px] font-semibold ${DRE_CLASS_BADGE[payable.effectiveDreClass]}`}
+                    title={payable.dreClassOverride ? "Classificacao ajustada nesta conta" : "Classificacao da categoria"}
+                  >
+                    {dreClassLabel(payable.effectiveDreClass)}
+                    {payable.dreClassOverride ? " (ajustada)" : ""}
+                  </span>
+                </p>
               </div>
               <p className="text-sm">{payable.supplierName ?? "Sem fornecedor"}</p>
               <p className="text-sm">{formatDate(payable.dueDate)}</p>

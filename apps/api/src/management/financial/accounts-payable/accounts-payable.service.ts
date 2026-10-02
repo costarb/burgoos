@@ -9,13 +9,14 @@ import {
   PayablePaymentReversalDto,
   PayablesQueryDto,
 } from "../dto/payable.dto";
+import { effectiveDreClass } from "../dre-expense-class";
 import { FinancialAuditService } from "../financial-audit.service";
 import { toDecimal, toMoneyString } from "../money";
 import { buildPayableOccurrences } from "./payable-recurrence";
 import { calculatePayableStatus, calculateRemainingAmount } from "./payable-rules";
 
 const payableInclude = {
-  category: { select: { id: true, name: true } },
+  category: { select: { id: true, name: true, dreClass: true } },
   supplier: { select: { id: true, name: true } },
   payments: {
     orderBy: { paidAt: "asc" },
@@ -149,6 +150,7 @@ export class AccountsPayableService {
         id: category.id,
         name: category.name,
         active: category.active,
+        dreClass: category.dreClass,
       })),
       accounts: accounts.map((account) => ({
         id: account.id,
@@ -223,6 +225,7 @@ export class AccountsPayableService {
             description: `${dto.description}${suffix}`,
             documentReference: dto.documentReference ?? null,
             competenceDate: occurrence.competenceDate ?? null,
+            dreClassOverride: dto.dreClassOverride ?? null,
             dueDate: occurrence.dueDate,
             expectedAmount,
             notes: dto.notes ?? null,
@@ -280,6 +283,7 @@ export class AccountsPayableService {
           description: dto.description,
           documentReference: dto.documentReference ?? null,
           competenceDate: dto.competenceDate ? parseDate(dto.competenceDate) : null,
+          dreClassOverride: dto.dreClassOverride ?? null,
           dueDate: parseDate(dto.dueDate),
           expectedAmount,
           notes: dto.notes ?? null,
@@ -599,6 +603,9 @@ export class AccountsPayableService {
       description: payable.description,
       documentReference: payable.documentReference,
       competenceDate: toDateOnly(payable.competenceDate),
+      dreClassOverride: payable.dreClassOverride,
+      categoryDreClass: payable.category.dreClass,
+      effectiveDreClass: effectiveDreClass(payable),
       dueDate: toDateOnly(payable.dueDate),
       expectedAmount: toMoneyString(payable.expectedAmount),
       paidAmount: toMoneyString(paidAmount),

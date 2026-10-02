@@ -1,4 +1,4 @@
-import { FinancialRecurrenceFrequency } from "@prisma/client";
+import { DreExpenseClass, FinancialRecurrenceFrequency } from "@prisma/client";
 import {
   IsDateString,
   IsEnum,
@@ -56,6 +56,10 @@ export class PayableDto {
   @IsOptional()
   @IsDateString()
   competenceDate?: string;
+
+  @IsOptional()
+  @IsEnum(DreExpenseClass)
+  dreClassOverride?: DreExpenseClass | null;
 
   @IsDateString()
   dueDate!: string;

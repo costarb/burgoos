@@ -3,6 +3,7 @@
 import type { FormEvent } from "react";
 import { useState } from "react";
 import type {
+  DreExpenseClass,
   FinancialAccount,
   FinancialAccountInput,
   FinancialCategory,
@@ -11,6 +12,7 @@ import type {
   PaymentInstitutionConfiguration,
 } from "@rrfive/types";
 import { ConfirmationDialog } from "../../../../components/admin/confirmation-dialog";
+import { DRE_CLASS_OPTIONS, dreClassLabel } from "../../../../lib/dre-expense-class";
 import { OperationFeedback } from "../../../../components/admin/operation-feedback";
 import {
   createFinancialAccount,
@@ -254,6 +256,26 @@ export function FinancialAccountDialog({
             placeholder="Nome da categoria"
             required
           />
+          <label className="grid gap-1 text-sm">
+            <span className="font-medium text-slate-700">Classificacao no DRE</span>
+            <select
+              aria-label="Classificacao no DRE"
+              className="rounded-md border border-slate-200 px-3 py-2 text-sm"
+              defaultValue={editingCategory?.dreClass ?? "VARIABLE_EXPENSE"}
+              key={editingCategory?.id ?? "new-category-dre-class"}
+              name="dreClass"
+            >
+              {DRE_CLASS_OPTIONS.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+            <span className="text-xs text-slate-500">
+              Custo fixo e Despesa variavel entram no DRE do mes de competencia. Fora do DRE: insumos (ja no
+              CMV), taxas dos pedidos e investimentos. Mudar a classificacao recalcula todos os meses.
+            </span>
+          </label>
           <label className="flex items-center gap-2 text-sm">
             <input
               defaultChecked={editingCategory?.active ?? true}
@@ -285,7 +307,9 @@ export function FinancialAccountDialog({
               >
                 <div>
                   <p className="font-semibold">{category.name}</p>
-                  <p className="text-xs text-slate-500">{category.active ? "Ativa" : "Inativa"}</p>
+                  <p className="text-xs text-slate-500">
+                    {category.active ? "Ativa" : "Inativa"} · {dreClassLabel(category.dreClass)}
+                  </p>
                 </div>
                 <button
                   className="rounded-md border border-slate-300 px-3 py-2 text-sm font-semibold"
@@ -334,6 +358,7 @@ function categoryPayload(formData: FormData): FinancialCategoryInput {
   return {
     name: String(formData.get("name") ?? ""),
     active: formData.get("active") === "on",
+    dreClass: (String(formData.get("dreClass") ?? "") || "VARIABLE_EXPENSE") as DreExpenseClass,
   };
 }
 

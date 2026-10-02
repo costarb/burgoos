@@ -1,13 +1,15 @@
 "use client";
 
-import React, { type FormEvent } from "react";
+import React, { type FormEvent, useState } from "react";
 import type {
+  DreExpenseClass,
   FinancialCategory,
   FinancialRecurrenceFrequency,
   Payable,
   PayableInput,
   Supplier,
 } from "@rrfive/types";
+import { DRE_CLASS_OPTIONS, dreClassLabel } from "../../../../lib/dre-expense-class";
 
 interface PayableFormProps {
   categories: FinancialCategory[];
@@ -28,6 +30,9 @@ export function PayableForm({
   onCancel,
   onSubmit,
 }: PayableFormProps) {
+  const [categoryId, setCategoryId] = useState(payable?.categoryId ?? "");
+  const selectedCategory = categories.find((category) => category.id === categoryId);
+
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const formData = new FormData(event.currentTarget);
@@ -39,6 +44,7 @@ export function PayableForm({
       description: String(formData.get("description") ?? ""),
       documentReference: optionalText(formData, "documentReference"),
       competenceDate: monthToDate(optionalText(formData, "competenceDate")),
+      dreClassOverride: (optionalText(formData, "dreClassOverride") as DreExpenseClass | undefined) ?? null,
       dueDate: String(formData.get("dueDate") ?? ""),
       expectedAmount: Number(formData.get("expectedAmount") ?? 0),
       notes: optionalText(formData, "notes"),
@@ -71,10 +77,11 @@ export function PayableForm({
         Categoria
         <select
           className="rounded-md border border-slate-200 px-3 py-2 text-sm"
-          defaultValue={payable?.categoryId ?? ""}
           disabled={categories.length === 0}
           name="categoryId"
+          onChange={(event) => setCategoryId(event.target.value)}
           required
+          value={categoryId}
         >
           <option value="">Selecione</option>
           {categories.map((category) => (
@@ -117,6 +124,24 @@ export function PayableForm({
           name="competenceDate"
           type="month"
         />
+      </label>
+      <label className="grid gap-1 text-sm font-medium text-slate-700">
+        Classificacao no DRE
+        <select
+          aria-label="Classificacao no DRE"
+          className="rounded-md border border-slate-200 px-3 py-2 text-sm"
+          defaultValue={payable?.dreClassOverride ?? ""}
+          name="dreClassOverride"
+        >
+          <option value="">
+            Seguir a categoria{selectedCategory ? ` (${dreClassLabel(selectedCategory.dreClass)})` : ""}
+          </option>
+          {DRE_CLASS_OPTIONS.map((option) => (
+            <option key={option.value} value={option.value}>
+              {option.label}
+            </option>
+          ))}
+        </select>
       </label>
       <label className="grid gap-1 text-sm font-medium text-slate-700">
         Valor previsto

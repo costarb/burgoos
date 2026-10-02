@@ -14,10 +14,10 @@
 
 ## Phase 2: User Story 1 - Classificar despesas (P1)
 
-- [ ] T006 [US1] `FinancialCategoryDto.dreClass` opcional (`IsEnum`) e `financial-account.service.ts`: criar com padrão, alterar mantendo o atual quando ausente, auditar `financial_category` com `before/after`; categorias e opções devolvem `dreClass`
-- [ ] T007 [US1] `PayableDto.dreClassOverride` (`IsEnum`, aceita `null`) e `accounts-payable.service.ts`: gravar na criação (todas as ocorrências da recorrência) e na edição; resposta com `dreClassOverride`, `categoryDreClass` e `effectiveDreClass` (incluir `category.dreClass` no `payableInclude`)
-- [ ] T008 [P] [US1] Testes de integração (módulo focado + Prisma em memória) em `apps/api/test/dre-expense-class.integration.spec.ts`: categoria nova = variável; alteração auditada; override na recorrência; classe efetiva na resposta; mudar a categoria afeta só contas sem ajuste
-- [ ] T009 [US1] Web: seletor de classificação com explicação no `financial-account-dialog.tsx` (e rótulo na lista de categorias); "Classificação no DRE" no `payable-form.tsx` (Seguir categoria (X) / Custo fixo / Despesa variável / Fora do DRE); badge da classificação efetiva (com "ajustada") em `payables-client.tsx`; testes nos specs existentes
+- [X] T006 [US1] `FinancialCategoryDto.dreClass` opcional (`IsEnum`) e `financial-account.service.ts`: criar com padrão, alterar mantendo o atual quando ausente, auditar `financial_category` com `before/after`; categorias e opções devolvem `dreClass`
+- [X] T007 [US1] `PayableDto.dreClassOverride` (`IsEnum`, aceita `null`) e `accounts-payable.service.ts`: gravar na criação (todas as ocorrências da recorrência) e na edição; resposta com `dreClassOverride`, `categoryDreClass` e `effectiveDreClass` (incluir `category.dreClass` no `payableInclude`)
+- [X] T008 [P] [US1] Testes de integração (módulo focado + Prisma em memória) em `apps/api/test/dre-expense-class.integration.spec.ts`: categoria nova = variável; alteração auditada; override na recorrência; classe efetiva na resposta; mudar a categoria afeta só contas sem ajuste
+- [X] T009 [US1] Web: seletor de classificação com explicação no `financial-account-dialog.tsx` (e rótulo na lista de categorias); "Classificação no DRE" no `payable-form.tsx` (Seguir categoria (X) / Custo fixo / Despesa variável / Fora do DRE); badge da classificação efetiva (com "ajustada") em `payables-client.tsx`; testes nos specs existentes
 
 ## Phase 3: User Story 2 - DRE por competência (P1) 🎯
 
