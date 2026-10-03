@@ -35,7 +35,7 @@
 
 ## Phase 5: Polish
 
-- [ ] T018 [P] Docs: `docs/USER_GUIDE.md` (seção do MCP: ações, segurança, exemplos), contrato `specs/025-store-mcp-server/contracts/mcp-tools.md` (referência às ações), glossário/instruções do servidor, `docs/DATA_DICTIONARY.md` regenerado
+- [X] T018 [P] Docs: `docs/USER_GUIDE.md` (seção do MCP: ações, segurança, exemplos), contrato `specs/025-store-mcp-server/contracts/mcp-tools.md` (referência às ações), glossário/instruções do servidor, `docs/DATA_DICTIONARY.md` regenerado
 - [ ] T019 Typecheck, lint e suítes de API e web (comparar com o baseline do `develop`)
 - [ ] T020 Roteiro do `quickstart.md` no ambiente local e em produção
 

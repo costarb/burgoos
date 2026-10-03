@@ -124,6 +124,10 @@ Entrada: `situacao?: ("OK"|"BUY"|"INSUFFICIENT")[]`. Saída: `totais { ingredien
 
 Fonte: `InventoryService.listBalances`.
 
+## Ações (spec 028)
+
+Tools de escrita — `criar_conta_a_pagar`, `registrar_pagamento_conta`, `editar_conta_a_pagar`, `cancelar_conta_a_pagar`, `integracoes_de_vendas`, `importar_vendas_previa`, `importacao_status`, `importar_vendas_confirmar` — só aparecem para conexões OAuth com `mcp:write`, loja com ações permitidas, área habilitada e permissão do usuário. Contrato completo em `specs/028-mcp-write-actions/contracts/mcp-actions.md`. Novos códigos de erro: `ACTION_NOT_ALLOWED`, `ACTION_RATE_LIMITED`, `BUSINESS_RULE` (mensagem da regra de negócio da tela), `NOT_FOUND`. `contas_a_pagar` passa a devolver `id` em cada conta.
+
 ## Resources
 
 | URI | Nome | Conteúdo |
