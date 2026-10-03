@@ -175,8 +175,8 @@ export function McpSettingsClient({
             </h1>
             <p className="mt-2 max-w-2xl text-sm text-slate-600">
               Conecte assistentes de IA (Claude, Cursor e outros clientes MCP) aos numeros desta
-              loja para gerar analises e insights. O acesso e somente leitura e nunca inclui dados
-              pessoais de clientes.
+              loja para gerar analises e insights. Por padrao o acesso e somente leitura e nunca
+              inclui dados pessoais de clientes.
             </p>
           </div>
           <div className="flex items-center gap-3">
@@ -244,6 +244,46 @@ export function McpSettingsClient({
           <>
             <McpConnectGuide enabled={configuration.enabled} serverUrl={configuration.serverUrl} />
 
+            <section className="rounded-md border border-slate-200 bg-white p-5 shadow-sm">
+              <div className="flex flex-wrap items-start justify-between gap-3">
+                <div className="max-w-2xl">
+                  <h2 className="text-lg font-semibold">Acoes pelos assistentes</h2>
+                  <p className="mt-1 text-sm text-slate-600">
+                    Permite que assistentes conectados por login (OAuth) criem, paguem, editem e
+                    cancelem contas a pagar e importem vendas do PagBank, Mercado Pago e iFood. Cada
+                    pessoa precisa marcar &quot;Permitir que o assistente execute acoes&quot; ao
+                    conectar, e o assistente so faz o que as permissoes dela permitem. Tokens de
+                    acesso continuam somente leitura. Tudo fica na auditoria com a origem MCP.
+                  </p>
+                </div>
+                <button
+                  aria-pressed={configuration.actionsEnabled}
+                  className={`rounded-md px-4 py-2 text-sm font-semibold disabled:opacity-60 ${
+                    configuration.actionsEnabled
+                      ? "border border-slate-300 text-slate-800 hover:bg-slate-50"
+                      : "bg-slate-900 text-white hover:bg-slate-800"
+                  }`}
+                  data-testid="mcp-actions-toggle"
+                  disabled={busy || !configuration.enabled}
+                  onClick={() =>
+                    saveConfiguration({
+                      enabled: configuration.enabled,
+                      enabledAreas: configuration.enabledAreas,
+                      actionsEnabled: !configuration.actionsEnabled,
+                    })
+                  }
+                  type="button"
+                >
+                  {configuration.actionsEnabled ? "Desligar acoes" : "Permitir acoes"}
+                </button>
+              </div>
+              <p className="mt-3 text-sm" data-testid="mcp-actions-status">
+                {configuration.actionsEnabled
+                  ? "Acoes permitidas. Conexoes ja existentes continuam so leitura ate a pessoa reconectar marcando a opcao."
+                  : "Acoes desligadas: os assistentes apenas consultam os numeros."}
+              </p>
+            </section>
+
             <McpConnectionsTable
               busy={busy}
               connections={connections}
@@ -294,10 +334,10 @@ export function McpSettingsClient({
                 <span className="text-sm text-slate-500">{activeTokens} de 10 ativos</span>
               </div>
               <p className="mt-1 text-sm text-slate-600">
-                Para clientes sem login (Cursor, Claude Desktop via mcp-remote, scripts). Cada token da
-                acesso somente a esta loja. O valor completo aparece uma unica vez, ao
-                gerar; a coluna Identificador mostra apenas o inicio, para reconhecer o token.
-                Endereco do servidor:{" "}
+                Para clientes sem login (Cursor, Claude Desktop via mcp-remote, scripts). Cada token
+                da acesso somente a esta loja. O valor completo aparece uma unica vez, ao gerar; a
+                coluna Identificador mostra apenas o inicio, para reconhecer o token. Endereco do
+                servidor:{" "}
                 <code className="rounded bg-slate-100 px-1.5 py-0.5 text-xs">
                   {configuration.serverUrl}
                 </code>

@@ -72,6 +72,11 @@ export function SalesImportHistory({ history }: { history: SalesImportRunView[] 
             {item.startDate.slice(0, 10)} a {item.endDate.slice(0, 10)} · {item.status} ·{" "}
             {item.counts.imported ?? 0} importadas
             {item.errorMessage ? ` · ${item.errorMessage}` : ""}
+            {item.requestedVia ? (
+              <span className="ml-2 rounded-full bg-amber-100 px-2 py-0.5 text-xs font-semibold text-amber-900">
+                {item.requestedVia}
+              </span>
+            ) : null}
           </li>
         ))}
       </ul>
@@ -374,6 +379,11 @@ export function SalesIntegrationPanel({
               <li key={item.id} className="rounded border p-2">
                 {item.startDate.slice(0, 10)} a {item.endDate.slice(0, 10)} · {item.status} ·{" "}
                 {item.counts.imported ?? 0} importadas
+                {item.requestedVia ? (
+                  <span className="ml-2 rounded-full bg-amber-100 px-2 py-0.5 text-xs font-semibold text-amber-900">
+                    {item.requestedVia}
+                  </span>
+                ) : null}
               </li>
             ))}
           </ul>

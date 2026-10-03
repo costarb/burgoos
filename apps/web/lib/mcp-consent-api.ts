@@ -28,7 +28,11 @@ async function call<T>(accessToken: string, path: string, init?: RequestInit): P
     | null;
   if (!response.ok) {
     const message = Array.isArray(body?.message) ? body.message.join("; ") : body?.message;
-    throw new McpConsentError(response.status, message ?? "Nao foi possivel concluir a autorizacao.", body?.code);
+    throw new McpConsentError(
+      response.status,
+      message ?? "Nao foi possivel concluir a autorizacao.",
+      body?.code
+    );
   }
   return body as T;
 }
@@ -37,10 +41,15 @@ export function getMcpAuthorizationRequest(accessToken: string, requestId: strin
   return call<McpAuthorizationRequest>(accessToken, `/api/oauth/requests/${requestId}`);
 }
 
-export function approveMcpAuthorization(accessToken: string, requestId: string, storeId: string) {
+export function approveMcpAuthorization(
+  accessToken: string,
+  requestId: string,
+  storeId: string,
+  allowActions = false
+) {
   return call<{ redirectUrl: string }>(accessToken, `/api/oauth/requests/${requestId}/approve`, {
     method: "POST",
-    body: JSON.stringify({ storeId }),
+    body: JSON.stringify({ storeId, allowActions }),
   });
 }
 
