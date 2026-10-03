@@ -52,7 +52,7 @@
 
 - [X] T021 [P] Docs: `docs/USER_GUIDE.md` (DRE por competência, classificação das categorias e contas), contrato MCP em `specs/025-store-mcp-server/contracts/mcp-tools.md`, regenerar `docs/DATA_DICTIONARY.md`
 - [X] T022 Typecheck, lint e suítes completas de API e web (comparar com o baseline do `develop`)
-- [ ] T023 Roteiro do `quickstart.md` no ambiente local e em produção
+- [X] T023 Roteiro do `quickstart.md` no ambiente local e em produção
 
 ## Dependencies
 
