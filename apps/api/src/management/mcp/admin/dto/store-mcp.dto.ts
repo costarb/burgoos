@@ -28,6 +28,11 @@ export class UpdateMcpConfigurationDto {
   @ArrayUnique()
   @IsEnum(McpDataArea, { each: true })
   enabledAreas!: McpDataArea[];
+
+  /** Write tools for OAuth connections granted actions; absent keeps the current value. */
+  @IsOptional()
+  @IsBoolean()
+  actionsEnabled?: boolean;
 }
 
 export class CreateMcpTokenDto {

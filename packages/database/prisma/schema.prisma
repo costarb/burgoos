@@ -1318,6 +1318,8 @@ model SalesImportRun {
   endDate           DateTime                @map("end_date") @db.Date
   status            SalesImportRunStatus    @default(PENDING)
   trigger           SalesRunTrigger         @default(MANUAL)
+  /// Null = screen; "MCP · <client>" when started by an AI assistant.
+  requestedVia      String?                 @map("requested_via") @db.VarChar(80)
   strategy          String
   fixedProductId    String?                 @map("fixed_product_id") @db.Uuid
   counts            Json                    @default("{}")
@@ -2297,6 +2299,8 @@ model FinancialAudit {
   action         FinancialAuditAction
   beforeSnapshot Json?                @map("before_snapshot")
   afterSnapshot  Json?                @map("after_snapshot")
+  /// Null = screen; "MCP · <client>" when done by an AI assistant.
+  channel        String?              @db.VarChar(80)
   createdAt      DateTime             @default(now()) @map("created_at")
   tenant         Tenant               @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   actorUser      User                 @relation("FinancialAuditActor", fields: [actorUserId], references: [id], onDelete: Restrict)
@@ -2704,6 +2708,8 @@ model StoreMcpConfiguration {
   tenantId        String        @unique @map("tenant_id") @db.Uuid
   enabled         Boolean       @default(false)
   enabledAreas    McpDataArea[] @default([SALES, FINANCIAL, MENU, CASH, PAYABLES, INVENTORY]) @map("enabled_areas")
+  /// Write tools for OAuth connections granted mcp:write (off by default).
+  actionsEnabled  Boolean       @default(false) @map("actions_enabled")
   updatedByUserId String?       @map("updated_by_user_id") @db.Uuid
   createdAt       DateTime      @default(now()) @map("created_at")
   updatedAt       DateTime      @updatedAt @map("updated_at")
@@ -2744,6 +2750,7 @@ model McpToolCall {
   result       McpToolCallResult
   errorCode    String?             @map("error_code") @db.VarChar(40)
   durationMs   Int                 @map("duration_ms")
+  isAction     Boolean             @default(false) @map("is_action")
   occurredAt   DateTime            @default(now()) @map("occurred_at")
   tenant       Tenant              @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   token        StoreMcpToken?      @relation(fields: [tokenId], references: [id], onDelete: SetNull)
@@ -2754,6 +2761,7 @@ model McpToolCall {
   @@index([tenantId, tokenId, occurredAt])
   @@index([occurredAt])
   @@index([tenantId, connectionId, occurredAt])
+  @@index([tenantId, connectionId, isAction, occurredAt])
   @@map("mcp_tool_calls")
 }
 

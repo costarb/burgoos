@@ -86,8 +86,8 @@ describe("store MCP admin integration", () => {
         storeId: storeA,
         actorUserId: adminId,
         metadata: {
-          before: { enabled: false, enabledAreas: [] },
-          after: { enabled: true, enabledAreas: ["SALES", "FINANCIAL"] },
+          before: { enabled: false, enabledAreas: [], actionsEnabled: false },
+          after: { enabled: true, enabledAreas: ["SALES", "FINANCIAL"], actionsEnabled: false },
         },
       }),
     ]);

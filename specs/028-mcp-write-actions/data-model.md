@@ -1,6 +1,6 @@
 # Data Model: Ações pelo MCP
 
-Migration `2026100410xxxx_mcp_write_actions` — só colunas novas com default ou nulas; sem backfill.
+Migration `20261004100000_mcp_write_actions` — só colunas novas com default ou nulas; sem backfill.
 
 ## `StoreMcpConfiguration`
 
@@ -28,7 +28,11 @@ Passa a aceitar `"mcp:read mcp:write"`. Valor decidido no consentimento.
 
 | Campo | Coluna | Tipo | Regra |
 |---|---|---|---|
-| `channel` | `channel` | `VarChar(80)?` | Igual ao da auditoria financeira. Exibido no histórico de importações. |
+| `requestedVia` | `requested_via` | `VarChar(80)?` | Igual ao canal da auditoria financeira (o campo `channel` já existe e indica API/arquivo). Exibido no histórico de importações. |
+
+## Origem da ação
+
+A origem é propagada por `AsyncLocalStorage` (`common/observability/action-origin.ts`): a tool roda dentro de `asMcpAction`, e `FinancialAuditService` e `SalesImportPreviewService.create` gravam o valor. Telas não definem origem (nulo).
 
 ## Constantes (código)
 

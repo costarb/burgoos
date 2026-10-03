@@ -1,4 +1,5 @@
 import { Inject, Injectable, NotFoundException } from "@nestjs/common";
+import { hasWriteScope } from "../mcp-actions";
 import { AccessAuditEventType, AccessAuditResult, Prisma } from "@prisma/client";
 import { PrismaService } from "../../../platform/database/prisma.service";
 import { AccessAuditService } from "../../access/access-audit.service";
@@ -13,6 +14,8 @@ export interface McpConnectionView {
   redirectHost: string;
   userName: string;
   status: "ACTIVE" | "REVOKED";
+  /** Connection was granted write tools (mcp:write). */
+  actions: boolean;
   createdAt: string;
   lastUsedAt: string | null;
   revokedAt: string | null;
@@ -24,7 +27,9 @@ const connectionInclude = {
   user: { select: { name: true } },
 } satisfies Prisma.McpOAuthConnectionInclude;
 
-type ConnectionWithDetails = Prisma.McpOAuthConnectionGetPayload<{ include: typeof connectionInclude }>;
+type ConnectionWithDetails = Prisma.McpOAuthConnectionGetPayload<{
+  include: typeof connectionInclude;
+}>;
 
 @Injectable()
 export class OAuthConnectionService {
@@ -41,11 +46,17 @@ export class OAuthConnectionService {
     });
     return rows
       .map(toView)
-      .sort((left, right) => Number(left.status === "REVOKED") - Number(right.status === "REVOKED"));
+      .sort(
+        (left, right) => Number(left.status === "REVOKED") - Number(right.status === "REVOKED")
+      );
   }
 
   /** Admin revocation scoped to the active store; idempotent. */
-  async revokeForStore(tenantId: string, connectionId: string, actorUserId: string): Promise<McpConnectionView> {
+  async revokeForStore(
+    tenantId: string,
+    connectionId: string,
+    actorUserId: string
+  ): Promise<McpConnectionView> {
     const existing = await this.prisma.mcpOAuthConnection.findFirst({
       where: { id: connectionId, tenantId },
       include: connectionInclude,
@@ -61,7 +72,11 @@ export class OAuthConnectionService {
   }
 
   /** Revokes a connection and all of its tokens, recording the reason in the access audit. */
-  async revoke(connectionId: string, reason: ConnectionRevokeReason, actorUserId?: string | null): Promise<void> {
+  async revoke(
+    connectionId: string,
+    reason: ConnectionRevokeReason,
+    actorUserId?: string | null
+  ): Promise<void> {
     const now = new Date();
     const connection = await this.prisma.mcpOAuthConnection.findUnique({
       where: { id: connectionId },
@@ -99,9 +114,12 @@ function toView(connection: ConnectionWithDetails): McpConnectionView {
     id: connection.id,
     clientName: connection.client.name,
     clientKind: connection.client.kind,
-    redirectHost: connection.client.redirectUris[0] ? redirectHost(connection.client.redirectUris[0]) : "-",
+    redirectHost: connection.client.redirectUris[0]
+      ? redirectHost(connection.client.redirectUris[0])
+      : "-",
     userName: connection.user.name,
     status: connection.revokedAt ? "REVOKED" : "ACTIVE",
+    actions: hasWriteScope(connection.scope),
     createdAt: connection.createdAt.toISOString(),
     lastUsedAt: connection.lastUsedAt?.toISOString() ?? null,
     revokedAt: connection.revokedAt?.toISOString() ?? null,

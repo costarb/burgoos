@@ -16,6 +16,8 @@ import { FinancialDashboardService } from "../../src/management/reports/financia
 import { ManagementReportService } from "../../src/management/reports/management-report.service";
 import { MenuEngineeringService } from "../../src/management/reports/menu-engineering.service";
 import { SalesReportService } from "../../src/management/reports/sales-report.service";
+import { SalesImportPreviewService } from "../../src/management/sales-integrations/sales-import-preview.service";
+import { SalesImportRunProcessor } from "../../src/management/sales-integrations/sales-import-run.processor";
 import { InventoryService } from "../../src/operations/inventory/inventory.service";
 import type { McpFakePrisma } from "./mcp-fake-prisma";
 import { createMcpTestApp } from "./mcp-test-app";
@@ -389,6 +391,7 @@ export function createServiceMocks() {
   };
 
   const payables = {
+    create: vi.fn(async (..._args: unknown[]) => ({ items: [] as unknown[], summary: {} })),
     list: vi.fn(async (tenantId: string) => ({
       items: [
         {
@@ -469,7 +472,34 @@ export function createServiceMocks() {
     ]),
   };
 
-  return { sales, reports, management, dre, dashboard, menu, cashFlow, payables, inventory };
+  const salesImport = {
+    create: vi.fn(async (tenantId: string, userId: string, dto: { integrationId: string; startDate: string; endDate: string }) => ({
+      id: "run-1",
+      tenantId,
+      requestedByUserId: userId,
+      integrationId: dto.integrationId,
+      status: "PENDING",
+    })),
+    get: vi.fn(async () => ({ id: "run-1", status: "PENDING", counts: {}, days: [] })),
+  };
+  const salesImportProcessor = {
+    queuePreview: vi.fn(async () => undefined),
+    queueConfirmation: vi.fn(async () => undefined),
+  };
+
+  return {
+    sales,
+    reports,
+    management,
+    dre,
+    dashboard,
+    menu,
+    cashFlow,
+    payables,
+    inventory,
+    salesImport,
+    salesImportProcessor,
+  };
 }
 
 export type ServiceMocks = ReturnType<typeof createServiceMocks>;
@@ -498,6 +528,8 @@ export async function createMcpServerApp(
       { provide: CashFlowService, useValue: services.cashFlow },
       { provide: AccountsPayableService, useValue: services.payables },
       { provide: InventoryService, useValue: services.inventory },
+      { provide: SalesImportPreviewService, useValue: services.salesImport },
+      { provide: SalesImportRunProcessor, useValue: services.salesImportProcessor },
     ],
   });
 }

@@ -1,3 +1,4 @@
+import { currentActionOrigin } from "../../common/observability/action-origin";
 import {
   BadRequestException,
   ConflictException,
@@ -78,6 +79,7 @@ export class SalesImportPreviewService {
       },
     });
     if (overlap) throw new ConflictException("Ja existe processamento sobreposto");
+    const requestedVia = currentActionOrigin();
     const run = await this.prisma.salesImportRun.create({
       data: {
         tenantId,
@@ -91,6 +93,7 @@ export class SalesImportPreviewService {
         fixedProductId: dto.fixedProductId,
         counts: EMPTY_COUNTS,
         trigger,
+        ...(requestedVia ? { requestedVia } : {}),
       },
     });
     return run;

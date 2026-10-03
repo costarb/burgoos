@@ -61,7 +61,7 @@ Saída: `{ execucaoId, situacao, periodo, mensagem: "Use importacao_status para 
 Anotações: `readOnlyHint: true`.
 
 Entrada: `execucaoId`.
-Saída: `{ execucaoId, provedor, periodo, situacao, origem, resumo?: { vendasNovas, valorNovasReais, duplicadas, pedidosExistentes, diasBloqueados: [{ data, motivo }] }, podeConfirmar: boolean, erros? }`.
+Saída: `{ execucaoId, provedor, periodo, situacao, origem, resumo?: { encontradas, vendasNovas, duplicadas, pedidosExistentes, rejeitadas, importadas, falhas, diasBloqueados: [{ data, motivo }] }, podeConfirmar: boolean, erros? }`.
 
 ### `importar_vendas_confirmar`
 Anotações: `readOnlyHint: false`, `destructiveHint: false`, `idempotentHint: true`.

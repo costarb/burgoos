@@ -20,6 +20,8 @@ import { FinancialDashboardService } from "../../src/management/reports/financia
 import { ManagementReportService } from "../../src/management/reports/management-report.service";
 import { MenuEngineeringService } from "../../src/management/reports/menu-engineering.service";
 import { SalesReportService } from "../../src/management/reports/sales-report.service";
+import { SalesImportPreviewService } from "../../src/management/sales-integrations/sales-import-preview.service";
+import { SalesImportRunProcessor } from "../../src/management/sales-integrations/sales-import-run.processor";
 import { InventoryService } from "../../src/operations/inventory/inventory.service";
 import type { McpFakePrisma } from "./mcp-fake-prisma";
 import { createServiceMocks, memoryPressureMock, ServiceMocks, STORE_A, STORE_B, STORE_DATA } from "./mcp-service-fixtures";
@@ -118,6 +120,8 @@ export async function createOAuthApp(
       { provide: CashFlowService, useValue: services.cashFlow },
       { provide: AccountsPayableService, useValue: services.payables },
       { provide: InventoryService, useValue: services.inventory },
+      { provide: SalesImportPreviewService, useValue: services.salesImport },
+      { provide: SalesImportRunProcessor, useValue: services.salesImportProcessor },
     ],
   });
 }

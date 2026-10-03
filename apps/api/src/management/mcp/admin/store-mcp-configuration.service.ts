@@ -9,6 +9,7 @@ import { UpdateMcpConfigurationDto } from "./dto/store-mcp.dto";
 export interface McpConfigurationView {
   enabled: boolean;
   enabledAreas: McpDataArea[];
+  actionsEnabled: boolean;
   availableAreas: Array<{ area: McpDataArea; label: string; description: string; tools: string[] }>;
   serverUrl: string;
   updatedAt: string | null;
@@ -30,7 +31,10 @@ export class StoreMcpConfigurationService {
 
     return {
       enabled: configuration?.enabled ?? false,
-      enabledAreas: configuration ? normalizeAreas(configuration.enabledAreas) : [...ALL_MCP_DATA_AREAS],
+      enabledAreas: configuration
+        ? normalizeAreas(configuration.enabledAreas)
+        : [...ALL_MCP_DATA_AREAS],
+      actionsEnabled: configuration?.actionsEnabled ?? false,
       availableAreas: MCP_DATA_AREAS.map((definition) => ({
         area: definition.area,
         label: definition.label,
@@ -59,8 +63,9 @@ export class StoreMcpConfigurationService {
     await this.prisma.$transaction(async (tx) => {
       const before = await tx.storeMcpConfiguration.findUnique({
         where: { tenantId: user.tenantId },
-        select: { enabled: true, enabledAreas: true },
+        select: { enabled: true, enabledAreas: true, actionsEnabled: true },
       });
+      const actionsEnabled = dto.actionsEnabled ?? before?.actionsEnabled ?? false;
 
       await tx.storeMcpConfiguration.upsert({
         where: { tenantId: user.tenantId },
@@ -68,9 +73,10 @@ export class StoreMcpConfigurationService {
           tenantId: user.tenantId,
           enabled: dto.enabled,
           enabledAreas,
+          actionsEnabled,
           updatedByUserId: user.id,
         },
-        update: { enabled: dto.enabled, enabledAreas, updatedByUserId: user.id },
+        update: { enabled: dto.enabled, enabledAreas, actionsEnabled, updatedByUserId: user.id },
       });
 
       await this.audit.record(
@@ -81,9 +87,13 @@ export class StoreMcpConfigurationService {
           result: AccessAuditResult.SUCCESS,
           metadata: {
             before: before
-              ? { enabled: before.enabled, enabledAreas: normalizeAreas(before.enabledAreas) }
-              : { enabled: false, enabledAreas: [] },
-            after: { enabled: dto.enabled, enabledAreas },
+              ? {
+                  enabled: before.enabled,
+                  enabledAreas: normalizeAreas(before.enabledAreas),
+                  actionsEnabled: before.actionsEnabled,
+                }
+              : { enabled: false, enabledAreas: [], actionsEnabled: false },
+            after: { enabled: dto.enabled, enabledAreas, actionsEnabled },
           },
         },
         tx

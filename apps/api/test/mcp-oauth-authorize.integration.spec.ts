@@ -49,7 +49,7 @@ describe("MCP OAuth discovery, authorize and consent", () => {
         expect(response.body).toEqual({
           resource: MCP_URL,
           authorization_servers: [ISSUER],
-          scopes_supported: ["mcp:read"],
+          scopes_supported: ["mcp:read", "mcp:write"],
           bearer_methods_supported: ["header"],
           resource_name: "RRFive OS",
         });
