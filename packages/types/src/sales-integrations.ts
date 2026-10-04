@@ -192,6 +192,8 @@ export interface SalesImportRunView {
   endDate: string;
   status: SalesImportRunStatus;
   trigger?: SalesRunTrigger;
+  /** Null = screen; "MCP · <client>" when started by an AI assistant. */
+  requestedVia?: string | null;
   counts: SalesRunCounts;
   days?: SalesImportDayView[];
   errorCode: string | null;

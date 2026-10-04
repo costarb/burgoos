@@ -2,10 +2,11 @@ import { Inject, Injectable } from "@nestjs/common";
 import { AccessProfileStatus, McpOAuthTokenKind } from "@prisma/client";
 import { PrismaService } from "../../../platform/database/prisma.service";
 import { normalizeAreas } from "../mcp-data-areas";
+import { actionChannel, hasWriteScope, NO_ACTIONS } from "../mcp-actions";
 import { McpDeniedReason, McpRequestContext } from "../server/mcp-context";
 import { ACCESS_TOKEN_PREFIX, hashSecret, hasOpaqueShape } from "./oauth-tokens.util";
 import { matchesResource } from "./oauth-urls";
-import { isActiveUser } from "./store-eligibility";
+import { isActiveUser, permissionsForStore } from "./store-eligibility";
 
 export type OAuthCredentialResult =
   | { status: "ok"; context: McpRequestContext }
@@ -21,7 +22,11 @@ export function isOAuthAccessToken(value: string): boolean {
 export class OAuthCredentialResolver {
   constructor(@Inject(PrismaService) private readonly prisma: PrismaService) {}
 
-  async resolve(accessToken: string, resource: string, now = new Date()): Promise<OAuthCredentialResult> {
+  async resolve(
+    accessToken: string,
+    resource: string,
+    now = new Date()
+  ): Promise<OAuthCredentialResult> {
     const token = await this.prisma.mcpOAuthToken.findUnique({
       where: { tokenHash: hashSecret(accessToken) },
       include: {
@@ -33,7 +38,10 @@ export class OAuthCredentialResolver {
                 status: true,
                 tenantId: true,
                 isMaster: true,
-                storeAssignments: { where: { status: AccessProfileStatus.ACTIVE }, select: { tenantId: true } },
+                storeAssignments: {
+                  where: { status: AccessProfileStatus.ACTIVE },
+                  select: { tenantId: true },
+                },
               },
             },
             tenant: {
@@ -43,7 +51,9 @@ export class OAuthCredentialResolver {
                 slug: true,
                 active: true,
                 deactivatedAt: true,
-                mcpConfiguration: { select: { enabled: true, enabledAreas: true } },
+                mcpConfiguration: {
+                  select: { enabled: true, enabledAreas: true, actionsEnabled: true },
+                },
               },
             },
           },
@@ -69,8 +79,16 @@ export class OAuthCredentialResolver {
     const hasStoreAccess =
       connection.user.isMaster ||
       connection.user.tenantId === connection.tenantId ||
-      connection.user.storeAssignments.some((assignment) => assignment.tenantId === connection.tenantId);
+      connection.user.storeAssignments.some(
+        (assignment) => assignment.tenantId === connection.tenantId
+      );
     if (!hasStoreAccess) return deny("STORE_ACCESS_LOST");
+
+    const canWrite =
+      hasWriteScope(connection.scope) && connection.tenant.mcpConfiguration.actionsEnabled;
+    const permissions = canWrite
+      ? await permissionsForStore(this.prisma, connection.userId, connection.tenantId)
+      : null;
 
     return {
       status: "ok",
@@ -81,6 +99,9 @@ export class OAuthCredentialResolver {
         userId: connection.userId,
         clientName: connection.client.name,
         enabledAreas: normalizeAreas(connection.tenant.mcpConfiguration.enabledAreas),
+        actions: permissions
+          ? { allowed: true, ...permissions, channel: actionChannel(connection.client.name) }
+          : NO_ACTIONS,
         storeName: connection.tenant.name,
         storeSlug: connection.tenant.slug,
       },

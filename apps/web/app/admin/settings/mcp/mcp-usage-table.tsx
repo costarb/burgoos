@@ -52,8 +52,7 @@ export function McpUsageTable({ initialPage, tokens, loadUsageAction }: McpUsage
       if (result.status === "success" && result.data) {
         setUsage(result.data);
         setUpdatedAt(new Date());
-      }
-      else setError(result.message ?? "Nao foi possivel carregar o uso.");
+      } else setError(result.message ?? "Nao foi possivel carregar o uso.");
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : "Nao foi possivel carregar o uso.");
     } finally {
@@ -172,7 +171,9 @@ export function McpUsageTable({ initialPage, tokens, loadUsageAction }: McpUsage
                     {entry.clientName ? (
                       <>
                         <span className="font-medium">{entry.clientName}</span>
-                        <span className="block text-xs text-slate-500">{entry.userName ?? "-"}</span>
+                        <span className="block text-xs text-slate-500">
+                          {entry.userName ?? "-"}
+                        </span>
                       </>
                     ) : (
                       (entry.tokenName ?? "-")
@@ -180,6 +181,11 @@ export function McpUsageTable({ initialPage, tokens, loadUsageAction }: McpUsage
                   </td>
                   <td className="py-2 pr-4">
                     <span className="font-medium">{entry.target ?? entry.method}</span>
+                    {entry.isAction ? (
+                      <span className="ml-2 rounded-full bg-amber-100 px-2 py-0.5 text-xs font-semibold text-amber-900">
+                        Acao
+                      </span>
+                    ) : null}
                     <span className="block text-xs text-slate-500">{entry.method}</span>
                   </td>
                   <td className="max-w-xs truncate py-2 pr-4 font-mono text-xs text-slate-600">

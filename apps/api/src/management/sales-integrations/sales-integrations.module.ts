@@ -101,6 +101,8 @@ import { IfoodFinancialObservabilityService } from "./ifood/ifood-financial-obse
   ],
   exports: [
     SalesIntegrationService,
+    SalesImportPreviewService,
+    SalesImportRunProcessor,
     IntegrationAuditService,
     SalesIntegrationOperationLockService,
     MercadoPagoAuthenticatedRequestService,

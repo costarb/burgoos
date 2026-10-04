@@ -1,4 +1,17 @@
-import { Body, Controller, Get, HttpCode, Inject, Param, ParseUUIDPipe, Post, Query, Req, Res, UseGuards } from "@nestjs/common";
+import {
+  Body,
+  Controller,
+  Get,
+  HttpCode,
+  Inject,
+  Param,
+  ParseUUIDPipe,
+  Post,
+  Query,
+  Req,
+  Res,
+  UseGuards,
+} from "@nestjs/common";
 import { ApiExcludeController } from "@nestjs/swagger";
 import type { Request, Response } from "express";
 import { AuthUser } from "../../../platform/auth/auth.types";
@@ -69,13 +82,19 @@ export class OAuthAuthorizeController {
     @Body() dto: ApproveAuthorizationDto,
     @Req() request: Request
   ) {
-    return this.authorization.approve(user, id, dto.storeId, this.urls.for(request));
+    return this.authorization.approve(user, id, dto.storeId, this.urls.for(request), new Date(), {
+      allowActions: dto.allowActions === true,
+    });
   }
 
   @Post("requests/:id/deny")
   @HttpCode(200)
   @UseGuards(JwtAuthGuard)
-  deny(@CurrentUser() user: AuthUser, @Param("id", ParseUUIDPipe) id: string, @Req() request: Request) {
+  deny(
+    @CurrentUser() user: AuthUser,
+    @Param("id", ParseUUIDPipe) id: string,
+    @Req() request: Request
+  ) {
     return this.authorization.deny(user, id, this.urls.for(request));
   }
 }
@@ -83,6 +102,9 @@ export class OAuthAuthorizeController {
 /** Keeps only single string values (repeated OAuth parameters are invalid). */
 export function stringParams(query: Record<string, unknown>): Record<string, string | undefined> {
   return Object.fromEntries(
-    Object.entries(query).map(([key, value]) => [key, typeof value === "string" ? value : undefined])
+    Object.entries(query).map(([key, value]) => [
+      key,
+      typeof value === "string" ? value : undefined,
+    ])
   );
 }

@@ -295,7 +295,7 @@ Conceda somente as permissões necessárias. Ao desligar um colaborador, inative
 
 ### 11.1 Assistentes de IA (MCP)
 
-Em **Configurações → MCP / IA** você conecta assistentes de IA (Claude, ChatGPT, Claude Code, Cursor) aos números da loja para pedir análises: comparar períodos, avaliar a margem do cardápio, prever o caixa, entre outras. O acesso é **somente leitura**, vale para **uma loja por conexão** e nunca inclui dados pessoais de clientes.
+Em **Configurações → MCP / IA** você conecta assistentes de IA (Claude, ChatGPT, Claude Code, Cursor) aos números da loja para pedir análises: comparar períodos, avaliar a margem do cardápio, prever o caixa, entre outras. Por padrão o acesso é **somente leitura**, vale para **uma loja por conexão** e nunca inclui dados pessoais de clientes. Opcionalmente, o assistente pode **executar ações** (veja abaixo).
 
 Permissões:
 - **MCP / IA** (`mcp.manage`) para configurar a tela;
@@ -327,6 +327,26 @@ Use para clientes sem login, como o Cursor, o Claude Desktop via `mcp-remote` e 
 2. Copie o **token completo** e o trecho do seu cliente. O token não é exibido novamente; a coluna **Identificador** mostra só o início dele.
 
 Cada loja pode ter até 10 tokens ativos. Trate o token como uma senha.
+
+**Ações pelos assistentes (opcional)**
+
+Com as ações liberadas, o assistente pode:
+- **Contas a pagar**: criar (inclusive recorrentes, com categoria, fornecedor, competência e classificação no DRE), registrar pagamento, editar e cancelar com motivo;
+- **Importação de vendas via API**: listar as integrações, gerar a prévia do PagBank, Mercado Pago ou iFood por período (ou a carga inicial de 30/60/90 dias do Mercado Pago), com atribuição automática por valor ou produto fixo, acompanhar e confirmar. A conciliação financeira do iFood continua só na tela.
+
+Para liberar:
+1. Em **Ações pelos assistentes**, clique em **Permitir ações** (o MCP precisa estar habilitado).
+2. Cada pessoa conecta (ou reconecta) o assistente pelo endereço e, na autorização, marca **Permitir que o assistente execute ações**. A opção vem desmarcada e só aparece quando a loja permite e a pessoa tem permissão para alguma ação.
+
+Regras de segurança:
+- O assistente só faz o que as permissões da pessoa permitem: gerenciar Caixa e contas (`finance.manage`) para contas a pagar e gerenciar Vendas externas (`integrations.sales.manage`) para importação, em Acessos > Perfis. A área de dados correspondente (Contas a pagar, Vendas) precisa estar ligada.
+- Tokens de acesso nunca executam ações.
+- Desligar as ações, revogar a conexão ou retirar a permissão bloqueia a próxima ação na hora.
+- Cada conexão executa até 30 ações por hora.
+- Contas criadas, pagas, editadas ou canceladas pelo assistente aparecem na auditoria financeira com a origem **MCP · nome do assistente**; importações mostram a mesma origem no histórico de execuções. Na aba **Uso**, as chamadas de ação têm o selo **Ação**.
+- Antes de criar uma conta igual a outra (mesma descrição, valor e vencimento), o assistente pede confirmação. A importação sempre mostra a prévia antes de gravar os pedidos.
+
+Exemplos de pedidos: “lança o aluguel de R$ 3.000, categoria Aluguel, vencendo dia 10, mensal por 12 meses”, “paga a conta de energia de hoje pelo Banco Inter”, “importa as vendas do PagBank de ontem e me mostra a prévia”.
 
 **Controle**
 

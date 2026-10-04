@@ -1397,6 +1397,7 @@ erDiagram
 | `endDate` | `end_date` | `DateTime` | sim | — | Data de end. |
 | `status` | `status` | `SalesImportRunStatus` | sim | default: PENDING | Estado atual no ciclo de vida da entidade. |
 | `trigger` | `trigger` | `SalesRunTrigger` | sim | default: MANUAL | Valor controlado pelo enum SalesRunTrigger. |
+| `requestedVia` | `requested_via` | `String?` | não | — | Atributo requestedVia da entidade. |
 | `strategy` | `strategy` | `String` | sim | — | Atributo strategy da entidade. |
 | `fixedProductId` | `fixed_product_id` | `String?` | não | — | Identificador associado a fixedProduct. |
 | `counts` | `counts` | `Json` | sim | default: "{}" | Atributo counts da entidade. |
@@ -2252,6 +2253,7 @@ erDiagram
 | `action` | `action` | `FinancialAuditAction` | sim | — | Valor controlado pelo enum FinancialAuditAction. |
 | `beforeSnapshot` | `before_snapshot` | `Json?` | não | — | Atributo beforeSnapshot da entidade. |
 | `afterSnapshot` | `after_snapshot` | `Json?` | não | — | Atributo afterSnapshot da entidade. |
+| `channel` | `channel` | `String?` | não | — | Atributo channel da entidade. |
 | `createdAt` | `created_at` | `DateTime` | sim | default: now() | Data e hora de criação. |
 | `tenant` | `—` | `Tenant` | sim | FK/relação | Referência relacionada a Tenant. |
 | `actorUser` | `—` | `User` | sim | FK/relação | Referência relacionada a User. |
@@ -2746,6 +2748,7 @@ erDiagram
 | `tenantId` | `tenant_id` | `String` | sim | UNIQUE | Tenant proprietário; obrigatório para isolamento dos dados. |
 | `enabled` | `enabled` | `Boolean` | sim | default: false | Indicador verdadeiro/falso da condição nomeada. |
 | `enabledAreas` | `enabled_areas` | `McpDataArea[]` | coleção | default: [SALES, FINANCIAL, MENU, CASH, PAYABLES, INVENTORY] | Valor controlado pelo enum McpDataArea. |
+| `actionsEnabled` | `actions_enabled` | `Boolean` | sim | default: false | Indicador verdadeiro/falso da condição nomeada. |
 | `updatedByUserId` | `updated_by_user_id` | `String?` | não | — | Identificador associado a updatedByUser. |
 | `createdAt` | `created_at` | `DateTime` | sim | default: now() | Data e hora de criação. |
 | `updatedAt` | `updated_at` | `DateTime` | sim | — | Data e hora da última atualização. |
@@ -2799,6 +2802,7 @@ erDiagram
 | `result` | `result` | `McpToolCallResult` | sim | — | Valor controlado pelo enum McpToolCallResult. |
 | `errorCode` | `error_code` | `String?` | não | — | Atributo errorCode da entidade. |
 | `durationMs` | `duration_ms` | `Int` | sim | — | Atributo durationMs da entidade. |
+| `isAction` | `is_action` | `Boolean` | sim | default: false | Indicador verdadeiro/falso da condição nomeada. |
 | `occurredAt` | `occurred_at` | `DateTime` | sim | default: now() | Data e hora de occurred. |
 | `tenant` | `—` | `Tenant` | sim | FK/relação | Referência relacionada a Tenant. |
 | `token` | `—` | `StoreMcpToken?` | não | FK/relação | Referência relacionada a StoreMcpToken. |
@@ -2811,6 +2815,7 @@ erDiagram
 - `@@index([tenantId, tokenId, occurredAt])`
 - `@@index([occurredAt])`
 - `@@index([tenantId, connectionId, occurredAt])`
+- `@@index([tenantId, connectionId, isAction, occurredAt])`
 
 **Escopo de tenant**: próprio (`tenantId`).
 

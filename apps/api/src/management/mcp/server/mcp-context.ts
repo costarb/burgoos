@@ -1,4 +1,5 @@
 import type { McpDataArea } from "@prisma/client";
+import type { McpActionsContext } from "../mcp-actions";
 import type { Request } from "express";
 
 /**
@@ -14,6 +15,8 @@ export interface McpRequestContext {
   userId?: string | null;
   clientName?: string | null;
   enabledAreas: McpDataArea[];
+  /** Write permissions of the call; absent or not allowed = read-only. */
+  actions?: McpActionsContext;
   storeName: string;
   storeSlug: string;
 }
@@ -29,6 +32,10 @@ export type McpErrorCode =
   | "AREA_DISABLED"
   | "TIMEOUT"
   | "MEMORY_PRESSURE"
+  | "ACTION_NOT_ALLOWED"
+  | "ACTION_RATE_LIMITED"
+  | "BUSINESS_RULE"
+  | "NOT_FOUND"
   | "INTERNAL";
 
 export type McpDeniedReason =
