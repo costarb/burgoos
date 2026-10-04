@@ -4,6 +4,7 @@ import { ObservabilityModule } from "../../common/observability/observability.mo
 import { OperationsModule } from "../../operations/operations.module";
 import { AuthModule } from "../../platform/auth/auth.module";
 import { ManagementModule } from "../management.module";
+import { SalesIntegrationsModule } from "../sales-integrations/sales-integrations.module";
 import { StoreMcpAdminController } from "./admin/store-mcp-admin.controller";
 import { StoreMcpConfigurationService } from "./admin/store-mcp-configuration.service";
 import { StoreMcpTokenService } from "./admin/store-mcp-token.service";
@@ -32,7 +33,9 @@ import { CashTools } from "./tools/cash.tools";
 import { FinancialTools } from "./tools/financial.tools";
 import { InventoryTools } from "./tools/inventory.tools";
 import { MenuTools } from "./tools/menu.tools";
+import { PayablesActionsTools } from "./tools/payables-actions.tools";
 import { PayablesTools } from "./tools/payables.tools";
+import { SalesImportTools } from "./tools/sales-import.tools";
 import { SalesTools } from "./tools/sales.tools";
 
 export const MCP_OAUTH_PROVIDERS = [
@@ -46,7 +49,11 @@ export const MCP_OAUTH_PROVIDERS = [
   OAuthCredentialResolver,
 ];
 
-export const MCP_OAUTH_CONTROLLERS = [WellKnownController, OAuthAuthorizeController, OAuthTokenController];
+export const MCP_OAUTH_CONTROLLERS = [
+  WellKnownController,
+  OAuthAuthorizeController,
+  OAuthTokenController,
+];
 
 export const MCP_SERVER_PROVIDERS = [
   ...MCP_OAUTH_PROVIDERS,
@@ -63,10 +70,19 @@ export const MCP_SERVER_PROVIDERS = [
   CashTools,
   PayablesTools,
   InventoryTools,
+  PayablesActionsTools,
+  SalesImportTools,
 ];
 
 @Module({
-  imports: [AuthModule, ManagementModule, OperationsModule, ObservabilityModule, BackgroundJobsModule],
+  imports: [
+    AuthModule,
+    ManagementModule,
+    SalesIntegrationsModule,
+    OperationsModule,
+    ObservabilityModule,
+    BackgroundJobsModule,
+  ],
   controllers: [StoreMcpAdminController, McpController, ...MCP_OAUTH_CONTROLLERS],
   providers: [
     StoreMcpConfigurationService,

@@ -3,7 +3,7 @@ import { McpDataArea } from "@prisma/client";
 import { z } from "zod";
 import { formatDate } from "../../../common/reporting/report-period";
 import { AccountsPayableService } from "../../financial/accounts-payable/accounts-payable.service";
-import { McpToolError } from "../server/mcp-context";
+import { resolveMany } from "./name-resolver";
 import {
   assertPeriod,
   BUSINESS_TIME_ZONE,
@@ -56,7 +56,13 @@ export function resolveDueDateFilter(
   const fim = typeof args.fim === "string" ? args.fim : null;
   if (!inicio && !fim && !hasCompetence) {
     const fallback = payablesDefaultRange(now);
-    return { inicio: fallback.start, fim: fallback.end, fuso: BUSINESS_TIME_ZONE, criterio: "vencimento", padraoAplicado: true };
+    return {
+      inicio: fallback.start,
+      fim: fallback.end,
+      fuso: BUSINESS_TIME_ZONE,
+      criterio: "vencimento",
+      padraoAplicado: true,
+    };
   }
   if (inicio && fim) assertPeriod(inicio, fim);
   else if (inicio) assertPeriod(inicio, inicio);
@@ -66,9 +72,7 @@ export function resolveDueDateFilter(
 
 @Injectable()
 export class PayablesTools {
-  constructor(
-    @Inject(AccountsPayableService) private readonly payables: AccountsPayableService
-  ) {}
+  constructor(@Inject(AccountsPayableService) private readonly payables: AccountsPayableService) {}
 
   definitions(): McpToolDefinition[] {
     return [
@@ -99,7 +103,8 @@ export class PayablesTools {
             .describe("Mes de competencia (AAAA-MM)."),
         },
         handler: async (context, args) => {
-          const mesCompetencia = typeof args.mesCompetencia === "string" ? args.mesCompetencia : null;
+          const mesCompetencia =
+            typeof args.mesCompetencia === "string" ? args.mesCompetencia : null;
           const vencimento = resolveDueDateFilter(args, mesCompetencia !== null);
           const status = stringArray(args.status);
           const requestedCategories = stringArray(args.categorias);
@@ -109,8 +114,16 @@ export class PayablesTools {
             requestedCategories.length || requestedSuppliers.length
               ? await this.payables.getOptions(context.tenantId)
               : null;
-          const categories = resolveNamed(requestedCategories, options?.categories ?? [], "categoria");
-          const suppliers = resolveNamed(requestedSuppliers, options?.suppliers ?? [], "fornecedor");
+          const categories = resolveNamed(
+            requestedCategories,
+            options?.categories ?? [],
+            "categoria"
+          );
+          const suppliers = resolveNamed(
+            requestedSuppliers,
+            options?.suppliers ?? [],
+            "fornecedor"
+          );
 
           const query = {
             start: vencimento.inicio ?? undefined,
@@ -146,24 +159,7 @@ export function resolveNamed(
   options: PayableOptions["categories"] | PayableOptions["suppliers"],
   label: "categoria" | "fornecedor"
 ): { ids: string[]; names: string[] } {
-  if (requested.length === 0) return { ids: [], names: [] };
-  const normalize = (value: string) =>
-    value.normalize("NFD").replace(/[̀-ͯ]/g, "").trim().toLowerCase();
-  const matched = new Map<string, string>();
-  const unknown: string[] = [];
-  for (const value of requested) {
-    const option = options.find((item) => item.id === value || normalize(item.name) === normalize(value));
-    if (option) matched.set(option.id, option.name);
-    else unknown.push(value);
-  }
-  if (unknown.length) {
-    const available = options.slice(0, 50).map((item) => item.name).join(", ") || "nenhuma cadastrada";
-    throw new McpToolError(
-      "INVALID_FILTER",
-      `${label === "categoria" ? "Categoria nao encontrada" : "Fornecedor nao encontrado"}: ${unknown.join(", ")}. Opcoes: ${available}.`
-    );
-  }
-  return { ids: [...matched.keys()], names: [...matched.values()] };
+  return resolveMany(requested, options, label);
 }
 
 export function mapPayables(
@@ -173,6 +169,7 @@ export function mapPayables(
   filtros: PayablesFilters
 ) {
   const contas = page.items.slice(0, MAX_LIST_ITEMS).map((item) => ({
+    id: item.id,
     descricao: item.description,
     fornecedor: item.supplierName,
     categoria: item.categoryName,

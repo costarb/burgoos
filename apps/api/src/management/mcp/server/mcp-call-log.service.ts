@@ -15,6 +15,7 @@ export interface McpCallRecord {
   result: McpToolCallResult;
   errorCode?: string | null;
   durationMs: number;
+  isAction?: boolean;
 }
 
 @Injectable()
@@ -37,6 +38,7 @@ export class McpCallLogService {
           result: call.result,
           errorCode: call.errorCode ?? null,
           durationMs: Math.max(0, Math.round(call.durationMs)),
+          isAction: call.isAction ?? false,
         },
       })
       .then(() => undefined)
@@ -47,6 +49,18 @@ export class McpCallLogService {
           }`
         );
       });
+  }
+
+  /** Successful write tools of a connection since the given instant (action rate limit). */
+  countActions(connectionId: string, since: Date): Promise<number> {
+    return this.prisma.mcpToolCall.count({
+      where: {
+        connectionId,
+        isAction: true,
+        result: McpToolCallResult.SUCCESS,
+        occurredAt: { gte: since },
+      },
+    });
   }
 
   /** Updates the OAuth connection's `lastUsedAt` at most once per minute. */
@@ -92,9 +106,7 @@ export class McpCallLogService {
   }
 }
 
-export function sanitizeArguments(
-  value: unknown
-): Prisma.InputJsonValue | typeof Prisma.DbNull {
+export function sanitizeArguments(value: unknown): Prisma.InputJsonValue | typeof Prisma.DbNull {
   if (value === undefined || value === null) return Prisma.DbNull;
   if (typeof value !== "object" || Array.isArray(value)) return Prisma.DbNull;
   const serialized = JSON.stringify(value);

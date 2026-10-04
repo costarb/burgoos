@@ -1,6 +1,7 @@
 import type { McpDataArea } from "@prisma/client";
 import { z } from "zod";
 import { MAX_INTERACTIVE_REPORT_DAYS } from "../../reports/sales-report.types";
+import type { McpActionGroup } from "../mcp-actions";
 import { McpRequestContext, McpToolError } from "../server/mcp-context";
 
 export const BUSINESS_TIME_ZONE = "America/Sao_Paulo";
@@ -14,6 +15,17 @@ export interface McpToolDefinition {
   title: string;
   description: string;
   inputSchema: z.ZodRawShape;
+  /**
+   * Set on write tools (and on reads that only support them): the tool is listed and runs only
+   * when the connection may perform this group of actions.
+   */
+  action?: {
+    group: McpActionGroup;
+    /** Writes data (false for supporting reads such as listing integrations). */
+    writes: boolean;
+    destructive?: boolean;
+    idempotent?: boolean;
+  };
   handler: (context: McpRequestContext, args: Record<string, unknown>) => Promise<ToolOutput>;
 }
 
@@ -109,5 +121,7 @@ export function truncate<T>(items: T[], limit = MAX_LIST_ITEMS) {
 }
 
 export function stringArray(value: unknown): string[] {
-  return Array.isArray(value) ? value.filter((item): item is string => typeof item === "string") : [];
+  return Array.isArray(value)
+    ? value.filter((item): item is string => typeof item === "string")
+    : [];
 }

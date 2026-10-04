@@ -31,8 +31,8 @@ export function McpConnectionsTable({
         <span className="text-sm text-slate-500">{active} de 20 ativas</span>
       </div>
       <p className="mt-1 text-sm text-slate-600">
-        Assistentes conectados pelo login. Revogar corta o acesso imediatamente; o assistente precisara
-        autorizar de novo.
+        Assistentes conectados pelo login. Revogar corta o acesso imediatamente; o assistente
+        precisara autorizar de novo.
       </p>
 
       {connections.length === 0 ? (
@@ -56,18 +56,35 @@ export function McpConnectionsTable({
                   <td className="py-2 pr-4">
                     <span className="font-medium">{connection.clientName}</span>
                     <span className="block text-xs text-slate-500">{connection.redirectHost}</span>
+                    <span
+                      className={`mt-1 inline-block rounded-full px-2 py-0.5 text-xs font-semibold ${
+                        connection.actions
+                          ? "bg-amber-100 text-amber-900"
+                          : "bg-slate-100 text-slate-600"
+                      }`}
+                      data-testid="connection-access"
+                    >
+                      {connection.actions ? "Leitura e acoes" : "Leitura"}
+                    </span>
                   </td>
                   <td className="py-2 pr-4">{connection.userName}</td>
-                  <td className="py-2 pr-4">{new Date(connection.createdAt).toLocaleDateString("pt-BR")}</td>
+                  <td className="py-2 pr-4">
+                    {new Date(connection.createdAt).toLocaleDateString("pt-BR")}
+                  </td>
                   <td className="py-2 pr-4">
                     {connection.lastUsedAt
-                      ? new Date(connection.lastUsedAt).toLocaleString("pt-BR", { dateStyle: "short", timeStyle: "short" })
+                      ? new Date(connection.lastUsedAt).toLocaleString("pt-BR", {
+                          dateStyle: "short",
+                          timeStyle: "short",
+                        })
                       : "Nunca"}
                   </td>
                   <td className="py-2 pr-4">
                     <span
                       className={`rounded-full px-2 py-0.5 text-xs font-semibold ${
-                        connection.status === "ACTIVE" ? "bg-emerald-100 text-emerald-800" : "bg-slate-200 text-slate-700"
+                        connection.status === "ACTIVE"
+                          ? "bg-emerald-100 text-emerald-800"
+                          : "bg-slate-200 text-slate-700"
                       }`}
                     >
                       {connection.status === "ACTIVE" ? "Ativa" : "Revogada"}

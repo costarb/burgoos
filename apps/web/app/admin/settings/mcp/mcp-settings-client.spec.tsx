@@ -65,6 +65,38 @@ describe("McpSettingsClient", () => {
     expect(text("mcp-status")).toBe("Habilitado");
   });
 
+  it("lets the owner allow actions, keeping the areas, and shows the access of each connection", async () => {
+    saveConfigurationAction.mockResolvedValue({
+      status: "success",
+      message: "Configuracao do MCP salva.",
+      data: configuration({ enabled: true, actionsEnabled: true }),
+    });
+    await render(configuration({ enabled: true }), [], usagePage([]), [
+      connection(),
+      connection({ id: "conn-2", actions: true }),
+    ]);
+
+    expect(text("mcp-actions-status")).toContain("Acoes desligadas");
+    expect(
+      [...container.querySelectorAll('[data-testid="connection-access"]')].map(
+        (item) => item.textContent
+      )
+    ).toEqual(["Leitura", "Leitura e acoes"]);
+
+    await click(button("Permitir acoes"));
+    expect(saveConfigurationAction).toHaveBeenCalledWith({
+      enabled: true,
+      enabledAreas: ["SALES", "FINANCIAL", "MENU", "CASH", "PAYABLES", "INVENTORY"],
+      actionsEnabled: true,
+    });
+    expect(text("mcp-actions-status")).toContain("Acoes permitidas");
+  });
+
+  it("keeps the actions switch disabled while the MCP is off", async () => {
+    await render(configuration({ enabled: false }), []);
+    expect(button("Permitir acoes").disabled).toBe(true);
+  });
+
   it("shows the generated token once with client snippets, then only the prefix", async () => {
     createTokenAction.mockResolvedValue({
       status: "success",
@@ -155,7 +187,11 @@ describe("McpSettingsClient", () => {
 
   it("refreshes the usage log keeping the current filters and page", async () => {
     loadUsageAction
-      .mockResolvedValueOnce({ status: "success", message: "ok", data: usagePage([usageEntry({ result: "DENIED" })]) })
+      .mockResolvedValueOnce({
+        status: "success",
+        message: "ok",
+        data: usagePage([usageEntry({ result: "DENIED" })]),
+      })
       .mockResolvedValueOnce({
         status: "success",
         message: "ok",
@@ -217,7 +253,11 @@ describe("McpSettingsClient", () => {
     revokeConnectionAction.mockResolvedValue({
       status: "success",
       message: "Conexao revogada.",
-      data: connection({ status: "REVOKED", revokedAt: "2026-10-02T12:00:00.000Z", revokedReason: "MANUAL" }),
+      data: connection({
+        status: "REVOKED",
+        revokedAt: "2026-10-02T12:00:00.000Z",
+        revokedReason: "MANUAL",
+      }),
     });
     await render(configuration({ enabled: true }), [], usagePage([]), [connection()]);
 
@@ -237,7 +277,14 @@ describe("McpSettingsClient", () => {
     await render(
       configuration({ enabled: true }),
       [],
-      usagePage([usageEntry({ tokenName: null, connectionId: "conn-1", clientName: "Claude", userName: "Dono Centro" })])
+      usagePage([
+        usageEntry({
+          tokenName: null,
+          connectionId: "conn-1",
+          clientName: "Claude",
+          userName: "Dono Centro",
+        }),
+      ])
     );
     await click(button("Uso"));
     expect(container.textContent).toContain("Claude");
@@ -312,12 +359,23 @@ function configuration(overrides: Partial<McpConfiguration> = {}): McpConfigurat
   return {
     enabled: false,
     enabledAreas: ["SALES", "FINANCIAL", "MENU", "CASH", "PAYABLES", "INVENTORY"],
+    actionsEnabled: false,
     availableAreas: [
       { area: "SALES", label: "Vendas", description: "Vendas", tools: ["resumo_vendas"] },
       { area: "FINANCIAL", label: "Financeiro/DRE", description: "DRE", tools: ["dre"] },
-      { area: "MENU", label: "Cardapio e Margem", description: "Menu", tools: ["engenharia_cardapio"] },
+      {
+        area: "MENU",
+        label: "Cardapio e Margem",
+        description: "Menu",
+        tools: ["engenharia_cardapio"],
+      },
       { area: "CASH", label: "Caixa", description: "Caixa", tools: ["posicao_caixa"] },
-      { area: "PAYABLES", label: "Contas a pagar", description: "Contas", tools: ["contas_a_pagar"] },
+      {
+        area: "PAYABLES",
+        label: "Contas a pagar",
+        description: "Contas",
+        tools: ["contas_a_pagar"],
+      },
       { area: "INVENTORY", label: "Estoque", description: "Estoque", tools: ["estoque"] },
     ],
     serverUrl: "https://api.example.com/api/mcp",
@@ -371,6 +429,7 @@ function usageEntry(overrides: Partial<McpUsageEntry> = {}): McpUsageEntry {
     result: "SUCCESS",
     errorCode: null,
     durationMs: 120,
+    isAction: false,
     ...overrides,
   };
 }
@@ -387,6 +446,7 @@ function connection(overrides: Partial<McpConnection> = {}): McpConnection {
     redirectHost: "claude.ai",
     userName: "Dono Centro",
     status: "ACTIVE",
+    actions: false,
     createdAt: "2026-10-02T10:00:00.000Z",
     lastUsedAt: null,
     revokedAt: null,

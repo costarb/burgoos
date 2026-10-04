@@ -1,4 +1,5 @@
 import { Controller, Get, Inject, Req, Res } from "@nestjs/common";
+import { MCP_WRITE_SCOPE } from "../mcp-actions";
 import { ApiExcludeController } from "@nestjs/swagger";
 import type { Request, Response } from "express";
 import { MCP_OAUTH_SCOPE } from "./oauth-urls";
@@ -19,7 +20,7 @@ export class WellKnownController {
     send(response, {
       resource: urls.resource,
       authorization_servers: [urls.issuer],
-      scopes_supported: [MCP_OAUTH_SCOPE],
+      scopes_supported: [MCP_OAUTH_SCOPE, MCP_WRITE_SCOPE],
       bearer_methods_supported: ["header"],
       resource_name: "RRFive OS",
     });
@@ -39,7 +40,7 @@ export class WellKnownController {
       code_challenge_methods_supported: ["S256"],
       token_endpoint_auth_methods_supported: ["none"],
       revocation_endpoint_auth_methods_supported: ["none"],
-      scopes_supported: [MCP_OAUTH_SCOPE],
+      scopes_supported: [MCP_OAUTH_SCOPE, MCP_WRITE_SCOPE],
       client_id_metadata_document_supported: true,
       authorization_response_iss_parameter_supported: true,
     });

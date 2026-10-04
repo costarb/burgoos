@@ -14,6 +14,7 @@ export interface McpUsageEntryView {
   userName: string | null;
   method: string;
   target: string | null;
+  isAction: boolean;
   arguments: Prisma.JsonValue | null;
   result: McpToolCallResult;
   errorCode: string | null;
@@ -80,6 +81,7 @@ export class McpUsageService {
         result: row.result,
         errorCode: row.errorCode,
         durationMs: row.durationMs,
+        isAction: row.isAction,
       })),
     };
   }

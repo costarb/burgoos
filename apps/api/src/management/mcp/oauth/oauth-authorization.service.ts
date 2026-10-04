@@ -15,12 +15,16 @@ import {
 import { AuthUser } from "../../../platform/auth/auth.types";
 import { PrismaService } from "../../../platform/database/prisma.service";
 import { AccessAuditService } from "../../access/access-audit.service";
+import {
+  MCP_ACTION_GROUPS,
+  MCP_READ_WRITE_SCOPE,
+  MCP_WRITE_SCOPE,
+  McpActionGroup,
+  unlockedActionGroups,
+} from "../mcp-actions";
 import { areaLabel } from "../mcp-data-areas";
 import { OAuthClientService } from "./oauth-client.service";
-import {
-  RedirectableAuthorizationError,
-  UntrustedAuthorizationRequest,
-} from "./oauth-errors";
+import { RedirectableAuthorizationError, UntrustedAuthorizationRequest } from "./oauth-errors";
 import {
   AUTHORIZATION_CODE_PREFIX,
   AUTHORIZATION_CODE_TTL_SECONDS,
@@ -37,9 +41,10 @@ import {
   onlyLoopbackRedirects,
   redirectHost,
 } from "./redirect-uri";
-import { StoreEligibilityService } from "./store-eligibility";
+import { EligibleStore, permissionsForStore, StoreEligibilityService } from "./store-eligibility";
 
-const TOLERATED_SCOPES = new Set([MCP_OAUTH_SCOPE, "offline_access"]);
+// Clients may ask for mcp:write; whether it is granted is decided on the consent screen.
+const TOLERATED_SCOPES = new Set([MCP_OAUTH_SCOPE, MCP_WRITE_SCOPE, "offline_access"]);
 
 export interface AuthorizeQuery {
   response_type?: string;
@@ -61,7 +66,13 @@ export interface AuthorizationRequestView {
   expiresAt: string;
   canAuthorize: boolean;
   blockedReason: BlockedReason | null;
-  stores: Array<{ id: string; name: string; areas: Array<{ area: string; label: string }> }>;
+  stores: Array<{
+    id: string;
+    name: string;
+    areas: Array<{ area: string; label: string }>;
+    /** Write tools this user could grant on this store (empty when the store disallows them). */
+    actions: Array<{ group: McpActionGroup; label: string }>;
+  }>;
 }
 
 @Injectable()
@@ -89,17 +100,26 @@ export class OAuthAuthorizationService {
     }
 
     if (query.response_type !== "code") {
-      throw new RedirectableAuthorizationError("unsupported_response_type", "Use response_type=code.");
+      throw new RedirectableAuthorizationError(
+        "unsupported_response_type",
+        "Use response_type=code."
+      );
     }
     if (query.code_challenge_method !== "S256" || !isValidCodeChallenge(query.code_challenge)) {
       throw new RedirectableAuthorizationError("invalid_request", "PKCE S256 obrigatorio.");
     }
     const scopes = (query.scope ?? MCP_OAUTH_SCOPE).split(/\s+/).filter(Boolean);
     if (!scopes.every((scope) => TOLERATED_SCOPES.has(scope))) {
-      throw new RedirectableAuthorizationError("invalid_scope", `Escopo suportado: ${MCP_OAUTH_SCOPE}.`);
+      throw new RedirectableAuthorizationError(
+        "invalid_scope",
+        `Escopo suportado: ${MCP_OAUTH_SCOPE}.`
+      );
     }
     if (!matchesResource(query.resource, urls.resource)) {
-      throw new RedirectableAuthorizationError("invalid_target", "Recurso desconhecido para este servidor.");
+      throw new RedirectableAuthorizationError(
+        "invalid_target",
+        "Recurso desconhecido para este servidor."
+      );
     }
 
     const request = await this.prisma.mcpOAuthAuthorizationRequest.create({
@@ -116,7 +136,11 @@ export class OAuthAuthorizationService {
     return `${urls.consentPage}?pedido=${request.id}`;
   }
 
-  async view(user: AuthUser, requestId: string, now = new Date()): Promise<AuthorizationRequestView> {
+  async view(
+    user: AuthUser,
+    requestId: string,
+    now = new Date()
+  ): Promise<AuthorizationRequestView> {
     const request = await this.loadPending(requestId, now);
     const base = {
       id: request.id,
@@ -126,7 +150,7 @@ export class OAuthAuthorizationService {
         kind: request.client.kind,
         loopbackOnly: onlyLoopbackRedirects(request.client.redirectUris),
       },
-      scopeDescription: "Somente leitura dos numeros da loja",
+      scopeDescription: "Leitura dos numeros da loja",
       expiresAt: request.expiresAt.toISOString(),
     };
 
@@ -135,17 +159,27 @@ export class OAuthAuthorizationService {
     }
     const { reachable, authorizable } = await this.eligibility.forUser(user.id);
     const blockedReason: BlockedReason | null =
-      reachable.length === 0 ? "NO_ELIGIBLE_STORE" : authorizable.length === 0 ? "MISSING_PERMISSION" : null;
+      reachable.length === 0
+        ? "NO_ELIGIBLE_STORE"
+        : authorizable.length === 0
+          ? "MISSING_PERMISSION"
+          : null;
 
     return {
       ...base,
       canAuthorize: blockedReason === null,
       blockedReason,
-      stores: authorizable.map((store) => ({
-        id: store.id,
-        name: store.name,
-        areas: store.areas.map((area) => ({ area, label: areaLabel(area) })),
-      })),
+      stores: await Promise.all(
+        authorizable.map(async (store) => ({
+          id: store.id,
+          name: store.name,
+          areas: store.areas.map((area) => ({ area, label: areaLabel(area) })),
+          actions: (await this.grantableActions(user.id, store)).map((group) => ({
+            group,
+            label: MCP_ACTION_GROUPS[group].label,
+          })),
+        }))
+      ),
     };
   }
 
@@ -154,18 +188,26 @@ export class OAuthAuthorizationService {
     requestId: string,
     storeId: string,
     urls: McpOAuthUrls,
-    now = new Date()
+    now = new Date(),
+    options: { allowActions?: boolean } = {}
   ): Promise<{ redirectUrl: string }> {
-    if (user.isPlatformAdmin) throw new ForbiddenException("Administradores de plataforma nao autorizam conectores.");
+    if (user.isPlatformAdmin)
+      throw new ForbiddenException("Administradores de plataforma nao autorizam conectores.");
     const request = await this.loadPending(requestId, now);
     const { authorizable } = await this.eligibility.forUser(user.id);
-    if (!authorizable.some((store) => store.id === storeId)) {
+    const store = authorizable.find((item) => item.id === storeId);
+    if (!store) {
       throw new ForbiddenException("Voce nao pode conectar assistentes a esta loja.");
     }
+    const grantActions =
+      options.allowActions === true && (await this.grantableActions(user.id, store)).length > 0;
+    const scope = grantActions ? MCP_READ_WRITE_SCOPE : MCP_OAUTH_SCOPE;
 
     const code = generateOpaque(AUTHORIZATION_CODE_PREFIX);
     await this.prisma.$transaction(async (tx) => {
-      const active = await tx.mcpOAuthConnection.count({ where: { tenantId: storeId, revokedAt: null } });
+      const active = await tx.mcpOAuthConnection.count({
+        where: { tenantId: storeId, revokedAt: null },
+      });
       if (active >= MAX_ACTIVE_CONNECTIONS_PER_STORE) {
         throw new ConflictException({
           code: "CONNECTION_LIMIT_REACHED",
@@ -177,7 +219,7 @@ export class OAuthAuthorizationService {
           tenantId: storeId,
           userId: user.id,
           clientId: request.clientId,
-          scope: request.scope,
+          scope,
           resource: request.resource,
         },
       });
@@ -198,14 +240,18 @@ export class OAuthAuthorizationService {
           storeId,
           eventType: AccessAuditEventType.MCP_CONNECTION_AUTHORIZED,
           result: AccessAuditResult.SUCCESS,
-          metadata: { mcpConnectionId: connection.id, client: request.client.name },
+          metadata: { mcpConnectionId: connection.id, client: request.client.name, scope },
         },
         tx
       );
     });
 
     return {
-      redirectUrl: buildRedirect(request.redirectUri, { code, state: request.state, iss: urls.issuer }),
+      redirectUrl: buildRedirect(request.redirectUri, {
+        code,
+        state: request.state,
+        iss: urls.issuer,
+      }),
     };
   }
 
@@ -231,6 +277,15 @@ export class OAuthAuthorizationService {
     };
   }
 
+  /** Action groups the user may grant on a store that allows actions. */
+  private async grantableActions(userId: string, store: EligibleStore): Promise<McpActionGroup[]> {
+    if (!store.actionsEnabled) return [];
+    const permissions = await permissionsForStore(this.prisma, userId, store.id);
+    return unlockedActionGroups(permissions).filter((group) =>
+      store.areas.includes(MCP_ACTION_GROUPS[group].area)
+    );
+  }
+
   private async resolveClient(clientId: string | undefined): Promise<McpOAuthClient> {
     try {
       return await this.clients.resolve(clientId);
@@ -248,8 +303,13 @@ export class OAuthAuthorizationService {
       include: { client: true },
     });
     if (!request) throw new NotFoundException("Pedido de autorizacao nao encontrado.");
-    if (request.status !== McpOAuthRequestStatus.PENDING || request.expiresAt.getTime() <= now.getTime()) {
-      throw new GoneException("Este pedido de autorizacao expirou. Volte ao assistente e conecte novamente.");
+    if (
+      request.status !== McpOAuthRequestStatus.PENDING ||
+      request.expiresAt.getTime() <= now.getTime()
+    ) {
+      throw new GoneException(
+        "Este pedido de autorizacao expirou. Volte ao assistente e conecte novamente."
+      );
     }
     return request;
   }

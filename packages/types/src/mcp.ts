@@ -13,6 +13,8 @@ export interface McpDataAreaOption {
 export interface McpConfiguration {
   enabled: boolean;
   enabledAreas: McpDataArea[];
+  /** Write tools for OAuth connections granted actions (off by default). */
+  actionsEnabled: boolean;
   availableAreas: McpDataAreaOption[];
   serverUrl: string;
   updatedAt: string | null;
@@ -22,6 +24,8 @@ export interface McpConfiguration {
 export interface McpConfigurationPayload {
   enabled: boolean;
   enabledAreas: McpDataArea[];
+  /** Absent keeps the current value. */
+  actionsEnabled?: boolean;
 }
 
 export interface McpToken {
@@ -68,6 +72,8 @@ export interface McpUsageEntry {
   result: McpToolCallResult;
   errorCode: string | null;
   durationMs: number;
+  /** Write tool (action) call. */
+  isAction: boolean;
 }
 
 export interface McpUsagePage {
@@ -92,7 +98,11 @@ export interface McpAuthorizationStore {
   id: string;
   name: string;
   areas: Array<{ area: McpDataArea; label: string }>;
+  /** Actions this user may grant on this store (empty when not allowed). */
+  actions: Array<{ group: McpActionGroup; label: string }>;
 }
+
+export type McpActionGroup = "PAYABLES" | "SALES_IMPORT";
 
 export interface McpAuthorizationRequest {
   id: string;
@@ -111,6 +121,8 @@ export interface McpConnection {
   redirectHost: string;
   userName: string;
   status: "ACTIVE" | "REVOKED";
+  /** Connection was granted write tools. */
+  actions: boolean;
   createdAt: string;
   lastUsedAt: string | null;
   revokedAt: string | null;

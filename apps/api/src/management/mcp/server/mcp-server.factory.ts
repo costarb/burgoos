@@ -1,6 +1,7 @@
 import { Inject, Injectable } from "@nestjs/common";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import type { CallToolResult, GetPromptResult } from "@modelcontextprotocol/sdk/types.js";
+import { actionDeniedMessage } from "../mcp-actions";
 import { areaLabel } from "../mcp-data-areas";
 import { ANALYSIS_PROMPTS, McpPromptDefinition } from "../prompts/analysis.prompts";
 import { McpResources } from "../resources/mcp-resources";
@@ -8,7 +9,9 @@ import { CashTools } from "../tools/cash.tools";
 import { FinancialTools } from "../tools/financial.tools";
 import { InventoryTools } from "../tools/inventory.tools";
 import { MenuTools } from "../tools/menu.tools";
+import { PayablesActionsTools } from "../tools/payables-actions.tools";
 import { PayablesTools } from "../tools/payables.tools";
+import { SalesImportTools } from "../tools/sales-import.tools";
 import { SalesTools } from "../tools/sales.tools";
 import { McpToolDefinition, ToolOutput } from "../tools/tool-output";
 import { McpRequestContext } from "./mcp-context";
@@ -25,7 +28,9 @@ export class McpToolCatalog {
     @Inject(MenuTools) private readonly menu: MenuTools,
     @Inject(CashTools) private readonly cash: CashTools,
     @Inject(PayablesTools) private readonly payables: PayablesTools,
-    @Inject(InventoryTools) private readonly inventory: InventoryTools
+    @Inject(InventoryTools) private readonly inventory: InventoryTools,
+    @Inject(PayablesActionsTools) private readonly payablesActions: PayablesActionsTools,
+    @Inject(SalesImportTools) private readonly salesImport: SalesImportTools
   ) {}
 
   all(): McpToolDefinition[] {
@@ -36,6 +41,8 @@ export class McpToolCatalog {
       ...this.cash.definitions(),
       ...this.payables.definitions(),
       ...this.inventory.definitions(),
+      ...this.payablesActions.definitions(),
+      ...this.salesImport.definitions(),
     ];
   }
 
@@ -64,7 +71,9 @@ export class McpServerFactory {
       { instructions: instructions(context) }
     );
 
-    for (const tool of this.catalog.all().filter((definition) => enabled.has(definition.area))) {
+    for (const tool of this.catalog
+      .all()
+      .filter((definition) => isAvailable(definition, context))) {
       this.registerTool(server, context, tool);
     }
     for (const resource of this.resources.definitions()) {
@@ -126,18 +135,45 @@ export class McpServerFactory {
         title: tool.title,
         description: tool.description,
         inputSchema: tool.inputSchema,
-        annotations: { readOnlyHint: true, openWorldHint: false, idempotentHint: true },
+        annotations: annotations(tool),
       },
       async (args) => {
         const outcome = await this.runner.run(
           context,
-          { method: "tools/call", target: tool.name, args },
+          {
+            method: "tools/call",
+            target: tool.name,
+            args,
+            action: tool.action
+              ? { group: tool.action.group, writes: tool.action.writes }
+              : undefined,
+          },
           () => tool.handler(context, args ?? {})
         );
         return outcome.ok ? toolResult(outcome.value) : toolError(outcome.message);
       }
     );
   }
+}
+
+/** Read tools follow the enabled areas; action tools also need the connection's write grant. */
+export function isAvailable(tool: McpToolDefinition, context: McpRequestContext): boolean {
+  if (!context.enabledAreas.includes(tool.area)) return false;
+  return (
+    !tool.action ||
+    actionDeniedMessage(context.actions, context.enabledAreas, tool.action.group) === null
+  );
+}
+
+function annotations(tool: McpToolDefinition): Record<string, boolean> {
+  if (!tool.action?.writes)
+    return { readOnlyHint: true, openWorldHint: false, idempotentHint: true };
+  return {
+    readOnlyHint: false,
+    destructiveHint: tool.action.destructive ?? false,
+    idempotentHint: tool.action.idempotent ?? false,
+    openWorldHint: false,
+  };
 }
 
 export function toolResult(value: ToolOutput): CallToolResult {
@@ -154,7 +190,9 @@ export function toolError(message: string): CallToolResult {
 function instructions(context: McpRequestContext): string {
   const areas = context.enabledAreas.map((area) => areaLabel(area)).join(", ");
   return [
-    `Servidor MCP somente leitura do RRFive OS para a loja "${context.storeName}".`,
+    context.actions?.allowed
+      ? `Servidor MCP do RRFive OS para a loja "${context.storeName}". Esta conexao pode executar acoes (ferramentas que alteram dados): confirme com o usuario antes de cada acao e mostre o resultado.`
+      : `Servidor MCP somente leitura do RRFive OS para a loja "${context.storeName}".`,
     `Areas de dados liberadas: ${areas}.`,
     "Datas no formato AAAA-MM-DD, fuso America/Sao_Paulo; no maximo 92 dias por consulta.",
     "Valores em reais (campos terminados em Reais). Consulte o recurso glossario_metricas para as definicoes.",

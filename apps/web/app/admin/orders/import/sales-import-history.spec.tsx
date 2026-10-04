@@ -11,4 +11,28 @@ describe("sales import history", () => {
     expect(html).toContain("1 importadas");
     expect(html).toContain("Falha segura");
   });
+
+  it("shows when a run was started by an AI assistant", () => {
+    const html = renderToStaticMarkup(
+      <SalesImportHistory
+        history={[
+          {
+            id: "run-mcp",
+            provider: "MERCADO_PAGO",
+            channel: "API",
+            startDate: "2026-10-01",
+            endDate: "2026-10-01",
+            status: "COMPLETED",
+            requestedVia: "MCP · Claude",
+            counts: { found: 1, new: 1, duplicate: 0, rejected: 0, imported: 1, failed: 0, blockedDays: 0 },
+            errorCode: null,
+            errorMessage: null,
+            createdAt: "2026-10-02",
+            completedAt: "2026-10-02",
+          },
+        ]}
+      />
+    );
+    expect(html).toContain("MCP · Claude");
+  });
 });
