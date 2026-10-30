@@ -1,3 +1,4 @@
+import { FiscalModule } from "../management/fiscal/fiscal.module";
 import { forwardRef, Module } from "@nestjs/common";
 import { ManagementModule } from "../management/management.module";
 import { AuthModule } from "../platform/auth/auth.module";
@@ -33,6 +34,7 @@ import { ShiftCloseController } from "./shift-close/shift-close.controller";
     IdempotencyModule,
     OperationsModule,
     forwardRef(() => ManagementModule),
+    FiscalModule,
   ],
   controllers: [
     PublicOrderController,

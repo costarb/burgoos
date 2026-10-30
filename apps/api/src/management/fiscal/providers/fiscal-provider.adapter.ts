@@ -35,6 +35,8 @@ export interface NfceDraftItem {
   grossAmount: string;
   discount: string;
   freight: string;
+  /** Positive manual price adjustments (NFC-e vOutro). */
+  otherExpenses: string;
   ncm: string;
   cfop: string;
   csosn: string;

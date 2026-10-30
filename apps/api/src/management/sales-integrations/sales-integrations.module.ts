@@ -1,3 +1,4 @@
+import { FiscalModule } from "../fiscal/fiscal.module";
 import { forwardRef, Module, OnModuleInit } from "@nestjs/common";
 import { ScheduleModule } from "@nestjs/schedule";
 import { OrderingModule } from "../../ordering/ordering.module";
@@ -55,6 +56,7 @@ import { IfoodFinancialObservabilityService } from "./ifood/ifood-financial-obse
     PlatformIntegrationsModule,
     DeliveryIntegrationsModule,
     forwardRef(() => OrderingModule),
+    FiscalModule,
   ],
   controllers: [
     SalesIntegrationController,

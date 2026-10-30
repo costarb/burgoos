@@ -81,6 +81,12 @@ export class CreateCounterOrderDto {
   @MaxLength(500)
   notes?: string;
 
+  /** CPF/CNPJ for the NFC-e ("CPF na nota"); validated by check digits in the service. */
+  @IsOptional()
+  @IsString()
+  @MaxLength(20)
+  consumerDocument?: string | null;
+
   @IsOptional()
   @IsBoolean()
   releaseToKds?: boolean;
@@ -115,6 +121,12 @@ export class UpdateCounterOrderDto {
   @IsString()
   @MaxLength(500)
   notes?: string;
+
+  /** CPF/CNPJ for the NFC-e ("CPF na nota"); validated by check digits in the service. */
+  @IsOptional()
+  @IsString()
+  @MaxLength(20)
+  consumerDocument?: string | null;
 
   @IsArray()
   @ArrayMinSize(1)

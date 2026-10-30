@@ -88,7 +88,7 @@ Item: `{ id, target: { type: "ORDER"|"TAB", id, publicCode }, status, trigger, n
 
 ### `POST admin/fiscal/documents/:id/cancel` (`fiscal.cancel`) `{ reason }` (15–255) → 202 `{ status: "CANCEL_PENDING", manualActionRequired: true, cancelDeadlineAt, providerPanelUrl }`.
 
-### `POST admin/fiscal/documents/:id/mark-cancelled-externally` (`fiscal.cancel`) → força uma sincronização imediata com o provedor (não altera o status sem confirmação do provedor).
+### `POST admin/fiscal/documents/:id/sync` (`fiscal.cancel` ou `fiscal.issue`) → "Já cancelei no provedor": força uma sincronização imediata com o provedor (não altera o status sem confirmação do provedor).
 
 ### Exportação
 `POST admin/exports` com `context: "FISCAL_XML"` e `{ from, to }` → job da infraestrutura de exportação; gera um ZIP (`autorizadas/`, `canceladas/`, `resumo.csv`) e notifica quando pronto. Exclui documentos HOMOLOGATION.
@@ -117,10 +117,11 @@ export interface NfceDraft {      // neutro, montado pelo compositor
   environment: "HOMOLOGATION" | "PRODUCTION";
   issuer: IssuerSnapshot;
   consumer?: { document: string };
-  items: Array<{ code: string; description: string; quantity: string; unitPrice: string; discount: string;
-                 freight: string; ncm: string; cfop: string; csosn: string; origin: number; unit: string;
-                 cest?: string; benefitCode?: string }>;
-  payments: Array<{ method: PaymentMethod; tPag: string; amount: string; change?: string }>;
+  items: Array<{ code: string; description: string; quantity: string; unitPrice: string; grossAmount: string;
+                 discount: string; freight: string; otherExpenses: string; ncm: string; cfop: string; csosn: string;
+                 origin: number; unit: string; cest: string | null; benefitCode: string | null }>;
+  payments: Array<{ method: PaymentMethod; tPag: string; amount: string }>;
+  change: string;
   total: string;
   additionalInfo?: string;
 }
@@ -139,10 +140,11 @@ export interface FiscalProviderAdapter {
   submit(ctx: ProviderContext, externalId: string): Promise<ProviderDocumentState>;
   get(ctx: ProviderContext, externalId: string): Promise<ProviderDocumentState>;
   findByReference(ctx: ProviderContext, draft: NfceDraft): Promise<{ externalId: string } | null>; // recuperação de timeout
+  panelUrl(externalId: string): string | null;                      // atalho do cancelamento assistido
+  validateSettings(settings: Record<string, unknown>): FiscalSettingsIssue[]; // itens PAYMENT_MAP / OPERATION_NATURE da prontidão
   cancel?(ctx: ProviderContext, externalId: string, reason: string): Promise<ProviderDocumentState>;
   downloadXml(ctx: ProviderContext, externalId: string, kind: "AUTHORIZATION" | "CANCELLATION"): Promise<Buffer | null>;
   downloadDanfe(ctx: ProviderContext, externalId: string): Promise<Buffer | null>;
-  validateConnection(ctx: ProviderContext): Promise<void>;
 }
 ```
 

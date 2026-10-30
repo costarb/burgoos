@@ -5,6 +5,7 @@ import {
   Injectable,
   Logger,
   NotFoundException,
+  Optional,
 } from "@nestjs/common";
 import {
   FulfillmentMethod,
@@ -16,6 +17,7 @@ import {
 import { IfoodStatusSyncService } from "../management/integrations/ifood/ifood-status-sync.service";
 import { OrderProfitabilityService } from "../management/reports/order-profitability.service";
 import { InventoryService, OrderStockWarning } from "../operations/inventory/inventory.service";
+import { FiscalCancellationService } from "../management/fiscal/documents/fiscal-cancellation.service";
 import { PrismaService } from "../platform/database/prisma.service";
 import { CreateOrderDto } from "./dto/create-order.dto";
 import { calculateOrderTotals, PricedOrderItem } from "./order-calculator";
@@ -35,7 +37,9 @@ export class OrderingService {
     @Inject(OrderProfitabilityService)
     private readonly orderProfitabilityService: OrderProfitabilityService,
     @Inject(forwardRef(() => IfoodStatusSyncService))
-    private readonly ifoodStatusSyncService: IfoodStatusSyncService
+    private readonly ifoodStatusSyncService: IfoodStatusSyncService,
+    @Optional() @Inject(FiscalCancellationService)
+    private readonly fiscalCancellation?: FiscalCancellationService
   ) {}
 
   async createPublicOrder(slug: string, dto: CreateOrderDto) {
@@ -356,6 +360,7 @@ export class OrderingService {
 
     if (status === OrderStatus.CANCELLED) {
       await this.inventoryService.releaseOrderReservation(tenantId, orderId, "Pedido cancelado");
+      await this.fiscalCancellation?.requestForOrder(tenantId, orderId, null, actorUserId ?? null, "ORDER_CANCELLED");
     }
 
     if (status === OrderStatus.DELIVERED) {

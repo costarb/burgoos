@@ -47,6 +47,7 @@ const RELATIONS: Record<string, Record<string, Relation>> = {
     items: { table: "orderItem", local: "id", foreign: "orderId", kind: "many" },
     paymentAllocations: { table: "paymentAllocation", local: "id", foreign: "orderId", kind: "many" },
     serviceTab: { table: "serviceTab", local: "serviceTabId", foreign: "id", kind: "one" },
+    orderPlatform: { table: "orderPlatform", local: "orderPlatformId", foreign: "id", kind: "one" },
     fiscalDocuments: { table: "fiscalDocument", local: "id", foreign: "orderId", kind: "many" },
   },
   orderItem: {
