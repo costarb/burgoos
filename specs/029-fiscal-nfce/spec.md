@@ -245,7 +245,7 @@ Como operador, eu quero imprimir o cupom ou enviá-lo por WhatsApp, e como gesto
 
 - **FR-011**: No modo automático, o sistema DEVE enfileirar a emissão de vendas elegíveis concluídas e pagas **cuja data de venda seja o dia corrente** no fuso da empresa, sem bloquear o operador.
 - **FR-012**: Pedidos fora da regra automática DEVEM ficar disponíveis para emissão manual; a emissão de venda de dia anterior exige confirmação explícita com aviso de risco e é auditada.
-- **FR-013**: O sistema DEVE garantir no máximo uma NFC-e ativa (processando ou autorizada) por pedido, com idempotência e lock contra concorrência.
+- **FR-013**: O sistema DEVE garantir no máximo uma NFC-e ativa (processando ou autorizada) por venda, com idempotência e lock contra concorrência. A unidade de venda é o pedido avulso (balcão, importado, API) ou a **comanda inteira** (uma nota com os itens de todos os pedidos não cancelados, porque a comanda é paga de uma vez).
 - **FR-014**: O sistema DEVE mapear as formas de pagamento do pedido (`PaymentMethod` e alocações) para os meios de pagamento da NFC-e, incluindo pagamento dividido e troco.
 - **FR-015**: O sistema DEVE aceitar CPF/CNPJ opcional do consumidor no fechamento de venda de balcão/comanda, validar o dígito e enviá-lo na nota.
 - **FR-016**: O sistema DEVE guardar, por nota: pedido, provedor, ambiente, ids externos, número, série, chave, protocolo, status, datas, código/mensagem de rejeição, URL do QR/consulta, snapshot do emitente, e cópias de XML e DANFE no storage do ERP.

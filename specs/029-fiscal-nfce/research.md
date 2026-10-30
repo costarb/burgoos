@@ -1,0 +1,96 @@
+# Research: Módulo Fiscal — NFC-e
+
+## R1. Bling API v3 para NFC-e
+
+**Decisão**: o adapter Bling usa o fluxo em duas etapas: criar a NFC-e (gera o `id` no Bling) e depois enviar para a SEFAZ. O `id` externo é gravado **antes** do envio, então retentar o envio nunca cria uma segunda nota.
+
+| Item | Situação | Ação |
+|---|---|---|
+| OAuth2 | Authorization code; o access token expira em horas e é renovado com o refresh token (Basic `client_id:client_secret`) | Reaproveitar o padrão do Mercado Pago OAuth (state assinado, callback, refresh agendado) |
+| Criar NFC-e | `POST /nfce` (a validar) | **T001**: validar em homologação o payload mínimo e se aceita itens com NCM/CFOP/origem inline ou exige `produto.id` |
+| Enviar à SEFAZ | `POST /nfce/{id}/enviar` (a validar) | T001 |
+| Consultar | `GET /nfce/{idNotaFiscalConsumidor}`: `situacao`, `numero`, `serie`, `chaveAcesso`, `xml`, `linkDanfe`, `linkPDF` | T001: confirmar o conteúdo de `xml` (URL ou conteúdo) e os links |
+| Listar | `GET /nfce` com filtros de data/situação (a validar) | Usado na recuperação de timeout antes de ter o `id` |
+| Cancelar | **Sem endpoint público.** `situacao=2` é somente leitura; `DELETE` remove o registro sem cancelar na SEFAZ | Capacidade `cancelViaApi = false` → cancelamento assistido (FR-018) |
+| Download NF-e | `GET /nfe/documento/{chave}?formato=xml\|pdf` → JSON `data[].conteudo` em GZIP + Base64 | Implementar o decodificador genérico; testar se serve para NFC-e |
+| Limites | Limite de requisições por segundo e por dia (a confirmar; documentação cita ~3 req/s) | Fila por empresa com concorrência 1 para Bling; backoff em 429 |
+
+**Riscos identificados**:
+
+1. **Tributação no Bling.** O Bling calcula tributos pela *natureza de operação* e pelas regras de tributação da conta. Se a API ignorar o CSOSN/CFOP inline, os perfis fiscais do ERP continuam sendo a fonte para os provedores futuros e para a validação, mas no Bling a tributação efetiva vem da natureza de operação. Mitigação: configurar `naturezaOperacaoId` por empresa no adapter, e a T001 compara o XML autorizado com o perfil enviado.
+2. **Formas de pagamento.** No Bling, as parcelas referenciam formas de pagamento cadastradas na conta (`formaPagamento.id`). Mitigação: tela de mapeamento `PaymentMethod → forma do Bling` (lista via `GET /formas-pagamentos`), guardada nas configurações da conexão; a prontidão exige o mapeamento completo.
+3. **Produtos.** Se `POST /nfce` exigir produto cadastrado, o adapter faz upsert do produto no Bling pelo código (id do produto/complemento do ERP) com cache de `externalProductId`. Decidido depois da T001.
+
+**Alternativas consideradas**: emitir direto na SEFAZ (exigiria assinatura XML, CSC, contingência e homologação própria; descartado para a fase 1). Focus NFe, PlugNotas e NFe.io têm cancelamento via API e aceitam o A1 por upload; ficam como candidatos de segundo adapter, e o contrato já prevê `usesOwnCertificate`.
+
+## R2. Prazo de cancelamento em SP
+
+**Decisão**: 30 minutos após a autorização (prazo informado pela SEFAZ-SP), em uma tabela por UF (`SP: 30`, padrão 30) usada para o contador das notificações. O ERP não bloqueia o cancelamento pelo prazo; tenta e trata a recusa.
+
+O **cancelamento por substituição** (até 168 h, usado quando uma nota em contingência substitui outra) fica fora do escopo, junto com a contingência.
+
+Fontes: [Oobj — cancelamento NFC-e](https://oobj.com.br/legislacao/cancelamento-nfce/), [Senior — cancelamento por substituição](https://documentacao.senior.com.br/documentoseletronicos/5.8.16/html_ajuda/documentacaoprocesso/nfc-e/cancelamento-substituicao.htm).
+
+**Consequência para o Bling**: com cancelamento manual e janela de 30 minutos, a notificação precisa ser imediata e insistente: notificação de severidade ERROR para quem tem `fiscal.cancel`, destaque na tela de pedidos e lembrete aos 10 minutos restantes.
+
+## R3. Composição dos itens
+
+**Decisão**: um item por `OrderItem` e um item por `OrderItemModification` do tipo `ADD_COMPLEMENT` com `totalPriceDelta > 0`. O valor do item principal é `chargedUnitPrice` (ou `unitPrice`) menos o acréscimo dos complementos já incluído no preço. O ajuste manual negativo vira `vDesc` do item. A soma dos itens deve bater com `order.total` ao centavo; a diferença de arredondamento vai para o último item.
+
+Gorjeta (SP, RC 33566/2026) e taxa de entrega (frete rateado) ficam implementadas no compositor, mas inativas: hoje o pedido não tem esses campos. Ver a seção Pesquisa do spec.
+
+**Comanda (decisão de desenho)**: a comanda (`ServiceTab`) é paga de uma vez e pode receber pagamentos na própria comanda. Por isso **a unidade fiscal da comanda é a comanda inteira**: uma NFC-e com os itens de todos os pedidos não cancelados dela. Balcão avulso, importados e API emitem uma NFC-e por pedido. O `FiscalDocument` aponta para `orderId` **ou** `serviceTabId`.
+
+## R4. Meios de pagamento (tPag)
+
+| `PaymentMethod` | tPag NFC-e |
+|---|---|
+| CASH | 01 Dinheiro (com troco quando houver) |
+| CREDIT_CARD | 03 Cartão de crédito (`tpIntegra=2`, não integrado) |
+| DEBIT_CARD | 04 Cartão de débito (`tpIntegra=2`) |
+| VOUCHER | 11 Vale refeição |
+| PIX | 17 PIX dinâmico |
+| PIX_MANUAL | 20 PIX estático |
+| DIGITAL_WALLET | 18 Transferência / carteira digital |
+| CARD_ON_DELIVERY | 99 Outros, com descrição (não ocorre nas origens desta fase) |
+
+Fonte primária dos valores: `PaymentAllocation` de pagamentos não cancelados/estornados. Sem alocação (importados/API), usa `order.paymentMethod` com o valor total. No Bling, o código tPag é resolvido pela forma de pagamento mapeada (R1, risco 2).
+
+## R5. Certificado A1
+
+**Decisão**: `node-forge` (nova dependência, puro JS) para abrir o PKCS#12 com a senha e extrair titular, CNPJ (OID ICP-Brasil 2.16.76.1.3.3 ou CN `NOME:CNPJ`), validade e fingerprint SHA-256. O `crypto` nativo do Node não lê metadados de PFX. Arquivo (Base64) e senha ficam num envelope `FISCAL_A1_CERTIFICATE` do `IntegrationSecretService` (AES-256-GCM). Limite de upload: 20 KB.
+
+## R6. Código IBGE do município
+
+**Decisão**: resolver pela API pública do IBGE (`servicodados.ibge.gov.br/api/v1/localidades/estados/{UF}/municipios`), comparando o nome normalizado (sem acento, minúsculo) com a cidade do perfil da loja. O código é gravado no emitente e pode ser editado; se a API falhar, o campo fica manual. Não embarcamos a tabela de ~5.570 municípios.
+
+## R7. Importação automática
+
+**Decisão**: novo job `SALES_AUTO_IMPORT` disparado a cada 2 minutos por integração com `autoImportEnabled`. Ele cria um `SalesImportRun` com o novo gatilho `AUTOMATIC` para o dia corrente (e também o dia anterior nos primeiros 10 minutos após a meia-noite) e roda a prévia e a confirmação no mesmo job, com a estratégia configurada. Funciona sobre o fluxo atual porque:
+
+- `isDateBlockedForProvider` só bloqueia datas futuras: o dia corrente é aceito.
+- A deduplicação por `ExternalSaleIdentity.claim` torna ciclos repetidos idempotentes.
+- O lock de operação por integração já existe.
+
+**Resiliência**:
+- Dedupe do job por integração, sem sobreposição.
+- Erros do provedor classificados por `SalesProviderError.code`, com backoff exponencial quando `RATE_LIMIT`/`UNAVAILABLE`.
+- Isolamento: cada integração é um job.
+- Contadores `autoImportConsecutiveFailures` e `autoImportLastSuccessAt` na integração.
+- Alerta (`sales.auto_import.degraded`) com 3 ou mais falhas seguidas ou defasagem maior que 15 minutos, limitado a uma notificação por hora por integração.
+
+**PagBank**: o EDI `movement/{v}/transactional/{data}` provavelmente entrega com defasagem. A defasagem observada (`now - max(occurredAt)`) vai para o log de cada ciclo; se for estrutural, as vendas caem na emissão manual (dia anterior) sem quebrar nada.
+
+## R8. Gatilho de emissão automática
+
+**Decisão**: hooks explícitos e uma varredura de segurança.
+
+- **Hooks** chamam `FiscalTriggerService.requestAutomatic(target)` depois do commit:
+  - confirmação de pagamento manual;
+  - liquidação Point;
+  - comanda paga;
+  - criação de pedido importado/API.
+  Cada hook enfileira `FISCAL_EMISSION` com `dedupeKey` do alvo. Isso cobre a meta de 30 segundos.
+- **Varredura** a cada minuto: alvos do dia, elegíveis, pagos, sem documento ativo, em empresas no modo automático. Ela garante a emissão mesmo se um hook falhar e loga `fiscal.trigger.recovered` quando encontra algo.
+
+"Pago" significa: soma das `PaymentAllocation` válidas maior ou igual ao total (pedido avulso ou comanda). Importados/API são considerados pagos na criação.
