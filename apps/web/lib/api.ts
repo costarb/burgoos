@@ -2904,14 +2904,14 @@ export async function fetchFiscalDocumentFile(
 }
 
 export async function getBlingPlatformConfiguration(token: string): Promise<BlingPlatformConfiguration> {
-  return fetchAdmin<BlingPlatformConfiguration>(token, "/api/platform/integrations/bling/configuration");
+  return fetchPlatform(token, "/api/platform/integrations/bling/configuration");
 }
 
 export async function updateBlingPlatformConfiguration(
   token: string,
   payload: BlingPlatformConfigurationPayload
 ): Promise<BlingPlatformConfiguration> {
-  return fetchAdmin<BlingPlatformConfiguration>(token, "/api/platform/integrations/bling/configuration", {
+  return fetchPlatform(token, "/api/platform/integrations/bling/configuration", {
     method: "PUT",
     body: JSON.stringify(payload),
   });

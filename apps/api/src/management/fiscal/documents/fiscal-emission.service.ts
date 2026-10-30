@@ -63,6 +63,10 @@ export class FiscalEmissionService {
 
     const sale = await this.sales.load(input.tenantId, input.target);
     if (!sale) return skip(404, "NOT_FOUND", "Venda nao encontrada");
+    // An order inside a tab is issued as part of the tab's NFC-e.
+    if (sale.target.type === "ORDER" && sale.partOfTab) {
+      return this.request({ ...input, target: { type: "TAB", id: sale.partOfTab } });
+    }
     const eligibility = evaluateEligibility(configuration, sale, {
       trigger: input.trigger,
       confirmRetroactive: input.confirmRetroactive,

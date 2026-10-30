@@ -25,13 +25,13 @@
 - [X] T011 [US1] Bling OAuth: `bling-oauth.service.ts`, callback, `fiscal-provider-context.service.ts` (refresh sob demanda em 401, uma vez), `bling-token-refresh.scheduler.ts`, desconectar; testes
 - [X] T012 [US1] `bling.client.ts` (HTTP, zod, backoff em 429, concorrência 1 por empresa) e `bling-connection` (options: formas de pagamento e naturezas; settings: mapeamento obrigatório); testes com fixtures
 - [X] T013 [P] [US1] Teste de isolamento por tenant (configuração, conexão, documentos) em `apps/api/test/fiscal-tenant-isolation.integration.spec.ts`
-- [ ] T014 [US1] Web: card Bling em `app/platform/integrations`; `app/admin/fiscal` aba Configuração (emitente, endereço com atalho, conexão, mapeamento de pagamentos/natureza, prontidão); item "Fiscal" em `admin-navigation.ts`; `lib/api.ts`; testes
+- [X] T014 [US1] Web: card Bling em `app/platform/integrations`; `app/admin/fiscal` aba Configuração (emitente, endereço com atalho, conexão, mapeamento de pagamentos/natureza, prontidão); item "Fiscal" em `admin-navigation.ts`; `lib/api.ts`; testes
 
 ## Phase 3: User Story 2 - Perfis fiscais (P1)
 
 - [X] T015 [US2] `fiscal-profile.service.ts|controller.ts`: CRUD com validações (NCM, CFOP 5xxx, CSOSN do Simples, CEST para 500), exclusão bloqueada em uso, atribuição em lote, faltantes; testes
 - [X] T016 [US2] `fiscal-profile-resolver.ts` (produto→categoria; complemento→complemento→produto pai); testes
-- [ ] T017 [US2] Web: aba Perfis fiscais (CRUD, atribuição por categoria/produto/complemento, lista de faltantes); testes
+- [X] T017 [US2] Web: aba Perfis fiscais (CRUD, atribuição por categoria/produto/complemento, lista de faltantes); testes
 
 ## Phase 4: User Story 3 - Emissão (P1)
 
@@ -41,8 +41,8 @@
 - [X] T021 [US3] `bling-nfce.mapper.ts` + `bling-fiscal-provider.adapter.ts` + `bling-document-decoder.ts` (GZIP+Base64), conforme a T001; testes com fixtures
 - [X] T022 [US3] `fiscal-trigger.service.ts` + hooks pós-commit em `manual-payment.service.ts`, `payment-settlement.service.ts`, `counter-order.service.ts`, `service-tab` (comanda paga), `sales-import-confirmation.service.ts`, `historical-order-import.service.ts`; falha do hook só loga; testes
 - [X] T023 [US3] `fiscal-sweep.scheduler.ts` (a cada minuto, só papel consumer): vendas do dia sem nota em modo automático → emissão + log `fiscal.trigger.recovered`; testes
-- [ ] T024 [US3] `consumerDocument` nos DTOs de balcão e checkout de comanda (CPF/CNPJ com DV); `fiscal-documents.controller.ts`: emitir (com `confirmRetroactive`), reprocessar, lista/detalhe, DANFE/XML; status fiscal derivado em lista/detalhe de pedidos + filtro `fiscalStatus`; testes
-- [ ] T025 [US3] Web: badge e filtro fiscal em `admin/orders`, ações no detalhe (emitir, confirmação retroativa, reprocessar, DANFE), CPF/CNPJ no balcão e no checkout da comanda; testes
+- [X] T024 [US3] `consumerDocument` nos DTOs de balcão e checkout de comanda (CPF/CNPJ com DV); `fiscal-documents.controller.ts`: emitir (com `confirmRetroactive`), reprocessar, lista/detalhe, DANFE/XML; status fiscal derivado em lista/detalhe de pedidos + filtro `fiscalStatus`; testes
+- [X] T025 [US3] Web: badge e filtro fiscal em `admin/orders`, ações no detalhe (emitir, confirmação retroativa, reprocessar, DANFE), CPF/CNPJ no balcão e no checkout da comanda; testes
 
 ## Phase 5: User Story 4 - Cancelamento (P1)
 
@@ -50,7 +50,7 @@
 - [X] T027 [US4] Hooks de cancelamento: `ordering.service.ts` (CANCELLED), `order-maintenance.service.ts` (exclusão), `service-tab.service.ts` (cancelar comanda; pedido cancelado dentro de comanda paga); `fiscal-order-guard.service.ts` na manutenção de itens e no update de balcão (409 `FISCAL_DOCUMENT_ACTIVE`); testes
 - [X] T028 [US4] `fiscal-sync.scheduler.ts` + `fiscal-sync.processor.ts`: PROCESSING/CANCEL_PENDING/CANCEL_FAILED com `nextSyncAt` por idade, CANCELLED detectado no provedor (`via: PROVIDER_PANEL`), CANCEL_FAILED pós-prazo com consulta por 7 dias, XML do cancelamento; testes
 - [X] T029 [P] [US4] Testes de ponta a ponta do cancelamento (SC-003) em `apps/api/test/fiscal-cancellation.integration.spec.ts`: com e sem `cancelViaApi`, prazo vencido, exclusão, comanda, guard
-- [ ] T030 [US4] Web: aba Pendências com contador de prazo, justificativa copiável e "Abrir no Bling"; ação "Cancelar NFC-e" no detalhe; testes
+- [X] T030 [US4] Web: aba Pendências com contador de prazo, justificativa copiável e "Abrir no Bling"; ação "Cancelar NFC-e" no detalhe; testes
 
 ## Phase 6: User Story 5 - Importação automática (P2)
 
@@ -67,8 +67,8 @@
 
 ## Phase 8: User Story 7 - Controle e pendências (P2)
 
-- [ ] T038 [US7] Lista de documentos com `pendingOnly` e `pendingReason` (incluindo `SAME_DAY_NOT_ISSUED` e `PROVIDER_DISCONNECTED`), eventos no detalhe, auditoria de reprocessamentos; testes
-- [ ] T039 [US7] Web: aba Notas (filtros por status e período) e Pendências com reprocessar; testes
+- [X] T038 [US7] Lista de documentos com `pendingOnly` e `pendingReason` (incluindo `SAME_DAY_NOT_ISSUED` e `PROVIDER_DISCONNECTED`), eventos no detalhe, auditoria de reprocessamentos; testes
+- [X] T039 [US7] Web: aba Notas (filtros por status e período) e Pendências com reprocessar; testes
 
 ## Phase 9: User Story 8 - DANFE, WhatsApp e XML ao contador (P3)
 

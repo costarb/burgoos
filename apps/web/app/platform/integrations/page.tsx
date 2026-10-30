@@ -1,4 +1,5 @@
 import {
+  getBlingPlatformConfiguration,
   getMercadoPagoPlatformConfiguration,
   getPagBankPlatformConfiguration,
   getPlatformAdminToken,
@@ -9,9 +10,10 @@ export const dynamic = "force-dynamic";
 
 export default async function PlatformIntegrationsPage() {
   const token = await getPlatformAdminToken();
-  const [mercadoPago, pagBank] = await Promise.all([
+  const [mercadoPago, pagBank, bling] = await Promise.all([
     getMercadoPagoPlatformConfiguration(token),
     getPagBankPlatformConfiguration(token),
+    getBlingPlatformConfiguration(token),
   ]);
-  return <PlatformIntegrationsClient token={token} mercadoPago={mercadoPago} pagBank={pagBank} />;
+  return <PlatformIntegrationsClient bling={bling} token={token} mercadoPago={mercadoPago} pagBank={pagBank} />;
 }

@@ -72,6 +72,8 @@ export interface CreateCounterOrderInput {
   fulfillmentMethod: FulfillmentMethod;
   notes?: string;
   releaseToKds?: boolean;
+  /** CPF/CNPJ for the NFC-e ("CPF na nota"). */
+  consumerDocument?: string | null;
   items: CounterOrderItemInput[];
 }
 
@@ -81,6 +83,7 @@ export interface UpdateCounterOrderInput {
   customerPhone?: string;
   fulfillmentMethod: FulfillmentMethod;
   notes?: string;
+  consumerDocument?: string | null;
   items: CounterOrderItemInput[];
 }
 
@@ -193,6 +196,8 @@ export interface UpdateServiceTabInput {
 export interface ServiceTabTransitionInput {
   expectedVersion: number;
   reason?: string;
+  /** Checkout only: CPF/CNPJ for the NFC-e of the tab. */
+  consumerDocument?: string | null;
 }
 
 export interface KdsOrder extends AdminOrder {

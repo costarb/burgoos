@@ -178,6 +178,18 @@ describe("NFC-e emission (US3)", () => {
     expect(info.get(first)).toMatchObject({ status: "AUTHORIZED", documentId: document.id });
   });
 
+  it("issues the tab NFC-e when an order of the tab is emitted manually", async () => {
+    const h = createFiscalHarness();
+    const tabId = randomUUID();
+    h.prisma.table("serviceTab").push({ id: tabId, tenantId: TENANT, publicCode: "C8", status: "PAID", openedAt: new Date(), closedAt: new Date() } as never);
+    const orderId = h.seedOrder({ serviceTabId: tabId });
+    h.pay({ serviceTabId: tabId }, "PIX", "28.00");
+
+    await h.emissions.request({ tenantId: TENANT, target: { type: "ORDER", id: orderId }, trigger: "MANUAL" });
+
+    expect(h.documentsOf()[0]).toMatchObject({ serviceTabId: tabId, orderId: null, activeKey: `tab:${tabId}` });
+  });
+
   it("blocks changes to orders with an active NFC-e", async () => {
     const h = createFiscalHarness();
     const orderId = h.seedOrder();
