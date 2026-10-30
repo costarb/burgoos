@@ -10,12 +10,12 @@
 
 ## Phase 1: Foundational
 
-- [ ] T002 Schema e migração `20261031100000_fiscal_nfce` conforme `data-model.md`: enums, tabelas fiscais, `PlatformFiscalProviderConfiguration`, campos em `orders`, `service_tabs`, `sales_integrations`, `categories`, `products`, `product_complements`, `BackgroundJobType`/`SalesRunTrigger` novos, CHECK `order_id XOR service_tab_id`; `npm run db:generate`
-- [ ] T003 [P] Permissões `fiscal.view|configure|issue|cancel` em `permission-catalog.ts` e no `seed.ts` (dono/admin todas; operador view+issue); testes do catálogo
-- [ ] T004 [P] `IntegrationSecretService`: envelopes `BLING_OAUTH` e `FISCAL_A1_CERTIFICATE` com validação; testes
-- [ ] T005 [P] `fiscal/configuration/br-documents.ts`: DV de CNPJ/CPF, IE de SP (algoritmo completo) e formato das demais UFs, máscara de CPF para logs; testes
-- [ ] T006 [P] Tipos compartilhados em `packages/types` (configuração, prontidão, documento, status fiscal do pedido, auto import health)
-- [ ] T007 `fiscal.module.ts` + `providers/fiscal-provider.adapter.ts` (contrato, `FiscalProviderError`), `fiscal-provider.registry.ts`, `testing/fake-fiscal-provider.adapter.ts` (cenários: autoriza, processing, rejeita, timeout, cancela/sem cancelamento) e `fiscal-audit.service.ts` (eventos + logs estruturados `fiscal.*`); testes
+- [X] T002 Schema e migração `20261031100000_fiscal_nfce` conforme `data-model.md`: enums, tabelas fiscais, `PlatformFiscalProviderConfiguration`, campos em `orders`, `service_tabs`, `sales_integrations`, `categories`, `products`, `product_complements`, `BackgroundJobType`/`SalesRunTrigger` novos, CHECK `order_id XOR service_tab_id`; `npm run db:generate`
+- [X] T003 [P] Permissões `fiscal.view|configure|issue|cancel` em `permission-catalog.ts` e no `seed.ts` (dono/admin todas; operador view+issue); testes do catálogo
+- [X] T004 [P] `IntegrationSecretService`: envelopes `BLING_OAUTH` e `FISCAL_A1_CERTIFICATE` com validação; testes
+- [X] T005 [P] `fiscal/configuration/br-documents.ts`: DV de CNPJ/CPF, IE de SP (algoritmo completo) e formato das demais UFs, máscara de CPF para logs; testes
+- [X] T006 [P] Tipos compartilhados em `packages/types` (configuração, prontidão, documento, status fiscal do pedido, auto import health)
+- [X] T007 `fiscal.module.ts` + `providers/fiscal-provider.adapter.ts` (contrato, `FiscalProviderError`), `fiscal-provider.registry.ts`, `testing/fake-fiscal-provider.adapter.ts` (cenários: autoriza, processing, rejeita, timeout, cancela/sem cancelamento) e `fiscal-audit.service.ts` (eventos + logs estruturados `fiscal.*`); testes
 
 ## Phase 2: User Story 1 - Configuração e conexão (P1)
 

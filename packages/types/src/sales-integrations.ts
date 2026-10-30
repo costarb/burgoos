@@ -26,7 +26,8 @@ export type SalesRunTrigger =
   | "INITIAL_LOAD"
   | "WEBHOOK"
   | "RECONCILIATION_SHORT"
-  | "RECONCILIATION_DAILY";
+  | "RECONCILIATION_DAILY"
+  | "AUTOMATIC";
 export type SalesImportRunStatus =
   | "PENDING"
   | "FETCHING"

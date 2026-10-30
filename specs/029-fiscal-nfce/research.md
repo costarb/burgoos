@@ -19,7 +19,7 @@
 
 1. **Tributação no Bling.** O Bling calcula tributos pela *natureza de operação* e pelas regras de tributação da conta. Se a API ignorar o CSOSN/CFOP inline, os perfis fiscais do ERP continuam sendo a fonte para os provedores futuros e para a validação, mas no Bling a tributação efetiva vem da natureza de operação. Mitigação: configurar `naturezaOperacaoId` por empresa no adapter, e a T001 compara o XML autorizado com o perfil enviado.
 2. **Formas de pagamento.** No Bling, as parcelas referenciam formas de pagamento cadastradas na conta (`formaPagamento.id`). Mitigação: tela de mapeamento `PaymentMethod → forma do Bling` (lista via `GET /formas-pagamentos`), guardada nas configurações da conexão; a prontidão exige o mapeamento completo.
-3. **Produtos.** Se `POST /nfce` exigir produto cadastrado, o adapter faz upsert do produto no Bling pelo código (id do produto/complemento do ERP) com cache de `externalProductId`. Decidido depois da T001.
+3. **Produtos.** Teste do usuário na interface do Bling (2026-10-30): a NFC-e aceita item sem cadastro prévio, marcado como "Produto novo", com código, unidade, quantidade, preço e NCM. O adapter envia os itens inline (código = id do produto/complemento do ERP), sem sincronizar catálogo. A T001 confirma o mesmo comportamento na API; se ela exigir `produto.id`, o plano B é upsert por código com cache de `externalProductId`.
 
 **Alternativas consideradas**: emitir direto na SEFAZ (exigiria assinatura XML, CSC, contingência e homologação própria; descartado para a fase 1). Focus NFe, PlugNotas e NFe.io têm cancelamento via API e aceitam o A1 por upload; ficam como candidatos de segundo adapter, e o contrato já prevê `usesOwnCertificate`.
 

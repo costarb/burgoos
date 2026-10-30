@@ -6,6 +6,7 @@ import { DatabaseModule } from "./platform/database/database.module";
 import { HealthController } from "./platform/health.controller";
 import { ManagementModule } from "./management/management.module";
 import { McpModule } from "./management/mcp/mcp.module";
+import { FiscalModule } from "./management/fiscal/fiscal.module";
 import { OperationsModule } from "./operations/operations.module";
 import { OrderingModule } from "./ordering/ordering.module";
 import { BrandingModule } from "./customer-experience/branding/branding.module";
@@ -46,6 +47,7 @@ import { RuntimeRoleService } from "./config/runtime-role.service";
     OperationsModule,
     ManagementModule,
     McpModule,
+    FiscalModule,
   ],
   controllers: [HealthController],
   providers: [RuntimeRoleService],
