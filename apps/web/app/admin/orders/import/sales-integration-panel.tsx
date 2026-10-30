@@ -22,6 +22,7 @@ import React, { FormEvent, useEffect, useState } from "react";
 import { SalesProviderSelector } from "./sales-provider-selector";
 import { MercadoPagoConnectionPanel } from "./mercado-pago-connection-panel";
 import { IfoodFinancialPanel } from "./ifood-financial-panel";
+import { SalesAutoImportCard } from "./sales-auto-import-card";
 
 export function SalesRunSummary({
   run,
@@ -371,6 +372,9 @@ export function SalesIntegrationPanel({
           </p>
         </>
       )}
+      {integration?.status === "ACTIVE" && (selectedProvider === "MERCADO_PAGO" || selectedProvider === "PAGBANK") ? (
+        <SalesAutoImportCard integration={integration} onChange={setIntegration} products={products} token={token} />
+      ) : null}
       {history.length > 0 ? (
         <details>
           <summary className="cursor-pointer font-semibold">Historico de execucoes</summary>
@@ -379,6 +383,9 @@ export function SalesIntegrationPanel({
               <li key={item.id} className="rounded border p-2">
                 {item.startDate.slice(0, 10)} a {item.endDate.slice(0, 10)} · {item.status} ·{" "}
                 {item.counts.imported ?? 0} importadas
+                {item.trigger === "AUTOMATIC" ? (
+                  <span className="ml-2 rounded-full bg-sky-100 px-2 py-0.5 text-xs font-semibold text-sky-900">Automatico</span>
+                ) : null}
                 {item.requestedVia ? (
                   <span className="ml-2 rounded-full bg-amber-100 px-2 py-0.5 text-xs font-semibold text-amber-900">
                     {item.requestedVia}

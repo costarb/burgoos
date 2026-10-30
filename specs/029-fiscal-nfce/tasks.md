@@ -54,10 +54,10 @@
 
 ## Phase 6: User Story 5 - Importação automática (P2)
 
-- [ ] T031 [US5] `autoImport` no DTO/serviço da integração (enabled, estratégia, produto fixo, auditoria) e `health` no GET; testes
-- [ ] T032 [US5] `sales-auto-import.scheduler.ts` (`0 */2 * * * *`, papel consumer, dedupe por integração) + `sales-auto-import.processor.ts` (lock, run AUTOMATIC do dia e do dia anterior nos 10 min após a meia-noite, preview + confirm, erros por `SalesProviderError.code`, backoff); testes
-- [ ] T033 [US5] `sales-auto-import-health.service.ts`: contadores, `lagSeconds`, logs `sales.auto_import.cycle`/`degraded` com os campos da FR-027b, notificação limitada a 1/h; testes (isolamento entre integrações, 3 falhas, lag > 15 min)
-- [ ] T034 [US5] Web: chave "Importação automática" e painel de saúde no `sales-integration-panel.tsx`; histórico mostra gatilho "Automático"; testes
+- [X] T031 [US5] `autoImport` no DTO/serviço da integração (enabled, estratégia, produto fixo, auditoria) e `health` no GET; testes
+- [X] T032 [US5] `sales-auto-import.scheduler.ts` (`0 */2 * * * *`, papel consumer, dedupe por integração) + `sales-auto-import.processor.ts` (lock, run AUTOMATIC do dia e do dia anterior nos 10 min após a meia-noite, preview + confirm, erros por `SalesProviderError.code`, backoff); testes
+- [X] T033 [US5] `sales-auto-import-health.service.ts`: contadores, `lagSeconds`, logs `sales.auto_import.cycle`/`degraded` com os campos da FR-027b, notificação limitada a 1/h; testes (isolamento entre integrações, 3 falhas, lag > 15 min)
+- [X] T034 [US5] Web: chave "Importação automática" e painel de saúde no `sales-integration-panel.tsx`; histórico mostra gatilho "Automático"; testes
 
 ## Phase 7: User Story 6 - Certificado A1 (P2)
 

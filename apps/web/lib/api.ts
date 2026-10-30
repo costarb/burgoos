@@ -2879,6 +2879,17 @@ export async function syncFiscalDocument(token: string, id: string): Promise<Fis
   return fetchAdmin<FiscalDocumentDetail>(token, `/api/admin/fiscal/documents/${id}/sync`, { method: "POST" });
 }
 
+export async function updateSalesAutoImport(
+  token: string,
+  integrationId: string,
+  payload: { enabled: boolean; strategy: "PRICE_WEIGHTED" | "FIXED_PRODUCT"; fixedProductId: string | null }
+): Promise<SalesIntegrationView> {
+  return fetchAdmin<SalesIntegrationView>(token, `/api/admin/sales-integrations/${integrationId}/auto-import`, {
+    method: "PUT",
+    body: JSON.stringify(payload),
+  });
+}
+
 export async function getOrdersFiscalStatus(
   token: string,
   orderIds: string[]

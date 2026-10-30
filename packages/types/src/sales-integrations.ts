@@ -1,3 +1,5 @@
+import type { SalesAutoImportHealth, SalesAutoImportSettings } from "./fiscal";
+
 export type SalesProvider = "PAGBANK" | "MERCADO_PAGO" | "IFOOD";
 export type SalesInputChannel = "API" | "FILE" | "OTHER";
 export type SalesIntegrationEnvironment = "TEST" | "PRODUCTION";
@@ -91,6 +93,9 @@ export interface SalesIntegrationView {
   updatedAt: string;
   deliveryIntegrationId?: string | null;
   financialReadiness?: IfoodFinancialReadinessStatus | null;
+  /** Automatic import every 2 minutes (Mercado Pago / PagBank). */
+  autoImport?: SalesAutoImportSettings;
+  autoImportHealth?: SalesAutoImportHealth;
 }
 
 export interface SalesRunCounts {
