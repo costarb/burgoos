@@ -3,7 +3,7 @@
 ## Pré-requisitos
 
 - Conta Bling da empresa habilitada para NFC-e em SP (certificado A1, CSC e série cadastrados no Bling), em homologação.
-- App OAuth criado no Bling (client id/secret, redirect `https://<api>/integrations/bling/callback`).
+- App OAuth criado no Bling (client id/secret, redirect `https://burgoos-api.onrender.com/api/integrations/bling/callback`; em ambiente local, `http://localhost:3001/api/integrations/bling/callback`).
 - Banco migrado: `npm run db:migrate` (migração `20261031100000_fiscal_nfce`) e seed atualizado.
 
 ## Validação manual (homologação)
@@ -11,7 +11,7 @@
 1. **Plataforma** → Integrações → Bling: informar client id/secret.
 2. **Admin da loja** → Configurações da loja: conferir o endereço completo (rua, número, bairro, cidade, UF = SP, CEP).
 3. **Fiscal → Configuração**: razão social, CNPJ, IE; conferir o código IBGE resolvido. Conectar o Bling, escolher a natureza de operação e mapear cada forma de pagamento. Ambiente = Homologação; modo = Automático.
-4. **Fiscal → Certificado**: enviar o .pfx e conferir titular, CNPJ e validade.
+4. **Certificado A1:** nao se aplica ao Bling (usa o certificado da propria conta); o envio do .pfx esta adiado (US6).
 5. **Fiscal → Perfis**: criar "Alimentação preparada" (CSOSN 102) como padrão da categoria; um perfil "Bebidas ST" (CSOSN 500 + CEST) num produto; conferir que "faltantes" está vazio. A prontidão deve ficar verde; ativar o fiscal.
 6. **Balcão**: vender um lanche com um complemento pago, CPF informado, pagamento dividido (PIX + dinheiro com troco). Esperado: nota Autorizada em até 30 s, com dois itens, dois pagamentos e CPF; DANFE abre e imprime; XML baixa.
 7. **Comanda**: abrir, lançar dois pedidos, fechar e pagar. Esperado: uma NFC-e com os itens dos dois pedidos.

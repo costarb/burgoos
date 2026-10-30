@@ -153,6 +153,8 @@ Como gestor, eu quero que as vendas das integrações sejam importadas automatic
 
 ### User Story 6 - Certificado A1 (Priority: P2)
 
+> **Adiada (decisão de 2026-10-30).** O Bling assina a NFC-e com o certificado A1 cadastrado na própria conta, então a emissão não depende desta história. A implementação aguarda uma versão madura do `node-forge` (as versões ≤ 1.4.0 têm vulnerabilidades altas no ASN.1; a 1.4.2 corrigida saiu em 2026-10-27). Reavaliar em algumas semanas.
+
 Como admin da empresa, eu quero enviar o certificado A1 e ser avisado antes do vencimento, para não parar de emitir.
 
 **Why this priority**: O Bling usa o certificado da própria conta, então para o primeiro provedor isso é controle e alerta. Para provedores futuros o certificado será obrigatório.

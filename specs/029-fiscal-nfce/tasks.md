@@ -61,9 +61,9 @@
 
 ## Phase 7: User Story 6 - Certificado A1 (P2)
 
-- [ ] T035 [US6] *(Bloqueada: decidir entre `node-forge` 1.4.2, publicada em 2026-10-27, e outra biblioteca — versões ≤ 1.4.0 têm vulnerabilidades altas no ASN.1.)* Dependência `node-forge`; `pkcs12-reader.ts` (titular, CNPJ ICP-Brasil, validade, fingerprint); `fiscal-certificate.service.ts|controller.ts` (multipart ≤ 20 KB, erros 422, rotação, nada de segredo na resposta); testes com PFX gerado no teste
-- [ ] T036 [US6] `certificate-expiry.scheduler.ts` (diário, 30/15/7/1, `lastExpiryAlertDays`); prontidão com CNPJ divergente; testes
-- [ ] T037 [US6] Web: bloco Certificado na aba Configuração (upload, metadados, dias para vencer); testes
+- [ ] T035 [US6] *(Adiada em 2026-10-30: reavaliar em algumas semanas a `node-forge` 1.4.2, publicada em 2026-10-27; versões ≤ 1.4.0 têm vulnerabilidades altas no ASN.1. O Bling usa o certificado da própria conta.)* Dependência `node-forge`; `pkcs12-reader.ts` (titular, CNPJ ICP-Brasil, validade, fingerprint); `fiscal-certificate.service.ts|controller.ts` (multipart ≤ 20 KB, erros 422, rotação, nada de segredo na resposta); testes com PFX gerado no teste
+- [ ] T036 [US6] *(Adiada com a T035.)* `certificate-expiry.scheduler.ts` (diário, 30/15/7/1, `lastExpiryAlertDays`); prontidão com CNPJ divergente; testes
+- [ ] T037 [US6] *(Adiada com a T035.)* Web: bloco Certificado na aba Configuração (upload, metadados, dias para vencer); testes
 
 ## Phase 8: User Story 7 - Controle e pendências (P2)
 

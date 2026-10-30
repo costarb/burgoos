@@ -68,13 +68,14 @@ export class FiscalReadinessService {
     const certificateValid = Boolean(certificate && certificate.validTo.getTime() > Date.now());
     const certificateRequired = Boolean(adapter?.capabilities.usesOwnCertificate);
     const cnpjMismatch = Boolean(certificate?.cnpj && issuer && certificate.cnpj !== issuer.cnpj);
+    // Providers that sign with their own account certificate (Bling) need nothing from the ERP.
     add(
       "CERTIFICATE",
-      certificateValid && !cnpjMismatch,
+      (!certificate && !certificateRequired) || (certificateValid && !cnpjMismatch),
       !certificate
         ? certificateRequired
           ? "Envie o certificado A1"
-          : "Certificado A1 nao enviado (o provedor usa o certificado da propria conta)"
+          : "O provedor usa o certificado A1 cadastrado na propria conta"
         : !certificateValid
           ? "Certificado A1 vencido"
           : cnpjMismatch

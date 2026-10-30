@@ -176,7 +176,7 @@ Quando o provedor responde CANCELLED, guarda o XML do cancelamento se o provedor
 
 **Compartilhamento.** *(Ajustado.)* O link de WhatsApp existente é o do cardápio público (fora do escopo e anterior à nota). O compartilhamento virou um botão "WhatsApp" na célula fiscal do pedido, com a consulta pública da SEFAZ e a chave de acesso.
 
-**Certificado A1.** *(Pendente.)* Todas as versões do `node-forge` até a 1.4.0 têm vulnerabilidades altas no parser ASN.1; as corrigidas (1.4.1/1.4.2) foram publicadas em 2026-10-27. A US6 aguarda decisão (usar a versão nova após avaliação ou outra biblioteca). O Bling não usa o certificado do ERP, então a emissão não depende dela.
+**Certificado A1.** *(Adiado por decisão do usuário em 2026-10-30.)* Todas as versões do `node-forge` até a 1.4.0 têm vulnerabilidades altas no parser ASN.1; as corrigidas (1.4.1/1.4.2) foram publicadas em 2026-10-27. A US6 será reavaliada em algumas semanas. O Bling usa o certificado da própria conta, e a prontidão trata o certificado do ERP como não exigido para esse provedor (item marcado como ok).
 
 **Web.**
 - `/admin/fiscal` com abas: Configuração (emitente, provedor/conexão, pagamentos e natureza, certificado, prontidão), Perfis fiscais (CRUD + atribuição em lote por categoria/produto/complemento + faltantes), Notas (lista filtrável) e Pendências (com ações e contador de prazo para cancelamento manual).

@@ -143,7 +143,7 @@ describe("fiscal configuration (US1/US2)", () => {
 
     const blocked = await configuration.update(user(TENANT_A), { ...payload, enabled: false });
     expect(blocked.readiness.items.find((item) => item.key === "PAYMENT_MAP")).toMatchObject({ ok: false, blocking: true });
-    expect(blocked.readiness.items.find((item) => item.key === "CERTIFICATE")).toMatchObject({ ok: false, blocking: false });
+    expect(blocked.readiness.items.find((item) => item.key === "CERTIFICATE")).toMatchObject({ ok: true, blocking: false, message: "O provedor usa o certificado A1 cadastrado na propria conta" });
 
     fake.settingsIssues = [];
     const view = await configuration.update(user(TENANT_A), payload);
