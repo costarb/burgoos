@@ -44,6 +44,13 @@
 - Nota 000004: **autorizada** (`cStat 100`, protocolo `135260000240600xx`, `tpAmb 2`). `GET /nfce/{id}` → `situacao 5`, `chaveAcesso` e `xml` (URL assinada, sem autenticação) com o **`nfeProc` completo** (NFe + `protNFe`), de onde saem `qrCode` e `urlChave` (consulta pública da SEFAZ-SP).
 - `linkDanfe` e `linkPDF` devolvem a **mesma página HTML** "DANFE NFCe" (formato bobina, com QR Code e `window.print()`), pública. **Não há PDF**: o ERP guarda o XML no storage (documento fiscal) e usa o `linkDanfe` para imprimir e compartilhar. `downloadDanfe` do adapter devolve `null` e a rota de DANFE redireciona para o link.
 
+**Quarta rodada — adapter real (2026-10-30)**: o `BlingFiscalProviderAdapter` emitiu a nota 000005 em homologação (autorizada, `cStat 100`) com 2 itens, desconto, acréscimo e pagamento dividido Pix + dinheiro com troco. Comportamentos do Bling incorporados:
+
+- `desconto`/`despesas` da nota são **rateados pelo Bling** entre os itens (`vDesc` 0,38 + 0,12 em vez de 0,50 no primeiro item). O total (`vNF`) bate; no MEI/Simples com CSOSN 102 não há efeito tributário.
+- O troco não é enviado: a parcela em dinheiro vai com o valor líquido (`vPag` 2,00 de 5,00 recebidos com 3,00 de troco), e a soma dos pagamentos = `vNF`.
+- A forma de pagamento com tipo 17 (Pix dinâmico) sai como `tPag 20`, e duas parcelas geram `indPag = 1`. A SEFAZ aceitou os dois.
+- `GET /nfce` (lista) **não traz `valorNota`**: `findByReference` compara total e códigos dos itens no detalhe de cada candidato da janela de 30 minutos.
+
 **Riscos identificados**:
 
 1. **Tributação no Bling.** O Bling calcula tributos pela *natureza de operação* e pelas regras de tributação da conta. Se a API ignorar o CSOSN/CFOP inline, os perfis fiscais do ERP continuam sendo a fonte para os provedores futuros e para a validação, mas no Bling a tributação efetiva vem da natureza de operação. Mitigação: configurar `naturezaOperacaoId` por empresa no adapter, e a T001 compara o XML autorizado com o perfil enviado.

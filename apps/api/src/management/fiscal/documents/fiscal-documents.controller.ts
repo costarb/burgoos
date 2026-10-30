@@ -127,7 +127,15 @@ export class FiscalDocumentsController {
     return this.documents.detail(user.tenantId, id);
   }
 
-  private async send(response: Response, file: { content: Buffer; contentType: string; fileName: string }, disposition: string) {
+  private async send(
+    response: Response,
+    file: { content: Buffer; contentType: string; fileName: string } | { redirect: string },
+    disposition: string
+  ) {
+    if ("redirect" in file) {
+      response.redirect(302, file.redirect);
+      return;
+    }
     response.setHeader("Content-Type", file.contentType);
     response.setHeader("Content-Disposition", `${disposition}; filename="${file.fileName}"`);
     response.setHeader("Cache-Control", "private, no-store");

@@ -6,7 +6,7 @@
 
 ## Phase 0: Validação do provedor (bloqueante para o adapter Bling)
 
-- [ ] T001 Em homologação, com a conta Bling real (SP), validar por script descartável em `tmp/`: OAuth, `POST /nfce` com payload mínimo (itens inline com NCM/CFOP/CSOSN vs. `produto.id`), envio à SEFAZ, `GET /nfce/{id}` (conteúdo de `xml`, `linkDanfe`, `linkPDF`), `GET /nfce` por filtro (para `findByReference`), `GET /formas-pagamentos`, naturezas de operação e limites de requisição. Salvar respostas anonimizadas em `apps/api/src/management/fiscal/providers/bling/__fixtures__/` e atualizar `research.md` (R1) com o que mudou
+- [X] T001 Em homologação, com a conta Bling real (SP), validar por script descartável em `tmp/`: OAuth, `POST /nfce` com payload mínimo (itens inline com NCM/CFOP/CSOSN vs. `produto.id`), envio à SEFAZ, `GET /nfce/{id}` (conteúdo de `xml`, `linkDanfe`, `linkPDF`), `GET /nfce` por filtro (para `findByReference`), `GET /formas-pagamentos`, naturezas de operação e limites de requisição. Salvar respostas anonimizadas em `apps/api/src/management/fiscal/providers/bling/__fixtures__/` e atualizar `research.md` (R1) com o que mudou
 
 ## Phase 1: Foundational
 
@@ -23,7 +23,7 @@
 - [X] T009 [US1] `fiscal-configuration.service.ts|controller.ts` + `fiscal-readiness.service.ts`: GET/PUT da configuração, `enabled` só com prontidão, troca de provedor bloqueada com documentos pendentes, auditoria; testes
 - [X] T010 [US1] Plataforma: `bling-platform-configuration.service.ts|controller.ts` (client id/secret cifrados, padrão Mercado Pago); testes
 - [X] T011 [US1] Bling OAuth: `bling-oauth.service.ts`, callback, `fiscal-provider-context.service.ts` (refresh sob demanda em 401, uma vez), `bling-token-refresh.scheduler.ts`, desconectar; testes
-- [ ] T012 [US1] `bling.client.ts` (HTTP, zod, backoff em 429, concorrência 1 por empresa) e `bling-connection` (options: formas de pagamento e naturezas; settings: mapeamento obrigatório); testes com fixtures
+- [X] T012 [US1] `bling.client.ts` (HTTP, zod, backoff em 429, concorrência 1 por empresa) e `bling-connection` (options: formas de pagamento e naturezas; settings: mapeamento obrigatório); testes com fixtures
 - [X] T013 [P] [US1] Teste de isolamento por tenant (configuração, conexão, documentos) em `apps/api/test/fiscal-tenant-isolation.integration.spec.ts`
 - [ ] T014 [US1] Web: card Bling em `app/platform/integrations`; `app/admin/fiscal` aba Configuração (emitente, endereço com atalho, conexão, mapeamento de pagamentos/natureza, prontidão); item "Fiscal" em `admin-navigation.ts`; `lib/api.ts`; testes
 
@@ -38,7 +38,7 @@
 - [X] T018 [US3] `nfce-composer.ts`: itens + complementos pagos, ajuste negativo como desconto, rateios (frete e gorjeta inativos), soma = total ao centavo, comanda agregando pedidos, pagamentos com tPag (R4) a partir de alocações ou do método do pedido, troco; testes
 - [X] T019 [US3] `fiscal-eligibility.service.ts`: origem, pago, total > 0, regra do dia (`BUSINESS_TIME_ZONE`), prontidão, documento ativo; testes (incluindo virada de dia)
 - [X] T020 [US3] `fiscal-emission.service.ts` + `fiscal-emission.processor.ts`: documento PENDING com `activeKey`, `create` → grava `externalId` → `submit`, AUTHORIZED/PROCESSING/REJECTED, timeout → `findByReference`, retry pela política do job, ERROR, `MISSING_FISCAL_DATA` local; `fiscal-document-storage.service.ts` (XML/DANFE no AssetStorage); testes com o fake (SC-005: concorrência e timeout)
-- [ ] T021 [US3] `bling-nfce.mapper.ts` + `bling-fiscal-provider.adapter.ts` + `bling-document-decoder.ts` (GZIP+Base64), conforme a T001; testes com fixtures
+- [X] T021 [US3] `bling-nfce.mapper.ts` + `bling-fiscal-provider.adapter.ts` + `bling-document-decoder.ts` (GZIP+Base64), conforme a T001; testes com fixtures
 - [X] T022 [US3] `fiscal-trigger.service.ts` + hooks pós-commit em `manual-payment.service.ts`, `payment-settlement.service.ts`, `counter-order.service.ts`, `service-tab` (comanda paga), `sales-import-confirmation.service.ts`, `historical-order-import.service.ts`; falha do hook só loga; testes
 - [X] T023 [US3] `fiscal-sweep.scheduler.ts` (a cada minuto, só papel consumer): vendas do dia sem nota em modo automático → emissão + log `fiscal.trigger.recovered`; testes
 - [ ] T024 [US3] `consumerDocument` nos DTOs de balcão e checkout de comanda (CPF/CNPJ com DV); `fiscal-documents.controller.ts`: emitir (com `confirmRetroactive`), reprocessar, lista/detalhe, DANFE/XML; status fiscal derivado em lista/detalhe de pedidos + filtro `fiscalStatus`; testes

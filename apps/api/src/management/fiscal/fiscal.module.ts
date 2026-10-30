@@ -1,4 +1,4 @@
-import { Module } from "@nestjs/common";
+import { Inject, Module, OnModuleInit } from "@nestjs/common";
 import { BackgroundJobsModule } from "../../common/background-jobs/background-jobs.module";
 import { StorageModule } from "../../common/storage/storage.module";
 import { AuthModule } from "../../platform/auth/auth.module";
@@ -27,7 +27,10 @@ import { FiscalProfileController } from "./profiles/fiscal-profile.controller";
 import { FiscalProfileResolver } from "./profiles/fiscal-profile-resolver";
 import { FiscalProfileService } from "./profiles/fiscal-profile.service";
 import { BlingConnectionController, BlingOAuthCallbackController } from "./providers/bling/bling-oauth.controller";
+import { BlingConnectionService } from "./providers/bling/bling-connection.service";
+import { BlingFiscalProviderAdapter } from "./providers/bling/bling-fiscal-provider.adapter";
 import { BlingOAuthService } from "./providers/bling/bling-oauth.service";
+import { BlingClient } from "./providers/bling/bling.client";
 import { FiscalProviderContextService } from "./providers/fiscal-provider-context.service";
 import { FiscalProviderRegistry } from "./providers/fiscal-provider.registry";
 
@@ -64,6 +67,9 @@ import { FiscalProviderRegistry } from "./providers/fiscal-provider.registry";
     FiscalDocumentsService,
     FiscalOrderGuardService,
     BlingOAuthService,
+    BlingClient,
+    BlingFiscalProviderAdapter,
+    BlingConnectionService,
   ],
   exports: [
     FiscalProviderRegistry,
@@ -77,4 +83,13 @@ import { FiscalProviderRegistry } from "./providers/fiscal-provider.registry";
     FiscalDocumentsService,
   ],
 })
-export class FiscalModule {}
+export class FiscalModule implements OnModuleInit {
+  constructor(
+    @Inject(FiscalProviderRegistry) private readonly registry: FiscalProviderRegistry,
+    @Inject(BlingFiscalProviderAdapter) private readonly bling: BlingFiscalProviderAdapter
+  ) {}
+
+  onModuleInit(): void {
+    if (!this.registry.has(this.bling.provider)) this.registry.register(this.bling);
+  }
+}

@@ -136,8 +136,14 @@ export class FiscalDocumentsService {
   }
 
   /** XML/DANFE from the ERP storage; downloads from the provider (and keeps a copy) when missing. */
-  async file(tenantId: string, id: string, kind: "xml" | "danfe"): Promise<{ content: Buffer; contentType: string; fileName: string }> {
+  async file(
+    tenantId: string,
+    id: string,
+    kind: "xml" | "danfe"
+  ): Promise<{ content: Buffer; contentType: string; fileName: string } | { redirect: string }> {
     const document = await this.require(tenantId, id);
+    // Providers whose DANFE is a hosted print page (Bling) are served by redirect.
+    if (kind === "danfe" && !document.danfeAssetKey && document.danfeUrl) return { redirect: document.danfeUrl };
     const key = kind === "xml" ? document.xmlAssetKey : document.danfeAssetKey;
     const name = document.accessKey ?? document.id;
     const contentType = kind === "xml" ? "application/xml" : "application/pdf";
