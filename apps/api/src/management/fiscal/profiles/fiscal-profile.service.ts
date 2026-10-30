@@ -117,6 +117,28 @@ export class FiscalProfileService {
     return { updated };
   }
 
+  /** Current assignments for the assignment screen (active catalog only). */
+  async assignments(tenantId: string) {
+    const [categories, products, complements] = await Promise.all([
+      this.prisma.category.findMany({
+        where: { tenantId, active: true },
+        select: { id: true, name: true, fiscalProfileId: true },
+        orderBy: { sortOrder: "asc" },
+      }),
+      this.prisma.product.findMany({
+        where: { tenantId, active: true },
+        select: { id: true, name: true, categoryId: true, fiscalProfileId: true },
+        orderBy: { name: "asc" },
+      }),
+      this.prisma.productComplement.findMany({
+        where: { tenantId, active: true },
+        select: { id: true, name: true, fiscalProfileId: true },
+        orderBy: { name: "asc" },
+      }),
+    ]);
+    return { categories, products, complements };
+  }
+
   /** Active products (and complements in use by them) whose fiscal profile cannot be resolved. */
   async missing(tenantId: string): Promise<FiscalMissingProfiles> {
     const products = await this.prisma.product.findMany({

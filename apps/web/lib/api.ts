@@ -1,4 +1,23 @@
 import type {
+  BlingConnectionOptions,
+  BlingPlatformConfiguration,
+  BlingPlatformConfigurationPayload,
+  BlingSettingsPayload,
+  FiscalConfigurationPayload,
+  FiscalConfigurationView,
+  FiscalDocumentDetail,
+  FiscalDocumentPage,
+  FiscalDocumentStatus,
+  FiscalEmissionPayload,
+  FiscalIssuerPayload,
+  FiscalMissingProfiles,
+  FiscalProfileAssignments,
+  FiscalProfileAssignmentsPayload,
+  FiscalProfilePayload,
+  FiscalProfileView,
+  OrderFiscalInfo,
+} from "@rrfive/types";
+import type {
   AdminOrder,
   AccessProfileSummary,
   AccessStoreSummary,
@@ -2697,4 +2716,203 @@ export async function listMcpConnections(token: string): Promise<McpConnection[]
 
 export async function revokeMcpConnection(token: string, id: string): Promise<McpConnection> {
   return fetchAdmin<McpConnection>(token, `/api/admin/mcp/connections/${id}/revoke`, { method: "POST" });
+}
+
+// Fiscal (NFC-e) — spec 029
+
+export async function getFiscalConfiguration(token: string): Promise<FiscalConfigurationView> {
+  return fetchAdmin<FiscalConfigurationView>(token, "/api/admin/fiscal/configuration");
+}
+
+export async function updateFiscalConfiguration(
+  token: string,
+  payload: FiscalConfigurationPayload
+): Promise<FiscalConfigurationView> {
+  return fetchAdmin<FiscalConfigurationView>(token, "/api/admin/fiscal/configuration", {
+    method: "PUT",
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function updateFiscalIssuer(
+  token: string,
+  payload: FiscalIssuerPayload
+): Promise<FiscalConfigurationView> {
+  return fetchAdmin<FiscalConfigurationView>(token, "/api/admin/fiscal/issuer", {
+    method: "PUT",
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function startBlingAuthorization(
+  token: string
+): Promise<{ authorizationUrl: string; expiresAt: string }> {
+  return fetchAdmin(token, "/api/admin/fiscal/connections/bling/authorize", { method: "POST" });
+}
+
+export async function getBlingConnectionOptions(token: string): Promise<BlingConnectionOptions> {
+  return fetchAdmin<BlingConnectionOptions>(token, "/api/admin/fiscal/connections/bling/options");
+}
+
+export async function updateBlingSettings(
+  token: string,
+  payload: BlingSettingsPayload
+): Promise<BlingSettingsPayload> {
+  return fetchAdmin<BlingSettingsPayload>(token, "/api/admin/fiscal/connections/bling/settings", {
+    method: "PUT",
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function disconnectBling(token: string): Promise<void> {
+  await fetchAdmin<void>(token, "/api/admin/fiscal/connections/bling", { method: "DELETE" });
+}
+
+export async function listFiscalProfiles(token: string): Promise<FiscalProfileView[]> {
+  return fetchAdmin<FiscalProfileView[]>(token, "/api/admin/fiscal/profiles");
+}
+
+export async function createFiscalProfile(
+  token: string,
+  payload: FiscalProfilePayload
+): Promise<FiscalProfileView> {
+  return fetchAdmin<FiscalProfileView>(token, "/api/admin/fiscal/profiles", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function updateFiscalProfile(
+  token: string,
+  id: string,
+  payload: FiscalProfilePayload
+): Promise<FiscalProfileView> {
+  return fetchAdmin<FiscalProfileView>(token, `/api/admin/fiscal/profiles/${id}`, {
+    method: "PATCH",
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function deleteFiscalProfile(token: string, id: string): Promise<void> {
+  await fetchAdmin<void>(token, `/api/admin/fiscal/profiles/${id}`, { method: "DELETE" });
+}
+
+export async function assignFiscalProfiles(
+  token: string,
+  payload: FiscalProfileAssignmentsPayload
+): Promise<{ updated: number }> {
+  return fetchAdmin<{ updated: number }>(token, "/api/admin/fiscal/profile-assignments", {
+    method: "PUT",
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function getFiscalProfileAssignments(token: string): Promise<FiscalProfileAssignments> {
+  return fetchAdmin<FiscalProfileAssignments>(token, "/api/admin/fiscal/profile-assignments");
+}
+
+export async function getMissingFiscalProfiles(token: string): Promise<FiscalMissingProfiles> {
+  return fetchAdmin<FiscalMissingProfiles>(token, "/api/admin/fiscal/profile-assignments/missing");
+}
+
+export interface FiscalDocumentQuery {
+  status?: FiscalDocumentStatus[];
+  from?: string;
+  to?: string;
+  orderId?: string;
+  serviceTabId?: string;
+  pendingOnly?: boolean;
+  page?: number;
+  pageSize?: number;
+}
+
+export async function listFiscalDocuments(
+  token: string,
+  query: FiscalDocumentQuery = {}
+): Promise<FiscalDocumentPage> {
+  const params = new URLSearchParams();
+  for (const [key, value] of Object.entries(query)) {
+    if (value === undefined || value === null || value === "") continue;
+    params.set(key, Array.isArray(value) ? value.join(",") : String(value));
+  }
+  const search = params.toString();
+  return fetchAdmin<FiscalDocumentPage>(token, `/api/admin/fiscal/documents${search ? `?${search}` : ""}`);
+}
+
+export async function getFiscalDocument(token: string, id: string): Promise<FiscalDocumentDetail> {
+  return fetchAdmin<FiscalDocumentDetail>(token, `/api/admin/fiscal/documents/${id}`);
+}
+
+export async function emitFiscalDocument(
+  token: string,
+  payload: FiscalEmissionPayload
+): Promise<FiscalDocumentDetail> {
+  return fetchAdmin<FiscalDocumentDetail>(token, "/api/admin/fiscal/emissions", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function reprocessFiscalDocument(
+  token: string,
+  id: string,
+  confirmRetroactive = false
+): Promise<FiscalDocumentDetail> {
+  return fetchAdmin<FiscalDocumentDetail>(token, `/api/admin/fiscal/documents/${id}/reprocess`, {
+    method: "POST",
+    body: JSON.stringify({ confirmRetroactive }),
+  });
+}
+
+export async function cancelFiscalDocument(
+  token: string,
+  id: string,
+  reason: string
+): Promise<FiscalDocumentDetail> {
+  return fetchAdmin<FiscalDocumentDetail>(token, `/api/admin/fiscal/documents/${id}/cancel`, {
+    method: "POST",
+    body: JSON.stringify({ reason }),
+  });
+}
+
+export async function syncFiscalDocument(token: string, id: string): Promise<FiscalDocumentDetail> {
+  return fetchAdmin<FiscalDocumentDetail>(token, `/api/admin/fiscal/documents/${id}/sync`, { method: "POST" });
+}
+
+export async function getOrdersFiscalStatus(
+  token: string,
+  orderIds: string[]
+): Promise<Record<string, OrderFiscalInfo>> {
+  if (!orderIds.length) return {};
+  return fetchAdmin<Record<string, OrderFiscalInfo>>(
+    token,
+    `/api/admin/fiscal/order-status?ids=${encodeURIComponent(orderIds.slice(0, 200).join(","))}`
+  );
+}
+
+/** Raw fetch for the XML/DANFE proxy route (the DANFE may answer with a redirect). */
+export async function fetchFiscalDocumentFile(
+  token: string,
+  id: string,
+  kind: "xml" | "danfe"
+): Promise<Response> {
+  return fetch(`${apiUrl}/api/admin/fiscal/documents/${id}/${kind}`, {
+    headers: { Authorization: `Bearer ${token}` },
+    cache: "no-store",
+    redirect: "manual",
+  });
+}
+
+export async function getBlingPlatformConfiguration(token: string): Promise<BlingPlatformConfiguration> {
+  return fetchAdmin<BlingPlatformConfiguration>(token, "/api/platform/integrations/bling/configuration");
+}
+
+export async function updateBlingPlatformConfiguration(
+  token: string,
+  payload: BlingPlatformConfigurationPayload
+): Promise<BlingPlatformConfiguration> {
+  return fetchAdmin<BlingPlatformConfiguration>(token, "/api/platform/integrations/bling/configuration", {
+    method: "PUT",
+    body: JSON.stringify(payload),
+  });
 }

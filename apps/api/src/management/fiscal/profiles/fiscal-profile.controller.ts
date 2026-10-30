@@ -57,6 +57,12 @@ export class FiscalProfileController {
     return this.profiles.assign(user, dto);
   }
 
+  @Get("profile-assignments")
+  @RequirePermission(FISCAL_PERMISSIONS.view, FISCAL_PERMISSIONS.configure)
+  assignments(@CurrentUser() user: AuthUser) {
+    return this.profiles.assignments(user.tenantId);
+  }
+
   @Get("profile-assignments/missing")
   @RequirePermission(FISCAL_PERMISSIONS.view, FISCAL_PERMISSIONS.configure)
   missing(@CurrentUser() user: AuthUser) {

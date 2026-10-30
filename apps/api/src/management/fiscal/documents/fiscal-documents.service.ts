@@ -135,6 +135,17 @@ export class FiscalDocumentsService {
     return result;
   }
 
+  /** Fiscal status keyed by order id, for the orders list (ids of other tenants are ignored). */
+  async statusByOrderIds(tenantId: string, ids: string[]): Promise<Record<string, OrderFiscalInfo>> {
+    const unique = [...new Set(ids)].slice(0, 200);
+    if (!unique.length) return {};
+    const orders = await this.prisma.order.findMany({
+      where: { tenantId, id: { in: unique } },
+      select: { id: true, serviceTabId: true, source: true, total: true },
+    });
+    return Object.fromEntries(await this.forOrders(tenantId, orders));
+  }
+
   /** XML/DANFE from the ERP storage; downloads from the provider (and keeps a copy) when missing. */
   async file(
     tenantId: string,

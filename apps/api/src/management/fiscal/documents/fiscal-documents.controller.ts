@@ -48,6 +48,13 @@ export class FiscalDocumentsController {
     });
   }
 
+  @Get("order-status")
+  @RequirePermission(FISCAL_PERMISSIONS.view, "orders.view")
+  orderStatus(@CurrentUser() user: AuthUser, @Query("ids") ids?: string) {
+    const list = (ids ?? "").split(",").map((id) => id.trim()).filter((id) => /^[0-9a-f-]{36}$/i.test(id));
+    return this.documents.statusByOrderIds(user.tenantId, list);
+  }
+
   @Get("documents/:id")
   detail(@CurrentUser() user: AuthUser, @Param("id", ParseUUIDPipe) id: string) {
     return this.documents.detail(user.tenantId, id);

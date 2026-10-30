@@ -241,3 +241,39 @@ export interface SalesAutoImportHealth {
   lagSeconds: number | null;
   degraded: boolean;
 }
+
+export interface BlingConnectionOptions {
+  paymentForms: Array<{ id: string; name: string; tPag: string }>;
+  operationNatures: Array<{ id: string; name: string; defaultForSales: boolean }>;
+  paymentMethods: Array<{ method: string; label: string; tPag: string }>;
+  current: { naturezaOperacaoId: string | null; paymentMethodMap: Record<string, string> };
+  suggested: { naturezaOperacaoId: string | null; paymentMethodMap: Record<string, string> };
+  account: { name: string | null; cnpj: string | null } | null;
+}
+
+export interface BlingSettingsPayload {
+  naturezaOperacaoId: string;
+  paymentMethodMap: Record<string, string>;
+}
+
+export interface BlingPlatformConfiguration {
+  clientIdConfigured: boolean;
+  clientSecretConfigured: boolean;
+  clientIdHint: string | null;
+  postCallbackUrl: string | null;
+  redirectUri: string;
+  source: "DATABASE" | "ENVIRONMENT";
+  oauthReady: boolean;
+}
+
+export interface BlingPlatformConfigurationPayload {
+  clientId?: string;
+  clientSecret?: string;
+  postCallbackUrl?: string;
+}
+
+export interface FiscalProfileAssignments {
+  categories: Array<{ id: string; name: string; fiscalProfileId: string | null }>;
+  products: Array<{ id: string; name: string; categoryId: string; fiscalProfileId: string | null }>;
+  complements: Array<{ id: string; name: string; fiscalProfileId: string | null }>;
+}
