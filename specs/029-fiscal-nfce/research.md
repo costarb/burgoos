@@ -15,6 +15,15 @@
 | Download NF-e | `GET /nfe/documento/{chave}?formato=xml\|pdf` → JSON `data[].conteudo` em GZIP + Base64 | Implementar o decodificador genérico; testar se serve para NFC-e |
 | Limites | Limite de requisições por segundo e por dia (a confirmar; documentação cita ~3 req/s) | Fila por empresa com concorrência 1 para Bling; backoff em 429 |
 
+**Validação com a conta real (T001, 2026-10-30, leitura apenas)**:
+
+- OAuth ok: `POST /oauth/token` com Basic `client_id:client_secret` devolve `access_token`, `refresh_token`, `expires_in=21600` (6 h), `token_type`, `scope`. O app atual foi criado com um único escopo.
+- `GET /nfce?pagina=1&limite=5` → 200 (lista vazia; nenhuma NFC-e emitida ainda).
+- `GET /formas-pagamentos` → 200, 7 formas. O campo `tipoPagamento` **é o código tPag** (Dinheiro=1, Pix=20, Boleto=15, Cheque=2, Depósito=16, Crediário/Vale-Troca=21). O mapeamento `PaymentMethod → forma do Bling` pode ser **sugerido automaticamente** pelo tPag da tabela R4.
+- Faltam na conta formas para Cartão de crédito (3), Cartão de débito (4), Vale-refeição (11) e Pix dinâmico (17). Elas precisam ser cadastradas no Bling antes de emitir vendas pagas com esses meios; a prontidão já bloqueia sem o mapeamento.
+- `GET /naturezas-operacoes` → 400 "Permissão negada" e `GET /empresas/me/dados-basicos` → 403 `insufficient_scope`: o app precisa dos escopos de Naturezas de Operação (e, opcionalmente, dados da empresa para conferir o CNPJ). Reconectar depois de incluir os escopos.
+- Depois de incluir escopos no app e reconectar (token com 25 escopos): `GET /naturezas-operacoes` → 200 (18 naturezas, campos `id, situacao, padrao, descricao`) e `GET /empresas/me/dados-basicos` → 200 (`id, nome, cnpj, email, dataContrato`). A natureza indicada para NFC-e é "Venda de mercadoria a não contribuinte" (`padrao = 1`), que o adapter sugere por padrão. O CNPJ da conta Bling será comparado com o CNPJ do emitente na prontidão.
+
 **Riscos identificados**:
 
 1. **Tributação no Bling.** O Bling calcula tributos pela *natureza de operação* e pelas regras de tributação da conta. Se a API ignorar o CSOSN/CFOP inline, os perfis fiscais do ERP continuam sendo a fonte para os provedores futuros e para a validação, mas no Bling a tributação efetiva vem da natureza de operação. Mitigação: configurar `naturezaOperacaoId` por empresa no adapter, e a T001 compara o XML autorizado com o perfil enviado.
