@@ -24,6 +24,17 @@
 - `GET /naturezas-operacoes` → 400 "Permissão negada" e `GET /empresas/me/dados-basicos` → 403 `insufficient_scope`: o app precisa dos escopos de Naturezas de Operação (e, opcionalmente, dados da empresa para conferir o CNPJ). Reconectar depois de incluir os escopos.
 - Depois de incluir escopos no app e reconectar (token com 25 escopos): `GET /naturezas-operacoes` → 200 (18 naturezas, campos `id, situacao, padrao, descricao`) e `GET /empresas/me/dados-basicos` → 200 (`id, nome, cnpj, email, dataContrato`). A natureza indicada para NFC-e é "Venda de mercadoria a não contribuinte" (`padrao = 1`), que o adapter sugere por padrão. O CNPJ da conta Bling será comparado com o CNPJ do emitente na prontidão.
 
+**Primeira NFC-e de teste em homologação (2026-10-30)** — contrato OpenAPI oficial (`developer.bling.com.br/build/assets/openapi-*.json`) e chamadas reais:
+
+- `POST /nfce` → 201 `{ id, numero, serie, contato }`. **Itens sem cadastro prévio funcionam** (`codigo`, `descricao`, `unidade`, `quantidade`, `valor`, `tipo: "P"`, `classificacaoFiscal` = NCM, `origem`, `cfop`, `cest`). `numero` pode ser omitido (o Bling atribui: 000001, série 1). Consumidor não identificado: `contato { nome: "Consumidor final", tipoPessoa: "F", numeroDocumento: "", contribuinte: 9 }`. Pagamentos em `parcelas[{ data, valor, formaPagamento.id }]`.
+- Não há desconto/despesa por item no contrato: só `desconto` e `despesas` no total da nota. O adapter envia a soma dos descontos/acréscimos do compositor.
+- O Bling calcula os tributos (CSOSN, IBPT) pela natureza de operação e pelo regime da conta: o XML saiu com `CRT=1`, `CSOSN=102`, `vTotTrib` preenchido.
+- `POST /nfce/{id}/enviar` → 200 `{ data: { xml } }` com o **retorno SOAP da SEFAZ** (`retEnviNFe`: `tpAmb`, `cStat` do lote 104 e `protNFe` com `cStat`/`xMotivo`/`chNFe`/`nProt`). É síncrono: o adapter lê o `protNFe` na própria resposta.
+- `GET /nfce/{id}` depois do envio: `situacao` (1 Pendente, 2 Cancelada, 3 Aguardando recibo, 4 Rejeitada, 5 Autorizada, 6 Emitida DANFE, 7 Registrada, 8 Aguardando protocolo, 9 Denegada, 10 Consulta situação, 11 Bloqueada), `chaveAcesso`, **`xml` é uma URL assinada** para baixar o XML, `linkDanfe`/`linkPDF` são URLs. `observacoes` não volta na consulta.
+- `GET /nfce` filtra por `numero`, `serie`, `chaveAcesso`, `situacao`, `dataEmissaoInicial/Final`: `findByReference` busca pela janela de emissão e confere valor e códigos dos itens.
+- Resultado do teste: **rejeição 717** ("NFC-e ou NF-e com DANFE Simplificado Tipo 2 em operação não permitida"). Causa no XML: `indPres = 9` (não presencial). NFC-e exige `indPres` 1 (presencial) ou 4 (entrega em domicílio). O contrato não tem campo de presença: vem da configuração da natureza de operação no Bling. Todo o resto do XML estava correto (`mod 65`, `tpAmb 2`, `indFinal 1`, `idDest 1`, `CFOP 5102`, `tPag 01`).
+- Mapeamento de situação no adapter: 1/3/8/10 → PROCESSING; 5/6/7 → AUTHORIZED; 4/9/11 → REJECTED (motivo do `protNFe`); 2 → CANCELLED.
+
 **Riscos identificados**:
 
 1. **Tributação no Bling.** O Bling calcula tributos pela *natureza de operação* e pelas regras de tributação da conta. Se a API ignorar o CSOSN/CFOP inline, os perfis fiscais do ERP continuam sendo a fonte para os provedores futuros e para a validação, mas no Bling a tributação efetiva vem da natureza de operação. Mitigação: configurar `naturezaOperacaoId` por empresa no adapter, e a T001 compara o XML autorizado com o perfil enviado.
