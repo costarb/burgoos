@@ -19,8 +19,8 @@
 
 ## Phase 2: User Story 1 - Configuração e conexão (P1)
 
-- [ ] T008 [US1] `fiscal-issuer.service.ts` + `ibge-municipality.client.ts`: emitente com endereço de `Tenant.config.address`, campos faltantes, resolução do IBGE com fallback manual; testes
-- [ ] T009 [US1] `fiscal-configuration.service.ts|controller.ts` + `fiscal-readiness.service.ts`: GET/PUT da configuração, `enabled` só com prontidão, troca de provedor bloqueada com documentos pendentes, auditoria; testes
+- [X] T008 [US1] `fiscal-issuer.service.ts` + `ibge-municipality.client.ts`: emitente com endereço de `Tenant.config.address`, campos faltantes, resolução do IBGE com fallback manual; testes
+- [X] T009 [US1] `fiscal-configuration.service.ts|controller.ts` + `fiscal-readiness.service.ts`: GET/PUT da configuração, `enabled` só com prontidão, troca de provedor bloqueada com documentos pendentes, auditoria; testes
 - [ ] T010 [US1] Plataforma: `bling-platform-configuration.service.ts|controller.ts` (client id/secret cifrados, padrão Mercado Pago); testes
 - [ ] T011 [US1] Bling OAuth: `bling-oauth.service.ts`, callback, `fiscal-provider-context.service.ts` (refresh sob demanda em 401, uma vez), `bling-token-refresh.scheduler.ts`, desconectar; testes
 - [ ] T012 [US1] `bling.client.ts` (HTTP, zod, backoff em 429, concorrência 1 por empresa) e `bling-connection` (options: formas de pagamento e naturezas; settings: mapeamento obrigatório); testes com fixtures
@@ -29,8 +29,8 @@
 
 ## Phase 3: User Story 2 - Perfis fiscais (P1)
 
-- [ ] T015 [US2] `fiscal-profile.service.ts|controller.ts`: CRUD com validações (NCM, CFOP 5xxx, CSOSN do Simples, CEST para 500), exclusão bloqueada em uso, atribuição em lote, faltantes; testes
-- [ ] T016 [US2] `fiscal-profile-resolver.ts` (produto→categoria; complemento→complemento→produto pai); testes
+- [X] T015 [US2] `fiscal-profile.service.ts|controller.ts`: CRUD com validações (NCM, CFOP 5xxx, CSOSN do Simples, CEST para 500), exclusão bloqueada em uso, atribuição em lote, faltantes; testes
+- [X] T016 [US2] `fiscal-profile-resolver.ts` (produto→categoria; complemento→complemento→produto pai); testes
 - [ ] T017 [US2] Web: aba Perfis fiscais (CRUD, atribuição por categoria/produto/complemento, lista de faltantes); testes
 
 ## Phase 4: User Story 3 - Emissão (P1)

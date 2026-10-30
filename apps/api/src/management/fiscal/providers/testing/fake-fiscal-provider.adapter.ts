@@ -3,6 +3,7 @@ import {
   FiscalProviderAdapter,
   FiscalProviderCapabilities,
   FiscalProviderError,
+  FiscalSettingsIssue,
   NfceDraft,
   ProviderContext,
   ProviderDocumentState,
@@ -88,6 +89,12 @@ export class FakeFiscalProviderAdapter implements FiscalProviderAdapter {
 
   panelUrl(externalId: string) {
     return `https://provider.test/nfce/${externalId}`;
+  }
+
+  settingsIssues: FiscalSettingsIssue[] = [];
+
+  validateSettings(): FiscalSettingsIssue[] {
+    return this.settingsIssues;
   }
 
   /** Simulates a cancellation done directly in the provider panel. */

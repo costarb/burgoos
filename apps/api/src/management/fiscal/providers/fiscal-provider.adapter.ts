@@ -111,6 +111,11 @@ export class FiscalProviderError extends Error {
   }
 }
 
+export interface FiscalSettingsIssue {
+  key: "PAYMENT_MAP" | "OPERATION_NATURE";
+  message: string;
+}
+
 export interface FiscalProviderAdapter {
   readonly provider: FiscalProvider;
   readonly capabilities: FiscalProviderCapabilities;
@@ -130,4 +135,6 @@ export interface FiscalProviderAdapter {
   downloadDanfe(ctx: ProviderContext, externalId: string): Promise<Buffer | null>;
   /** Link to the document in the provider panel, used by assisted cancellation. */
   panelUrl(externalId: string): string | null;
+  /** Provider-specific settings still missing on the connection (readiness checklist). */
+  validateSettings(settings: Record<string, unknown>): FiscalSettingsIssue[];
 }
