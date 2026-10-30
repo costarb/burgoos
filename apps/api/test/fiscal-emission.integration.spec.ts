@@ -2,6 +2,8 @@ import { ConflictException, NotFoundException, UnprocessableEntityException } fr
 import { Prisma } from "@prisma/client";
 import { randomUUID } from "crypto";
 import { describe, expect, it } from "vitest";
+import { FiscalDocumentStorageService } from "../src/management/fiscal/documents/fiscal-document-storage.service";
+import { FiscalXmlExportService } from "../src/management/fiscal/documents/fiscal-xml-export.service";
 import { createFiscalHarness, OTHER_TENANT, OWNER_ID, SODA, TENANT } from "./support/fiscal-harness";
 
 describe("NFC-e emission (US3)", () => {
@@ -318,5 +320,56 @@ describe("NFC-e cancellation (US4, SC-003)", () => {
     expect(h.documentsOf()[0]).toMatchObject({ serviceTabId: tabId, status: "CANCEL_PENDING" });
 
     expect(await h.cancellations.requestForOrder(TENANT, h.seedOrder({}, { paid: false }), null, null, "ORDER_CANCELLED")).toBeNull();
+  });
+});
+
+describe("XML export for the accountant (US8)", () => {
+  function zipEntryNames(zip: Buffer): string[] {
+    const names: string[] = [];
+    let offset = 0;
+    while (zip.readUInt32LE(offset) === 0x04034b50) {
+      const size = zip.readUInt32LE(offset + 18);
+      const nameLength = zip.readUInt16LE(offset + 26);
+      names.push(zip.subarray(offset + 30, offset + 30 + nameLength).toString());
+      offset += 30 + nameLength + size;
+    }
+    return names;
+  }
+
+  it("bundles authorized and cancelled notes with a summary, keeping homologation apart", async () => {
+    const h = createFiscalHarness({ capabilities: { cancelViaApi: true, usesOwnCertificate: false } });
+    const first = h.seedOrder();
+    const second = h.seedOrder();
+    await h.trigger.requestForOrder(TENANT, first);
+    await h.trigger.requestForOrder(TENANT, second);
+    await h.runJobs();
+    await h.cancellations.requestForOrder(TENANT, second, "Cliente desistiu da compra", null, "ORDER_CANCELLED");
+    await h.runJobs();
+    const [authorized, cancelled] = h.documentsOf();
+    const storage = new FiscalDocumentStorageService({
+      read: async (key: string) => ({ body: (await import("node:stream")).Readable.from(h.files.get(key) as Buffer) }),
+    } as never);
+    const exporter = new FiscalXmlExportService(h.prisma as never, storage, h.documents, { log: () => undefined } as never);
+    const today = new Intl.DateTimeFormat("en-CA", { timeZone: "America/Sao_Paulo" }).format(new Date());
+
+    const homologation = await exporter.build(TENANT, { from: today, to: today, environment: "HOMOLOGATION" });
+
+    expect(homologation.count).toBe(2);
+    expect(homologation.fileName).toBe(`nfce-${today}-a-${today}-homologacao.zip`);
+    expect(zipEntryNames(homologation.content).sort()).toEqual(
+      [
+        `autorizadas/${authorized.accessKey}.xml`,
+        `canceladas/${cancelled.accessKey}.xml`,
+        `canceladas/${cancelled.accessKey}-cancelamento.xml`,
+        "resumo.csv",
+      ].sort()
+    );
+    expect(homologation.content.toString()).toContain(";CANCELLED;HOMOLOGATION;ok");
+
+    const production = await exporter.build(TENANT, { from: today, to: today });
+    expect(production.count).toBe(0);
+    expect(zipEntryNames(production.content)).toEqual(["resumo.csv"]);
+    await expect(exporter.build(TENANT, { from: today, to: "2020-01-01" })).rejects.toMatchObject({ response: { code: "INVALID_PERIOD" } });
+    expect((await exporter.build(OTHER_TENANT, { from: today, to: today, environment: "HOMOLOGATION" })).count).toBe(0);
   });
 });

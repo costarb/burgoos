@@ -23,6 +23,7 @@ import { FiscalOrderGuardService } from "./documents/fiscal-order-guard.service"
 import { FiscalSaleLoader } from "./documents/fiscal-sale.loader";
 import { FiscalSyncService } from "./documents/fiscal-sync.service";
 import { FiscalTriggerService } from "./documents/fiscal-trigger.service";
+import { FiscalXmlExportService } from "./documents/fiscal-xml-export.service";
 import { FiscalProfileController } from "./profiles/fiscal-profile.controller";
 import { FiscalProfileResolver } from "./profiles/fiscal-profile-resolver";
 import { FiscalProfileService } from "./profiles/fiscal-profile.service";
@@ -66,6 +67,7 @@ import { FiscalProviderRegistry } from "./providers/fiscal-provider.registry";
     FiscalTriggerService,
     FiscalDocumentsService,
     FiscalOrderGuardService,
+    FiscalXmlExportService,
     BlingOAuthService,
     BlingClient,
     BlingFiscalProviderAdapter,

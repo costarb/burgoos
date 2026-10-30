@@ -2,7 +2,7 @@
 
 import React, { useState } from "react";
 import type { FiscalDocumentDetail, OrderFiscalInfo } from "@rrfive/types";
-import { FileCode2, Printer, ReceiptText } from "lucide-react";
+import { FileCode2, MessageCircle, Printer, ReceiptText } from "lucide-react";
 import { FISCAL_STATUS, PENDING_REASON, type FiscalActionState } from "./fiscal-labels";
 
 interface Props {
@@ -13,6 +13,17 @@ interface Props {
 }
 
 const linkClass = "inline-flex items-center gap-1 rounded-md border border-slate-300 px-2 py-1 text-xs font-semibold text-slate-700 hover:bg-slate-50";
+
+/** wa.me share text with the public SEFAZ consultation (the operator picks the contact). */
+export function whatsAppShareUrl(info: OrderFiscalInfo): string | null {
+  if (info.status !== "AUTHORIZED" || !info.consultationUrl || !info.accessKey) return null;
+  const text = [
+    `Sua NFC-e${info.number ? ` nº ${info.number}` : ""} foi emitida.`,
+    `Consulte em ${info.consultationUrl}`,
+    `Chave de acesso: ${info.accessKey.replace(/(\d{4})(?=\d)/g, "$1 ")}`,
+  ].join("\n");
+  return `https://wa.me/?text=${encodeURIComponent(text)}`;
+}
 
 function isPreviousDay(saleDate: string): boolean {
   const day = (date: Date) => new Intl.DateTimeFormat("en-CA", { timeZone: "America/Sao_Paulo" }).format(date);
@@ -58,6 +69,11 @@ export function OrderFiscalCell({ orderId, saleDate, info: initialInfo, emitActi
           <a className={linkClass} href={`/api/admin/fiscal/documents/${info.documentId}/xml`}>
             <FileCode2 aria-hidden className="h-3.5 w-3.5" /> XML
           </a>
+          {whatsAppShareUrl(info) ? (
+            <a className={linkClass} href={whatsAppShareUrl(info) as string} rel="noreferrer" target="_blank">
+              <MessageCircle aria-hidden className="h-3.5 w-3.5" /> WhatsApp
+            </a>
+          ) : null}
         </>
       ) : null}
       {canEmit ? (

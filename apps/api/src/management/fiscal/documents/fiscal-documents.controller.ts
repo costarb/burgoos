@@ -25,6 +25,7 @@ import { FiscalCancellationService } from "./fiscal-cancellation.service";
 import { FiscalDocumentsService } from "./fiscal-documents.service";
 import { FiscalEmissionService } from "./fiscal-emission.service";
 import { FiscalSyncService } from "./fiscal-sync.service";
+import { FiscalXmlExportService } from "./fiscal-xml-export.service";
 
 @ApiTags("admin fiscal")
 @ApiBearerAuth()
@@ -36,8 +37,26 @@ export class FiscalDocumentsController {
     @Inject(FiscalDocumentsService) private readonly documents: FiscalDocumentsService,
     @Inject(FiscalEmissionService) private readonly emissions: FiscalEmissionService,
     @Inject(FiscalCancellationService) private readonly cancellations: FiscalCancellationService,
-    @Inject(FiscalSyncService) private readonly sync: FiscalSyncService
+    @Inject(FiscalSyncService) private readonly sync: FiscalSyncService,
+    @Inject(FiscalXmlExportService) private readonly xmlExport: FiscalXmlExportService
   ) {}
+
+  /** ZIP with the period XMLs for the accountant (production notes unless asked otherwise). */
+  @Get("exports/xml")
+  async exportXml(
+    @CurrentUser() user: AuthUser,
+    @Query("from") from: string,
+    @Query("to") to: string,
+    @Query("environment") environment: string | undefined,
+    @Res() response: Response
+  ) {
+    const file = await this.xmlExport.build(user.tenantId, {
+      from,
+      to,
+      environment: environment === "HOMOLOGATION" ? "HOMOLOGATION" : "PRODUCTION",
+    });
+    await this.send(response, { content: file.content, contentType: "application/zip", fileName: file.fileName }, "attachment");
+  }
 
   @Get("documents")
   list(@CurrentUser() user: AuthUser, @Query() query: FiscalDocumentQueryDto) {

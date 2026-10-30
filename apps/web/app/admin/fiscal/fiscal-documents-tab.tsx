@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from "react";
 import type { FiscalDocumentDetail, FiscalDocumentPage, FiscalDocumentStatus, FiscalDocumentSummary } from "@rrfive/types";
-import { Copy, ExternalLink, FileCode2, Printer, RefreshCw, RotateCcw, XCircle } from "lucide-react";
+import { Copy, Download, ExternalLink, FileCode2, Printer, RefreshCw, RotateCcw, XCircle } from "lucide-react";
 import type { FiscalDocumentQuery } from "../../../lib/api";
 import {
   FISCAL_STATUS,
@@ -23,6 +23,7 @@ export interface FiscalDocumentActions {
 interface Props {
   mode: "pending" | "all";
   initialPage: FiscalDocumentPage;
+  environment?: "HOMOLOGATION" | "PRODUCTION";
   defaultCancelReason: string;
   actions: FiscalDocumentActions;
   busy: boolean;
@@ -41,7 +42,7 @@ const STATUS_FILTERS: Array<[FiscalDocumentStatus | "", string]> = [
 const inputClass = "rounded-md border border-slate-300 px-3 py-2 text-sm";
 const iconButton = "inline-flex items-center gap-1 rounded-md border border-slate-300 px-2 py-1 text-xs font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-50";
 
-export function FiscalDocumentsTab({ mode, initialPage, defaultCancelReason, actions, busy, run }: Props) {
+export function FiscalDocumentsTab({ mode, initialPage, environment = "PRODUCTION", defaultCancelReason, actions, busy, run }: Props) {
   const [page, setPage] = useState(initialPage);
   const [status, setStatus] = useState<FiscalDocumentStatus | "">("");
   const [from, setFrom] = useState("");
@@ -118,6 +119,18 @@ export function FiscalDocumentsTab({ mode, initialPage, defaultCancelReason, act
             <button className="rounded-md bg-slate-900 px-4 py-2 text-sm font-semibold text-white disabled:opacity-60" disabled={busy} type="submit">
               Filtrar
             </button>
+            {from && to ? (
+              <a
+                className="inline-flex items-center gap-1 rounded-md border border-slate-300 px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50"
+                data-testid="fiscal-xml-export"
+                href={`/api/admin/fiscal/exports/xml?${new URLSearchParams({ from, to, environment }).toString()}`}
+                title="ZIP com os XMLs autorizados e cancelados e um resumo para o contador"
+              >
+                <Download aria-hidden className="h-4 w-4" /> Exportar XMLs
+              </a>
+            ) : (
+              <span className="text-xs text-slate-500">Informe o periodo para exportar os XMLs</span>
+            )}
           </form>
         ) : (
           <button className={iconButton} disabled={busy} onClick={() => void load(1)} type="button">

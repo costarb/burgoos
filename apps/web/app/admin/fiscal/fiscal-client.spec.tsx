@@ -133,6 +133,13 @@ describe("FiscalClient", () => {
     await render({ configuration: configuration({ enabled: true }), documents: page([documentSummary()]), tab: "notas" });
 
     expect(container.querySelector("a[href='/api/admin/fiscal/documents/doc-1/danfe']")).not.toBeNull();
+    expect(container.querySelector("[data-testid='fiscal-xml-export']")).toBeNull();
+    for (const [label, value] of [["De", "2026-10-01"], ["Ate", "2026-10-31"]]) {
+      await change(container.querySelector(`input[aria-label='${label}']`) as HTMLInputElement, value);
+    }
+    expect(container.querySelector("[data-testid='fiscal-xml-export']")?.getAttribute("href")).toBe(
+      "/api/admin/fiscal/exports/xml?from=2026-10-01&to=2026-10-31&environment=HOMOLOGATION"
+    );
     await click(button("Cancelar"));
     await submit(container.querySelector("[data-testid='fiscal-cancel-form']") as HTMLFormElement);
 

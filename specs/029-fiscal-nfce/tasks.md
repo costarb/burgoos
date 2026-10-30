@@ -72,8 +72,8 @@
 
 ## Phase 9: User Story 8 - DANFE, WhatsApp e XML ao contador (P3)
 
-- [ ] T040 [US8] Impressão do DANFE (rota que abre o PDF para impressão) e `consultationUrl` no `whatsapp-link.ts`; testes
-- [ ] T041 [US8] `fiscal-xml-export.handler.ts`: contexto `FISCAL_XML` no worker de exportação (ZIP `autorizadas/`, `canceladas/`, `resumo.csv`, sem homologação) + botão na aba Notas; testes
+- [X] T040 [US8] Impressão do DANFE (rota que abre o PDF para impressão) e `consultationUrl` no `whatsapp-link.ts`; testes
+- [X] T041 [US8] `fiscal-xml-export.handler.ts`: contexto `FISCAL_XML` no worker de exportação (ZIP `autorizadas/`, `canceladas/`, `resumo.csv`, sem homologação) + botão na aba Notas; testes
 
 ## Phase 10: Polish
 

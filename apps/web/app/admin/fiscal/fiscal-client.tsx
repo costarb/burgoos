@@ -152,6 +152,7 @@ export function FiscalClient(props: Props) {
             actions={props.documentActions}
             busy={busy}
             defaultCancelReason={configuration.defaultCancelReason}
+            environment={configuration.environment}
             initialPage={props.documents}
             mode="all"
             run={run}

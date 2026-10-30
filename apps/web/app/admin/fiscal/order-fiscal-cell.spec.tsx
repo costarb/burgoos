@@ -70,4 +70,21 @@ describe("OrderFiscalCell", () => {
     expect(container.querySelector("a[href='/api/admin/fiscal/documents/doc-9/xml']")).not.toBeNull();
     expect(container.querySelector("button")).toBeNull();
   });
+
+  it("shares the public SEFAZ consultation on WhatsApp", async () => {
+    await render(
+      info({
+        status: "AUTHORIZED",
+        documentId: "doc-9",
+        number: 12,
+        accessKey: "35261011222333000181650010000000041689756832",
+        consultationUrl: "https://www.nfce.fazenda.sp.gov.br/consulta",
+      })
+    );
+    const href = (container.querySelector("a[href^='https://wa.me/']") as HTMLAnchorElement).href;
+    const text = decodeURIComponent(href.split("text=")[1]);
+    expect(text).toBe(
+      "Sua NFC-e nº 12 foi emitida.\nConsulte em https://www.nfce.fazenda.sp.gov.br/consulta\nChave de acesso: 3526 1011 2223 3300 0181 6500 1000 0000 0416 8975 6832"
+    );
+  });
 });
