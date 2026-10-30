@@ -37,6 +37,13 @@
 
 **Segunda rodada (2026-10-30)**: com "Indicador de presença = 1 - Operação presencial" na natureza, o reenvio da nota 000001 continuou com `indPres = 9`: **o Bling grava os indicadores na nota ao criá-la**, então mudanças na natureza só valem para notas novas (uma nota rejeitada por configuração precisa ser recriada). A nota nova 000002 saiu com `indPres = 1` e passou da regra 717, mas foi rejeitada com **180** ("Código Regime Tributário do emitente diverge do cadastro na Receita Federal"): o XML levou `CRT = 1` (Simples Nacional), que não corresponde ao regime do CNPJ na Receita. O CRT vem do "Código de regime tributário" da natureza/conta no Bling e precisa refletir o regime real (1 Simples, 2 Simples com excesso de sublimite, 3 Regime normal, 4 MEI).
 
+**Terceira rodada — primeira NFC-e autorizada (2026-10-30)**:
+
+- Regime: a consulta do Simples Nacional mostra a empresa **enquadrada no SIMEI desde 24/04/2026**, com desenquadramento agendado para **01/11/2026** ("Natureza jurídica vedada"). Até 31/10/2026 o CRT correto é 4 (MEI); a partir de 01/11/2026 passa a ser 1 (Simples Nacional). No Bling, a natureza de produção precisa acompanhar a data. O Bling avisa que uma natureza com regime diferente do cadastro "não será listada para emissão", mas a API aceita o id.
+- Natureza sem **"Faturada"** faz o Bling incluir um `detPag` com `tPag 90` (sem pagamento) e `vPag 0` ao lado do pagamento real → **rejeição 899**. A natureza de NFC-e precisa: Saída, Faturada, Consumidor final, Indicador de presença 1 e o regime do CNPJ. A prontidão vai orientar esses quatro pontos.
+- Nota 000004: **autorizada** (`cStat 100`, protocolo `135260000240600xx`, `tpAmb 2`). `GET /nfce/{id}` → `situacao 5`, `chaveAcesso` e `xml` (URL assinada, sem autenticação) com o **`nfeProc` completo** (NFe + `protNFe`), de onde saem `qrCode` e `urlChave` (consulta pública da SEFAZ-SP).
+- `linkDanfe` e `linkPDF` devolvem a **mesma página HTML** "DANFE NFCe" (formato bobina, com QR Code e `window.print()`), pública. **Não há PDF**: o ERP guarda o XML no storage (documento fiscal) e usa o `linkDanfe` para imprimir e compartilhar. `downloadDanfe` do adapter devolve `null` e a rota de DANFE redireciona para o link.
+
 **Riscos identificados**:
 
 1. **Tributação no Bling.** O Bling calcula tributos pela *natureza de operação* e pelas regras de tributação da conta. Se a API ignorar o CSOSN/CFOP inline, os perfis fiscais do ERP continuam sendo a fonte para os provedores futuros e para a validação, mas no Bling a tributação efetiva vem da natureza de operação. Mitigação: configurar `naturezaOperacaoId` por empresa no adapter, e a T001 compara o XML autorizado com o perfil enviado.
