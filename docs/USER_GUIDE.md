@@ -25,7 +25,7 @@ O menu lateral agrupa as funções por área:
 - **Operação**: novo pedido, comandas, pedidos, importação e estoque;
 - **Supervisão**: exceções de pagamento;
 - **Cardápio e custos**: catálogo, insumos, fichas técnicas, precificação e engenharia de cardápio;
-- **Financeiro**: contas a pagar, caixa e instituições;
+- **Financeiro**: contas a pagar, caixa, instituições e fiscal (NFC-e);
 - **Relatórios e administração**: itens exibidos conforme as permissões do usuário.
 
 O cabeçalho mostra a loja ativa, as notificações e a sessão atual. Em telas menores, o menu pode ser recolhido.
@@ -267,7 +267,55 @@ Para Mercado Pago, o fluxo deve importar somente pagamentos originados de venda,
 
 Datas próximas da meia-noite exigem atenção ao fuso horário. Confira a data apresentada pelo provedor e a data efetiva gravada no pedido.
 
-## 10. Integrações de delivery
+## 10. Fiscal (NFC-e)
+
+Acesse **Financeiro → Fiscal (NFC-e)**. A tela emite e acompanha a nota fiscal de consumidor das vendas de balcão, das comandas e das vendas importadas (Mercado Pago, PagBank e API). Vendas do cardápio público e do iFood não emitem NFC-e nesta versão.
+
+### 10.1 Configuração inicial
+
+1. **Endereço:** complete o endereço da loja no cadastro da loja (logradouro, número, bairro, cidade, UF e CEP). A tela fiscal mostra o que falta.
+2. **Emitente:** informe razão social, CNPJ e inscrição estadual. O código IBGE do município é preenchido automaticamente pela cidade.
+3. **Bling:** clique em **Conectar Bling** e autorize com a conta da empresa. Depois clique em **Configurar natureza e pagamentos**:
+   - escolha a **natureza de operação** usada nas NFC-e;
+   - confira o vínculo de cada forma de pagamento do sistema com uma forma do Bling (o sistema sugere pelo código fiscal).
+4. **Perfis fiscais:** na aba **Perfis fiscais**, cadastre os perfis (NCM, CFOP, CSOSN) e atribua um perfil a cada categoria. Produtos e complementos podem ter perfil próprio em **Ajustar por produto ou complemento**.
+5. **Emissão:** escolha o ambiente (**Homologação** para testes, **Produção** para valer), o modo (**Automático** ou **Manual**) e ative a emissão. A ativação só é liberada quando a **Prontidão para emitir** estiver completa.
+
+No Bling, a natureza de operação das NFC-e precisa estar como **Saída**, **Faturada**, **Consumidor final**, **Indicador de presença 1 - Operação presencial** e com o **regime tributário atual do CNPJ** (MEI ou Simples Nacional). Sem isso a SEFAZ rejeita a nota (códigos 717, 899 ou 180).
+
+### 10.2 Emissão
+
+- **Automática:** a nota é emitida quando a venda do dia é paga (balcão, comanda) ou importada. Vendas de dias anteriores nunca são emitidas sozinhas.
+- **Manual:** em **Pedidos → Manutenção**, use **Emitir NFC-e** no pedido. Para venda de dia anterior, o sistema pede confirmação, porque a SEFAZ pode rejeitar a emissão retroativa.
+- **Comanda:** a comanda gera uma única NFC-e com os itens de todos os pedidos dela.
+- **CPF na nota:** informe o CPF/CNPJ no campo **CPF/CNPJ na nota** do balcão ou antes de bloquear a comanda para pagamento.
+- **DANFE e compartilhamento:** no pedido ou na aba **Notas**, use **DANFE** para imprimir, **XML** para baixar e **WhatsApp** para enviar a consulta da nota ao cliente.
+
+Pedidos com NFC-e emitida não podem ter itens ou valores alterados. Para corrigir, cancele a venda e lance novamente.
+
+### 10.3 Cancelamento
+
+Cancelar ou excluir um pedido com NFC-e inicia o cancelamento da nota. Com o Bling, o cancelamento é feito **no painel do Bling**:
+
+1. Uma notificação avisa que a nota precisa ser cancelada e mostra o horário limite (**30 minutos após a autorização** em SP).
+2. Na aba **Pendências**, use **Abrir no Bling** e **Copiar chave** para localizar a nota e cancele com a justificativa indicada.
+3. Clique em **Já cancelei no Bling** (ou aguarde alguns minutos): o sistema confirma o cancelamento consultando o Bling.
+
+Faltando 10 minutos para o prazo, chega um lembrete. Se o prazo passar, a nota fica como **Cancelamento não realizado**: trate com o contador.
+
+### 10.4 Pendências
+
+A aba **Pendências** reúne notas rejeitadas, com erro, sem perfil fiscal ou com cancelamento a fazer. Corrija a causa (por exemplo, atribua o perfil fiscal ao produto) e clique em **Reprocessar**.
+
+### 10.5 XML para o contador
+
+Na aba **Notas**, informe o período e clique em **Exportar XMLs**. O arquivo ZIP traz as pastas `autorizadas` e `canceladas` e um `resumo.csv`. Notas de homologação só entram quando o ambiente configurado é homologação.
+
+### 10.6 Importação automática
+
+Em **Importar pedidos**, nas integrações do Mercado Pago e do PagBank, ligue a **Importação automática**. As vendas do dia são buscadas a cada 2 minutos e, com a emissão automática ativa, a NFC-e sai em seguida. O cartão mostra a última importação, o atraso das vendas e as falhas seguidas; depois de 3 falhas seguidas os administradores recebem uma notificação.
+
+## 11. Integrações de delivery
 
 Acesse **Integrações de delivery** para conectar e acompanhar canais como iFood.
 
@@ -277,7 +325,7 @@ Cada conexão pertence à loja selecionada. Utilize as ações apresentadas para
 
 Pedidos externos podem levar alguns instantes para entrar na fila. Antes de criar um pedido manual, pesquise pelo identificador externo para evitar duplicidade.
 
-## 11. Configurações e acesso
+## 12. Configurações e acesso
 
 Acesse **Configurações** para dados operacionais da loja.
 
@@ -293,7 +341,7 @@ Usuários com permissão administrativa também podem gerenciar:
 
 Conceda somente as permissões necessárias. Ao desligar um colaborador, inative o acesso em vez de reutilizar a conta.
 
-### 11.1 Assistentes de IA (MCP)
+### 12.1 Assistentes de IA (MCP)
 
 Em **Configurações → MCP / IA** você conecta assistentes de IA (Claude, ChatGPT, Claude Code, Cursor) aos números da loja para pedir análises: comparar períodos, avaliar a margem do cardápio, prever o caixa, entre outras. Por padrão o acesso é **somente leitura**, vale para **uma loja por conexão** e nunca inclui dados pessoais de clientes. Opcionalmente, o assistente pode **executar ações** (veja abaixo).
 
@@ -355,7 +403,7 @@ Exemplos de pedidos: “lança o aluguel de R$ 3.000, categoria Aluguel, vencend
 - A **aba Uso** mostra cada consulta (com o aplicativo e o usuário, ou o token) e as tentativas recusadas, com filtros por token, período e resultado. O histórico é mantido por 90 dias.
 - Habilitação, tokens e conexões (autorizada, cancelada, revogada) aparecem em **Auditoria de acessos**.
 
-## 12. Notificações
+## 13. Notificações
 
 O sino no cabeçalho reúne notificações operacionais. Acesse a central para consultar itens anteriores quando disponível.
 
@@ -364,7 +412,7 @@ O sino no cabeçalho reúne notificações operacionais. Acesse a central para c
 - evite abrir várias abas do painel sem necessidade;
 - se os números parecerem desatualizados, atualize a página uma vez e verifique a conexão em tempo real.
 
-## 13. Solução de problemas
+## 14. Solução de problemas
 
 ### A tela não atualizou
 
@@ -394,7 +442,7 @@ Na aba **Uso**, tentativas recusadas aparecem como **Recusada**, com o motivo.
 
 Reduza o período dos filtros e evite múltiplas exportações ou sincronizações simultâneas. Informe a tela, o período consultado e o horário ao suporte.
 
-## 14. Atualização das capturas
+## 15. Atualização das capturas
 
 As imagens deste manual podem ser regeneradas em ambiente local com `scripts/capture-user-guide.mjs`. Com API e web em execução, defina:
 

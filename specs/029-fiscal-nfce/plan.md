@@ -172,7 +172,11 @@ Quando o provedor responde CANCELLED, guarda o XML do cancelamento se o provedor
 - **Falha**: incrementa os contadores e loga o ciclo `failed` com `errorCode`. Com 3 ou mais falhas seguidas, ou lag maior que 15 minutos, emite `sales.auto_import.degraded` e uma notificação (no máximo 1 por hora).
 - **Fiscal**: os pedidos criados disparam o gatilho fiscal pelo hook da confirmação.
 
-**Exportação ao contador.** Novo contexto `FISCAL_XML` no worker de exportação existente: lê os documentos do período (exceto HOMOLOGATION), monta o ZIP com o XML de autorização e o de cancelamento e um `resumo.csv`, grava como artefato da exportação e notifica.
+**Exportação ao contador.** *(Ajustado na implementação.)* A infraestrutura de exportação é tabular (CSV/XLSX/PDF), então o ZIP é gerado por um endpoint próprio, `GET admin/fiscal/exports/xml?from&to&environment`, que lê os documentos do período (até 5.000), monta `autorizadas/`, `canceladas/` e `resumo.csv` com o gerador de ZIP extraído para `common/zip` e devolve o arquivo. Homologação só entra quando pedida explicitamente.
+
+**Compartilhamento.** *(Ajustado.)* O link de WhatsApp existente é o do cardápio público (fora do escopo e anterior à nota). O compartilhamento virou um botão "WhatsApp" na célula fiscal do pedido, com a consulta pública da SEFAZ e a chave de acesso.
+
+**Certificado A1.** *(Pendente.)* Todas as versões do `node-forge` até a 1.4.0 têm vulnerabilidades altas no parser ASN.1; as corrigidas (1.4.1/1.4.2) foram publicadas em 2026-10-27. A US6 aguarda decisão (usar a versão nova após avaliação ou outra biblioteca). O Bling não usa o certificado do ERP, então a emissão não depende dela.
 
 **Web.**
 - `/admin/fiscal` com abas: Configuração (emitente, provedor/conexão, pagamentos e natureza, certificado, prontidão), Perfis fiscais (CRUD + atribuição em lote por categoria/produto/complemento + faltantes), Notas (lista filtrável) e Pendências (com ações e contador de prazo para cancelamento manual).

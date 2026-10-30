@@ -46,7 +46,7 @@ These items are post-MVP unless a new specification promotes them:
 
 *   Online payment integration.
 *   WhatsApp Cloud API, chatbot or AI assistant.
-*   Fiscal/NF-e features.
+*   Fiscal/NF-e features, except NFC-e emission for counter, tab and imported sales (promoted by spec `029-fiscal-nfce`).
 *   Advanced stock control.
 *   Loyalty, coupons and campaigns.
 *   Marketplace integrations.
@@ -87,4 +87,4 @@ Before pilot launch:
 
 This constitution supersedes older draft documents when there is a conflict. Changes to MVP scope require updating the feature specification, implementation plan and task list together. If implementation reveals a mismatch with the spec, update the spec artifacts before continuing.
 
-**Version**: 1.0.0 | **Ratified**: 2026-05-13 | **Last Amended**: 2026-05-13
+**Version**: 1.1.0 | **Ratified**: 2026-05-13 | **Last Amended**: 2026-10-30

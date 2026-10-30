@@ -108,6 +108,7 @@ A API utiliza NestJS e agrupa funcionalidades em módulos de domínio. `apps/api
 | `PaymentsModule`             | cobranças, terminais, webhooks, conciliação e exceções               |
 | `OperationsModule`           | estoque e rotinas operacionais                                       |
 | `ManagementModule`           | financeiro, relatórios, notificações e integrações de venda/delivery |
+| `FiscalModule`               | NFC-e: configuração por loja, perfis fiscais, provedores e cancelamento |
 | `BackgroundJobsModule`       | persistência, execução, recuperação e políticas de jobs              |
 | `StorageModule`              | armazenamento local ou S3                                            |
 | `ObservabilityModule`        | correlação, métricas e pressão de memória                            |
@@ -203,6 +204,35 @@ Diretrizes:
 - processar páginas e períodos em lotes limitados;
 - persistir checkpoints para retomada;
 - limitar tamanho e retenção de payloads brutos.
+
+### 7.1 Fiscal (NFC-e)
+
+O `FiscalModule` (`apps/api/src/management/fiscal`) emite a NFC-e das vendas de balcão, comandas e vendas importadas por meio de um **provedor fiscal** escolhido por loja. O contrato `FiscalProviderAdapter` declara capacidades (`cancelViaApi`, `usesOwnCertificate`); o primeiro adaptador é o Bling (API v3, OAuth2).
+
+```mermaid
+flowchart LR
+    Sale[Venda paga / importada] --> Trigger[FiscalTriggerService]
+    Sweep[Varredura a cada minuto] --> Trigger
+    Trigger --> Emission[FiscalEmissionService: elegibilidade, perfis, composição]
+    Emission --> Doc[(FiscalDocument + activeKey)]
+    Doc --> Job[Job FISCAL_EMISSION]
+    Job --> Provider[Adaptador do provedor]
+    Provider --> State[FiscalDocumentStateService]
+    State --> Storage[XML no storage]
+    Cancel[Pedido cancelado/excluído] --> Cancellation[FiscalCancellationService]
+    Cancellation -->|cancelViaApi| Provider
+    Cancellation -->|assistido| Notify[Notificação + prazo]
+    Sync[FiscalSyncService a cada minuto] --> Provider
+```
+
+Regras principais:
+
+- **uma nota ativa por venda** (pedido avulso ou comanda inteira), garantida pela chave única `activeKey`;
+- emissão automática só para vendas pagas do **dia corrente** (fuso de São Paulo); vendas anteriores apenas manualmente, com confirmação;
+- o `externalId` é gravado antes do envio e um timeout na criação procura a nota por referência antes de tentar de novo, evitando duplicidade;
+- os ganchos de venda nunca derrubam a venda: falhas são registradas e recuperadas pela varredura;
+- sem cancelamento por API (Bling), o cancelamento é **assistido**: notificação com prazo legal (30 min em SP), lembrete e detecção pela sincronização;
+- pedidos com nota emitida não podem ter itens ou valores alterados (`FiscalOrderGuardService`).
 
 ## 8. Processamento em segundo plano
 
@@ -307,6 +337,23 @@ sequenceDiagram
 - **Limpeza diária**: pedidos encerrados, tokens expirados há mais de 7 dias e clientes DCR sem conexão há 30 dias.
 
 Contratos: `specs/026-mcp-oauth-connectors/contracts/oauth.md`.
+
+### 10.2 Eventos para monitoria (fiscal e importação automática)
+
+Os módulos fiscal e de importação automática registram uma linha JSON por evento, com nome estável no campo `event`, sem tokens nem CPF completo.
+
+| Evento | Nível | Alerta sugerido |
+| ------ | ----- | --------------- |
+| `sales.auto_import.cycle` (`result: success\|skipped\|failed`) | log / warn | taxa de `failed` por integração; `lagSeconds` alto |
+| `sales.auto_import.degraded` | warn | qualquer ocorrência (3 falhas seguidas ou atraso > 15 min) |
+| `fiscal.document.submitted` / `fiscal.document.authorized` | log | `saleToAuthorizationSeconds` p95 > 300 (meta de 5 minutos) |
+| `fiscal.document.rejected` | warn | aumento por loja ou por código (`code`) |
+| `fiscal.document.error` | error | `finalAttempt: true` ou `errorCode: PROVIDER_DISCONNECTED` |
+| `fiscal.document.cancel_manual_required` | warn | acompanhar até `fiscal.document.cancelled` dentro do prazo |
+| `fiscal.document.cancel_failed` | error | qualquer ocorrência |
+| `fiscal.trigger.recovered` | warn | recorrência indica gancho de venda falhando |
+| `fiscal.connection.error` | error | qualquer ocorrência (renovação do token falhou) |
+| `fiscal.sync.tick_failed` / `fiscal.sweep.failed` | error | qualquer ocorrência |
 
 ## 11. Segurança
 

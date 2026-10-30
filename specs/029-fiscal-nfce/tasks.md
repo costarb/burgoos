@@ -61,7 +61,7 @@
 
 ## Phase 7: User Story 6 - Certificado A1 (P2)
 
-- [ ] T035 [US6] Dependência `node-forge`; `pkcs12-reader.ts` (titular, CNPJ ICP-Brasil, validade, fingerprint); `fiscal-certificate.service.ts|controller.ts` (multipart ≤ 20 KB, erros 422, rotação, nada de segredo na resposta); testes com PFX gerado no teste
+- [ ] T035 [US6] *(Bloqueada: decidir entre `node-forge` 1.4.2, publicada em 2026-10-27, e outra biblioteca — versões ≤ 1.4.0 têm vulnerabilidades altas no ASN.1.)* Dependência `node-forge`; `pkcs12-reader.ts` (titular, CNPJ ICP-Brasil, validade, fingerprint); `fiscal-certificate.service.ts|controller.ts` (multipart ≤ 20 KB, erros 422, rotação, nada de segredo na resposta); testes com PFX gerado no teste
 - [ ] T036 [US6] `certificate-expiry.scheduler.ts` (diário, 30/15/7/1, `lastExpiryAlertDays`); prontidão com CNPJ divergente; testes
 - [ ] T037 [US6] Web: bloco Certificado na aba Configuração (upload, metadados, dias para vencer); testes
 
@@ -72,12 +72,12 @@
 
 ## Phase 9: User Story 8 - DANFE, WhatsApp e XML ao contador (P3)
 
-- [X] T040 [US8] Impressão do DANFE (rota que abre o PDF para impressão) e `consultationUrl` no `whatsapp-link.ts`; testes
-- [X] T041 [US8] `fiscal-xml-export.handler.ts`: contexto `FISCAL_XML` no worker de exportação (ZIP `autorizadas/`, `canceladas/`, `resumo.csv`, sem homologação) + botão na aba Notas; testes
+- [X] T040 [US8] Impressão do DANFE (redirecionamento para a página de impressão do Bling) e compartilhamento da consulta da NFC-e por WhatsApp na célula fiscal do pedido; testes
+- [X] T041 [US8] `fiscal-xml-export.service.ts` + `GET admin/fiscal/exports/xml` (ZIP `autorizadas/`, `canceladas/`, `resumo.csv`, homologação separada; gerador de ZIP extraído para `common/zip`) + botão na aba Notas; testes
 
 ## Phase 10: Polish
 
-- [ ] T042 [P] Docs: `docs/USER_GUIDE.md` (seção Fiscal: configuração, Bling, cancelamento assistido, importação automática), `docs/DATA_DICTIONARY.md` regenerado, guia de monitoria com os eventos de log; emenda da constituição ("Fiscal/NF-e" promovido pela spec 029)
+- [X] T042 [P] Docs: `docs/USER_GUIDE.md` (seção Fiscal: configuração, Bling, cancelamento assistido, importação automática), `docs/DATA_DICTIONARY.md` regenerado, guia de monitoria com os eventos de log; emenda da constituição ("Fiscal/NF-e" promovido pela spec 029)
 - [ ] T043 Typecheck, lint e suítes de API e web (comparar com o baseline do `develop`)
 - [ ] T044 Roteiro do `quickstart.md` em homologação; depois produção em modo manual → automático
 
