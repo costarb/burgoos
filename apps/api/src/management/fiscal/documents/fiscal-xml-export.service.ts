@@ -7,6 +7,8 @@ import { FiscalDocumentStorageService } from "./fiscal-document-storage.service"
 import { FiscalDocumentsService } from "./fiscal-documents.service";
 
 const MAX_DOCUMENTS = 5_000;
+/** Excel opens the semicolon CSV with the right accents only with a BOM. */
+const UTF8_BOM = String.fromCharCode(0xfeff);
 const ISSUED_STATUSES = ["AUTHORIZED", "CANCEL_PENDING", "CANCEL_FAILED", "CANCELLED"] as const;
 
 export interface FiscalXmlExportQuery {
@@ -79,7 +81,7 @@ export class FiscalXmlExportService {
       );
     }
 
-    entries.push({ name: "resumo.csv", content: Buffer.from(`﻿${summary.join("\r\n")}\r\n`, "utf8") });
+    entries.push({ name: "resumo.csv", content: Buffer.from(`${UTF8_BOM}${summary.join("\r\n")}\r\n`, "utf8") });
     this.audit.log("fiscal.export.xml", { tenantId, from: query.from, to: query.to, environment, documents: rows.length });
     const suffix = environment === "HOMOLOGATION" ? "-homologacao" : "";
     return { fileName: `nfce-${query.from}-a-${query.to}${suffix}.zip`, content: createZip(entries), count: rows.length };
