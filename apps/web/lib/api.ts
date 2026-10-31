@@ -15,6 +15,7 @@ import type {
   FiscalProfileAssignmentsPayload,
   FiscalProfilePayload,
   FiscalProfileView,
+  FiscalUnissuedSale,
   OrderFiscalInfo,
 } from "@rrfive/types";
 import type {
@@ -2878,6 +2879,10 @@ export async function updateSalesAutoImport(
     method: "PUT",
     body: JSON.stringify(payload),
   });
+}
+
+export async function listUnissuedSales(token: string, date?: string): Promise<FiscalUnissuedSale[]> {
+  return fetchAdmin<FiscalUnissuedSale[]>(token, `/api/admin/fiscal/unissued${date ? `?date=${encodeURIComponent(date)}` : ""}`);
 }
 
 export async function getOrdersFiscalStatus(

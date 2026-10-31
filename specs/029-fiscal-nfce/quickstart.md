@@ -19,7 +19,8 @@
 9. **Guard**: tentar editar itens de um pedido autorizado → bloqueado.
 10. **Importação automática**: ligar no Mercado Pago (produto fixo). Fazer uma venda na maquininha; em até 5 min aparecem o pedido importado e a nota autorizada. Conferir o log `sales.auto_import.cycle`.
 11. **Falha simulada**: revogar o token do Mercado Pago → ciclos `failed`; após 3 ciclos, log `sales.auto_import.degraded` e notificação. Reconectar → volta a `success`.
-12. **Retroativo**: importar manualmente uma venda de ontem → "Não emitida"; emitir manualmente exige confirmação de risco.
+12. **Retroativo**: importar manualmente uma venda de ontem → "Não emitida"; em **Fiscal → Vendas sem NFC-e**, escolher a data de ontem e emitir exige confirmação de risco.
+13. **Modo manual**: com o modo Manual, fazer uma venda de balcão e pagar → ela aparece em **Fiscal → Vendas sem NFC-e**; **Emitir NFC-e** gera a nota.
 13. **Exportação**: exportar o mês → ZIP sem as notas de homologação (com o ambiente em homologação, conferir que o ZIP vem vazio e com aviso).
 
 ## Testes automatizados

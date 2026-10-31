@@ -267,3 +267,14 @@ export interface FiscalProfileAssignments {
   products: Array<{ id: string; name: string; categoryId: string; fiscalProfileId: string | null }>;
   complements: Array<{ id: string; name: string; fiscalProfileId: string | null }>;
 }
+
+/** Paid sale of the day without an active NFC-e, offered for manual emission. */
+export interface FiscalUnissuedSale {
+  target: { type: FiscalTargetType; id: string };
+  publicCode: string | null;
+  source: string;
+  totalAmount: string;
+  saleOccurredAt: string;
+  paymentMethods: string[];
+  lastAttempt: FiscalDocumentStatus | null;
+}

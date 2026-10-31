@@ -11,6 +11,7 @@ import type {
   FiscalProfileAssignmentsPayload,
   FiscalProfilePayload,
   FiscalProfileView,
+  FiscalUnissuedSale,
 } from "@rrfive/types";
 import { revalidatePath } from "next/cache";
 import {
@@ -26,6 +27,7 @@ import {
   getMissingFiscalProfiles,
   listFiscalDocuments,
   listFiscalProfiles,
+  listUnissuedSales,
   reprocessFiscalDocument,
   startBlingAuthorization,
   syncFiscalDocument,
@@ -116,6 +118,18 @@ export async function cancelFiscalDocumentAction(id: string, reason: string) {
 
 export async function syncFiscalDocumentAction(id: string) {
   return run<FiscalDocumentDetail>((token) => syncFiscalDocument(token, id), "Situacao consultada no provedor.", "Nao foi possivel consultar o provedor.");
+}
+
+export async function loadUnissuedSalesAction(date: string) {
+  return run<FiscalUnissuedSale[]>((token) => listUnissuedSales(token, date), "Vendas carregadas.", "Nao foi possivel carregar as vendas sem NFC-e.");
+}
+
+export async function emitSaleFiscalDocumentAction(target: { type: "ORDER" | "TAB"; id: string }, confirmRetroactive = false) {
+  return run<FiscalDocumentDetail>(
+    (token) => emitFiscalDocument(token, { target, confirmRetroactive }),
+    "Emissao da NFC-e solicitada.",
+    "Nao foi possivel emitir a NFC-e."
+  );
 }
 
 export async function emitFiscalDocumentAction(orderId: string, confirmRetroactive = false, consumerDocument?: string | null) {

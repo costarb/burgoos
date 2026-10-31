@@ -7,6 +7,7 @@ import type {
   FiscalMissingProfiles,
   FiscalProfileAssignments,
   FiscalProfileView,
+  FiscalUnissuedSale,
   OperationState,
 } from "@rrfive/types";
 import { ReceiptText } from "lucide-react";
@@ -17,8 +18,9 @@ import { FiscalConfigurationTab, type FiscalConfigurationActions } from "./fisca
 import { FiscalDocumentsTab, type FiscalDocumentActions } from "./fiscal-documents-tab";
 import type { FiscalActionState } from "./fiscal-labels";
 import { FiscalProfilesTab, type FiscalProfileActions } from "./fiscal-profiles-tab";
+import { FiscalUnissuedTab, type FiscalUnissuedActions } from "./fiscal-unissued-tab";
 
-export type FiscalTab = "configuracao" | "perfis" | "notas" | "pendencias";
+export type FiscalTab = "configuracao" | "perfis" | "vendas" | "notas" | "pendencias";
 
 interface Props {
   initialTab: FiscalTab;
@@ -29,6 +31,9 @@ interface Props {
   assignments: FiscalProfileAssignments;
   pending: FiscalDocumentPage;
   documents: FiscalDocumentPage;
+  unissued: FiscalUnissuedSale[];
+  today: string;
+  unissuedActions: FiscalUnissuedActions;
   /** Test seam; by default read from the session (owners, admins and fiscal.configure). */
   canConfigure?: boolean;
   configurationActions: FiscalConfigurationActions;
@@ -39,6 +44,7 @@ interface Props {
 const TABS: Array<[FiscalTab, string]> = [
   ["configuracao", "Configuracao"],
   ["perfis", "Perfis fiscais"],
+  ["vendas", "Vendas sem NFC-e"],
   ["notas", "Notas"],
   ["pendencias", "Pendencias"],
 ];
@@ -86,7 +92,7 @@ export function FiscalClient(props: Props) {
   }
 
   const pendingCount = props.pending.total;
-  const visibleTabs = canConfigure ? TABS : TABS.filter(([key]) => key === "notas" || key === "pendencias");
+  const visibleTabs = canConfigure ? TABS : TABS.filter(([key]) => key === "vendas" || key === "notas" || key === "pendencias");
 
   return (
     <main className="min-h-screen bg-slate-50 px-6 py-8 text-slate-900">
@@ -127,6 +133,9 @@ export function FiscalClient(props: Props) {
               type="button"
             >
               {label}
+              {key === "vendas" && props.unissued.length > 0 ? (
+                <span className="ml-2 rounded-full bg-amber-500 px-2 py-0.5 text-xs text-white">{props.unissued.length}</span>
+              ) : null}
               {key === "pendencias" && pendingCount > 0 ? (
                 <span className="ml-2 rounded-full bg-red-600 px-2 py-0.5 text-xs text-white">{pendingCount}</span>
               ) : null}
@@ -145,6 +154,17 @@ export function FiscalClient(props: Props) {
             missing={props.missing}
             profiles={props.profiles}
             run={run}
+          />
+        ) : null}
+        {tab === "vendas" ? (
+          <FiscalUnissuedTab
+            actions={props.unissuedActions}
+            busy={busy}
+            emissionMode={configuration.emissionMode}
+            enabled={configuration.enabled}
+            initialSales={props.unissued}
+            run={run}
+            today={props.today}
           />
         ) : null}
         {tab === "notas" ? (

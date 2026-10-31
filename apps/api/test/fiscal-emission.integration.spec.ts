@@ -192,6 +192,27 @@ describe("NFC-e emission (US3)", () => {
     expect(h.documentsOf()[0]).toMatchObject({ serviceTabId: tabId, orderId: null, activeKey: `tab:${tabId}` });
   });
 
+  it("lists paid sales of the day without NFC-e for manual emission", async () => {
+    const h = createFiscalHarness();
+    h.prisma.table("fiscalConfiguration")[0].emissionMode = "MANUAL";
+    const paid = h.seedOrder();
+    h.seedOrder({}, { paid: false });
+    const issued = h.seedOrder();
+    await h.emissions.request({ tenantId: TENANT, target: { type: "ORDER", id: issued }, trigger: "MANUAL" });
+    const tabId = randomUUID();
+    h.prisma.table("serviceTab").push({ id: tabId, tenantId: TENANT, publicCode: "C5", status: "PAID", openedAt: new Date(), closedAt: new Date() } as never);
+    h.seedOrder({ serviceTabId: tabId, total: "12.00" });
+    const today = new Intl.DateTimeFormat("en-CA", { timeZone: "America/Sao_Paulo" }).format(new Date());
+
+    const sales = await h.documents.unissued(TENANT, today);
+
+    expect(sales.map((sale) => sale.target)).toEqual(expect.arrayContaining([{ type: "ORDER", id: paid }, { type: "TAB", id: tabId }]));
+    expect(sales).toHaveLength(2);
+    expect(sales.find((sale) => sale.target.type === "ORDER")).toMatchObject({ totalAmount: "28.00", paymentMethods: ["PIX"], lastAttempt: null });
+    expect(sales.find((sale) => sale.target.type === "TAB")).toMatchObject({ totalAmount: "12.00", publicCode: "C5" });
+    expect(await h.documents.unissued(OTHER_TENANT, today)).toEqual([]);
+  });
+
   it("blocks changes to orders with an active NFC-e", async () => {
     const h = createFiscalHarness();
     const orderId = h.seedOrder();

@@ -286,7 +286,7 @@ No Bling, a natureza de operação das NFC-e precisa estar como **Saída**, **Fa
 ### 10.2 Emissão
 
 - **Automática:** a nota é emitida quando a venda do dia é paga (balcão, comanda) ou importada. Vendas de dias anteriores nunca são emitidas sozinhas.
-- **Manual:** em **Pedidos → Manutenção**, use **Emitir NFC-e** no pedido. Para venda de dia anterior, o sistema pede confirmação, porque a SEFAZ pode rejeitar a emissão retroativa.
+- **Manual:** em **Fiscal → Vendas sem NFC-e**, escolha a data e use **Emitir NFC-e** na venda paga. Para venda de dia anterior, o sistema pede confirmação, porque a SEFAZ pode rejeitar a emissão retroativa.
 - **Comanda:** a comanda gera uma única NFC-e com os itens de todos os pedidos dela.
 - **CPF na nota:** informe o CPF/CNPJ no campo **CPF/CNPJ na nota** do balcão ou antes de bloquear a comanda para pagamento.
 - **DANFE e compartilhamento:** no pedido ou na aba **Notas**, use **DANFE** para imprimir, **XML** para baixar e **WhatsApp** para enviar a consulta da nota ao cliente.

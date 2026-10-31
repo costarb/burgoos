@@ -7,6 +7,7 @@ import type {
   FiscalDocumentPage,
   FiscalDocumentSummary,
   FiscalProfileView,
+  FiscalUnissuedSale,
 } from "@rrfive/types";
 import { FiscalClient, type FiscalTab } from "./fiscal-client";
 
@@ -23,13 +24,14 @@ describe("FiscalClient", () => {
   };
   const profileActions = { saveProfile: vi.fn(), deleteProfile: vi.fn(), reloadProfiles: vi.fn(), assignProfiles: vi.fn() };
   const documentActions = { loadDocuments: vi.fn(), reprocess: vi.fn(), cancel: vi.fn(), sync: vi.fn() };
+  const unissuedActions = { loadUnissued: vi.fn(), emitSale: vi.fn() };
 
   beforeEach(() => {
     (globalThis as typeof globalThis & { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
     container = document.createElement("div");
     document.body.appendChild(container);
     root = createRoot(container);
-    for (const group of [configurationActions, profileActions, documentActions]) Object.values(group).forEach((fn) => fn.mockReset());
+    for (const group of [configurationActions, profileActions, documentActions, unissuedActions]) Object.values(group).forEach((fn) => fn.mockReset());
   });
 
   afterEach(() => {
@@ -152,12 +154,33 @@ describe("FiscalClient", () => {
   it("hides configuration tabs from view-only users", async () => {
     await render({ configuration: configuration(), canConfigure: false, tab: "configuracao" });
     const tabs = [...container.querySelectorAll("[role='tab']")].map((element) => element.textContent);
-    expect(tabs).toEqual(["Notas", "Pendencias"]);
+    expect(tabs).toEqual(["Vendas sem NFC-e", "Notas", "Pendencias"]);
     expect(container.textContent).toContain("Nenhuma pendencia fiscal.");
+  });
+
+  it("emits the NFC-e of a paid sale without note in manual mode", async () => {
+    unissuedActions.emitSale.mockResolvedValue({ status: "success", message: "Emissao da NFC-e solicitada.", data: {} });
+    await render({
+      configuration: configuration({ connected: true, enabled: true }),
+      tab: "vendas",
+      unissued: [
+        { target: { type: "ORDER", id: "order-199" }, publicCode: "199", source: "COUNTER", totalAmount: "34.00", saleOccurredAt: new Date().toISOString(), paymentMethods: ["DEBIT_CARD"], lastAttempt: null },
+      ],
+    });
+
+    const row = text("fiscal-unissued-row");
+    expect(row).toContain("Pedido 199");
+    expect(row).toContain("Debito");
+    expect(container.textContent).toContain("Vendas sem NFC-e1");
+    await click(button("Emitir NFC-e"));
+
+    expect(unissuedActions.emitSale).toHaveBeenCalledWith({ type: "ORDER", id: "order-199" }, false);
+    expect(container.querySelector("[data-testid='fiscal-unissued-row']")).toBeNull();
   });
 
   async function render(options: {
     configuration: FiscalConfigurationView;
+    unissued?: FiscalUnissuedSale[];
     tab?: FiscalTab;
     pending?: FiscalDocumentPage;
     documents?: FiscalDocumentPage;
@@ -183,6 +206,9 @@ describe("FiscalClient", () => {
           pending={options.pending ?? page([])}
           profileActions={profileActions}
           profiles={[]}
+          today={new Intl.DateTimeFormat("en-CA", { timeZone: "America/Sao_Paulo" }).format(new Date())}
+          unissued={options.unissued ?? []}
+          unissuedActions={unissuedActions}
         />
       );
     });

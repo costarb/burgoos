@@ -15,6 +15,17 @@ import { FiscalDocumentStorageService } from "./fiscal-document-storage.service"
 
 const PENDING_STATUSES: FiscalDocumentStatus[] = ["REJECTED", "ERROR", "CANCEL_PENDING", "CANCEL_FAILED"];
 
+export interface UnissuedSale {
+  target: { type: "ORDER" | "TAB"; id: string };
+  publicCode: string | null;
+  source: string;
+  totalAmount: string;
+  saleOccurredAt: string;
+  paymentMethods: string[];
+  /** Status of the latest attempt (e.g. REJECTED), null when never attempted. */
+  lastAttempt: FiscalDocumentStatus | null;
+}
+
 export interface FiscalDocumentFilters {
   status?: FiscalDocumentStatus[];
   from?: Date;
@@ -133,6 +144,81 @@ export class FiscalDocumentsService {
       });
     }
     return result;
+  }
+
+  /**
+   * Paid sales of a business day without an active NFC-e (pending reason SAME_DAY_NOT_ISSUED):
+   * counter/imported orders outside tabs, and paid tabs. Used for manual emission.
+   */
+  async unissued(tenantId: string, day: string): Promise<UnissuedSale[]> {
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(day)) throw new NotFoundException("Data invalida");
+    const start = new Date(`${day}T00:00:00-03:00`);
+    const end = new Date(`${day}T23:59:59.999-03:00`);
+    const configuration = await this.prisma.fiscalConfiguration.findUnique({ where: { tenantId }, select: { eligibleSources: true } });
+    const sources = (configuration?.eligibleSources ?? ["COUNTER", "IMPORT", "API"]).filter((source) => ["COUNTER", "IMPORT", "API"].includes(source));
+    const noActiveDocument = { fiscalDocuments: { none: { activeKey: { not: null } } } };
+    const [orders, tabs] = await Promise.all([
+      this.prisma.order.findMany({
+        where: {
+          tenantId,
+          serviceTabId: null,
+          deletedAt: null,
+          status: { not: "CANCELLED" },
+          source: { in: sources },
+          paymentInstitution: { not: "IFOOD" },
+          createdAt: { gte: start, lte: end },
+          total: { gt: 0 },
+          ...noActiveDocument,
+        },
+        include: {
+          paymentAllocations: { include: { payment: { select: { method: true, cancelledAt: true, refundedAt: true } } } },
+          fiscalDocuments: { select: { status: true }, orderBy: { createdAt: "desc" }, take: 1 },
+        },
+        orderBy: { createdAt: "desc" },
+        take: 200,
+      }),
+      sources.includes("COUNTER")
+        ? this.prisma.serviceTab.findMany({
+            where: { tenantId, status: "PAID", closedAt: { gte: start, lte: end }, ...noActiveDocument },
+            include: {
+              orders: { where: { deletedAt: null, status: { not: "CANCELLED" } }, select: { total: true } },
+              fiscalDocuments: { select: { status: true }, orderBy: { createdAt: "desc" }, take: 1 },
+            },
+            orderBy: { closedAt: "desc" },
+            take: 200,
+          })
+        : Promise.resolve([]),
+    ]);
+    const result: UnissuedSale[] = [];
+    for (const order of orders) {
+      const payments = order.paymentAllocations.filter((allocation) => allocation.payment && !allocation.payment.cancelledAt && !allocation.payment.refundedAt);
+      const paid = payments.reduce((sum, allocation) => sum.add(allocation.amount), new Prisma.Decimal(0));
+      // Counter sales need the full balance paid; imports and API orders are paid on creation.
+      if (order.source === "COUNTER" && paid.lessThan(order.total)) continue;
+      result.push({
+        target: { type: "ORDER", id: order.id },
+        publicCode: order.publicCode,
+        source: order.source,
+        totalAmount: new Prisma.Decimal(order.total).toFixed(2),
+        saleOccurredAt: order.createdAt.toISOString(),
+        paymentMethods: [...new Set(payments.length ? payments.map((allocation) => allocation.payment!.method) : [order.paymentMethod])],
+        lastAttempt: order.fiscalDocuments[0]?.status ?? null,
+      });
+    }
+    for (const tab of tabs) {
+      const total = tab.orders.reduce((sum, order) => sum.add(order.total), new Prisma.Decimal(0));
+      if (total.lessThanOrEqualTo(0)) continue;
+      result.push({
+        target: { type: "TAB", id: tab.id },
+        publicCode: tab.publicCode,
+        source: "COUNTER",
+        totalAmount: total.toFixed(2),
+        saleOccurredAt: (tab.closedAt ?? tab.openedAt).toISOString(),
+        paymentMethods: [],
+        lastAttempt: tab.fiscalDocuments[0]?.status ?? null,
+      });
+    }
+    return result.sort((a, b) => b.saleOccurredAt.localeCompare(a.saleOccurredAt));
   }
 
   /** Fiscal status keyed by order id, for the orders list (ids of other tenants are ignored). */

@@ -67,6 +67,13 @@ export class FiscalDocumentsController {
     });
   }
 
+  /** Paid sales of the day (São Paulo) without NFC-e, for manual emission. */
+  @Get("unissued")
+  unissued(@CurrentUser() user: AuthUser, @Query("date") date?: string) {
+    const today = new Intl.DateTimeFormat("en-CA", { timeZone: "America/Sao_Paulo" }).format(new Date());
+    return this.documents.unissued(user.tenantId, date || today);
+  }
+
   @Get("order-status")
   @RequirePermission(FISCAL_PERMISSIONS.view, "orders.view")
   orderStatus(@CurrentUser() user: AuthUser, @Query("ids") ids?: string) {
