@@ -1,16 +1,22 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import type { FiscalDocumentDetail, OrderFiscalInfo } from "@rrfive/types";
 import { FileCode2, MessageCircle, Printer, ReceiptText } from "lucide-react";
 import { FISCAL_STATUS, PENDING_REASON, type FiscalActionState } from "./fiscal-labels";
 
 interface Props {
-  orderId: string;
   saleDate: string;
   info: OrderFiscalInfo;
-  emitAction: (orderId: string, confirmRetroactive?: boolean) => Promise<FiscalActionState<FiscalDocumentDetail>>;
+  emitAction: (target: OrderFiscalInfo["target"], confirmRetroactive?: boolean) => Promise<FiscalActionState<FiscalDocumentDetail>>;
 }
+
+const BLOCKED_REASON: Record<NonNullable<OrderFiscalInfo["blockedReason"]>, string> = {
+  NOT_PAID: "Aguardando pagamento",
+  TAB_NOT_PAID: "Comanda ainda nao paga",
+  DISABLED: "Emissao desativada",
+  CANCELLED: "Pedido cancelado",
+};
 
 const linkClass = "inline-flex items-center gap-1 rounded-md border border-slate-300 px-2 py-1 text-xs font-semibold text-slate-700 hover:bg-slate-50";
 
@@ -31,12 +37,14 @@ function isPreviousDay(saleDate: string): boolean {
 }
 
 /** Fiscal status of an order with the manual emission action and document links. */
-export function OrderFiscalCell({ orderId, saleDate, info: initialInfo, emitAction }: Props) {
+export function OrderFiscalCell({ saleDate, info: initialInfo, emitAction }: Props) {
   const [info, setInfo] = useState(initialInfo);
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<{ ok: boolean; text: string } | null>(null);
+
+  useEffect(() => setInfo(initialInfo), [initialInfo]);
   const status = FISCAL_STATUS[info.status];
-  const canEmit = info.status === "NOT_ISSUED" || info.status === "REJECTED";
+  const isTab = info.target.type === "TAB";
 
   async function emit() {
     const retroactive = isPreviousDay(saleDate);
@@ -44,10 +52,10 @@ export function OrderFiscalCell({ orderId, saleDate, info: initialInfo, emitActi
     setBusy(true);
     setMessage(null);
     try {
-      const result = await emitAction(orderId, retroactive);
+      const result = await emitAction(info.target, retroactive);
       setMessage({ ok: result.status === "success", text: result.message ?? "" });
       if (result.status === "success" && result.data) {
-        setInfo({ ...info, status: result.data.status, documentId: result.data.id, number: result.data.number, pendingReason: result.data.pendingReason });
+        setInfo({ ...info, status: result.data.status, documentId: result.data.id, number: result.data.number, pendingReason: result.data.pendingReason, canEmit: false, blockedReason: null });
       }
     } finally {
       setBusy(false);
@@ -76,10 +84,15 @@ export function OrderFiscalCell({ orderId, saleDate, info: initialInfo, emitActi
           ) : null}
         </>
       ) : null}
-      {canEmit ? (
+      {info.canEmit ? (
         <button className={`${linkClass} disabled:opacity-50`} disabled={busy} onClick={() => void emit()} type="button">
           {info.status === "REJECTED" ? "Emitir novamente" : "Emitir NFC-e"}
+          {isTab ? ` da comanda${info.targetCode ? ` ${info.targetCode}` : ""}` : ""}
         </button>
+      ) : info.blockedReason ? (
+        <span className="text-xs text-slate-500" data-testid="order-fiscal-blocked">
+          {BLOCKED_REASON[info.blockedReason]}
+        </span>
       ) : null}
       {message ? <span className={`text-xs ${message.ok ? "text-emerald-700" : "text-red-700"}`}>{message.text}</span> : null}
     </div>

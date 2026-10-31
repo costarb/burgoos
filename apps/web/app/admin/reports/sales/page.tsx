@@ -1,5 +1,7 @@
 import React from "react";
-import { getAdminToken, getOrderPlatforms, getSalesReport } from "../../../../lib/api";
+import type { OrderFiscalInfo } from "@rrfive/types";
+import { getAdminToken, getOrderPlatforms, getOrdersFiscalStatus, getSalesReport } from "../../../../lib/api";
+import { emitSaleFiscalDocumentAction } from "../../fiscal/actions";
 import { SalesReportClient } from "./sales-report-client";
 
 export const dynamic = "force-dynamic";
@@ -35,6 +37,11 @@ export default async function SalesReportPage({ searchParams }: SalesReportPageP
     ),
     getOrderPlatforms(),
   ]);
+  // Users without fiscal access simply do not see the NFC-e column content.
+  const fiscal = await getOrdersFiscalStatus(
+    token,
+    report.analytical.items.map((order) => order.orderId)
+  ).catch(() => ({}) as Record<string, OrderFiscalInfo>);
 
   return (
     <main className="min-h-screen bg-slate-50 px-6 py-8 text-slate-900">
@@ -56,6 +63,8 @@ export default async function SalesReportPage({ searchParams }: SalesReportPageP
         </div>
 
         <SalesReportClient
+          emitFiscalAction={emitSaleFiscalDocumentAction}
+          fiscal={fiscal}
           orderPlatforms={platformData.orderPlatforms}
           report={report}
           token={token}

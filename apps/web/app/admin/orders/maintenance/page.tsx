@@ -1,6 +1,6 @@
 import type { OrderFiscalInfo, OrderStatus } from "@rrfive/types";
 import { getOrderMaintenanceHistory, getOrderMaintenanceSearch, getOrdersFiscalStatus } from "../../../../lib/api";
-import { emitFiscalDocumentAction } from "../../fiscal/actions";
+import { emitSaleFiscalDocumentAction } from "../../fiscal/actions";
 import { OrderFiscalCell } from "../../fiscal/order-fiscal-cell";
 
 interface MaintenancePageProps {
@@ -82,7 +82,7 @@ export default async function OrderMaintenancePage({ searchParams = {} }: Mainte
             </div>
             {fiscal[order.id] ? (
               <div className="mt-3">
-                <OrderFiscalCell emitAction={emitFiscalDocumentAction} info={fiscal[order.id]} orderId={order.id} saleDate={order.createdAt ?? new Date().toISOString()} />
+                <OrderFiscalCell emitAction={emitSaleFiscalDocumentAction} info={fiscal[order.id]} saleDate={order.createdAt ?? new Date().toISOString()} />
               </div>
             ) : null}
             {order.deletionReason ? <p className="mt-3 rounded-md bg-red-50 p-2 text-sm text-red-700">Motivo da exclusao: {order.deletionReason}</p> : null}

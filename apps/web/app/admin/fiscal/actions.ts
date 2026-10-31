@@ -132,10 +132,3 @@ export async function emitSaleFiscalDocumentAction(target: { type: "ORDER" | "TA
   );
 }
 
-export async function emitFiscalDocumentAction(orderId: string, confirmRetroactive = false, consumerDocument?: string | null) {
-  return run<FiscalDocumentDetail>(
-    (token) => emitFiscalDocument(token, { target: { type: "ORDER", id: orderId }, confirmRetroactive, consumerDocument }),
-    "Emissao da NFC-e solicitada.",
-    "Nao foi possivel emitir a NFC-e."
-  );
-}

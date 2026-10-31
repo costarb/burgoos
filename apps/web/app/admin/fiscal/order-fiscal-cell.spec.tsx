@@ -30,11 +30,15 @@ describe("OrderFiscalCell", () => {
     accessKey: null,
     consultationUrl: null,
     pendingReason: null,
+    canEmit: true,
+    blockedReason: null,
+    target: { type: "ORDER", id: "order-1" },
+    targetCode: null,
     ...overrides,
   });
 
   async function render(value: OrderFiscalInfo, saleDate = new Date().toISOString()) {
-    await act(async () => root.render(<OrderFiscalCell emitAction={emitAction} info={value} orderId="order-1" saleDate={saleDate} />));
+    await act(async () => root.render(<OrderFiscalCell emitAction={emitAction} info={value} saleDate={saleDate} />));
   }
 
   it("emits a same-day sale and shows the new status", async () => {
@@ -47,7 +51,7 @@ describe("OrderFiscalCell", () => {
 
     await act(async () => (container.querySelector("button") as HTMLButtonElement).click());
 
-    expect(emitAction).toHaveBeenCalledWith("order-1", false);
+    expect(emitAction).toHaveBeenCalledWith({ type: "ORDER", id: "order-1" }, false);
     expect(container.textContent).toContain("NFC-e: Na fila");
     expect(container.textContent).toContain("Emissao da NFC-e solicitada.");
   });
@@ -63,12 +67,33 @@ describe("OrderFiscalCell", () => {
   });
 
   it("links DANFE and XML of an authorized note and hides the emit button", async () => {
-    await render(info({ status: "AUTHORIZED", documentId: "doc-9", number: 12 }));
+    await render(info({ status: "AUTHORIZED", documentId: "doc-9", number: 12, canEmit: false }));
 
     expect(container.textContent).toContain("NFC-e: Autorizada nº 12");
     expect(container.querySelector("a[href='/api/admin/fiscal/documents/doc-9/danfe']")).not.toBeNull();
     expect(container.querySelector("a[href='/api/admin/fiscal/documents/doc-9/xml']")).not.toBeNull();
     expect(container.querySelector("button")).toBeNull();
+  });
+
+  it("emits the whole tab when the order belongs to a paid tab", async () => {
+    emitAction.mockResolvedValue({ status: "success", message: "ok", data: { id: "doc-2", status: "PENDING", number: null, pendingReason: null } });
+    await render(info({ target: { type: "TAB", id: "tab-7" }, targetCode: "C07" }));
+
+    const button = container.querySelector("button") as HTMLButtonElement;
+    expect(button.textContent).toBe("Emitir NFC-e da comanda C07");
+    await act(async () => button.click());
+
+    expect(emitAction).toHaveBeenCalledWith({ type: "TAB", id: "tab-7" }, false);
+    expect(container.querySelector("button")).toBeNull();
+  });
+
+  it("hides the emit button and explains why while the sale is not paid", async () => {
+    await render(info({ canEmit: false, blockedReason: "NOT_PAID" }));
+    expect(container.querySelector("button")).toBeNull();
+    expect(container.querySelector("[data-testid='order-fiscal-blocked']")?.textContent).toBe("Aguardando pagamento");
+
+    await render(info({ canEmit: false, blockedReason: "TAB_NOT_PAID", target: { type: "TAB", id: "tab-7" } }));
+    expect(container.textContent).toContain("Comanda ainda nao paga");
   });
 
   it("shares the public SEFAZ consultation on WhatsApp", async () => {
@@ -79,6 +104,7 @@ describe("OrderFiscalCell", () => {
         number: 12,
         accessKey: "35261011222333000181650010000000041689756832",
         consultationUrl: "https://www.nfce.fazenda.sp.gov.br/consulta",
+        canEmit: false,
       })
     );
     const href = (container.querySelector("a[href^='https://wa.me/']") as HTMLAnchorElement).href;

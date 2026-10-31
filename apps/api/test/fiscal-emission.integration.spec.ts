@@ -213,6 +213,35 @@ describe("NFC-e emission (US3)", () => {
     expect(await h.documents.unissued(OTHER_TENANT, today)).toEqual([]);
   });
 
+  it("allows manual emission only for paid sales without NFC-e, pointing tab orders to the tab", async () => {
+    const h = createFiscalHarness();
+    h.prisma.table("fiscalConfiguration")[0].emissionMode = "MANUAL";
+    const unpaid = h.seedOrder({}, { paid: false });
+    const paid = h.seedOrder();
+    const tabId = randomUUID();
+    h.prisma.table("serviceTab").push({ id: tabId, tenantId: TENANT, publicCode: "C3", status: "OPEN", openedAt: new Date() } as never);
+    const inTab = h.seedOrder({ serviceTabId: tabId, total: "12.00" });
+    const status = async () => {
+      const orders = h.prisma.table("order").filter((order) => ([unpaid, paid, inTab] as string[]).includes(order.id as string)) as never[];
+      return h.documents.forOrders(TENANT, orders);
+    };
+
+    let info = await status();
+    expect(info.get(unpaid)).toMatchObject({ status: "NOT_ISSUED", canEmit: false, blockedReason: "NOT_PAID", target: { type: "ORDER", id: unpaid } });
+    expect(info.get(paid)).toMatchObject({ canEmit: true, blockedReason: null });
+    expect(info.get(inTab)).toMatchObject({ canEmit: false, blockedReason: "TAB_NOT_PAID", target: { type: "TAB", id: tabId }, targetCode: "C3" });
+
+    h.prisma.table("serviceTab").find((tab) => tab.id === tabId)!.status = "PAID";
+    h.pay({ serviceTabId: tabId }, "CASH", "12.00");
+    await h.emissions.request({ tenantId: TENANT, target: { type: "ORDER", id: paid }, trigger: "MANUAL" });
+    info = await status();
+    expect(info.get(inTab)).toMatchObject({ canEmit: true, target: { type: "TAB", id: tabId } });
+    expect(info.get(paid)).toMatchObject({ status: "PENDING", canEmit: false, blockedReason: null });
+
+    h.prisma.table("fiscalConfiguration")[0].enabled = false;
+    expect((await status()).get(inTab)).toMatchObject({ canEmit: false, blockedReason: "DISABLED" });
+  });
+
   it("blocks changes to orders with an active NFC-e", async () => {
     const h = createFiscalHarness();
     const orderId = h.seedOrder();

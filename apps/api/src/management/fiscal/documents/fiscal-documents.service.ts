@@ -116,31 +116,91 @@ export class FiscalDocumentsService {
   }
 
   /** Fiscal status for a set of orders (the order's own document or its tab's, latest first). */
+  /**
+   * Fiscal status per order plus whether the manual emission is allowed now: NFC-e not issued
+   * (or rejected), emission enabled and the sale paid. Orders of a tab point to the tab, which is
+   * issued as a whole once it is paid.
+   */
   async forOrders(tenantId: string, orders: Array<{ id: string; serviceTabId: string | null; source: string; total: Prisma.Decimal.Value }>) {
     const result = new Map<string, OrderFiscalInfo>();
     if (!orders.length) return result;
-    const documents = await this.prisma.fiscalDocument.findMany({
-      where: {
-        tenantId,
-        OR: [
-          { orderId: { in: orders.map((order) => order.id) } },
-          { serviceTabId: { in: orders.flatMap((order) => (order.serviceTabId ? [order.serviceTabId] : [])) } },
-        ],
-      },
-      orderBy: { createdAt: "desc" },
-    });
+    const orderIds = orders.map((order) => order.id);
+    const tabIds = [...new Set(orders.flatMap((order) => (order.serviceTabId ? [order.serviceTabId] : [])))];
+    const validPayment = { payment: { cancelledAt: null, refundedAt: null } };
+    const [documents, configuration, orderRows, tabRows] = await Promise.all([
+      this.prisma.fiscalDocument.findMany({
+        where: { tenantId, OR: [{ orderId: { in: orderIds } }, { serviceTabId: { in: tabIds } }] },
+        orderBy: { createdAt: "desc" },
+      }),
+      this.prisma.fiscalConfiguration.findUnique({ where: { tenantId }, select: { enabled: true, eligibleSources: true } }),
+      this.prisma.order.findMany({
+        where: { tenantId, id: { in: orderIds } },
+        select: {
+          id: true,
+          status: true,
+          deletedAt: true,
+          paymentInstitution: true,
+          paymentAllocations: { where: validPayment, select: { amount: true } },
+        },
+      }),
+      tabIds.length
+        ? this.prisma.serviceTab.findMany({
+            where: { tenantId, id: { in: tabIds } },
+            select: {
+              id: true,
+              status: true,
+              publicCode: true,
+              paymentAllocations: { where: validPayment, select: { amount: true } },
+              orders: {
+                where: { deletedAt: null, status: { not: "CANCELLED" } },
+                select: { total: true, paymentAllocations: { where: validPayment, select: { amount: true } } },
+              },
+            },
+          })
+        : Promise.resolve([]),
+    ]);
+    const sum = (values: Array<{ amount: Prisma.Decimal.Value }>) =>
+      values.reduce((total, value) => total.add(new Prisma.Decimal(value.amount)), new Prisma.Decimal(0));
+    const sources = configuration?.eligibleSources ?? ["COUNTER", "IMPORT", "API"];
+
     for (const order of orders) {
+      const row = orderRows.find((candidate) => candidate.id === order.id);
+      const tab = order.serviceTabId ? tabRows.find((candidate) => candidate.id === order.serviceTabId) : undefined;
       const document = documents.find((candidate) =>
         order.serviceTabId ? candidate.serviceTabId === order.serviceTabId : candidate.orderId === order.id
       );
-      const applicable = ["COUNTER", "IMPORT", "API"].includes(order.source) && new Prisma.Decimal(order.total).greaterThan(0);
+      const total = new Prisma.Decimal(order.total);
+      const applicable =
+        ["COUNTER", "IMPORT", "API"].includes(order.source) &&
+        sources.includes(order.source as never) &&
+        total.greaterThan(0) &&
+        row?.paymentInstitution !== "IFOOD";
+      const status = document ? document.status : applicable ? "NOT_ISSUED" : "NOT_APPLICABLE";
+
+      let blockedReason: OrderFiscalInfo["blockedReason"] = null;
+      if (status !== "NOT_ISSUED" && status !== "REJECTED") blockedReason = null;
+      else if (!configuration?.enabled) blockedReason = "DISABLED";
+      else if (row?.deletedAt || row?.status === "CANCELLED" || tab?.status === "CANCELLED") blockedReason = "CANCELLED";
+      else if (tab) {
+        const tabTotal = tab.orders.reduce((value, item) => value.add(new Prisma.Decimal(item.total)), new Prisma.Decimal(0));
+        const tabPaid = sum(tab.paymentAllocations).add(sum(tab.orders.flatMap((item) => item.paymentAllocations)));
+        if (!(tab.status === "PAID" || (tabTotal.greaterThan(0) && tabPaid.greaterThanOrEqualTo(tabTotal)))) blockedReason = "TAB_NOT_PAID";
+      } else if (order.source === "COUNTER" && sum(row?.paymentAllocations ?? []).lessThan(total)) {
+        blockedReason = "NOT_PAID";
+      }
+      const canEmit = (status === "NOT_ISSUED" || status === "REJECTED") && blockedReason === null;
+
       result.set(order.id, {
-        status: document ? document.status : applicable ? "NOT_ISSUED" : "NOT_APPLICABLE",
+        status,
         documentId: document?.id ?? null,
         number: document?.number ?? null,
         accessKey: document?.accessKey ?? null,
         consultationUrl: document?.status === "AUTHORIZED" ? document.consultationUrl : null,
         pendingReason: document ? this.pendingReason(document) : null,
+        canEmit,
+        blockedReason,
+        target: order.serviceTabId ? { type: "TAB", id: order.serviceTabId } : { type: "ORDER", id: order.id },
+        targetCode: tab?.publicCode ?? null,
       });
     }
     return result;

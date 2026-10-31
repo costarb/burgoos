@@ -56,6 +56,36 @@ describe("sales report client", () => {
     expect(html).toContain("Valores a receber");
     expect(html).toContain("A receber");
     expect(html).toContain("Alterar");
+    expect(html).not.toContain("order-fiscal-cell");
+  });
+
+  it("shows the NFC-e action next to Alterar only for paid sales without a note", () => {
+    const orderId = "22222222-2222-4222-8222-222222222222";
+    const fiscalInfo = {
+      status: "NOT_ISSUED" as const,
+      documentId: null,
+      number: null,
+      accessKey: null,
+      consultationUrl: null,
+      pendingReason: null,
+      target: { type: "TAB" as const, id: "tab-1" },
+      targetCode: "C12",
+    };
+    const render = (canEmit: boolean) =>
+      renderToStaticMarkup(
+        <SalesReportClient
+          emitFiscalAction={vi.fn()}
+          fiscal={{ [orderId]: { ...fiscalInfo, canEmit, blockedReason: canEmit ? null : "TAB_NOT_PAID" } }}
+          orderPlatforms={[]}
+          report={reportFixture}
+          token="token"
+        />
+      );
+
+    expect(render(true)).toContain("Emitir NFC-e da comanda C12");
+    const blocked = render(false);
+    expect(blocked).not.toContain("Emitir NFC-e");
+    expect(blocked).toContain("Comanda ainda nao paga");
   });
 });
 

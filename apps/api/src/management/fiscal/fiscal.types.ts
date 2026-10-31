@@ -216,6 +216,13 @@ export interface OrderFiscalInfo {
   accessKey: string | null;
   consultationUrl: string | null;
   pendingReason: FiscalPendingReason | null;
+  /** Manual emission allowed now: not issued (or rejected), emission enabled and the sale paid. */
+  canEmit: boolean;
+  /** Why the emission is not allowed yet (null when allowed or already issued). */
+  blockedReason: "NOT_PAID" | "TAB_NOT_PAID" | "DISABLED" | "CANCELLED" | null;
+  /** Fiscal unit of the order: itself, or its tab (issued as a whole). */
+  target: { type: FiscalTargetType; id: string };
+  targetCode: string | null;
 }
 
 export interface SalesAutoImportSettings {
