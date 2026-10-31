@@ -46,7 +46,10 @@ export class FiscalConfigurationService {
   }
 
   async get(tenantId: string): Promise<FiscalConfigurationView> {
-    const configuration = await this.current(tenantId);
+    const stored = await this.current(tenantId);
+    // Before the provider is saved, show the only available provider so a connection made from
+    // the screen is reflected immediately.
+    const configuration = { ...stored, provider: stored.provider ?? this.registry.defaultProvider() };
     const [issuer, address, readiness, connection, certificate] = await Promise.all([
       this.issuers.get(tenantId),
       this.issuers.address(tenantId),

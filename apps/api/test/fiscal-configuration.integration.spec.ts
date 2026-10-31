@@ -183,9 +183,18 @@ describe("fiscal configuration (US1/US2)", () => {
     });
   });
 
+  it("shows a connection made before the provider is saved", async () => {
+    prisma.table("fiscalProviderConnection").push({ id: "conn-b", tenantId: TENANT_B, provider: "BLING", status: "CONNECTED", settings: {} });
+
+    const view = await configuration.get(TENANT_B);
+
+    expect(view.connection).toMatchObject({ provider: "BLING", status: "CONNECTED" });
+    expect(view.readiness.items.find((item) => item.key === "CONNECTION")).toMatchObject({ ok: true });
+  });
+
   it("returns defaults for a tenant never configured", async () => {
     const view = await configuration.get(TENANT_B);
-    expect(view).toMatchObject({ enabled: false, provider: null, emissionMode: "MANUAL", environment: "HOMOLOGATION", eligibleSources: ["COUNTER", "IMPORT", "API"], updatedAt: null });
+    expect(view).toMatchObject({ enabled: false, provider: "BLING", emissionMode: "MANUAL", environment: "HOMOLOGATION", eligibleSources: ["COUNTER", "IMPORT", "API"], updatedAt: null });
     expect(view.missingAddressFields).toEqual(["street", "number", "neighborhood", "city", "state", "postalCode"]);
   });
 });

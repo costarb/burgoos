@@ -27,4 +27,9 @@ export class FiscalProviderRegistry {
   has(provider: FiscalProvider): boolean {
     return this.adapters.has(provider);
   }
+
+  /** The provider to show while the store has not chosen one: the only one available, if any. */
+  defaultProvider(): FiscalProvider | null {
+    return this.adapters.size === 1 ? [...this.adapters.keys()][0] : null;
+  }
 }

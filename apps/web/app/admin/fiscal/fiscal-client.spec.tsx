@@ -49,6 +49,7 @@ describe("FiscalClient", () => {
     expect(container.querySelector("input[aria-label='CNPJ']")).toBeNull();
     expect(text("fiscal-address")).toContain("Obrigatorio");
     expect(checkbox("Emissao de NFC-e ativa").disabled).toBe(true);
+    expect(text("bling-requirements")).toContain("Conta Bling da empresa com NFC-e habilitada");
   });
 
   it("starts the Bling authorization and redirects the browser", async () => {

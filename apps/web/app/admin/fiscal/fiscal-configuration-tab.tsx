@@ -150,6 +150,13 @@ export function FiscalConfigurationTab({ configuration, actions, busy, run, onCo
             {connected ? "Bling conectado" : configuration.connection?.status === "ERROR" ? "Erro na conexao" : "Nao conectado"}
           </span>
         </div>
+        {!connected ? (
+          <ul className="mt-3 list-disc space-y-1 pl-5 text-sm text-slate-600" data-testid="bling-requirements">
+            <li>Aplicativo Bling configurado pela plataforma (client id, client secret e URL de retorno cadastrada no app).</li>
+            <li>Conta Bling da empresa com NFC-e habilitada (certificado A1, CSC e serie cadastrados no Bling).</li>
+            <li>Ao clicar em Conectar, faca login no Bling com a conta da empresa e autorize o acesso.</li>
+          </ul>
+        ) : null}
         {configuration.connection?.lastErrorMessage ? (
           <p className="mt-2 text-sm text-red-700">{configuration.connection.lastErrorMessage}</p>
         ) : null}

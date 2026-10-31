@@ -112,6 +112,13 @@ export class BlingOAuthService implements FiscalTokenRefresher, OnModuleInit {
     try {
       const tokens = await this.requestToken({ grant_type: "authorization_code", code });
       await this.saveTokens(connection.id, tokens, { connectedAt: new Date(), status: "CONNECTED" });
+      // Connecting Bling also chooses it as the store provider when none was chosen yet.
+      const configuration = await this.prisma.fiscalConfiguration.findUnique({ where: { tenantId: connection.tenantId } });
+      if (!configuration) {
+        await this.prisma.fiscalConfiguration.create({ data: { tenantId: connection.tenantId, provider: "BLING" } });
+      } else if (!configuration.provider) {
+        await this.prisma.fiscalConfiguration.update({ where: { tenantId: connection.tenantId }, data: { provider: "BLING" } });
+      }
     } catch (error) {
       await this.prisma.fiscalProviderConnection.update({
         where: { id: connection.id },

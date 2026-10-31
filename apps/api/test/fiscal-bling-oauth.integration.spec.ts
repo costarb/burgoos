@@ -79,6 +79,7 @@ describe("Bling OAuth (US1)", () => {
     expect(String(connection.credentialCiphertext)).not.toContain("access-1");
     expect(secrets.decryptEnvelope(connection.credentialCiphertext as string)).toEqual({ version: 1, kind: "BLING_OAUTH", accessToken: "access-1", refreshToken: "refresh-1" });
     expect(prisma.table("accessAuditEvent")[0]).toMatchObject({ eventType: "FISCAL_CONNECTION_CHANGED", storeId: TENANT });
+    expect(prisma.table("fiscalConfiguration")[0]).toMatchObject({ tenantId: TENANT, provider: "BLING" });
   });
 
   it("rejects replayed, unknown and expired states", async () => {
