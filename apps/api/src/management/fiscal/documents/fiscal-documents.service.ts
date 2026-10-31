@@ -165,7 +165,8 @@ export class FiscalDocumentsService {
           deletedAt: null,
           status: { not: "CANCELLED" },
           source: { in: sources },
-          paymentInstitution: { not: "IFOOD" },
+          // Marketplace (iFood) sales are out of scope; NULL must be kept explicitly (SQL `<>` drops it).
+          OR: [{ paymentInstitution: null }, { paymentInstitution: { not: "IFOOD" } }],
           createdAt: { gte: start, lte: end },
           total: { gt: 0 },
           ...noActiveDocument,

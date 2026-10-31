@@ -182,7 +182,8 @@ export function createFiscalFakePrisma(seed: Partial<Record<string, Array<Record
         if ("in" in ops && !(ops.in as unknown[]).includes(value)) return false;
         if ("notIn" in ops && (ops.notIn as unknown[]).includes(value)) return false;
         if ("not" in ops) {
-          if (ops.not === null ? value === null || value === undefined : value === ops.not) return false;
+          // SQL semantics: `column <> value` never matches NULL rows.
+          if (ops.not === null ? value === null || value === undefined : value === null || value === undefined || value === ops.not) return false;
         }
         if ("contains" in ops && !String(value ?? "").toLowerCase().includes(String(ops.contains).toLowerCase())) return false;
         if ("has" in ops && !(Array.isArray(value) && value.includes(ops.has))) return false;
