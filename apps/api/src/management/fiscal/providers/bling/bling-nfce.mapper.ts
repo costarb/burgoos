@@ -102,8 +102,11 @@ export function toBlingNfce(draft: NfceDraft, settings: BlingSettings, now = new
   };
 }
 
+/** Text of each `<name>` element; SEFAZ messages may carry brackets ("[nItem:4]") or CDATA. */
 function tag(xml: string, name: string): string[] {
-  return [...xml.matchAll(new RegExp(`<${name}>(?:<!\\[CDATA\\[)?([^<\\]]*)(?:\\]\\]>)?</${name}>`, "g"))].map((match) => match[1]);
+  return [...xml.matchAll(new RegExp(`<${name}>(?:<!\\[CDATA\\[([\\s\\S]*?)\\]\\]>|([^<]*))</${name}>`, "g"))].map(
+    (match) => match[1] ?? match[2]
+  );
 }
 
 /** Result of POST /nfce/{id}/enviar: SEFAZ SOAP envelope (`retEnviNFe` with `protNFe`). */
@@ -112,9 +115,11 @@ export function parseSendResult(externalId: string, body: unknown): ProviderDocu
   if (typeof xml !== "string" || !xml.includes("retEnviNFe")) {
     throw new FiscalProviderError("INCOMPATIBLE_RESPONSE", "Resposta de envio do Bling inesperada", true);
   }
-  const statuses = tag(xml, "cStat");
-  const reasons = tag(xml, "xMotivo");
   const hasProtocol = xml.includes("<protNFe");
+  // The note result lives in protNFe; the outer cStat/xMotivo describe the batch ("104 Lote processado").
+  const protocolXml = hasProtocol ? xml.slice(xml.indexOf("<protNFe")) : xml;
+  const statuses = tag(protocolXml, "cStat");
+  const reasons = tag(protocolXml, "xMotivo");
   if (!hasProtocol) {
     // Batch received but not processed yet (e.g. 103/105): follow up through the sync job.
     return { status: "PROCESSING", externalId };

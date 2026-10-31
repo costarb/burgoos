@@ -390,14 +390,13 @@ export class FiscalDocumentsService {
     };
   }
 
-  /** A rejected/errored attempt stops being pending once a newer document exists for the sale. */
+  /** A rejected/errored attempt stops being pending once a newer attempt (of any status) exists for the sale. */
   private async withoutSuperseded(tenantId: string, documents: DocumentWithTarget[]) {
     const candidates = documents.filter((document) => document.status === "REJECTED" || document.status === "ERROR");
     if (!candidates.length) return documents;
     const newer = await this.prisma.fiscalDocument.findMany({
       where: {
         tenantId,
-        status: { notIn: ["REJECTED"] },
         OR: [
           { orderId: { in: candidates.flatMap((document) => (document.orderId ? [document.orderId] : [])) } },
           { serviceTabId: { in: candidates.flatMap((document) => (document.serviceTabId ? [document.serviceTabId] : [])) } },

@@ -85,6 +85,16 @@ describe("Bling NFC-e mapper", () => {
       message: "Rejeição: NFC-e ou NF-e com DANFE Simplificado Tipo 2 em operação não permitida",
     });
     expect(parseSendResult("1", JSON.parse(fixture("enviar-rejected-899.json")))).toMatchObject({ status: "REJECTED", code: "899" });
+    // SEFAZ reasons may point the item between brackets; the batch "Lote processado" must not win.
+    const bracketed = fixture("enviar-rejected-717.json")
+      .replace("<cStat>717</cStat>", "<cStat>386</cStat>")
+      .replace(/(<infProt>[\s\S]*?<xMotivo>)[^<]*(<\/xMotivo>)/, "$1Rejeição: CFOP não permitido para o CSOSN informado [nItem:4]$2");
+    expect(parseSendResult("1", JSON.parse(bracketed))).toEqual({
+      status: "REJECTED",
+      externalId: "1",
+      code: "386",
+      message: "Rejeição: CFOP não permitido para o CSOSN informado [nItem:4]",
+    });
     expect(() => parseSendResult("1", { data: {} })).toThrow(/inesperada/);
   });
 

@@ -147,6 +147,21 @@ describe("NFC-e emission (US3)", () => {
     expect((await h.documents.list(TENANT, { pendingOnly: true })).items).toEqual([]);
   });
 
+  it("lists only the latest rejected attempt of a sale as pending", async () => {
+    const h = createFiscalHarness();
+    h.fake.submitOutcomes = ["REJECT", "REJECT"];
+    const orderId = h.seedOrder();
+    await h.emissions.request({ tenantId: TENANT, target: { type: "ORDER", id: orderId }, trigger: "MANUAL" });
+    await h.runJobs();
+    h.documentsOf()[0].createdAt = new Date(Date.now() - 60_000);
+    await h.emissions.request({ tenantId: TENANT, target: { type: "ORDER", id: orderId }, trigger: "MANUAL" });
+    await h.runJobs();
+
+    const latest = h.documentsOf().find((document) => (document.createdAt as Date).getTime() > Date.now() - 30_000);
+    const pending = await h.documents.list(TENANT, { pendingOnly: true });
+    expect(pending.items.map((item) => item.id)).toEqual([latest?.id]);
+  });
+
   it("rejects locally when an item has no fiscal profile and does not retry automatically", async () => {
     const h = createFiscalHarness();
     h.prisma.table("category")[0].fiscalProfileId = null;
