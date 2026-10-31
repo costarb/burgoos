@@ -9,7 +9,7 @@ import { FiscalConfigurationController } from "./configuration/fiscal-configurat
 import { FiscalConfigurationService } from "./configuration/fiscal-configuration.service";
 import { FiscalIssuerService } from "./configuration/fiscal-issuer.service";
 import { FiscalReadinessService } from "./configuration/fiscal-readiness.service";
-import { IbgeMunicipalityClient } from "./configuration/ibge-municipality.client";
+import { IbgeMunicipalityClient } from "../../common/br/ibge-municipality.client";
 import { FiscalAuditService } from "./documents/fiscal-audit.service";
 import { FiscalCancellationService } from "./documents/fiscal-cancellation.service";
 import { FiscalDocumentStateService } from "./documents/fiscal-document-state.service";

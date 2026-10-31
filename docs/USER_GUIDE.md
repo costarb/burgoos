@@ -273,8 +273,8 @@ Acesse **Financeiro → Fiscal (NFC-e)**. A tela emite e acompanha a nota fiscal
 
 ### 10.1 Configuração inicial
 
-1. **Endereço:** complete o endereço da loja no cadastro da loja (logradouro, número, bairro, cidade, UF e CEP). A tela fiscal mostra o que falta.
-2. **Emitente:** informe razão social, CNPJ e inscrição estadual. O código IBGE do município é preenchido automaticamente pela cidade.
+1. **Dados da loja:** em **Cadastros → Dados da loja**, complete o endereço (logradouro, número, bairro, cidade, UF e CEP) e os dados fiscais (razão social, CNPJ e inscrição estadual). O código IBGE do município é preenchido automaticamente pela cidade. A tela fiscal mostra o que falta e tem o atalho **Editar dados da loja**.
+2. **Quem altera o quê:** o administrador da loja altera nome, telefone, endereço, redes sociais e dados fiscais da própria loja. Endereço do cardápio (slug), domínio e ativação da loja são alterados pela plataforma, que também pode editar todos os dados em **Plataforma → Lojas**.
 3. **Bling:** clique em **Conectar Bling** e autorize com a conta da empresa. Depois clique em **Configurar natureza e pagamentos**:
    - escolha a **natureza de operação** usada nas NFC-e;
    - confira o vínculo de cada forma de pagamento do sistema com uma forma do Bling (o sistema sugere pelo código fiscal).

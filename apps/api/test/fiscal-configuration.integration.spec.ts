@@ -5,11 +5,13 @@ import { AccessAuditService } from "../src/management/access/access-audit.servic
 import { FiscalConfigurationService } from "../src/management/fiscal/configuration/fiscal-configuration.service";
 import { FiscalIssuerService } from "../src/management/fiscal/configuration/fiscal-issuer.service";
 import { FiscalReadinessService } from "../src/management/fiscal/configuration/fiscal-readiness.service";
-import { IbgeMunicipalityClient } from "../src/management/fiscal/configuration/ibge-municipality.client";
+import { IbgeMunicipalityClient } from "../src/common/br/ibge-municipality.client";
 import { FiscalProfileService } from "../src/management/fiscal/profiles/fiscal-profile.service";
 import { FiscalProviderRegistry } from "../src/management/fiscal/providers/fiscal-provider.registry";
 import { FakeFiscalProviderAdapter } from "../src/management/fiscal/providers/testing/fake-fiscal-provider.adapter";
 import type { AuthUser } from "../src/platform/auth/auth.types";
+import { PlatformStoreService } from "../src/platform/stores/platform-store.service";
+import { StoreLegalProfileService } from "../src/platform/stores/store-legal-profile.service";
 import { createFiscalFakePrisma } from "./support/fiscal-fake-prisma";
 
 const TENANT_A = "11111111-1111-4111-8111-111111111111";
@@ -35,6 +37,8 @@ const ISSUER = { legalName: "Dogao LTDA", cnpj: "11.222.333/0001-81", stateRegis
 describe("fiscal configuration (US1/US2)", () => {
   let prisma: ReturnType<typeof createFiscalFakePrisma>;
   let issuers: FiscalIssuerService;
+  let stores: PlatformStoreService;
+  const saveStore = (tenantId: string, data: Record<string, unknown>) => stores.updateOwnStore(tenantId, data as never, user(tenantId).id);
   let profiles: FiscalProfileService;
   let configuration: FiscalConfigurationService;
   let registry: FiscalProviderRegistry;
@@ -44,8 +48,8 @@ describe("fiscal configuration (US1/US2)", () => {
   beforeEach(() => {
     prisma = createFiscalFakePrisma({
       tenant: [
-        { id: TENANT_A, name: "Dogao", config: { address: SP_ADDRESS } },
-        { id: TENANT_B, name: "Outra", config: {} },
+        { id: TENANT_A, name: "Dogao", slug: "dogao", active: true, config: { storeProfile: { address: SP_ADDRESS } } },
+        { id: TENANT_B, name: "Outra", slug: "outra", active: true, config: {} },
       ],
       category: [
         { id: "c0000000-0000-4000-8000-00000000000a", tenantId: TENANT_A, name: "Lanches" },
@@ -63,7 +67,8 @@ describe("fiscal configuration (US1/US2)", () => {
       return { ok: true, json: async () => [{ id: 3550308, nome: "São Paulo" }, { id: 3509502, nome: "Campinas" }] };
     });
     const audit = new AccessAuditService(prisma as never);
-    issuers = new FiscalIssuerService(prisma as never, ibge, audit);
+    issuers = new FiscalIssuerService(prisma as never);
+    stores = new PlatformStoreService(prisma as never, new StoreLegalProfileService(ibge));
     profiles = new FiscalProfileService(prisma as never, audit);
     registry = new FiscalProviderRegistry();
     fake = new FakeFiscalProviderAdapter();
@@ -72,28 +77,44 @@ describe("fiscal configuration (US1/US2)", () => {
     configuration = new FiscalConfigurationService(prisma as never, issuers, readiness, registry, audit);
   });
 
-  it("saves the issuer, reusing the store address and resolving the IBGE code", async () => {
-    const issuer = await issuers.update(user(TENANT_A), ISSUER);
+  it("keeps the fiscal identity in the store registration and reads the real store address", async () => {
+    const store = await saveStore(TENANT_A, ISSUER);
 
-    expect(issuer).toMatchObject({ cnpj: "11222333000181", stateRegistration: "110042490114", municipalityIbgeCode: "3550308", municipalityIbgeSource: "IBGE_API" });
+    expect(store.legal).toMatchObject({ legalName: "Dogao LTDA", cnpj: "11222333000181", stateRegistration: "110042490114", taxRegime: "SIMPLES_NACIONAL", municipalityIbgeCode: "3550308", municipalityIbgeSource: "IBGE_API" });
     expect(ibgeCalls[0]).toContain("/estados/SP/municipios");
+    expect(await issuers.get(TENANT_A)).toMatchObject({ cnpj: "11222333000181" });
     const snapshot = await issuers.snapshot(TENANT_A);
-    expect(snapshot?.address).toMatchObject({ city: "São Paulo", state: "SP", postalCode: "01305000", municipalityIbgeCode: "3550308" });
+    expect(snapshot?.address).toMatchObject({ street: "Rua Augusta", city: "São Paulo", state: "SP", postalCode: "01305000", municipalityIbgeCode: "3550308" });
     expect(snapshot?.tradeName).toBe("Dogao");
-    expect(prisma.table("accessAuditEvent")[0]).toMatchObject({ eventType: "FISCAL_CONFIGURATION_CHANGED", storeId: TENANT_A });
   });
 
   it("rejects invalid CNPJ, invalid SP state registration and stores without UF", async () => {
-    await expect(issuers.update(user(TENANT_A), { ...ISSUER, cnpj: "11222333000182" })).rejects.toBeInstanceOf(UnprocessableEntityException);
-    await expect(issuers.update(user(TENANT_A), { ...ISSUER, stateRegistration: "110042491114" })).rejects.toBeInstanceOf(UnprocessableEntityException);
-    await expect(issuers.update(user(TENANT_B), ISSUER)).rejects.toMatchObject({ response: { code: "ADDRESS_INCOMPLETE" } });
+    await expect(saveStore(TENANT_A, { ...ISSUER, cnpj: "11222333000182" })).rejects.toBeInstanceOf(UnprocessableEntityException);
+    await expect(saveStore(TENANT_A, { ...ISSUER, stateRegistration: "110042491114" })).rejects.toBeInstanceOf(UnprocessableEntityException);
+    await expect(saveStore(TENANT_B, ISSUER)).rejects.toMatchObject({ response: { code: "ADDRESS_INCOMPLETE" } });
+    expect(await issuers.get(TENANT_A)).toBeNull();
   });
 
-  it("asks for a manual IBGE code when the city is not found", async () => {
-    prisma.table("tenant")[0].config = { address: { ...SP_ADDRESS, city: "Cidade Inexistente" } };
-    await expect(issuers.update(user(TENANT_A), ISSUER)).rejects.toMatchObject({ response: { code: "IBGE_NOT_RESOLVED" } });
-    const manual = await issuers.update(user(TENANT_A), { ...ISSUER, municipalityIbgeCode: "3550308" });
-    expect(manual.municipalityIbgeSource).toBe("MANUAL");
+  it("accepts a manual IBGE code when the city is not found", async () => {
+    prisma.table("tenant")[0].config = { storeProfile: { address: { ...SP_ADDRESS, city: "Cidade Inexistente" } } };
+    expect((await saveStore(TENANT_A, ISSUER)).legal.municipalityIbgeCode).toBeNull();
+    expect((await configuration.get(TENANT_A)).readiness.items.find((item) => item.key === "ADDRESS")).toMatchObject({ ok: false, message: "Codigo IBGE do municipio nao informado" });
+
+    const manual = await saveStore(TENANT_A, { municipalityIbgeCode: "3550308" });
+    expect(manual.legal).toMatchObject({ municipalityIbgeCode: "3550308", municipalityIbgeSource: "MANUAL" });
+  });
+
+  it("re-resolves the IBGE code only when the city changes, and lets the admin edit only allowed fields", async () => {
+    await saveStore(TENANT_A, ISSUER);
+    ibgeCalls.length = 0;
+
+    await saveStore(TENANT_A, { address: { ...SP_ADDRESS, number: "200" } });
+    expect(ibgeCalls).toHaveLength(0);
+    const moved = await saveStore(TENANT_A, { address: { ...SP_ADDRESS, city: "Campinas" } });
+    expect(moved.legal.municipalityIbgeCode).toBe("3509502");
+
+    const renamed = await saveStore(TENANT_A, { name: "Dogao Centro", slug: "outro-slug", active: false, publicDomain: "x.test" });
+    expect(renamed).toMatchObject({ name: "Dogao Centro", slug: "dogao", active: true });
   });
 
   it("validates profiles, prevents duplicate names and deletion while in use", async () => {
@@ -135,7 +156,7 @@ describe("fiscal configuration (US1/US2)", () => {
     const payload = { enabled: true, provider: "BLING" as const, environment: "HOMOLOGATION" as const, series: 1, emissionMode: "AUTOMATIC" as const, defaultCancelReason: "Venda cancelada a pedido do cliente" };
     await expect(configuration.update(user(TENANT_A), payload)).rejects.toMatchObject({ response: { code: "NOT_READY" } });
 
-    await issuers.update(user(TENANT_A), ISSUER);
+    await saveStore(TENANT_A, ISSUER);
     const profile = await profiles.create(user(TENANT_A), PROFILE);
     await profiles.assign(user(TENANT_A), { categories: [{ id: "c0000000-0000-4000-8000-00000000000a", fiscalProfileId: profile.id }] });
     fake.settingsIssues = [{ key: "PAYMENT_MAP", message: "Mapeie PIX" }];

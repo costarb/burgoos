@@ -49,7 +49,7 @@ apps/api/src/management/fiscal/                   # NOVO
   fiscal-permissions.ts                           # chaves fiscal.view|configure|issue|cancel
   configuration/
     fiscal-configuration.controller.ts|service.ts # GET/PUT configuração, prontidão
-    fiscal-issuer.service.ts                      # emitente + endereço do Tenant.config + IBGE
+    fiscal-issuer.service.ts                      # leitura do emitente a partir do cadastro da loja (Tenant)
     ibge-municipality.client.ts
     fiscal-readiness.service.ts
     br-documents.ts                               # DV de CNPJ/CPF, IE por UF (SP completo; demais: formato)

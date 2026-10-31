@@ -1,7 +1,7 @@
 import { Inject, Injectable, NotFoundException } from "@nestjs/common";
 import { FiscalDocument, FiscalDocumentStatus, Prisma } from "@prisma/client";
 import { PrismaService } from "../../../platform/database/prisma.service";
-import { maskDocument } from "../configuration/br-documents";
+import { maskDocument } from "../../../common/br/br-documents";
 import type {
   FiscalDocumentDetail,
   FiscalDocumentPage,

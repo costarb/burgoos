@@ -2,7 +2,7 @@ import { ConflictException, Inject, Injectable, NotFoundException, Unprocessable
 import { FiscalDocument, Prisma } from "@prisma/client";
 import { BackgroundJobService } from "../../../common/background-jobs/background-job.service";
 import { PrismaService } from "../../../platform/database/prisma.service";
-import { normalizeConsumerDocument } from "../configuration/br-documents";
+import { normalizeConsumerDocument } from "../../../common/br/br-documents";
 import { FiscalConfigurationService } from "../configuration/fiscal-configuration.service";
 import { FiscalIssuerService } from "../configuration/fiscal-issuer.service";
 import { FiscalProfileResolver } from "../profiles/fiscal-profile-resolver";

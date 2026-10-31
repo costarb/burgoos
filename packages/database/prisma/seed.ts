@@ -248,6 +248,14 @@ async function main(): Promise<void> {
       sensitive: true,
     },
     {
+      key: "store.profile.manage",
+      area: "Configuracoes",
+      screen: "Dados da loja",
+      action: AccessPermissionAction.MANAGE,
+      description: "Ver e alterar os dados da loja: contato, endereco e dados fiscais",
+      sensitive: true,
+    },
+    {
       key: "fiscal.view",
       area: "Fiscal",
       screen: "NFC-e",
@@ -471,6 +479,7 @@ async function main(): Promise<void> {
       "integrations.sales.manage",
       "mcp.manage",
       "mcp.connect",
+      "store.profile.manage",
       "fiscal.view",
       "fiscal.configure",
       "fiscal.issue",

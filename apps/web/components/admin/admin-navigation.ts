@@ -240,6 +240,13 @@ export const adminNavigation: AdminNavigationGroup[] = [
         permissions: ["catalog.manage"],
       },
       {
+        href: "/admin/settings/store",
+        label: "Dados da loja",
+        icon: Store,
+        description: "Contato, endereco e dados fiscais",
+        permissions: ["store.profile.manage"],
+      },
+      {
         href: "/admin/settings",
         label: "Configuracoes",
         icon: Settings,

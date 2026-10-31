@@ -7,7 +7,6 @@ import { AccessAuditService } from "../../src/management/access/access-audit.ser
 import { FiscalConfigurationService } from "../../src/management/fiscal/configuration/fiscal-configuration.service";
 import { FiscalIssuerService } from "../../src/management/fiscal/configuration/fiscal-issuer.service";
 import { FiscalReadinessService } from "../../src/management/fiscal/configuration/fiscal-readiness.service";
-import { IbgeMunicipalityClient } from "../../src/management/fiscal/configuration/ibge-municipality.client";
 import { FiscalAuditService } from "../../src/management/fiscal/documents/fiscal-audit.service";
 import { FiscalCancellationService } from "../../src/management/fiscal/documents/fiscal-cancellation.service";
 import { FiscalDocumentStateService } from "../../src/management/fiscal/documents/fiscal-document-state.service";
@@ -54,13 +53,21 @@ export function createFiscalHarness(options: { capabilities?: FiscalProviderCapa
   const secrets = new IntegrationSecretService(new ConfigService({ INTEGRATION_SECRET_KEY: Buffer.alloc(32, 9).toString("base64") }));
   const prisma = createFiscalFakePrisma({
     tenant: [
-      { id: TENANT, name: "Dogao", config: { address: { street: "Rua Augusta", number: "100", neighborhood: "Consolacao", city: "Sao Paulo", state: "SP", postalCode: "01305000" } } },
+      {
+        id: TENANT,
+        name: "Dogao",
+        config: { storeProfile: { address: { street: "Rua Augusta", number: "100", neighborhood: "Consolacao", city: "Sao Paulo", state: "SP", postalCode: "01305000" } } },
+        legalName: "Dogao LTDA",
+        tradeName: null,
+        cnpj: "11222333000181",
+        stateRegistration: "110042490114",
+        taxRegime: "SIMPLES_NACIONAL",
+        municipalityIbgeCode: "3550308",
+        municipalityIbgeSource: "IBGE_API",
+      },
       { id: OTHER_TENANT, name: "Outra", config: {} },
     ],
     user: [{ id: OWNER_ID, tenantId: TENANT, role: "OWNER", status: "ACTIVE", name: "Dono" }],
-    fiscalIssuer: [
-      { tenantId: TENANT, legalName: "Dogao LTDA", tradeName: null, cnpj: "11222333000181", stateRegistration: "110042490114", taxRegime: "SIMPLES_NACIONAL", municipalityIbgeCode: "3550308", municipalityIbgeSource: "IBGE_API" },
-    ],
     fiscalConfiguration: [
       { tenantId: TENANT, enabled: true, provider: "BLING", environment: "HOMOLOGATION", series: 1, emissionMode: "AUTOMATIC", eligibleSources: ["COUNTER", "IMPORT", "API"], defaultCancelReason: "Venda cancelada a pedido do cliente", enabledAt: new Date() },
     ],
@@ -131,7 +138,7 @@ export function createFiscalHarness(options: { capabilities?: FiscalProviderCapa
   const notifier = new FiscalNotifierService(prisma as never, new NotificationsService(prisma as never));
   const states = new FiscalDocumentStateService(prisma as never, audit, documentStorage, registry, contexts);
   const cancellations = new FiscalCancellationService(prisma as never, registry, contexts, states, audit, notifier, jobs as never);
-  const issuers = new FiscalIssuerService(prisma as never, new IbgeMunicipalityClient(), accessAudit);
+  const issuers = new FiscalIssuerService(prisma as never);
   const profileService = new FiscalProfileService(prisma as never, accessAudit);
   const readiness = new FiscalReadinessService(prisma as never, issuers, profileService, registry);
   const configurations = new FiscalConfigurationService(prisma as never, issuers, readiness, registry, accessAudit);

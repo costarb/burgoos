@@ -7,7 +7,6 @@ import type {
   FiscalConfigurationView,
   FiscalDocumentDetail,
   FiscalDocumentPage,
-  FiscalIssuerPayload,
   FiscalMissingProfiles,
   FiscalProfileAssignmentsPayload,
   FiscalProfilePayload,
@@ -32,7 +31,6 @@ import {
   syncFiscalDocument,
   updateBlingSettings,
   updateFiscalConfiguration,
-  updateFiscalIssuer,
   updateFiscalProfile,
   type FiscalDocumentQuery,
 } from "../../../lib/api";
@@ -54,10 +52,6 @@ export async function saveFiscalConfigurationAction(payload: FiscalConfiguration
     payload.enabled ? "Configuracao fiscal salva." : "Configuracao salva (emissao desativada).",
     "Nao foi possivel salvar a configuracao fiscal."
   );
-}
-
-export async function saveFiscalIssuerAction(payload: FiscalIssuerPayload) {
-  return run<FiscalConfigurationView>((token) => updateFiscalIssuer(token, payload), "Dados do emitente salvos.", "Nao foi possivel salvar o emitente.");
 }
 
 export async function refreshFiscalConfigurationAction() {

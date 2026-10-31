@@ -19,7 +19,6 @@ import {
   reprocessFiscalDocumentAction,
   saveBlingSettingsAction,
   saveFiscalConfigurationAction,
-  saveFiscalIssuerAction,
   saveFiscalProfileAction,
   startBlingAuthorizationAction,
   syncFiscalDocumentAction,
@@ -55,7 +54,6 @@ export default async function FiscalPage({ searchParams }: { searchParams?: Reco
       configuration={configuration}
       configurationActions={{
         saveConfiguration: saveFiscalConfigurationAction,
-        saveIssuer: saveFiscalIssuerAction,
         startBlingAuthorization: startBlingAuthorizationAction,
         loadBlingOptions: loadBlingOptionsAction,
         saveBlingSettings: saveBlingSettingsAction,

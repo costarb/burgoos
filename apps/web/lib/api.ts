@@ -1,4 +1,5 @@
 import type {
+  StoreProfileInput,
   BlingConnectionOptions,
   BlingPlatformConfiguration,
   BlingPlatformConfigurationPayload,
@@ -9,7 +10,6 @@ import type {
   FiscalDocumentPage,
   FiscalDocumentStatus,
   FiscalEmissionPayload,
-  FiscalIssuerPayload,
   FiscalMissingProfiles,
   FiscalProfileAssignments,
   FiscalProfileAssignmentsPayload,
@@ -2734,16 +2734,6 @@ export async function updateFiscalConfiguration(
   });
 }
 
-export async function updateFiscalIssuer(
-  token: string,
-  payload: FiscalIssuerPayload
-): Promise<FiscalConfigurationView> {
-  return fetchAdmin<FiscalConfigurationView>(token, "/api/admin/fiscal/issuer", {
-    method: "PUT",
-    body: JSON.stringify(payload),
-  });
-}
-
 export async function startBlingAuthorization(
   token: string
 ): Promise<{ authorizationUrl: string; expiresAt: string }> {
@@ -2923,6 +2913,19 @@ export async function updateBlingPlatformConfiguration(
   payload: BlingPlatformConfigurationPayload
 ): Promise<BlingPlatformConfiguration> {
   return fetchPlatform(token, "/api/platform/integrations/bling/configuration", {
+    method: "PUT",
+    body: JSON.stringify(payload),
+  });
+}
+
+// Store registration seen by the store admin ("Dados da loja")
+
+export async function getStoreProfile(token: string): Promise<StoreDetail> {
+  return fetchAdmin<StoreDetail>(token, "/api/admin/store-profile");
+}
+
+export async function updateStoreProfile(token: string, payload: StoreProfileInput): Promise<StoreDetail> {
+  return fetchAdmin<StoreDetail>(token, "/api/admin/store-profile", {
     method: "PUT",
     body: JSON.stringify(payload),
   });

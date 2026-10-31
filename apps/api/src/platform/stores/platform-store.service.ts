@@ -8,11 +8,17 @@ import {
 import { Prisma, StoreOpenMode, UserRole } from "@prisma/client";
 import { hash } from "bcryptjs";
 import { PrismaService } from "../database/prisma.service";
-import { CreateStoreDto, UpdateStoreDto } from "./dto/store-onboarding.dto";
+import { CreateStoreDto, StoreAdminProfileDto, UpdateStoreDto } from "./dto/store-onboarding.dto";
 import { calculateLaunchReadiness, LaunchReadiness } from "./launch-readiness";
 import { assertValidStoreSlug } from "./store-slug";
 import { normalizeStoreDomain } from "./store-domain";
 import { logStoreAuditEvent } from "./store-audit";
+import {
+  readStoreAddress,
+  readStoreLegal,
+  StoreLegalFields,
+  StoreLegalProfileService,
+} from "./store-legal-profile.service";
 
 interface StoreSummary {
   id: string;
@@ -37,6 +43,7 @@ interface StoreResponsibleUser {
 
 interface StoreDetail extends StoreSummary {
   phone: string;
+  legal: StoreLegalFields;
   address?: StoreAddress | null;
   socialLinks?: StoreSocialLinks | null;
   operatingHours: Prisma.JsonValue;
@@ -77,7 +84,10 @@ interface StoreProfile {
 
 @Injectable()
 export class PlatformStoreService {
-  constructor(@Inject(PrismaService) private readonly prisma: PrismaService) {}
+  constructor(
+    @Inject(PrismaService) private readonly prisma: PrismaService,
+    @Inject(StoreLegalProfileService) private readonly legalProfile: StoreLegalProfileService
+  ) {}
 
   async list(filters: StoreFilters = {}): Promise<StoreSummary[]> {
     const stores = await this.prisma.tenant.findMany({
@@ -123,6 +133,10 @@ export class PlatformStoreService {
     await this.assertSlugAvailable(slug);
     if (publicDomain) await this.assertDomainAvailable(publicDomain);
     await this.assertOwnerEmailAvailable(dto.owner.email);
+    const config = this.mergeStoreProfile({}, dto.address, dto.socialLinks);
+    const legal = this.legalProfile.hasLegalInput(dto)
+      ? await this.legalProfile.resolve(readStoreLegal({}), dto, readStoreAddress(config), true)
+      : {};
 
     const store = await this.prisma.tenant.create({
       data: {
@@ -135,7 +149,8 @@ export class PlatformStoreService {
         openMode:
           dto.openMode ?? (dto.isOpen ? StoreOpenMode.FORCE_OPEN : StoreOpenMode.FORCE_CLOSED),
         operatingHours: (dto.operatingHours ?? {}) as Prisma.InputJsonValue,
-        config: this.mergeStoreProfile({}, dto.address, dto.socialLinks),
+        config,
+        ...legal,
         setupCompletedAt: new Date(),
         createdByPlatformUserId: platformUserId,
         defaultLayoutPresetKey: "classic",
@@ -172,6 +187,7 @@ export class PlatformStoreService {
         openMode: store.openMode,
         address: this.readStoreProfile(store.config).address,
         socialLinks: this.readStoreProfile(store.config).socialLinks,
+        legal: readStoreLegal(store),
         operatingHours: store.operatingHours,
         owner: {
           id: owner.id,
@@ -193,6 +209,31 @@ export class PlatformStoreService {
   }
 
   async update(storeId: string, dto: UpdateStoreDto, platformUserId: string): Promise<StoreDetail> {
+    return this.apply(storeId, dto, { platformUserId });
+  }
+
+  /** Store admin editing its own store: only identity, contact and fiscal data (FR-002a). */
+  async updateOwnStore(storeId: string, dto: StoreAdminProfileDto, userId: string): Promise<StoreDetail> {
+    const allowed: UpdateStoreDto = {
+      name: dto.name,
+      phone: dto.phone,
+      address: dto.address,
+      socialLinks: dto.socialLinks,
+      legalName: dto.legalName,
+      tradeName: dto.tradeName,
+      cnpj: dto.cnpj,
+      stateRegistration: dto.stateRegistration,
+      taxRegime: dto.taxRegime,
+      municipalityIbgeCode: dto.municipalityIbgeCode,
+    };
+    return this.apply(storeId, allowed, { userId });
+  }
+
+  private async apply(
+    storeId: string,
+    dto: UpdateStoreDto,
+    actor: { platformUserId?: string; userId?: string }
+  ): Promise<StoreDetail> {
     const data: Record<string, unknown> = {};
 
     if (dto.name !== undefined) {
@@ -216,17 +257,26 @@ export class PlatformStoreService {
       data.operatingHours = dto.operatingHours as Prisma.InputJsonValue;
     }
 
-    if (dto.address !== undefined || dto.socialLinks !== undefined) {
-      const current = await this.prisma.tenant.findUnique({
-        where: { id: storeId },
-        select: { config: true },
-      });
+    const addressChanged = dto.address !== undefined;
+    if (addressChanged || dto.socialLinks !== undefined || this.legalProfile.hasLegalInput(dto)) {
+      const current = await this.prisma.tenant.findUnique({ where: { id: storeId } });
 
       if (!current) {
         throw new NotFoundException("Loja nao encontrada");
       }
 
-      data.config = this.mergeStoreProfile(current.config, dto.address, dto.socialLinks);
+      const config =
+        addressChanged || dto.socialLinks !== undefined
+          ? this.mergeStoreProfile(current.config, dto.address, dto.socialLinks)
+          : current.config;
+      if (addressChanged || dto.socialLinks !== undefined) data.config = config;
+      if (addressChanged || this.legalProfile.hasLegalInput(dto)) {
+        const before = readStoreAddress(current.config);
+        const after = readStoreAddress(config);
+        // Only a different city/state requires a new IBGE code; other address edits keep it.
+        const municipalityChanged = before.city !== after.city || before.state !== after.state;
+        Object.assign(data, await this.legalProfile.resolve(readStoreLegal(current), dto, after, municipalityChanged));
+      }
     }
 
     if (dto.active !== undefined) {
@@ -255,10 +305,10 @@ export class PlatformStoreService {
     });
 
     logStoreAuditEvent({
-      action: "STORE_UPDATED",
+      action: actor.userId ? "STORE_PROFILE_UPDATED" : "STORE_UPDATED",
       tenantId: storeId,
-      platformUserId,
-      metadata: data,
+      ...actor,
+      metadata: { fields: Object.keys(data) },
     });
 
     return this.toDetail(store);
@@ -301,6 +351,7 @@ export class PlatformStoreService {
       operatingHours: store.operatingHours,
       address: profile.address,
       socialLinks: profile.socialLinks,
+      legal: readStoreLegal(store),
       owner: owner
         ? {
             id: owner.id,

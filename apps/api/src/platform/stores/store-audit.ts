@@ -3,6 +3,7 @@ import { Logger } from "@nestjs/common";
 export type StoreAuditAction =
   | "STORE_CREATED"
   | "STORE_UPDATED"
+  | "STORE_PROFILE_UPDATED"
   | "STORE_ACTIVATED"
   | "STORE_DEACTIVATED"
   | "BRANDING_DRAFT_SAVED"

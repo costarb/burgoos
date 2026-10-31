@@ -46,7 +46,12 @@ Perfis padrão no seed: dono/admin recebem todas; operador recebe `fiscal.view` 
 ### `PUT admin/fiscal/configuration` (`fiscal.configure`)
 `{ enabled, provider, environment, series, emissionMode, defaultCancelReason }`. `enabled=true` exige `readiness.ready`, senão 409 com os itens pendentes. Trocar `provider` com documentos em PROCESSING/CANCEL_PENDING → 409.
 
-### `PUT admin/fiscal/issuer` (`fiscal.configure`)
+### Dados da loja *(revisado em 2026-10-30; substitui `PUT admin/fiscal/issuer`)*
+- `GET/PUT admin/store-profile` (`store.profile.manage`; dono e admin sempre): o admin vê e altera a própria loja (`name`, `phone`, `address`, `socialLinks`, `legalName`, `tradeName`, `cnpj`, `stateRegistration`, `taxRegime`, `municipalityIbgeCode`). Slug, domínio e ativação não são aceitos.
+- `POST/PATCH platform/stores[/:id]` (plataforma): aceitam os mesmos campos fiscais, além dos já existentes.
+- Validações: CNPJ (DV, alfanumérico), IE para a UF do endereço, código IBGE resolvido pela cidade/UF quando não informado (422 `IBGE_NOT_RESOLVED` se não encontrar).
+
+### ~~`PUT admin/fiscal/issuer`~~ (removido)
 `{ legalName, tradeName?, cnpj, stateRegistration, taxRegime, municipalityIbgeCode? }`. Sem `municipalityIbgeCode`, ele é resolvido pelo IBGE; se não resolver → 422 `IBGE_NOT_RESOLVED` pedindo o código manual.
 
 ### Conexão Bling

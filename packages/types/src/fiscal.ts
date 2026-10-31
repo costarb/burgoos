@@ -63,16 +63,6 @@ export interface FiscalIssuerView {
   municipalityIbgeSource: "IBGE_API" | "MANUAL" | null;
 }
 
-export interface FiscalIssuerPayload {
-  legalName: string;
-  tradeName?: string | null;
-  cnpj: string;
-  stateRegistration: string;
-  taxRegime: FiscalTaxRegime;
-  /** Absent: resolved from the store city/state through the IBGE API. */
-  municipalityIbgeCode?: string | null;
-}
-
 export interface FiscalConnectionView {
   provider: FiscalProvider;
   status: FiscalConnectionStatus;

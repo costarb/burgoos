@@ -115,6 +115,14 @@ export const ACCESS_PERMISSIONS = [
     sensitive: true,
   },
   {
+    key: "store.profile.manage",
+    area: "Configuracoes",
+    screen: "Dados da loja",
+    action: "MANAGE",
+    description: "Ver e alterar os dados da loja: contato, endereco e dados fiscais",
+    sensitive: true,
+  },
+  {
     key: "fiscal.view",
     area: "Fiscal",
     screen: "NFC-e",

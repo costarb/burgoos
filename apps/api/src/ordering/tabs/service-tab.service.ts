@@ -11,7 +11,7 @@ import {
   ServiceTabStatus,
 } from "@prisma/client";
 import { randomInt } from "node:crypto";
-import { normalizeConsumerDocument } from "../../management/fiscal/configuration/br-documents";
+import { normalizeConsumerDocument } from "../../common/br/br-documents";
 import { AuthUser } from "../../platform/auth/auth.types";
 import { PrismaService } from "../../platform/database/prisma.service";
 import { OperationalEventService } from "../operational-events/operational-event.service";

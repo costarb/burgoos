@@ -15,7 +15,6 @@ describe("FiscalClient", () => {
   let root: Root;
   const configurationActions = {
     saveConfiguration: vi.fn(),
-    saveIssuer: vi.fn(),
     startBlingAuthorization: vi.fn(),
     loadBlingOptions: vi.fn(),
     saveBlingSettings: vi.fn(),
@@ -45,6 +44,9 @@ describe("FiscalClient", () => {
     expect(text("fiscal-readiness")).toContain("Faltam 2 item(ns) obrigatorio(s)");
     expect(text("fiscal-readiness")).toContain("Conecte a conta do provedor");
     expect(text("fiscal-address")).toContain("Rua Augusta");
+    expect(text("fiscal-issuer")).toContain("11222333000181");
+    expect(container.querySelector("a[href='/admin/settings/store']")?.textContent).toContain("Editar dados da loja");
+    expect(container.querySelector("input[aria-label='CNPJ']")).toBeNull();
     expect(text("fiscal-address")).toContain("Obrigatorio");
     expect(checkbox("Emissao de NFC-e ativa").disabled).toBe(true);
   });

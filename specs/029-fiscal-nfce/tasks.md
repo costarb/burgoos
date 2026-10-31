@@ -75,6 +75,14 @@
 - [X] T040 [US8] Impressão do DANFE (redirecionamento para a página de impressão do Bling) e compartilhamento da consulta da NFC-e por WhatsApp na célula fiscal do pedido; testes
 - [X] T041 [US8] `fiscal-xml-export.service.ts` + `GET admin/fiscal/exports/xml` (ZIP `autorizadas/`, `canceladas/`, `resumo.csv`, homologação separada; gerador de ZIP extraído para `common/zip`) + botão na aba Notas; testes
 
+## Phase 9b: Dados fiscais no cadastro da loja (revisão de 2026-10-30)
+
+- [X] T045 Migração `20261031120000_store_legal_profile`: campos fiscais em `tenants`, cópia dos dados de `fiscal_issuers` e remoção da tabela; mover `br-documents` e o cliente IBGE para `common/br`
+- [X] T046 Cadastro da loja na plataforma: campos fiscais no create/update com validação (CNPJ, IE x UF, IBGE) e no detalhe; testes
+- [X] T047 `admin/store-profile` (GET/PUT) com permissão `store.profile.manage`: admin vê/altera só a própria loja, sem slug/domínio/ativação; auditoria; testes
+- [X] T048 Fiscal lê o emitente da loja (`config.storeProfile.address` — corrige a leitura de `config.address`); remove `PUT admin/fiscal/issuer`; testes
+- [X] T049 Web: campos fiscais no cadastro de lojas da plataforma; tela "Dados da loja" para o admin; aba Configuração fiscal só exibe e aponta para "Dados da loja"; testes
+
 ## Phase 10: Polish
 
 - [X] T042 [P] Docs: `docs/USER_GUIDE.md` (seção Fiscal: configuração, Bling, cancelamento assistido, importação automática), `docs/DATA_DICTIONARY.md` regenerado, guia de monitoria com os eventos de log; emenda da constituição ("Fiscal/NF-e" promovido pela spec 029)

@@ -6,14 +6,12 @@ import type {
   BlingSettingsPayload,
   FiscalConfigurationPayload,
   FiscalConfigurationView,
-  FiscalIssuerPayload,
 } from "@rrfive/types";
-import { CheckCircle2, CircleAlert, Link2, PlugZap, Unplug } from "lucide-react";
+import { CheckCircle2, CircleAlert, Link2, PlugZap, Store, Unplug } from "lucide-react";
 import { READINESS_LABEL, type FiscalActionState } from "./fiscal-labels";
 
 export interface FiscalConfigurationActions {
   saveConfiguration: (payload: FiscalConfigurationPayload) => Promise<FiscalActionState<FiscalConfigurationView>>;
-  saveIssuer: (payload: FiscalIssuerPayload) => Promise<FiscalActionState<FiscalConfigurationView>>;
   startBlingAuthorization: () => Promise<FiscalActionState<{ authorizationUrl: string; expiresAt: string }>>;
   loadBlingOptions: () => Promise<FiscalActionState<BlingConnectionOptions>>;
   saveBlingSettings: (payload: BlingSettingsPayload) => Promise<FiscalActionState<BlingSettingsPayload>>;
@@ -44,18 +42,24 @@ const labelClass = "block text-sm font-medium text-slate-700";
 const cardClass = "rounded-md border border-slate-200 bg-white p-5 shadow-sm";
 
 export function FiscalConfigurationTab({ configuration, actions, busy, run, onConfiguration }: Props) {
-  const [issuer, setIssuer] = useState<FiscalIssuerPayload>(() => issuerForm(configuration));
   const [settings, setSettings] = useState<FiscalConfigurationPayload>(() => settingsForm(configuration));
   const [options, setOptions] = useState<BlingConnectionOptions | null>(null);
   const [bling, setBling] = useState<BlingSettingsPayload>({ naturezaOperacaoId: "", paymentMethodMap: {} });
 
   useEffect(() => {
-    setIssuer(issuerForm(configuration));
     setSettings(settingsForm(configuration));
   }, [configuration]);
 
   const connected = configuration.connection?.status === "CONNECTED";
   const blockingPending = configuration.readiness.items.filter((item) => item.blocking && !item.ok);
+  const ISSUER_FIELDS: Array<[string, string | null | undefined]> = [
+    ["Razao social", configuration.issuer?.legalName],
+    ["CNPJ", configuration.issuer?.cnpj],
+    ["Inscricao estadual", configuration.issuer?.stateRegistration],
+    ["Nome fantasia", configuration.issuer?.tradeName ?? "Nome da loja"],
+    ["Regime", configuration.issuer ? "Simples Nacional / MEI" : null],
+    ["Codigo IBGE", configuration.issuer?.municipalityIbgeCode],
+  ];
 
   function loadOptions() {
     return run(actions.loadBlingOptions, (data) => {
@@ -98,9 +102,24 @@ export function FiscalConfigurationTab({ configuration, actions, busy, run, onCo
         </ul>
       </section>
 
-      <section className={cardClass}>
-        <h2 className="text-lg font-semibold">Emitente</h2>
-        <p className="mt-1 text-sm text-slate-600">O endereco vem do cadastro da loja. Os dados abaixo completam a identificacao fiscal.</p>
+      <section className={cardClass} data-testid="fiscal-issuer">
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <h2 className="text-lg font-semibold">Emitente</h2>
+            <p className="mt-1 text-sm text-slate-600">Os dados fiscais e o endereco fazem parte do cadastro da loja.</p>
+          </div>
+          <a className="inline-flex items-center gap-2 rounded-md border border-slate-300 px-4 py-2 text-sm font-semibold hover:bg-slate-50" href="/admin/settings/store">
+            <Store aria-hidden className="h-4 w-4" /> Editar dados da loja
+          </a>
+        </div>
+        <dl className="mt-3 grid gap-2 rounded-md bg-slate-50 p-3 text-sm sm:grid-cols-3">
+          {ISSUER_FIELDS.map(([label, value]) => (
+            <div key={label}>
+              <dt className="text-xs uppercase text-slate-500">{label}</dt>
+              <dd className={value ? "" : "font-semibold text-red-700"}>{value || "Obrigatorio"}</dd>
+            </div>
+          ))}
+        </dl>
         <dl className="mt-3 grid gap-2 rounded-md bg-slate-50 p-3 text-sm sm:grid-cols-3" data-testid="fiscal-address">
           {ADDRESS_FIELDS.map(([field, label]) => (
             <div key={field}>
@@ -111,55 +130,9 @@ export function FiscalConfigurationTab({ configuration, actions, busy, run, onCo
             </div>
           ))}
         </dl>
-        {configuration.missingAddressFields.length ? (
-          <p className="mt-2 text-sm text-red-700">
-            Complete o endereco na tela de cadastro da loja antes de emitir.
-          </p>
+        {!configuration.issuer || configuration.missingAddressFields.length ? (
+          <p className="mt-2 text-sm text-red-700">Complete os dados da loja antes de emitir.</p>
         ) : null}
-        <form
-          className="mt-4 grid gap-4 sm:grid-cols-2"
-          onSubmit={(event) => {
-            event.preventDefault();
-            void run(() => actions.saveIssuer(issuer), onConfiguration);
-          }}
-        >
-          <label className={labelClass}>
-            Razao social
-            <input className={inputClass} onChange={(event) => setIssuer({ ...issuer, legalName: event.target.value })} required value={issuer.legalName} />
-          </label>
-          <label className={labelClass}>
-            Nome fantasia
-            <input className={inputClass} onChange={(event) => setIssuer({ ...issuer, tradeName: event.target.value })} value={issuer.tradeName ?? ""} />
-          </label>
-          <label className={labelClass}>
-            CNPJ
-            <input className={inputClass} onChange={(event) => setIssuer({ ...issuer, cnpj: event.target.value })} required value={issuer.cnpj} />
-          </label>
-          <label className={labelClass}>
-            Inscricao estadual
-            <input className={inputClass} onChange={(event) => setIssuer({ ...issuer, stateRegistration: event.target.value })} required value={issuer.stateRegistration} />
-          </label>
-          <label className={labelClass}>
-            Regime tributario
-            <select className={inputClass} disabled value="SIMPLES_NACIONAL">
-              <option value="SIMPLES_NACIONAL">Simples Nacional / MEI</option>
-            </select>
-          </label>
-          <label className={labelClass}>
-            Codigo IBGE do municipio
-            <input
-              className={inputClass}
-              onChange={(event) => setIssuer({ ...issuer, municipalityIbgeCode: event.target.value || null })}
-              placeholder="Automatico pela cidade"
-              value={issuer.municipalityIbgeCode ?? ""}
-            />
-          </label>
-          <div className="sm:col-span-2">
-            <button className="rounded-md bg-slate-900 px-4 py-2 text-sm font-semibold text-white disabled:opacity-60" disabled={busy} type="submit">
-              Salvar emitente
-            </button>
-          </div>
-        </form>
       </section>
 
       <section className={cardClass}>
@@ -318,17 +291,6 @@ export function FiscalConfigurationTab({ configuration, actions, busy, run, onCo
       </section>
     </div>
   );
-}
-
-function issuerForm(configuration: FiscalConfigurationView): FiscalIssuerPayload {
-  return {
-    legalName: configuration.issuer?.legalName ?? "",
-    tradeName: configuration.issuer?.tradeName ?? "",
-    cnpj: configuration.issuer?.cnpj ?? "",
-    stateRegistration: configuration.issuer?.stateRegistration ?? "",
-    taxRegime: "SIMPLES_NACIONAL",
-    municipalityIbgeCode: configuration.issuer?.municipalityIbgeSource === "MANUAL" ? configuration.issuer.municipalityIbgeCode : null,
-  };
 }
 
 function settingsForm(configuration: FiscalConfigurationView): FiscalConfigurationPayload {

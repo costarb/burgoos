@@ -731,6 +731,14 @@ model Tenant {
   createdByPlatformUserId     String?                           @map("created_by_platform_user_id") @db.Uuid
   defaultLayoutPresetKey      String                            @default("classic") @map("default_layout_preset_key")
   config                      Json                              @default("{}")
+  /// Fiscal identity of the store (spec 029): edited by the platform and by the store admin.
+  legalName                   String?                           @map("legal_name") @db.VarChar(120)
+  tradeName                   String?                           @map("trade_name") @db.VarChar(120)
+  cnpj                        String?                           @db.VarChar(14)
+  stateRegistration           String?                           @map("state_registration") @db.VarChar(20)
+  taxRegime                   FiscalTaxRegime?                  @map("tax_regime")
+  municipalityIbgeCode        String?                           @map("municipality_ibge_code") @db.Char(7)
+  municipalityIbgeSource      String?                           @map("municipality_ibge_source") @db.VarChar(10)
   createdAt                   DateTime                          @default(now()) @map("created_at")
   updatedAt                   DateTime                          @updatedAt @map("updated_at")
   createdByPlatformUser       PlatformUser?                     @relation(fields: [createdByPlatformUserId], references: [id], onDelete: SetNull)
@@ -809,7 +817,6 @@ model Tenant {
   mcpOAuthConnections         McpOAuthConnection[]
   mcpOAuthRequests            McpOAuthAuthorizationRequest[]
   fiscalConfiguration         FiscalConfiguration?
-  fiscalIssuer                FiscalIssuer?
   fiscalProviderConnections   FiscalProviderConnection[]
   fiscalCertificates          FiscalCertificate[]
   fiscalProfiles              FiscalProfile[]
@@ -2959,24 +2966,6 @@ model FiscalConfiguration {
   tenant              Tenant             @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 
   @@map("fiscal_configurations")
-}
-
-model FiscalIssuer {
-  id                     String          @id @default(uuid()) @db.Uuid
-  tenantId               String          @unique @map("tenant_id") @db.Uuid
-  legalName              String          @map("legal_name") @db.VarChar(120)
-  tradeName              String?         @map("trade_name") @db.VarChar(120)
-  cnpj                   String          @db.Char(14)
-  stateRegistration      String          @map("state_registration") @db.VarChar(20)
-  taxRegime              FiscalTaxRegime @default(SIMPLES_NACIONAL) @map("tax_regime")
-  municipalityIbgeCode   String?         @map("municipality_ibge_code") @db.Char(7)
-  municipalityIbgeSource String?         @map("municipality_ibge_source") @db.VarChar(10)
-  updatedByUserId        String?         @map("updated_by_user_id") @db.Uuid
-  createdAt              DateTime        @default(now()) @map("created_at")
-  updatedAt              DateTime        @updatedAt @map("updated_at")
-  tenant                 Tenant          @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-
-  @@map("fiscal_issuers")
 }
 
 model FiscalProviderConnection {

@@ -21,7 +21,10 @@ interface Relation {
 }
 
 const RELATIONS: Record<string, Record<string, Relation>> = {
-  tenant: {},
+  tenant: {
+    users: { table: "user", local: "id", foreign: "tenantId", kind: "many" },
+    visualConfigurations: { table: "storeVisualConfiguration", local: "id", foreign: "tenantId", kind: "many" },
+  },
   category: {
     fiscalProfile: { table: "fiscalProfile", local: "fiscalProfileId", foreign: "id", kind: "one" },
     products: { table: "product", local: "id", foreign: "categoryId", kind: "many" },

@@ -49,7 +49,23 @@ Extensões: `BackgroundJobType += FISCAL_EMISSION, FISCAL_SYNC, FISCAL_CANCELLAT
 | enabledAt | timestamp? | Marco da ativação (auditoria) |
 | updatedByUserId, createdAt, updatedAt | | |
 
-### `FiscalIssuer` (1 por empresa)
+### Dados fiscais da loja (`Tenant`) — *revisado em 2026-10-30*
+
+A identificação fiscal deixou de ser uma tabela própria (`fiscal_issuers`, removida na migração `20261031120000_store_legal_profile`) e passou a ser parte do cadastro da loja, editada pela plataforma e pelo admin da loja:
+
+| Campo | Tipo | Notas |
+|---|---|---|
+| legalName | varchar(120)? | Razão social |
+| tradeName | varchar(120)? | Nome fantasia (padrão: nome da loja) |
+| cnpj | varchar(14)? | Só dígitos/letras, DV validado (inclui CNPJ alfanumérico) |
+| stateRegistration | varchar(20)? | IE validada para a UF do endereço |
+| taxRegime | FiscalTaxRegime? | |
+| municipalityIbgeCode | char(7)? | Resolvido pela cidade/UF ou manual |
+| municipalityIbgeSource | varchar(10)? | `IBGE_API` \| `MANUAL` |
+
+O endereço continua em `Tenant.config.storeProfile.address`.
+
+### ~~`FiscalIssuer`~~ (substituído pelos campos acima)
 
 | Campo | Tipo | Notas |
 |---|---|---|
@@ -62,7 +78,7 @@ Extensões: `BackgroundJobType += FISCAL_EMISSION, FISCAL_SYNC, FISCAL_CANCELLAT
 | municipalityIbgeCode | char(7) | Resolvido (R6) ou manual |
 | municipalityIbgeSource | varchar(10) | `IBGE_API` \| `MANUAL` |
 
-O endereço não é duplicado: vem de `Tenant.config.address`. O snapshot completo do emitente fica em `FiscalDocument.issuerSnapshot`.
+O endereço não é duplicado: vem de `Tenant.config.storeProfile.address`. O snapshot completo do emitente fica em `FiscalDocument.issuerSnapshot`.
 
 ### `FiscalProviderConnection`
 

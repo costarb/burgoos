@@ -22,7 +22,7 @@ Decisões tomadas com o usuário:
 - **Complementos pagos viram itens próprios da nota** (ver FR-021 e a seção Pesquisa).
 - **Cancelamento**: cancelar ou excluir um pedido com nota autorizada dispara o cancelamento da NFC-e. Alterar itens de um pedido com nota autorizada é bloqueado. **O Bling não tem endpoint público para cancelar NFC-e**: para esse provedor, o cancelamento é assistido (o ERP sinaliza com urgência, o usuário cancela no painel do Bling e o ERP detecta o cancelamento pela consulta da nota).
 - **Certificado A1 armazenado no ERP** (arquivo e senha criptografados, com validade e alerta). É enviado ao provedor só se ele suportar; no Bling serve apenas para controle e alerta.
-- **Dados do emitente**: o endereço vem do cadastro da loja (fonte única); o módulo fiscal acrescenta CNPJ, IE, razão social, regime e código IBGE.
+- **Dados do emitente no cadastro da loja** *(revisado em 2026-10-30)*: razão social, nome fantasia, CNPJ, IE, regime tributário e código IBGE fazem parte do **cadastro da loja**, junto com o endereço. A plataforma inclui, altera e desativa lojas; o admin da loja vê e altera somente os dados da própria loja (nome, telefone, endereço, redes sociais e dados fiscais), sem mexer em slug, domínio ou ativação. A tela fiscal apenas exibe esses dados e o que falta para emitir.
 - **CPF/CNPJ na nota** opcional no balcão/comanda.
 - **DANFE**: link/PDF no pedido, impressão, link no WhatsApp e exportação em lote dos XMLs para o contador.
 - **XML e DANFE copiados para o storage do ERP**.
@@ -227,7 +227,8 @@ Como operador, eu quero imprimir o cupom ou enviá-lo por WhatsApp, e como gesto
 **Configuração e provedores**
 
 - **FR-001**: O sistema DEVE manter por empresa uma configuração fiscal: ativo/inativo, provedor, ambiente (homologação/produção), série, modo de emissão (automático/manual), origens elegíveis (nesta fase: balcão/comanda, importados, API) e justificativa padrão de cancelamento.
-- **FR-002**: Os dados do emitente DEVEM reutilizar o endereço do cadastro da loja como fonte única e acrescentar razão social, CNPJ, IE, regime tributário (somente Simples Nacional) e código IBGE do município (resolvido por cidade/UF, editável).
+- **FR-002**: Os dados do emitente DEVEM vir do **cadastro da loja** (fonte única): endereço, razão social, nome fantasia, CNPJ, IE, regime tributário (Simples Nacional/MEI) e código IBGE do município (resolvido por cidade/UF, editável).
+- **FR-002a**: Usuários de plataforma DEVEM poder incluir, alterar (todos os campos) e desativar lojas. O admin da loja (dono, admin ou permissão "Dados da loja") DEVE poder ver e alterar somente a própria loja: nome, telefone, endereço, redes sociais e dados fiscais; slug, domínio público e ativação ficam restritos à plataforma. Alterações são auditadas.
 - **FR-003**: A emissão DEVE passar por um contrato único de provedor fiscal (emitir, consultar, cancelar, obter XML/DANFE, validar conexão) com **capacidades declaradas** por provedor (por exemplo, `cancelamentoViaApi`, `usaCertificadoProprio`), e adapters registrados. O primeiro adapter é o Bling.
 - **FR-004**: As credenciais do app Bling (client id/secret) DEVEM ficar na configuração de plataforma; cada empresa conecta sua conta via OAuth2, com tokens criptografados e renovação automática.
 - **FR-005**: Configurar o fiscal DEVE exigir a nova permissão Fiscal com ações separadas: visualizar, configurar, emitir e cancelar.
@@ -287,7 +288,7 @@ Como operador, eu quero imprimir o cupom ou enviá-lo por WhatsApp, e como gesto
 ### Key Entities
 
 - **FiscalConfiguration** (por empresa): ativo, provedor, ambiente, série, modo de emissão, origens elegíveis, justificativa padrão de cancelamento.
-- **FiscalIssuer** (por empresa): razão social, CNPJ, IE, regime, código IBGE; o endereço vem do perfil da loja.
+- **Tenant (loja), campos novos**: razão social, nome fantasia, CNPJ, IE, regime tributário e código IBGE; o endereço continua no perfil da loja.
 - **FiscalProviderConnection**: conexão da empresa com um provedor (status, tokens criptografados, expiração, último erro); segue o padrão de `SalesIntegration`/`SalesIntegrationCredential`.
 - **FiscalCertificate**: arquivo e senha criptografados, mais metadados (titular, CNPJ, validade, fingerprint, status ativo/substituído).
 - **FiscalProfile**: perfil tributário (NCM, CFOP, CSOSN, origem, unidade, CEST); referenciado por `Category` (padrão), `Product` e `ProductComplement` (sobrescrita).

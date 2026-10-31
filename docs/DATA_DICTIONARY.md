@@ -5,7 +5,7 @@
 
 ## Escopo e leitura
 
-Este catálogo descreve o modelo PostgreSQL atual exposto pelo Prisma: **93 entidades** e **92 enums**. Ele documenta nomes lógicos e físicos, tipos, nulabilidade, chaves, defaults, relacionamentos, índices e finalidade de negócio. Não registra valores de credenciais, dados pessoais reais nem conteúdo de produção.
+Este catálogo descreve o modelo PostgreSQL atual exposto pelo Prisma: **92 entidades** e **92 enums**. Ele documenta nomes lógicos e físicos, tipos, nulabilidade, chaves, defaults, relacionamentos, índices e finalidade de negócio. Não registra valores de credenciais, dados pessoais reais nem conteúdo de produção.
 
 ### Convenções
 
@@ -31,7 +31,7 @@ Este catálogo descreve o modelo PostgreSQL atual exposto pelo Prisma: **93 enti
 | Delivery e marketplaces | `OrderPlatform`, `DeliveryIntegration`, `DeliveryIntegrationCredential`, `DeliveryPlatformEvent`, `PlatformOrderLink`, `PlatformSyncAttempt`, `PlatformCancellationReason`, `PlatformDispute`, `DeliveryIntegrationAudit` |
 | Jobs, exportações e notificações | `ExportJob`, `BackgroundJob`, `BackgroundJobAttempt`, `OperationalNotification` |
 | MCP e assistentes de IA | `StoreMcpConfiguration`, `StoreMcpToken`, `McpToolCall`, `McpOAuthClient`, `McpOAuthAuthorizationRequest`, `McpOAuthConnection`, `McpOAuthToken` |
-| Fiscal (NFC-e) | `FiscalConfiguration`, `FiscalIssuer`, `FiscalProviderConnection`, `PlatformFiscalProviderConfiguration`, `FiscalCertificate`, `FiscalProfile`, `FiscalDocument`, `FiscalDocumentEvent` |
+| Fiscal (NFC-e) | `FiscalConfiguration`, `FiscalProviderConnection`, `PlatformFiscalProviderConfiguration`, `FiscalCertificate`, `FiscalProfile`, `FiscalDocument`, `FiscalDocumentEvent` |
 
 ## Relações centrais
 
@@ -79,6 +79,13 @@ erDiagram
 | `createdByPlatformUserId` | `created_by_platform_user_id` | `String?` | não | — | Identificador associado a createdByPlatformUser. |
 | `defaultLayoutPresetKey` | `default_layout_preset_key` | `String` | sim | default: "classic" | Atributo defaultLayoutPresetKey da entidade. |
 | `config` | `config` | `Json` | sim | default: "{}" | Atributo config da entidade. |
+| `legalName` | `legal_name` | `String?` | não | — | Atributo legalName da entidade. |
+| `tradeName` | `trade_name` | `String?` | não | — | Atributo tradeName da entidade. |
+| `cnpj` | `cnpj` | `String?` | não | — | Atributo cnpj da entidade. |
+| `stateRegistration` | `state_registration` | `String?` | não | — | Atributo stateRegistration da entidade. |
+| `taxRegime` | `tax_regime` | `FiscalTaxRegime?` | não | — | Valor controlado pelo enum FiscalTaxRegime. |
+| `municipalityIbgeCode` | `municipality_ibge_code` | `String?` | não | — | Atributo municipalityIbgeCode da entidade. |
+| `municipalityIbgeSource` | `municipality_ibge_source` | `String?` | não | — | Atributo municipalityIbgeSource da entidade. |
 | `createdAt` | `created_at` | `DateTime` | sim | default: now() | Data e hora de criação. |
 | `updatedAt` | `updated_at` | `DateTime` | sim | — | Data e hora da última atualização. |
 | `createdByPlatformUser` | `—` | `PlatformUser?` | não | FK/relação | Referência relacionada a PlatformUser. |
@@ -157,7 +164,6 @@ erDiagram
 | `mcpOAuthConnections` | `—` | `McpOAuthConnection[]` | coleção | relação 1:N/N:N | Coleção relacionada de McpOAuthConnection. |
 | `mcpOAuthRequests` | `—` | `McpOAuthAuthorizationRequest[]` | coleção | relação 1:N/N:N | Coleção relacionada de McpOAuthAuthorizationRequest. |
 | `fiscalConfiguration` | `—` | `FiscalConfiguration?` | não | FK/relação | Referência relacionada a FiscalConfiguration. |
-| `fiscalIssuer` | `—` | `FiscalIssuer?` | não | FK/relação | Referência relacionada a FiscalIssuer. |
 | `fiscalProviderConnections` | `—` | `FiscalProviderConnection[]` | coleção | relação 1:N/N:N | Coleção relacionada de FiscalProviderConnection. |
 | `fiscalCertificates` | `—` | `FiscalCertificate[]` | coleção | relação 1:N/N:N | Coleção relacionada de FiscalCertificate. |
 | `fiscalProfiles` | `—` | `FiscalProfile[]` | coleção | relação 1:N/N:N | Coleção relacionada de FiscalProfile. |
@@ -2985,29 +2991,6 @@ erDiagram
 
 **Escopo de tenant**: próprio (`tenantId`).
 
-#### FiscalIssuer
-
-**Tabela física**: `fiscal_issuers`  
-**Finalidade**: Identificação fiscal do emitente (razão social, CNPJ, IE, regime, código IBGE); o endereço vem do perfil da loja.
-
-| Campo lógico | Coluna física | Tipo Prisma | Obrigatório | Regra/Chave | Descrição |
-|---|---|---|---|---|---|
-| `id` | `id` | `String` | sim | PK; default: uuid() | Identificador único do registro. |
-| `tenantId` | `tenant_id` | `String` | sim | UNIQUE | Tenant proprietário; obrigatório para isolamento dos dados. |
-| `legalName` | `legal_name` | `String` | sim | — | Atributo legalName da entidade. |
-| `tradeName` | `trade_name` | `String?` | não | — | Atributo tradeName da entidade. |
-| `cnpj` | `cnpj` | `String` | sim | — | Atributo cnpj da entidade. |
-| `stateRegistration` | `state_registration` | `String` | sim | — | Atributo stateRegistration da entidade. |
-| `taxRegime` | `tax_regime` | `FiscalTaxRegime` | sim | default: SIMPLES_NACIONAL | Valor controlado pelo enum FiscalTaxRegime. |
-| `municipalityIbgeCode` | `municipality_ibge_code` | `String?` | não | — | Atributo municipalityIbgeCode da entidade. |
-| `municipalityIbgeSource` | `municipality_ibge_source` | `String?` | não | — | Atributo municipalityIbgeSource da entidade. |
-| `updatedByUserId` | `updated_by_user_id` | `String?` | não | — | Identificador associado a updatedByUser. |
-| `createdAt` | `created_at` | `DateTime` | sim | default: now() | Data e hora de criação. |
-| `updatedAt` | `updated_at` | `DateTime` | sim | — | Data e hora da última atualização. |
-| `tenant` | `—` | `Tenant` | sim | FK/relação | Referência relacionada a Tenant. |
-
-**Escopo de tenant**: próprio (`tenantId`).
-
 #### FiscalProviderConnection
 
 **Tabela física**: `fiscal_provider_connections`  
@@ -3657,7 +3640,6 @@ Valores permitidos: `CREATED`, `SUBMITTED`, `AUTHORIZED`, `REJECTED`, `ERROR`, `
 | `Tenant` | `mcpOAuthConnections` | `McpOAuthConnection` | muitos | `—` |
 | `Tenant` | `mcpOAuthRequests` | `McpOAuthAuthorizationRequest` | muitos | `—` |
 | `Tenant` | `fiscalConfiguration` | `FiscalConfiguration` | zero ou um | `—` |
-| `Tenant` | `fiscalIssuer` | `FiscalIssuer` | zero ou um | `—` |
 | `Tenant` | `fiscalProviderConnections` | `FiscalProviderConnection` | muitos | `—` |
 | `Tenant` | `fiscalCertificates` | `FiscalCertificate` | muitos | `—` |
 | `Tenant` | `fiscalProfiles` | `FiscalProfile` | muitos | `—` |
@@ -4010,7 +3992,6 @@ Valores permitidos: `CREATED`, `SUBMITTED`, `AUTHORIZED`, `REJECTED`, `ERROR`, `
 | `McpOAuthConnection` | `toolCalls` | `McpToolCall` | muitos | `—` |
 | `McpOAuthToken` | `connection` | `McpOAuthConnection` | um | `@relation(fields: [connectionId], references: [id], onDelete: Cascade)` |
 | `FiscalConfiguration` | `tenant` | `Tenant` | um | `@relation(fields: [tenantId], references: [id], onDelete: Cascade)` |
-| `FiscalIssuer` | `tenant` | `Tenant` | um | `@relation(fields: [tenantId], references: [id], onDelete: Cascade)` |
 | `FiscalProviderConnection` | `tenant` | `Tenant` | um | `@relation(fields: [tenantId], references: [id], onDelete: Cascade)` |
 | `FiscalCertificate` | `tenant` | `Tenant` | um | `@relation(fields: [tenantId], references: [id], onDelete: Cascade)` |
 | `FiscalProfile` | `tenant` | `Tenant` | um | `@relation(fields: [tenantId], references: [id], onDelete: Cascade)` |
