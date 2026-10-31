@@ -130,3 +130,19 @@ Fonte primária dos valores: `PaymentAllocation` de pagamentos não cancelados/e
 - **Varredura** a cada minuto: alvos do dia, elegíveis, pagos, sem documento ativo, em empresas no modo automático. Ela garante a emissão mesmo se um hook falhar e loga `fiscal.trigger.recovered` quando encontra algo.
 
 "Pago" significa: soma das `PaymentAllocation` válidas maior ou igual ao total (pedido avulso ou comanda). Importados/API são considerados pagos na criação.
+
+## R9. CFOP/CSOSN por item no Bling (teste de 30/10/2026)
+
+**Pergunta**: dá para forçar o CFOP e o CSOSN de um item (ex.: refrigerante com ICMS-ST, 5405/500) pelo payload do `POST /nfce`?
+
+**Teste**: rascunho 000007 (id 27270143624, homologação, não enviado à SEFAZ) com dois itens:
+- controle: hot dog, NCM 2106.90.90, `cfop 5102`;
+- Coca-Cola, NCM 2202.10.00, CEST 03.007.00, `cfop 5405` e `impostos.icms.st 500`.
+
+**Resultado**: o `GET /nfce/{id}` devolveu os dois itens com `cfop 5102` e `impostos.icms.st 0`. O CEST foi gravado.
+- No OpenAPI, `itens[].cfop` e `itens[].impostos` são `readOnly`.
+
+**Decisão**:
+- O Bling sempre aplica CFOP e CSOSN pelas regras da natureza de operação, e o ERP não consegue sobrescrever.
+- Itens com ST devem ser tratados na própria natureza, com uma regra de exceção por NCM (ex.: 2202.10.00 → CFOP 5405, CSOSN 500).
+- O perfil fiscal do ERP continua como fonte de NCM, CEST e origem, e serve de referência do que a natureza deve aplicar.
