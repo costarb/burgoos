@@ -93,6 +93,8 @@ Item: `{ id, target: { type: "ORDER"|"TAB", id, publicCode }, status, trigger, n
 
 ### `POST admin/fiscal/documents/:id/cancel` (`fiscal.cancel`) `{ reason }` (15–255) → 202 `{ status: "CANCEL_PENDING", manualActionRequired: true, cancelDeadlineAt, providerPanelUrl }`.
 
+### `POST admin/fiscal/documents/:id/tax-divergence/review` (`fiscal.configure` ou `fiscal.issue`) → marca como revisada a divergência de CFOP/CSOSN da nota (após ajustar a natureza no provedor). 409 `NO_TAX_DIVERGENCE` quando a nota não tem divergência. Retorna o detalhe da nota.
+
 ### `POST admin/fiscal/documents/:id/sync` (`fiscal.cancel` ou `fiscal.issue`) → "Já cancelei no provedor": força uma sincronização imediata com o provedor (não altera o status sem confirmação do provedor).
 
 ### Exportação

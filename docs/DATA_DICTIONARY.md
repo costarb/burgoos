@@ -3145,6 +3145,9 @@ erDiagram
 | `cancelProtocol` | `cancel_protocol` | `String?` | não | — | Atributo cancelProtocol da entidade. |
 | `cancelXmlAssetKey` | `cancel_xml_asset_key` | `String?` | não | — | Atributo cancelXmlAssetKey da entidade. |
 | `attempts` | `attempts` | `Int` | sim | default: 0 | Atributo attempts da entidade. |
+| `taxDivergences` | `tax_divergences` | `Json?` | não | — | Atributo taxDivergences da entidade. |
+| `taxDivergenceAt` | `tax_divergence_at` | `DateTime?` | não | — | Data e hora de taxDivergence. |
+| `taxDivergenceReviewedAt` | `tax_divergence_reviewed_at` | `DateTime?` | não | — | Data e hora de taxDivergenceReviewed. |
 | `nextSyncAt` | `next_sync_at` | `DateTime?` | não | — | Data e hora de nextSync. |
 | `requestedByUserId` | `requested_by_user_id` | `String?` | não | — | Identificador associado a requestedByUser. |
 | `createdAt` | `created_at` | `DateTime` | sim | default: now() | Data e hora de criação. |
@@ -3558,7 +3561,7 @@ Valores permitidos: `PENDING`, `PROCESSING`, `AUTHORIZED`, `REJECTED`, `ERROR`, 
 
 ### FiscalDocumentEventType
 
-Valores permitidos: `CREATED`, `SUBMITTED`, `AUTHORIZED`, `REJECTED`, `ERROR`, `RETRY_SCHEDULED`, `SYNCED`, `CANCEL_REQUESTED`, `CANCEL_MANUAL_REQUIRED`, `CANCELLED`, `CANCEL_FAILED`, `DOCUMENTS_STORED`, `RETROACTIVE_CONFIRMED`.
+Valores permitidos: `CREATED`, `SUBMITTED`, `AUTHORIZED`, `REJECTED`, `ERROR`, `RETRY_SCHEDULED`, `SYNCED`, `CANCEL_REQUESTED`, `CANCEL_MANUAL_REQUIRED`, `CANCELLED`, `CANCEL_FAILED`, `DOCUMENTS_STORED`, `RETROACTIVE_CONFIRMED`, `TAX_DIVERGENCE`, `TAX_DIVERGENCE_REVIEWED`.
 
 ## Relacionamentos e integridade
 

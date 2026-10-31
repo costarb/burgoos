@@ -283,6 +283,8 @@ Acesse **Financeiro → Fiscal (NFC-e)**. A tela emite e acompanha a nota fiscal
 
 No Bling, a natureza de operação das NFC-e precisa estar como **Saída**, **Faturada**, **Consumidor final**, **Indicador de presença 1 - Operação presencial** e com o **regime tributário atual do CNPJ** (MEI ou Simples Nacional). Sem isso a SEFAZ rejeita a nota (códigos 717, 899 ou 180).
 
+**CFOP e CSOSN no Bling:** o Bling aplica o CFOP e o CSOSN de cada item pelas regras da natureza de operação, e não pelos valores do perfil fiscal. A aba **Perfis fiscais** mostra a regra padrão e as exceções por NCM que a natureza precisa ter (por exemplo, refrigerante com ST: NCM 2202.10.00 → CFOP 5405 / CSOSN 500). Uma natureza vale para a nota inteira; as diferenças entre produtos ficam nas exceções da mesma natureza.
+
 ### 10.2 Emissão
 
 - **Automática:** a nota é emitida quando a venda do dia é paga (balcão, comanda) ou importada. Vendas de dias anteriores nunca são emitidas sozinhas.
@@ -306,6 +308,8 @@ Faltando 10 minutos para o prazo, chega um lembrete. Se o prazo passar, a nota f
 ### 10.4 Pendências
 
 A aba **Pendências** reúne notas rejeitadas, com erro, sem perfil fiscal ou com cancelamento a fazer. Corrija a causa (por exemplo, atribua o perfil fiscal ao produto) e clique em **Reprocessar**.
+
+Também aparecem notas **autorizadas com CFOP/CSOSN diferente do perfil fiscal**: o sistema compara o XML autorizado com o perfil de cada item e mostra o que saiu e o que era esperado. A nota continua válida. Ajuste as regras da natureza no Bling e clique em **Marcar como revisada**.
 
 ### 10.5 XML para o contador
 

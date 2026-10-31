@@ -27,7 +27,8 @@ export type FiscalPendingReason =
   | "CANCEL_FAILED"
   | "MISSING_FISCAL_DATA"
   | "PROVIDER_DISCONNECTED"
-  | "SAME_DAY_NOT_ISSUED";
+  | "SAME_DAY_NOT_ISSUED"
+  | "TAX_DIVERGENCE";
 
 export type FiscalReadinessKey =
   | "ISSUER"
@@ -42,6 +43,8 @@ export type FiscalReadinessKey =
 export interface FiscalProviderCapabilitiesView {
   cancelViaApi: boolean;
   usesOwnCertificate: boolean;
+  /** CFOP/CSOSN of each item come from the provider rules (Bling operation nature), not from the ERP payload. */
+  itemTaxesFromProvider: boolean;
 }
 
 export interface FiscalAddress {
@@ -157,6 +160,14 @@ export interface FiscalMissingProfiles {
   complements: Array<{ id: string; name: string }>;
 }
 
+export interface FiscalTaxDivergence {
+  code: string;
+  description: string;
+  ncm: string;
+  expected: { cfop: string; csosn: string };
+  actual: { cfop: string | null; csosn: string | null };
+}
+
 export interface FiscalDocumentSummary {
   id: string;
   target: { type: FiscalTargetType; id: string; publicCode: string | null };
@@ -172,6 +183,9 @@ export interface FiscalDocumentSummary {
   rejectionCode: string | null;
   rejectionMessage: string | null;
   cancelDeadlineAt: string | null;
+  /** Items authorized with CFOP/CSOSN other than the fiscal profile; null when none or not checked. */
+  taxDivergences: FiscalTaxDivergence[] | null;
+  taxDivergenceReviewedAt: string | null;
   pendingReason: FiscalPendingReason | null;
   providerPanelUrl: string | null;
   createdAt: string;

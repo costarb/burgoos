@@ -30,7 +30,7 @@ const LOOKUP_WINDOW_MS = 30 * 60_000;
 @Injectable()
 export class BlingFiscalProviderAdapter implements FiscalProviderAdapter {
   readonly provider = "BLING" as const;
-  readonly capabilities = { cancelViaApi: false, usesOwnCertificate: false };
+  readonly capabilities = { cancelViaApi: false, usesOwnCertificate: false, itemTaxesFromProvider: true };
 
   constructor(@Inject(BlingClient) private readonly client: BlingClient) {}
 

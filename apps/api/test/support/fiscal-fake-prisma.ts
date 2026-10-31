@@ -93,6 +93,7 @@ const DEFAULTS: Record<string, () => Record<string, unknown>> = {
     danfeAssetKey: null, qrCodeUrl: null, consultationUrl: null, danfeUrl: null, cancelReason: null, cancelRequestedAt: null,
     cancelDeadlineAt: null, cancelReminderAt: null, cancelledAt: null, cancelProtocol: null, cancelXmlAssetKey: null,
     attempts: 0, nextSyncAt: null, requestedByUserId: null, orderId: null, serviceTabId: null,
+    taxDivergences: null, taxDivergenceAt: null, taxDivergenceReviewedAt: null,
   }),
   category: () => ({ fiscalProfileId: null, active: true }),
   product: () => ({ fiscalProfileId: null, active: true }),

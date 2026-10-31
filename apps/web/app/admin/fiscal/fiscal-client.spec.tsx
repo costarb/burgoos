@@ -23,7 +23,7 @@ describe("FiscalClient", () => {
     refreshConfiguration: vi.fn(),
   };
   const profileActions = { saveProfile: vi.fn(), deleteProfile: vi.fn(), reloadProfiles: vi.fn(), assignProfiles: vi.fn() };
-  const documentActions = { loadDocuments: vi.fn(), reprocess: vi.fn(), cancel: vi.fn(), sync: vi.fn() };
+  const documentActions = { loadDocuments: vi.fn(), reprocess: vi.fn(), cancel: vi.fn(), sync: vi.fn(), reviewTaxDivergence: vi.fn() };
   const unissuedActions = { loadUnissued: vi.fn(), emitSale: vi.fn() };
 
   beforeEach(() => {
@@ -110,6 +110,41 @@ describe("FiscalClient", () => {
     expect(container.textContent).toContain("Alimentacao preparada");
   });
 
+  it("explains that Bling applies CFOP/CSOSN from the operation nature, listing the NCM exceptions", async () => {
+    const profiles = [
+      profile(),
+      profile({ id: "profile-2", name: "Agua", ncm: "22011000" }),
+      profile({ id: "profile-3", name: "Revenda com ST", ncm: "22021000", cfop: "5405", csosn: "500" }),
+    ];
+    await render({ configuration: configuration({ connected: true, itemTaxesFromProvider: true }), tab: "perfis", profiles });
+
+    const notice = text("provider-tax-rules");
+    expect(notice).toContain("Regra padrao: CFOP 5102 / CSOSN 102");
+    expect(notice).toContain("Excecao por NCM 2202.10.00: CFOP 5405 / CSOSN 500");
+
+    await render({ configuration: configuration({ connected: true }), tab: "perfis", profiles });
+    expect(container.querySelector("[data-testid='provider-tax-rules']")).toBeNull();
+  });
+
+  it("lists notes authorized with other taxes as pending until marked as reviewed", async () => {
+    documentActions.reviewTaxDivergence.mockResolvedValue({ status: "success", message: "Divergencia marcada como revisada.", data: {} });
+    documentActions.loadDocuments.mockResolvedValue({ status: "success", message: "ok", data: page([]) });
+    const divergent = documentSummary({
+      pendingReason: "TAX_DIVERGENCE",
+      taxDivergences: [
+        { code: "prod-2", description: "Coca-Cola", ncm: "22021000", expected: { cfop: "5405", csosn: "500" }, actual: { cfop: "5102", csosn: "102" } },
+      ],
+    });
+    await render({ configuration: configuration({ connected: true, enabled: true }), pending: page([divergent]), tab: "pendencias" });
+
+    expect(text("fiscal-document-row")).toContain("revise a natureza no provedor");
+    expect(text("fiscal-tax-divergences")).toContain("Coca-Cola (NCM 22021000): saiu 5102/102, perfil 5405/500");
+
+    await click(button("Marcar como revisada"));
+    expect(documentActions.reviewTaxDivergence).toHaveBeenCalledWith("doc-1");
+    expect(documentActions.loadDocuments).toHaveBeenCalledWith({ pendingOnly: true, page: 1, pageSize: 25 });
+  });
+
   it("shows assisted cancellation pending with deadline and checks the provider on demand", async () => {
     documentActions.sync.mockResolvedValue({ status: "success", message: "Situacao consultada no provedor.", data: {} });
     documentActions.loadDocuments.mockResolvedValue({ status: "success", message: "ok", data: page([]) });
@@ -186,6 +221,7 @@ describe("FiscalClient", () => {
     documents?: FiscalDocumentPage;
     canConfigure?: boolean;
     blingResult?: "connected" | "error" | null;
+    profiles?: FiscalProfileView[];
   }) {
     await act(async () => {
       root.render(
@@ -205,7 +241,7 @@ describe("FiscalClient", () => {
           missing={{ products: [{ id: "prod-1", name: "Hot Dog", categoryName: "Lanches" }], complements: [] }}
           pending={options.pending ?? page([])}
           profileActions={profileActions}
-          profiles={[]}
+          profiles={options.profiles ?? []}
           today={new Intl.DateTimeFormat("en-CA", { timeZone: "America/Sao_Paulo" }).format(new Date())}
           unissued={options.unissued ?? []}
           unissuedActions={unissuedActions}
@@ -250,7 +286,7 @@ describe("FiscalClient", () => {
   }
 });
 
-function configuration(overrides: { connected?: boolean; enabled?: boolean } = {}): FiscalConfigurationView {
+function configuration(overrides: { connected?: boolean; enabled?: boolean; itemTaxesFromProvider?: boolean } = {}): FiscalConfigurationView {
   const connected = overrides.connected ?? false;
   return {
     enabled: overrides.enabled ?? false,
@@ -276,7 +312,7 @@ function configuration(overrides: { connected?: boolean; enabled?: boolean } = {
       status: connected ? "CONNECTED" : "DRAFT",
       connectedAt: null,
       lastErrorMessage: null,
-      capabilities: { cancelViaApi: false, usesOwnCertificate: false },
+      capabilities: { cancelViaApi: false, usesOwnCertificate: false, itemTaxesFromProvider: overrides.itemTaxesFromProvider ?? false },
     },
     certificate: null,
     readiness: {
@@ -309,7 +345,7 @@ function blingOptions(): BlingConnectionOptions {
   };
 }
 
-function profile(): FiscalProfileView {
+function profile(overrides: Partial<FiscalProfileView> = {}): FiscalProfileView {
   return {
     id: "profile-1",
     name: "Alimentacao preparada",
@@ -322,6 +358,7 @@ function profile(): FiscalProfileView {
     benefitCode: null,
     active: true,
     usage: { categories: 0, products: 0, complements: 0 },
+    ...overrides,
   };
 }
 
@@ -341,6 +378,8 @@ function documentSummary(overrides: Partial<FiscalDocumentSummary> = {}): Fiscal
     rejectionCode: null,
     rejectionMessage: null,
     cancelDeadlineAt: null,
+    taxDivergences: null,
+    taxDivergenceReviewedAt: null,
     pendingReason: null,
     providerPanelUrl: null,
     createdAt: new Date().toISOString(),

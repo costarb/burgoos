@@ -31,6 +31,7 @@ import {
   reprocessFiscalDocument,
   startBlingAuthorization,
   syncFiscalDocument,
+  reviewFiscalTaxDivergence,
   updateBlingSettings,
   updateFiscalConfiguration,
   updateFiscalProfile,
@@ -114,6 +115,10 @@ export async function reprocessFiscalDocumentAction(id: string, confirmRetroacti
 
 export async function cancelFiscalDocumentAction(id: string, reason: string) {
   return run<FiscalDocumentDetail>((token) => cancelFiscalDocument(token, id, reason), "Cancelamento solicitado.", "Nao foi possivel cancelar a nota.");
+}
+
+export async function reviewFiscalTaxDivergenceAction(id: string) {
+  return run<FiscalDocumentDetail>((token) => reviewFiscalTaxDivergence(token, id), "Divergencia marcada como revisada.", "Nao foi possivel marcar como revisada.");
 }
 
 export async function syncFiscalDocumentAction(id: string) {

@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from "react";
 import type { FiscalDocumentDetail, FiscalDocumentPage, FiscalDocumentStatus, FiscalDocumentSummary } from "@rrfive/types";
-import { Copy, Download, ExternalLink, FileCode2, Printer, RefreshCw, RotateCcw, XCircle } from "lucide-react";
+import { CheckCircle2, Copy, Download, ExternalLink, FileCode2, Printer, RefreshCw, RotateCcw, XCircle } from "lucide-react";
 import type { FiscalDocumentQuery } from "../../../lib/api";
 import {
   FISCAL_STATUS,
@@ -18,6 +18,7 @@ export interface FiscalDocumentActions {
   reprocess: (id: string, confirmRetroactive?: boolean) => Promise<FiscalActionState<FiscalDocumentDetail>>;
   cancel: (id: string, reason: string) => Promise<FiscalActionState<FiscalDocumentDetail>>;
   sync: (id: string) => Promise<FiscalActionState<FiscalDocumentDetail>>;
+  reviewTaxDivergence: (id: string) => Promise<FiscalActionState<FiscalDocumentDetail>>;
 }
 
 interface Props {
@@ -211,6 +212,16 @@ export function FiscalDocumentsTab({ mode, initialPage, environment = "PRODUCTIO
                           {document.rejectionCode}: {document.rejectionMessage}
                         </p>
                       ) : null}
+                      {document.taxDivergences?.length ? (
+                        <ul className="mt-1 space-y-0.5 text-xs text-amber-900" data-testid="fiscal-tax-divergences">
+                          {document.taxDivergences.map((item) => (
+                            <li key={item.code}>
+                              {item.description} (NCM {item.ncm}): saiu {item.actual.cfop ?? "-"}/{item.actual.csosn ?? "-"}, perfil {item.expected.cfop}/{item.expected.csosn}
+                            </li>
+                          ))}
+                          {document.taxDivergenceReviewedAt ? <li className="text-slate-500">Revisada em {formatDateTime(document.taxDivergenceReviewedAt)}</li> : null}
+                        </ul>
+                      ) : null}
                       {deadline ? <p className={`mt-1 text-xs font-semibold ${deadline === "prazo encerrado" ? "text-red-700" : "text-amber-800"}`}>{deadline}</p> : null}
                     </td>
                     <td className="space-x-1 space-y-1 text-right">
@@ -236,6 +247,11 @@ export function FiscalDocumentsTab({ mode, initialPage, environment = "PRODUCTIO
                           type="button"
                         >
                           <RotateCcw aria-hidden className="h-3.5 w-3.5" /> Reprocessar
+                        </button>
+                      ) : null}
+                      {document.pendingReason === "TAX_DIVERGENCE" ? (
+                        <button className={iconButton} disabled={busy} onClick={() => void run(() => actions.reviewTaxDivergence(document.id), afterAction)} type="button">
+                          <CheckCircle2 aria-hidden className="h-3.5 w-3.5" /> Marcar como revisada
                         </button>
                       ) : null}
                       {document.status === "AUTHORIZED" ? (

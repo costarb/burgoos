@@ -72,6 +72,7 @@ export class FiscalConfigurationService {
           capabilities: {
             cancelViaApi: adapter?.capabilities.cancelViaApi ?? false,
             usesOwnCertificate: adapter?.capabilities.usesOwnCertificate ?? false,
+            itemTaxesFromProvider: adapter?.capabilities.itemTaxesFromProvider ?? false,
           },
         }
       : null;

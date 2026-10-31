@@ -27,6 +27,7 @@ enum FiscalDocumentEventType {
   CREATED SUBMITTED AUTHORIZED REJECTED ERROR RETRY_SCHEDULED
   SYNCED CANCEL_REQUESTED CANCEL_MANUAL_REQUIRED CANCELLED CANCEL_FAILED
   DOCUMENTS_STORED RETROACTIVE_CONFIRMED
+  TAX_DIVERGENCE TAX_DIVERGENCE_REVIEWED
 }
 ```
 
@@ -160,6 +161,8 @@ Referências novas (FK opcional, `onDelete: Restrict`):
 | cancelRequestedAt, cancelDeadlineAt, cancelledAt | timestamp? | |
 | cancelProtocol, cancelXmlAssetKey | varchar? | |
 | attempts | int | |
+| taxDivergences | jsonb? | Itens autorizados com CFOP/CSOSN diferente do perfil fiscal (`code`, `description`, `ncm`, `expected`, `actual`) |
+| taxDivergenceAt, taxDivergenceReviewedAt | timestamp? | Detecção da divergência no XML autorizado e revisão pelo operador; sem revisão, a nota fica em Pendências (`TAX_DIVERGENCE`) |
 | nextSyncAt | timestamp? | Agenda da sincronização |
 | requestedByUserId | uuid? | null = automático |
 | createdAt, updatedAt | | |

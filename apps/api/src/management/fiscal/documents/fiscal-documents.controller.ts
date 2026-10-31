@@ -148,6 +148,14 @@ export class FiscalDocumentsController {
     return this.documents.detail(user.tenantId, id);
   }
 
+  /** The operator reviewed the provider tax rules for a note authorized with other CFOP/CSOSN. */
+  @Post("documents/:id/tax-divergence/review")
+  @HttpCode(200)
+  @RequirePermission(FISCAL_PERMISSIONS.configure, FISCAL_PERMISSIONS.issue)
+  reviewTaxDivergence(@CurrentUser() user: AuthUser, @Param("id", ParseUUIDPipe) id: string) {
+    return this.documents.reviewTaxDivergence(user.tenantId, id, user.id);
+  }
+
   /** "Ja cancelei no provedor": checks the provider now instead of waiting for the next sync. */
   @Post("documents/:id/sync")
   @HttpCode(200)

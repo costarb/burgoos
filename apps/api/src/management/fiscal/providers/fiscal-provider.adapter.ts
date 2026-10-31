@@ -5,6 +5,11 @@ export interface FiscalProviderCapabilities {
   cancelViaApi: boolean;
   /** Provider signs with the A1 certificate stored in the ERP (instead of its own account certificate). */
   usesOwnCertificate: boolean;
+  /**
+   * CFOP/CSOSN of each item are applied by rules configured at the provider (e.g. Bling operation nature)
+   * and the values sent by the ERP are ignored. The ERP then checks the authorized XML for divergences.
+   */
+  itemTaxesFromProvider: boolean;
 }
 
 export interface IssuerSnapshot {

@@ -714,6 +714,8 @@ enum FiscalDocumentEventType {
   CANCEL_FAILED
   DOCUMENTS_STORED
   RETROACTIVE_CONFIRMED
+  TAX_DIVERGENCE
+  TAX_DIVERGENCE_REVIEWED
 }
 
 model Tenant {
@@ -3052,51 +3054,55 @@ model FiscalProfile {
 }
 
 model FiscalDocument {
-  id                String                @id @default(uuid()) @db.Uuid
-  tenantId          String                @map("tenant_id") @db.Uuid
-  orderId           String?               @map("order_id") @db.Uuid
-  serviceTabId      String?               @map("service_tab_id") @db.Uuid
+  id                      String                @id @default(uuid()) @db.Uuid
+  tenantId                String                @map("tenant_id") @db.Uuid
+  orderId                 String?               @map("order_id") @db.Uuid
+  serviceTabId            String?               @map("service_tab_id") @db.Uuid
   /// "order:<id>" / "tab:<id>" while the sale holds this document; null when REJECTED or CANCELLED.
-  activeKey         String?               @unique @map("active_key") @db.VarChar(60)
-  provider          FiscalProvider
-  environment       FiscalEnvironment
-  status            FiscalDocumentStatus  @default(PENDING)
-  trigger           String                @db.VarChar(12)
-  externalId        String?               @map("external_id") @db.VarChar(80)
-  number            Int?
-  series            Int?
-  accessKey         String?               @unique @map("access_key") @db.Char(44)
-  protocol          String?               @db.VarChar(40)
-  issuedAt          DateTime?             @map("issued_at")
-  authorizedAt      DateTime?             @map("authorized_at")
-  saleOccurredAt    DateTime              @map("sale_occurred_at")
-  totalAmount       Decimal               @map("total_amount") @db.Decimal(12, 2)
-  consumerDocument  String?               @map("consumer_document") @db.VarChar(14)
-  issuerSnapshot    Json                  @map("issuer_snapshot")
-  payloadSnapshot   Json                  @map("payload_snapshot")
-  rejectionCode     String?               @map("rejection_code") @db.VarChar(40)
-  rejectionMessage  String?               @map("rejection_message") @db.VarChar(500)
-  xmlAssetKey       String?               @map("xml_asset_key") @db.VarChar(255)
-  danfeAssetKey     String?               @map("danfe_asset_key") @db.VarChar(255)
-  qrCodeUrl         String?               @map("qr_code_url") @db.VarChar(1000)
-  consultationUrl   String?               @map("consultation_url") @db.VarChar(1000)
-  danfeUrl          String?               @map("danfe_url") @db.VarChar(1000)
-  cancelReason      String?               @map("cancel_reason") @db.VarChar(255)
-  cancelRequestedAt DateTime?             @map("cancel_requested_at")
-  cancelDeadlineAt  DateTime?             @map("cancel_deadline_at")
-  cancelReminderAt  DateTime?             @map("cancel_reminder_at")
-  cancelledAt       DateTime?             @map("cancelled_at")
-  cancelProtocol    String?               @map("cancel_protocol") @db.VarChar(40)
-  cancelXmlAssetKey String?               @map("cancel_xml_asset_key") @db.VarChar(255)
-  attempts          Int                   @default(0)
-  nextSyncAt        DateTime?             @map("next_sync_at")
-  requestedByUserId String?               @map("requested_by_user_id") @db.Uuid
-  createdAt         DateTime              @default(now()) @map("created_at")
-  updatedAt         DateTime              @updatedAt @map("updated_at")
-  tenant            Tenant                @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  order             Order?                @relation(fields: [orderId], references: [id], onDelete: Restrict)
-  serviceTab        ServiceTab?           @relation(fields: [serviceTabId], references: [id], onDelete: Restrict)
-  events            FiscalDocumentEvent[]
+  activeKey               String?               @unique @map("active_key") @db.VarChar(60)
+  provider                FiscalProvider
+  environment             FiscalEnvironment
+  status                  FiscalDocumentStatus  @default(PENDING)
+  trigger                 String                @db.VarChar(12)
+  externalId              String?               @map("external_id") @db.VarChar(80)
+  number                  Int?
+  series                  Int?
+  accessKey               String?               @unique @map("access_key") @db.Char(44)
+  protocol                String?               @db.VarChar(40)
+  issuedAt                DateTime?             @map("issued_at")
+  authorizedAt            DateTime?             @map("authorized_at")
+  saleOccurredAt          DateTime              @map("sale_occurred_at")
+  totalAmount             Decimal               @map("total_amount") @db.Decimal(12, 2)
+  consumerDocument        String?               @map("consumer_document") @db.VarChar(14)
+  issuerSnapshot          Json                  @map("issuer_snapshot")
+  payloadSnapshot         Json                  @map("payload_snapshot")
+  rejectionCode           String?               @map("rejection_code") @db.VarChar(40)
+  rejectionMessage        String?               @map("rejection_message") @db.VarChar(500)
+  xmlAssetKey             String?               @map("xml_asset_key") @db.VarChar(255)
+  danfeAssetKey           String?               @map("danfe_asset_key") @db.VarChar(255)
+  qrCodeUrl               String?               @map("qr_code_url") @db.VarChar(1000)
+  consultationUrl         String?               @map("consultation_url") @db.VarChar(1000)
+  danfeUrl                String?               @map("danfe_url") @db.VarChar(1000)
+  cancelReason            String?               @map("cancel_reason") @db.VarChar(255)
+  cancelRequestedAt       DateTime?             @map("cancel_requested_at")
+  cancelDeadlineAt        DateTime?             @map("cancel_deadline_at")
+  cancelReminderAt        DateTime?             @map("cancel_reminder_at")
+  cancelledAt             DateTime?             @map("cancelled_at")
+  cancelProtocol          String?               @map("cancel_protocol") @db.VarChar(40)
+  cancelXmlAssetKey       String?               @map("cancel_xml_asset_key") @db.VarChar(255)
+  attempts                Int                   @default(0)
+  /// Items whose authorized CFOP/CSOSN differ from the ERP fiscal profile (provider rules applied other taxes).
+  taxDivergences          Json?                 @map("tax_divergences")
+  taxDivergenceAt         DateTime?             @map("tax_divergence_at")
+  taxDivergenceReviewedAt DateTime?             @map("tax_divergence_reviewed_at")
+  nextSyncAt              DateTime?             @map("next_sync_at")
+  requestedByUserId       String?               @map("requested_by_user_id") @db.Uuid
+  createdAt               DateTime              @default(now()) @map("created_at")
+  updatedAt               DateTime              @updatedAt @map("updated_at")
+  tenant                  Tenant                @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  order                   Order?                @relation(fields: [orderId], references: [id], onDelete: Restrict)
+  serviceTab              ServiceTab?           @relation(fields: [serviceTabId], references: [id], onDelete: Restrict)
+  events                  FiscalDocumentEvent[]
 
   @@index([tenantId, status])
   @@index([tenantId, orderId])

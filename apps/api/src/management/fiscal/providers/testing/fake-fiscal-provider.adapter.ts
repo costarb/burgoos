@@ -24,7 +24,7 @@ export class FakeFiscalProviderAdapter implements FiscalProviderAdapter {
   private sequence = 0;
 
   constructor(
-    readonly capabilities: FiscalProviderCapabilities = { cancelViaApi: false, usesOwnCertificate: false },
+    readonly capabilities: FiscalProviderCapabilities = { cancelViaApi: false, usesOwnCertificate: false, itemTaxesFromProvider: false },
     readonly provider: FiscalProvider = "BLING"
   ) {}
 
@@ -79,7 +79,14 @@ export class FakeFiscalProviderAdapter implements FiscalProviderAdapter {
 
   async downloadXml(_ctx: ProviderContext, externalId: string, kind: "AUTHORIZATION" | "CANCELLATION") {
     this.calls.push({ method: `downloadXml:${kind}`, externalId });
-    return Buffer.from(`<nfeProc id="${externalId}" kind="${kind}"/>`);
+    const items = this.documents.get(externalId)?.draft.items ?? [];
+    const det = items
+      .map((item, index) => {
+        const taxes = this.itemTaxOverrides[index] ?? item;
+        return `<det nItem="${index + 1}"><prod><cProd>${item.code}</cProd><CFOP>${taxes.cfop}</CFOP></prod><imposto><ICMS><ICMSSN><CSOSN>${taxes.csosn}</CSOSN></ICMSSN></ICMS></imposto></det>`;
+      })
+      .join("");
+    return Buffer.from(`<nfeProc id="${externalId}" kind="${kind}">${det}</nfeProc>`);
   }
 
   async downloadDanfe(_ctx: ProviderContext, externalId: string) {
@@ -92,6 +99,8 @@ export class FakeFiscalProviderAdapter implements FiscalProviderAdapter {
   }
 
   settingsIssues: FiscalSettingsIssue[] = [];
+  /** Taxes the "provider rules" apply to the item at each position instead of the ones sent. */
+  itemTaxOverrides: Record<number, { cfop: string; csosn: string }> = {};
 
   validateSettings(): FiscalSettingsIssue[] {
     return this.settingsIssues;

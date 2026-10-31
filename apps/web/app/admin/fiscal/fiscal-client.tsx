@@ -151,6 +151,7 @@ export function FiscalClient(props: Props) {
             actions={props.profileActions}
             assignments={props.assignments}
             busy={busy}
+            itemTaxesFromProvider={configuration.connection?.capabilities.itemTaxesFromProvider ?? false}
             missing={props.missing}
             profiles={props.profiles}
             run={run}

@@ -1,4 +1,4 @@
-import { Inject, Injectable, NotFoundException } from "@nestjs/common";
+import { ConflictException, Inject, Injectable, NotFoundException } from "@nestjs/common";
 import { FiscalDocument, FiscalDocumentStatus, Prisma } from "@prisma/client";
 import { PrismaService } from "../../../platform/database/prisma.service";
 import { maskDocument } from "../../../common/br/br-documents";
@@ -7,6 +7,7 @@ import type {
   FiscalDocumentPage,
   FiscalDocumentSummary,
   FiscalPendingReason,
+  FiscalTaxDivergence,
   OrderFiscalInfo,
 } from "../fiscal.types";
 import { FiscalProviderContextService } from "../providers/fiscal-provider-context.service";
@@ -14,6 +15,12 @@ import { FiscalProviderRegistry } from "../providers/fiscal-provider.registry";
 import { FiscalDocumentStorageService } from "./fiscal-document-storage.service";
 
 const PENDING_STATUSES: FiscalDocumentStatus[] = ["REJECTED", "ERROR", "CANCEL_PENDING", "CANCEL_FAILED"];
+/** Authorized notes whose item taxes diverged from the fiscal profile and nobody reviewed yet. */
+const UNREVIEWED_TAX_DIVERGENCE: Prisma.FiscalDocumentWhereInput = {
+  status: "AUTHORIZED",
+  taxDivergenceAt: { not: null },
+  taxDivergenceReviewedAt: null,
+};
 
 export interface UnissuedSale {
   target: { type: "ORDER" | "TAB"; id: string };
@@ -62,7 +69,7 @@ export class FiscalDocumentsService {
         ? { saleOccurredAt: { ...(filters.from ? { gte: filters.from } : {}), ...(filters.to ? { lte: filters.to } : {}) } }
         : {}),
       ...(filters.pendingOnly
-        ? { status: { in: PENDING_STATUSES } }
+        ? { OR: [{ status: { in: PENDING_STATUSES } }, UNREVIEWED_TAX_DIVERGENCE] }
         : filters.status?.length
           ? { status: { in: filters.status } }
           : {}),
@@ -322,6 +329,21 @@ export class FiscalDocumentsService {
     return { content, contentType, fileName };
   }
 
+  /** "Revisado": the provider configuration was checked; the divergence leaves the pending list. */
+  async reviewTaxDivergence(tenantId: string, id: string, actorUserId: string): Promise<FiscalDocumentDetail> {
+    const document = await this.require(tenantId, id);
+    if (!document.taxDivergenceAt) throw new ConflictException({ code: "NO_TAX_DIVERGENCE", message: "NFC-e sem divergencia de tributacao" });
+    if (!document.taxDivergenceReviewedAt) {
+      await this.prisma.$transaction(async (tx) => {
+        await tx.fiscalDocument.update({ where: { id }, data: { taxDivergenceReviewedAt: new Date() } });
+        await tx.fiscalDocumentEvent.create({
+          data: { tenantId, documentId: id, type: "TAX_DIVERGENCE_REVIEWED", actorUserId, metadata: {} },
+        });
+      });
+    }
+    return this.detail(tenantId, id);
+  }
+
   pendingReason(document: FiscalDocument): FiscalPendingReason | null {
     switch (document.status) {
       case "REJECTED":
@@ -334,6 +356,8 @@ export class FiscalDocumentsService {
       }
       case "CANCEL_FAILED":
         return "CANCEL_FAILED";
+      case "AUTHORIZED":
+        return document.taxDivergenceAt && !document.taxDivergenceReviewedAt ? "TAX_DIVERGENCE" : null;
       default:
         return null;
     }
@@ -358,6 +382,8 @@ export class FiscalDocumentsService {
       rejectionCode: document.rejectionCode,
       rejectionMessage: document.rejectionMessage,
       cancelDeadlineAt: document.cancelDeadlineAt?.toISOString() ?? null,
+      taxDivergences: (document.taxDivergences as unknown as FiscalTaxDivergence[] | null) ?? null,
+      taxDivergenceReviewedAt: document.taxDivergenceReviewedAt?.toISOString() ?? null,
       pendingReason: this.pendingReason(document),
       providerPanelUrl: document.externalId && adapter ? adapter.panelUrl(document.externalId) : null,
       createdAt: document.createdAt.toISOString(),

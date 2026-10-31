@@ -331,7 +331,7 @@ describe("NFC-e cancellation (US4, SC-003)", () => {
   });
 
   it("cancels through the API when the provider supports it", async () => {
-    const h = createFiscalHarness({ capabilities: { cancelViaApi: true, usesOwnCertificate: false } });
+    const h = createFiscalHarness({ capabilities: { cancelViaApi: true, usesOwnCertificate: false, itemTaxesFromProvider: false } });
     const { orderId } = await authorized(h);
     await h.cancellations.requestForOrder(TENANT, orderId, "Cliente desistiu da compra", null, "ORDER_CANCELLED");
     await h.runJobs();
@@ -387,7 +387,7 @@ describe("XML export for the accountant (US8)", () => {
   }
 
   it("bundles authorized and cancelled notes with a summary, keeping homologation apart", async () => {
-    const h = createFiscalHarness({ capabilities: { cancelViaApi: true, usesOwnCertificate: false } });
+    const h = createFiscalHarness({ capabilities: { cancelViaApi: true, usesOwnCertificate: false, itemTaxesFromProvider: false } });
     const first = h.seedOrder();
     const second = h.seedOrder();
     await h.trigger.requestForOrder(TENANT, first);
@@ -421,5 +421,37 @@ describe("XML export for the accountant (US8)", () => {
     expect(zipEntryNames(production.content)).toEqual(["resumo.csv"]);
     await expect(exporter.build(TENANT, { from: today, to: "2020-01-01" })).rejects.toMatchObject({ response: { code: "INVALID_PERIOD" } });
     expect((await exporter.build(OTHER_TENANT, { from: today, to: today, environment: "HOMOLOGATION" })).count).toBe(0);
+  });
+
+  it("flags items authorized with taxes other than the fiscal profile until someone reviews it", async () => {
+    const h = createFiscalHarness();
+    h.fake.itemTaxOverrides = { 1: { cfop: "5405", csosn: "500" } };
+    await h.trigger.requestForOrder(TENANT, h.seedOrder());
+    await h.runJobs();
+
+    const [document] = h.documentsOf();
+    expect(document.status).toBe("AUTHORIZED");
+    expect(document.taxDivergences).toEqual([
+      { code: expect.any(String), description: "Bacon extra", ncm: "21069090", expected: { cfop: "5102", csosn: "102" }, actual: { cfop: "5405", csosn: "500" } },
+    ]);
+    expect(h.events(document.id)).toEqual(["CREATED", "SUBMITTED", "AUTHORIZED", "DOCUMENTS_STORED", "TAX_DIVERGENCE"]);
+    expect(h.logs.find((log) => log.event === "fiscal.document.tax_divergence")).toMatchObject({ level: "warn" });
+
+    const pending = await h.documents.list(TENANT, { pendingOnly: true });
+    expect(pending.items.map((item) => [item.id, item.pendingReason])).toEqual([[document.id, "TAX_DIVERGENCE"]]);
+
+    const reviewed = await h.documents.reviewTaxDivergence(TENANT, document.id, OWNER_ID);
+    expect(reviewed).toMatchObject({ pendingReason: null, taxDivergenceReviewedAt: expect.any(String) });
+    expect((await h.documents.list(TENANT, { pendingOnly: true })).total).toBe(0);
+  });
+
+  it("does not flag notes authorized with the taxes of the fiscal profile", async () => {
+    const h = createFiscalHarness();
+    await h.trigger.requestForOrder(TENANT, h.seedOrder());
+    await h.runJobs();
+
+    const [document] = h.documentsOf();
+    expect(document.taxDivergenceAt).toBeNull();
+    await expect(h.documents.reviewTaxDivergence(TENANT, document.id, OWNER_ID)).rejects.toMatchObject({ response: { code: "NO_TAX_DIVERGENCE" } });
   });
 });

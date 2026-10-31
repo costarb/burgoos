@@ -22,6 +22,8 @@ interface Props {
   profiles: FiscalProfileView[];
   missing: FiscalMissingProfiles;
   assignments: FiscalProfileAssignments;
+  /** The provider applies CFOP/CSOSN from its own rules (Bling operation nature). */
+  itemTaxesFromProvider?: boolean;
   actions: FiscalProfileActions;
   busy: boolean;
   run: <T>(action: () => Promise<FiscalActionState<T>>, onSuccess?: (data: T) => void) => Promise<void>;
@@ -40,7 +42,23 @@ const CSOSN_OPTIONS = [
 const inputClass = "mt-1 w-full rounded-md border border-slate-300 px-3 py-2 text-sm focus:border-slate-500 focus:outline-none";
 const cardClass = "rounded-md border border-slate-200 bg-white p-5 shadow-sm";
 
-export function FiscalProfilesTab({ profiles: initialProfiles, missing: initialMissing, assignments, actions, busy, run }: Props) {
+/**
+ * Rules the provider operation nature must reproduce: the most common CFOP/CSOSN is the default rule,
+ * every other combination needs an exception for its NCMs.
+ */
+export function providerTaxRules(profiles: FiscalProfileView[]) {
+  const groups = new Map<string, { cfop: string; csosn: string; ncms: string[] }>();
+  for (const profile of profiles.filter((item) => item.active)) {
+    const key = `${profile.cfop}/${profile.csosn}`;
+    const group = groups.get(key) ?? { cfop: profile.cfop, csosn: profile.csosn, ncms: [] };
+    if (!group.ncms.includes(profile.ncm)) group.ncms.push(profile.ncm);
+    groups.set(key, group);
+  }
+  const [standard, ...exceptions] = [...groups.values()].sort((a, b) => b.ncms.length - a.ncms.length);
+  return { standard: standard ?? null, exceptions };
+}
+
+export function FiscalProfilesTab({ profiles: initialProfiles, missing: initialMissing, assignments, itemTaxesFromProvider = false, actions, busy, run }: Props) {
   const [profiles, setProfiles] = useState(initialProfiles);
   const [missing, setMissing] = useState(initialMissing);
   const [editing, setEditing] = useState<{ id: string | null; form: FiscalProfilePayload } | null>(null);
@@ -100,6 +118,7 @@ export function FiscalProfilesTab({ profiles: initialProfiles, missing: initialM
             <p className="mt-1 text-sm text-slate-600">
               Defina NCM, CFOP e CSOSN uma vez e reutilize. A categoria define o padrao; produto e complemento podem ter perfil proprio.
             </p>
+            {itemTaxesFromProvider ? <ProviderTaxRulesNotice profiles={profiles} /> : null}
           </div>
           <button
             className="inline-flex items-center gap-2 rounded-md bg-slate-900 px-4 py-2 text-sm font-semibold text-white disabled:opacity-60"
@@ -299,4 +318,29 @@ function toMap(items: Array<{ id: string; fiscalProfileId: string | null }>): Re
 function toPayload(profile: FiscalProfileView): FiscalProfilePayload {
   const { name, ncm, cfop, csosn, origin, commercialUnit, cest, benefitCode, active } = profile;
   return { name, ncm, cfop, csosn, origin, commercialUnit, cest, benefitCode, active };
+}
+
+function ProviderTaxRulesNotice({ profiles }: { profiles: FiscalProfileView[] }) {
+  const { standard, exceptions } = providerTaxRules(profiles);
+  const ncm = (value: string) => `${value.slice(0, 4)}.${value.slice(4, 6)}.${value.slice(6, 8)}`;
+  return (
+    <div className="mt-3 max-w-3xl rounded-md bg-amber-50 p-3 text-sm text-amber-900" data-testid="provider-tax-rules">
+      <p>
+        No Bling, o CFOP e o CSOSN de cada item sao aplicados pelas regras da natureza de operacao; os valores do perfil nao sao enviados. Configure a
+        natureza para reproduzir os perfis abaixo. Notas autorizadas com valores diferentes aparecem em Pendencias.
+      </p>
+      {standard ? (
+        <ul className="mt-2 list-disc pl-5">
+          <li>
+            Regra padrao: CFOP {standard.cfop} / CSOSN {standard.csosn}
+          </li>
+          {exceptions.map((rule) => (
+            <li key={`${rule.cfop}/${rule.csosn}`}>
+              Excecao por NCM {rule.ncms.map(ncm).join(", ")}: CFOP {rule.cfop} / CSOSN {rule.csosn}
+            </li>
+          ))}
+        </ul>
+      ) : null}
+    </div>
+  );
 }

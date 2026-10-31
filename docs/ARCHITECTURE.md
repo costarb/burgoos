@@ -348,6 +348,7 @@ Os módulos fiscal e de importação automática registram uma linha JSON por ev
 | `sales.auto_import.degraded` | warn | qualquer ocorrência (3 falhas seguidas ou atraso > 15 min) |
 | `fiscal.document.submitted` / `fiscal.document.authorized` | log | `saleToAuthorizationSeconds` p95 > 300 (meta de 5 minutos) |
 | `fiscal.document.rejected` | warn | aumento por loja ou por código (`code`) |
+| `fiscal.document.tax_divergence` | warn | qualquer ocorrência: a natureza do provedor aplicou CFOP/CSOSN diferente do perfil fiscal |
 | `fiscal.document.error` | error | `finalAttempt: true` ou `errorCode: PROVIDER_DISCONNECTED` |
 | `fiscal.document.cancel_manual_required` | warn | acompanhar até `fiscal.document.cancelled` dentro do prazo |
 | `fiscal.document.cancel_failed` | error | qualquer ocorrência |

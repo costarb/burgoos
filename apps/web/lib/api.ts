@@ -2870,6 +2870,10 @@ export async function syncFiscalDocument(token: string, id: string): Promise<Fis
   return fetchAdmin<FiscalDocumentDetail>(token, `/api/admin/fiscal/documents/${id}/sync`, { method: "POST" });
 }
 
+export async function reviewFiscalTaxDivergence(token: string, id: string): Promise<FiscalDocumentDetail> {
+  return fetchAdmin<FiscalDocumentDetail>(token, `/api/admin/fiscal/documents/${id}/tax-divergence/review`, { method: "POST" });
+}
+
 export async function updateSalesAutoImport(
   token: string,
   integrationId: string,

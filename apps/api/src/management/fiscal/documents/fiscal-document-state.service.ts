@@ -1,11 +1,12 @@
 import { Inject, Injectable } from "@nestjs/common";
-import type { FiscalDocument } from "@prisma/client";
+import { Prisma, type FiscalDocument } from "@prisma/client";
 import { FiscalProviderRegistry } from "../providers/fiscal-provider.registry";
 import { FiscalProviderContextService } from "../providers/fiscal-provider-context.service";
-import type { ProviderDocumentState } from "../providers/fiscal-provider.adapter";
+import type { NfceDraft, ProviderDocumentState } from "../providers/fiscal-provider.adapter";
 import { PrismaService } from "../../../platform/database/prisma.service";
 import { FiscalAuditService } from "./fiscal-audit.service";
 import { FiscalDocumentStorageService } from "./fiscal-document-storage.service";
+import { authorizedItemTaxes, compareItemTaxes } from "./fiscal-tax-divergence";
 
 const MINUTE = 60_000;
 const HOUR = 60 * MINUTE;
@@ -126,11 +127,13 @@ export class FiscalDocumentStateService {
     const adapter = this.registry.get(document.provider);
     const name = document.accessKey ?? document.id;
     const issuedAt = document.issuedAt ?? document.createdAt;
+    let authorizedXml = null as Buffer | null;
     try {
       const data: Record<string, string> = {};
       await this.contexts.run(document.tenantId, document.provider, document.environment, async (ctx) => {
         const xml = await adapter.downloadXml(ctx, document.externalId as string, kind);
         if (xml) {
+          if (kind === "AUTHORIZATION") authorizedXml = xml;
           const key = this.storage.key(document.tenantId, issuedAt, name, kind === "AUTHORIZATION" ? "xml" : "cancel-xml");
           data[kind === "AUTHORIZATION" ? "xmlAssetKey" : "cancelXmlAssetKey"] = await this.storage.save(key, xml, "xml");
         }
@@ -150,5 +153,47 @@ export class FiscalDocumentStateService {
         "warn"
       );
     }
+    if (authorizedXml) await this.checkItemTaxes(document, authorizedXml);
+  }
+
+  /**
+   * Compares the CFOP/CSOSN authorized for each item with the fiscal profile sent by the ERP. Providers
+   * that apply their own tax rules (Bling operation nature) may diverge silently; the divergence becomes
+   * a pending item to review the provider configuration. Never changes the fiscal status.
+   */
+  async checkItemTaxes(document: FiscalDocument, xml: Buffer): Promise<void> {
+    const draft = document.payloadSnapshot as unknown as Partial<NfceDraft> | null;
+    if (!draft?.items?.length) return;
+    const divergences = compareItemTaxes(draft.items, authorizedItemTaxes(xml.toString("utf8")));
+    if (!divergences.length) return;
+    await this.prisma.fiscalDocument.update({
+      where: { id: document.id },
+      data: {
+        taxDivergences: divergences as unknown as Prisma.InputJsonValue,
+        taxDivergenceAt: new Date(),
+        taxDivergenceReviewedAt: null,
+      },
+    });
+    const message = divergences
+      .map((item) => `${item.description}: autorizado ${item.actual.cfop ?? "-"}/${item.actual.csosn ?? "-"}, perfil ${item.expected.cfop}/${item.expected.csosn}`)
+      .join("; ");
+    await this.audit.event({
+      tenantId: document.tenantId,
+      documentId: document.id,
+      type: "TAX_DIVERGENCE",
+      code: "TAX_DIVERGENCE",
+      message,
+      metadata: { items: divergences.length },
+    });
+    this.audit.log(
+      "fiscal.document.tax_divergence",
+      {
+        tenantId: document.tenantId,
+        documentId: document.id,
+        provider: document.provider,
+        items: divergences.map((item) => ({ ncm: item.ncm, expected: item.expected, actual: item.actual })),
+      },
+      "warn"
+    );
   }
 }
