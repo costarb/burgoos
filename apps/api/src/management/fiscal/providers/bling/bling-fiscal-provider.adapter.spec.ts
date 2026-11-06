@@ -95,6 +95,17 @@ describe("Bling NFC-e mapper", () => {
       code: "386",
       message: "Rejeição: CFOP não permitido para o CSOSN informado [nItem:4]",
     });
+    // Without protNFe: 103/105 is a batch still processing; any other status rejects the whole batch.
+    const batch = (cStat: string, xMotivo: string) => ({
+      data: { xml: `<retEnviNFe versao="4.00"><tpAmb>2</tpAmb><cStat>${cStat}</cStat><xMotivo>${xMotivo}</xMotivo><cUF>35</cUF></retEnviNFe>` },
+    });
+    expect(parseSendResult("1", batch("103", "Lote recebido com sucesso"))).toEqual({ status: "PROCESSING", externalId: "1" });
+    expect(parseSendResult("1", batch("225", "Rejeição: Falha no Schema XML do lote de NFe"))).toEqual({
+      status: "REJECTED",
+      externalId: "1",
+      code: "225",
+      message: "Rejeição: Falha no Schema XML do lote de NFe",
+    });
     expect(() => parseSendResult("1", { data: {} })).toThrow(/inesperada/);
   });
 
@@ -153,7 +164,11 @@ describe("BlingFiscalProviderAdapter", () => {
 
   it("maps a rejected document and Bling validation errors", async () => {
     routes["GET https://api.bling.test/Api/v3/nfce/27268944672"] = { status: 200, body: fixture("get-rejected.json") };
-    expect(await adapter.get(ctx, "27268944672")).toMatchObject({ status: "REJECTED", code: "BLING_SITUACAO_4" });
+    expect(await adapter.get(ctx, "27268944672")).toMatchObject({
+      status: "REJECTED",
+      code: "BLING_SITUACAO_4",
+      message: expect.stringMatching(/^Rejeitada pela SEFAZ\. O Bling nao informa o motivo na consulta: veja a NFC-e .* no Bling$/),
+    });
 
     routes["POST https://api.bling.test/Api/v3/nfce"] = {
       status: 400,

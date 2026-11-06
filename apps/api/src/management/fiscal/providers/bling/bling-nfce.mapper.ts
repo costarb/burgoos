@@ -24,6 +24,8 @@ const AUTHORIZED_SITUATIONS = new Set([5, 6, 7]);
 const PROCESSING_SITUATIONS = new Set([1, 3, 8, 10]);
 const REJECTED_SITUATIONS = new Set([4, 9, 11]);
 const AUTHORIZED_CSTAT = new Set(["100", "150"]);
+/** Batch received / in processing: the note result arrives later. */
+const BATCH_PENDING_CSTAT = new Set(["103", "105"]);
 
 const round2 = (value: number) => Math.round(value * 100) / 100;
 
@@ -120,12 +122,14 @@ export function parseSendResult(externalId: string, body: unknown): ProviderDocu
   const protocolXml = hasProtocol ? xml.slice(xml.indexOf("<protNFe")) : xml;
   const statuses = tag(protocolXml, "cStat");
   const reasons = tag(protocolXml, "xMotivo");
-  if (!hasProtocol) {
-    // Batch received but not processed yet (e.g. 103/105): follow up through the sync job.
-    return { status: "PROCESSING", externalId };
-  }
   const code = statuses[statuses.length - 1];
   const message = reasons[reasons.length - 1] ?? "Sem motivo";
+  if (!hasProtocol) {
+    // Batch received but not processed yet: follow up through the sync job. Any other batch status
+    // is a rejection of the whole batch, and its reason only comes in this answer.
+    if (!code || BATCH_PENDING_CSTAT.has(code)) return { status: "PROCESSING", externalId };
+    return { status: "REJECTED", externalId, code, message };
+  }
   if (AUTHORIZED_CSTAT.has(code)) {
     return {
       status: "AUTHORIZED",
@@ -191,7 +195,14 @@ export function stateFromDetail(detail: BlingNfceDetail, xmlFields?: ReturnType<
   if (detail.situacao === 2) return { status: "CANCELLED", externalId, cancelledAt: null, protocol: null };
   if (REJECTED_SITUATIONS.has(detail.situacao)) {
     const labels: Record<number, string> = { 4: "Rejeitada pela SEFAZ", 9: "Uso denegado pela SEFAZ", 11: "Bloqueada no Bling" };
-    return { status: "REJECTED", externalId, code: `BLING_SITUACAO_${detail.situacao}`, message: labels[detail.situacao] };
+    // The Bling query has no SEFAZ reason: point to the note in the Bling panel.
+    const note = detail.numero ? `NFC-e ${detail.numero}` : "NFC-e";
+    return {
+      status: "REJECTED",
+      externalId,
+      code: `BLING_SITUACAO_${detail.situacao}`,
+      message: `${labels[detail.situacao]}. O Bling nao informa o motivo na consulta: veja a ${note} em Notas fiscais de consumidor no Bling`,
+    };
   }
   if (PROCESSING_SITUATIONS.has(detail.situacao)) return { status: "PROCESSING", externalId };
   throw new FiscalProviderError("INCOMPATIBLE_RESPONSE", `Situacao de NFC-e desconhecida no Bling: ${detail.situacao}`, true);
