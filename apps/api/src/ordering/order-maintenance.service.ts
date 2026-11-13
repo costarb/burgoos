@@ -5,8 +5,11 @@ import {
   Injectable,
   Logger,
   NotFoundException,
+  Optional,
 } from "@nestjs/common";
 import { OrderMaintenanceAction, OrderStatus, Prisma } from "@prisma/client";
+import { FiscalCancellationService } from "../management/fiscal/documents/fiscal-cancellation.service";
+import { FiscalOrderGuardService } from "../management/fiscal/documents/fiscal-order-guard.service";
 import { OrderProfitabilityService } from "../management/reports/order-profitability.service";
 import { InventoryService } from "../operations/inventory/inventory.service";
 import { AuthUser } from "../platform/auth/auth.types";
@@ -26,13 +29,17 @@ export class OrderMaintenanceService {
     @Inject(PrismaService) private readonly prisma: PrismaService,
     @Inject(InventoryService) private readonly inventoryService: InventoryService,
     @Inject(OrderProfitabilityService)
-    private readonly profitabilityService: OrderProfitabilityService
+    private readonly profitabilityService: OrderProfitabilityService,
+    @Optional() @Inject(FiscalOrderGuardService) private readonly fiscalGuard?: FiscalOrderGuardService,
+    @Optional() @Inject(FiscalCancellationService)
+    private readonly fiscalCancellation?: FiscalCancellationService
   ) {}
 
   async edit(user: AuthUser, orderId: string, dto: EditOrderDto) {
     const current = await this.getOrder(user.tenantId, orderId);
     this.assertCurrent(current, dto.expectedUpdatedAt);
     validateOrderMaintenanceInput(current.status, dto);
+    await this.fiscalGuard?.assertMutable(user.tenantId, orderId);
     await this.validateProducts(user.tenantId, dto.items.map((item) => item.productId));
 
     const beforeSnapshot = jsonSnapshot(current);
@@ -160,6 +167,7 @@ export class OrderMaintenanceService {
     });
 
     this.logger.log(`Order deleted tenantId=${user.tenantId} orderId=${orderId} actorUserId=${user.id}`);
+    await this.fiscalCancellation?.requestForOrder(user.tenantId, orderId, dto.reason.trim(), user.id, "ORDER_DELETED");
     return { orderId, deletedAt: deletedAt.toISOString(), reason: dto.reason.trim() };
   }
 

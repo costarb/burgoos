@@ -42,14 +42,22 @@ export class UpdateServiceTabDto {
   notes?: string | null;
 }
 
-export class CheckoutServiceTabDto {
+export class TabVersionDto {
   @Type(() => Number)
   @IsInt()
   @Min(0)
   expectedVersion!: number;
 }
 
-export class ReopenServiceTabDto extends CheckoutServiceTabDto {
+export class CheckoutServiceTabDto extends TabVersionDto {
+  /** CPF/CNPJ for the NFC-e ("CPF na nota"); validated by check digits in the service. */
+  @IsOptional()
+  @IsString()
+  @MaxLength(20)
+  consumerDocument?: string | null;
+}
+
+export class ReopenServiceTabDto extends TabVersionDto {
   @IsString()
   @MinLength(3)
   @MaxLength(300)

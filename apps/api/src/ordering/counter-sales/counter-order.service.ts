@@ -1,8 +1,10 @@
 import {
   ConflictException,
+  Inject,
   Injectable,
   Logger,
   NotFoundException,
+  Optional,
   UnprocessableEntityException,
 } from "@nestjs/common";
 import {
@@ -15,6 +17,8 @@ import {
   ServiceTabStatus,
 } from "@prisma/client";
 import { randomInt } from "node:crypto";
+import { normalizeConsumerDocument } from "../../common/br/br-documents";
+import { FiscalOrderGuardService } from "../../management/fiscal/documents/fiscal-order-guard.service";
 import { AuthUser } from "../../platform/auth/auth.types";
 import { PrismaService } from "../../platform/database/prisma.service";
 import { OperationalEventService } from "../operational-events/operational-event.service";
@@ -36,6 +40,7 @@ export class CounterOrderService {
     private readonly calculator: CounterOrderCalculator,
     private readonly events: OperationalEventService,
     private readonly gateway: OrdersGateway,
+    @Optional() @Inject(FiscalOrderGuardService) private readonly fiscalGuard?: FiscalOrderGuardService,
   ) {}
 
   async create(user: AuthUser, dto: CreateCounterOrderDto) {
@@ -58,6 +63,7 @@ export class CounterOrderService {
     }
 
     const calculated = this.calculator.calculate(dto.items, products, this.authorization(user));
+    const consumerDocument = this.consumerDocument(dto.consumerDocument);
     const publicCode = await this.nextPublicCode(tenantId);
 
     const order = await this.prisma.order.create({
@@ -72,6 +78,7 @@ export class CounterOrderService {
         fulfillmentMethod: dto.fulfillmentMethod,
         paymentMethod: PaymentMethod.CASH,
         notes: dto.notes?.trim() || null,
+        consumerDocument,
         items: {
           create: calculated.items.map((item) => ({
             tenantId,
@@ -258,6 +265,8 @@ export class CounterOrderService {
     if (current.version !== dto.expectedVersion) {
       throw new ConflictException("Pedido foi alterado por outro operador. Recarregue a tela");
     }
+    await this.fiscalGuard?.assertMutable(tenantId, orderId);
+    const consumerDocument = this.consumerDocument(dto.consumerDocument);
 
     const productIds = [...new Set(dto.items.map((item) => item.productId))];
     const products = await this.loadProducts(tenantId, productIds);
@@ -282,6 +291,7 @@ export class CounterOrderService {
           customerPhone: dto.customerPhone?.trim() || "",
           fulfillmentMethod: dto.fulfillmentMethod,
           notes: dto.notes?.trim() || null,
+          ...(dto.consumerDocument !== undefined ? { consumerDocument } : {}),
         },
       });
       if (claimed.count !== 1) {
@@ -323,6 +333,13 @@ export class CounterOrderService {
     const response = this.toResponse(order);
     this.gateway.emitOrderUpdated(tenantId, response);
     return response;
+  }
+
+  private consumerDocument(value: string | null | undefined): string | null {
+    if (!value?.trim()) return null;
+    const normalized = normalizeConsumerDocument(value);
+    if (!normalized) throw new UnprocessableEntityException("CPF/CNPJ do consumidor invalido");
+    return normalized;
   }
 
   private async loadProducts(tenantId: string, productIds: string[]) {

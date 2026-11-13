@@ -1,3 +1,4 @@
+import { FiscalModule } from "../management/fiscal/fiscal.module";
 import { forwardRef, Module } from "@nestjs/common";
 import { SalesIntegrationsModule } from "../management/sales-integrations/sales-integrations.module";
 import { DatabaseModule } from "../platform/database/database.module";
@@ -21,7 +22,7 @@ import { PaymentExceptionController } from "./payment-exception.controller";
 import { BackgroundJobsModule } from "../common/background-jobs/background-jobs.module";
 
 @Module({
-  imports: [DatabaseModule, AuthModule, BackgroundJobsModule, forwardRef(() => SalesIntegrationsModule)],
+  imports: [DatabaseModule, AuthModule, BackgroundJobsModule, FiscalModule, forwardRef(() => SalesIntegrationsModule)],
   providers: [
     MercadoPagoPointClient,
     PaymentTerminalService,

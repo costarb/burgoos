@@ -19,6 +19,13 @@ import {
   listPlatformStores,
   updatePlatformStore,
 } from "../../../lib/api";
+import {
+  StoreLegalFields,
+  emptyStoreLegalForm,
+  toStoreLegalForm,
+  toStoreLegalInput,
+  type StoreLegalFormState,
+} from "../../../components/admin/store-legal-fields";
 
 interface StoreMaintenanceClientProps {
   token: string;
@@ -61,6 +68,7 @@ const emptyForm: StoreFormState = {
     whatsapp: "",
     website: "",
   },
+  legal: emptyStoreLegalForm,
   ownerName: "",
   ownerEmail: "",
   temporaryPassword: "",
@@ -373,6 +381,7 @@ function StoreEditorDialog({
       active: form.active,
       openMode: form.openMode,
       operatingHours,
+      ...toStoreLegalInput(form.legal),
     };
 
     if (mode === "create") {
@@ -492,6 +501,14 @@ function StoreEditorDialog({
               <AddressField formKey="postalCode" label="CEP" setForm={setForm} value={form} />
             </div>
           </section>
+
+          <div className="border-t border-slate-100 pt-4">
+            <StoreLegalFields
+              legal={store?.legal}
+              onChange={(legal) => setForm((current) => ({ ...current, legal }))}
+              value={form.legal}
+            />
+          </div>
 
           <section className="grid gap-4 border-t border-slate-100 pt-4">
             <h3 className="font-semibold">Midias sociais</h3>
@@ -629,6 +646,7 @@ interface StoreFormState {
   operatingHours: string;
   address: Required<StoreAddress>;
   socialLinks: Required<StoreSocialLinks>;
+  legal: StoreLegalFormState;
   ownerName: string;
   ownerEmail: string;
   temporaryPassword: string;
@@ -666,6 +684,7 @@ function toFormState(store?: StoreDetail): StoreFormState {
       whatsapp: socialLinks.whatsapp ?? "",
       website: socialLinks.website ?? "",
     },
+    legal: toStoreLegalForm(store.legal),
   };
 }
 

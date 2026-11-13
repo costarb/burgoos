@@ -1,6 +1,7 @@
 import { Type } from "class-transformer";
 import {
   IsBoolean,
+  IsEnum,
   IsIn,
   IsObject,
   IsEmail,
@@ -8,8 +9,48 @@ import {
   IsString,
   MaxLength,
   MinLength,
+  ValidateIf,
   ValidateNested,
 } from "class-validator";
+import { FiscalTaxRegime } from "@prisma/client";
+
+/** Fiscal identity of the store (spec 029); validated against the address in the service. */
+export class StoreLegalDto {
+  @IsOptional()
+  @ValidateIf((_, value) => value !== null)
+  @IsString()
+  @MaxLength(120)
+  legalName?: string | null;
+
+  @IsOptional()
+  @ValidateIf((_, value) => value !== null)
+  @IsString()
+  @MaxLength(120)
+  tradeName?: string | null;
+
+  @IsOptional()
+  @ValidateIf((_, value) => value !== null)
+  @IsString()
+  @MaxLength(20)
+  cnpj?: string | null;
+
+  @IsOptional()
+  @ValidateIf((_, value) => value !== null)
+  @IsString()
+  @MaxLength(20)
+  stateRegistration?: string | null;
+
+  @IsOptional()
+  @ValidateIf((_, value) => value !== null)
+  @IsEnum(FiscalTaxRegime)
+  taxRegime?: FiscalTaxRegime | null;
+
+  @IsOptional()
+  @ValidateIf((_, value) => value !== null)
+  @IsString()
+  @MaxLength(9)
+  municipalityIbgeCode?: string | null;
+}
 
 export class CreateStoreOwnerDto {
   @IsString()
@@ -71,7 +112,7 @@ export class StoreSocialLinksDto {
   website?: string;
 }
 
-export class CreateStoreDto {
+export class CreateStoreDto extends StoreLegalDto {
   @IsString()
   name!: string;
 
@@ -117,7 +158,7 @@ export class CreateStoreDto {
   owner!: CreateStoreOwnerDto;
 }
 
-export class UpdateStoreDto {
+export class UpdateStoreDto extends StoreLegalDto {
   @IsOptional()
   @IsString()
   name?: string;
@@ -160,4 +201,31 @@ export class UpdateStoreDto {
   @IsOptional()
   @IsObject()
   operatingHours?: Record<string, unknown>;
+}
+
+/**
+ * What the store admin may change on its own store ("Dados da loja"): identity, contact and
+ * fiscal data. Slug, public domain, activation and opening rules stay with the platform.
+ */
+export class StoreAdminProfileDto extends StoreLegalDto {
+  @IsOptional()
+  @IsString()
+  @MinLength(2)
+  @MaxLength(120)
+  name?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(40)
+  phone?: string;
+
+  @IsOptional()
+  @ValidateNested()
+  @Type(() => StoreAddressDto)
+  address?: StoreAddressDto;
+
+  @IsOptional()
+  @ValidateNested()
+  @Type(() => StoreSocialLinksDto)
+  socialLinks?: StoreSocialLinksDto;
 }

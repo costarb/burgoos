@@ -17,6 +17,7 @@ const domains = [
   ["Delivery e marketplaces", ["OrderPlatform", "DeliveryIntegration", "DeliveryIntegrationCredential", "DeliveryPlatformEvent", "PlatformOrderLink", "PlatformSyncAttempt", "PlatformCancellationReason", "PlatformDispute", "DeliveryIntegrationAudit"]],
   ["Jobs, exportações e notificações", ["ExportJob", "BackgroundJob", "BackgroundJobAttempt", "OperationalNotification"]],
   ["MCP e assistentes de IA", ["StoreMcpConfiguration", "StoreMcpToken", "McpToolCall", "McpOAuthClient", "McpOAuthAuthorizationRequest", "McpOAuthConnection", "McpOAuthToken"]],
+  ["Fiscal (NFC-e)", ["FiscalConfiguration", "FiscalProviderConnection", "PlatformFiscalProviderConfiguration", "FiscalCertificate", "FiscalProfile", "FiscalDocument", "FiscalDocumentEvent"]],
 ];
 
 const purposes = {
@@ -98,6 +99,13 @@ const purposes = {
   McpOAuthAuthorizationRequest: "Pedido de autorização OAuth do authorize até a troca do código (PKCE, uso único).",
   McpOAuthConnection: "Conexão autorizada entre aplicativo, usuário e uma loja; revogável e auditada.",
   McpOAuthToken: "Tokens OAuth opacos (acesso 1h, renovação 30 dias com rotação), guardados apenas como SHA-256.",
+  FiscalConfiguration: "Configuração fiscal da loja: provedor, ambiente, série, modo de emissão (automático/manual) e origens elegíveis.",
+  FiscalProviderConnection: "Conexão da loja com o provedor fiscal (ex.: Bling via OAuth), com credencial cifrada e configurações do provedor.",
+  PlatformFiscalProviderConfiguration: "Aplicativo OAuth do provedor fiscal no nível da plataforma (client id/secret cifrados).",
+  FiscalCertificate: "Certificado A1 da loja (arquivo e senha cifrados) com metadados de titular, CNPJ e validade.",
+  FiscalProfile: "Perfil tributário reutilizável (NCM, CFOP, CSOSN, origem, unidade, CEST) atribuído a categoria, produto ou complemento.",
+  FiscalDocument: "NFC-e de uma venda (pedido avulso ou comanda): situação, numeração, chave, protocolo, prazos de cancelamento e cópias de XML.",
+  FiscalDocumentEvent: "Linha do tempo de cada NFC-e (envio, autorização, rejeição, sincronização, cancelamento), sem dados sensíveis.",
 };
 
 function blocks(kind) {

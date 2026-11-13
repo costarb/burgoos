@@ -1,0 +1,118 @@
+{
+  "data": [
+    {
+      "id": 15111819164,
+      "situacao": 1,
+      "padrao": 2,
+      "descricao": "Compra de mercadoria"
+    },
+    {
+      "id": 15111819171,
+      "situacao": 1,
+      "padrao": 0,
+      "descricao": "Compra de mercadoria com ST"
+    },
+    {
+      "id": 15111819174,
+      "situacao": 1,
+      "padrao": 9,
+      "descricao": "Devolução de compra"
+    },
+    {
+      "id": 15111819178,
+      "situacao": 1,
+      "padrao": 0,
+      "descricao": "Devolução de compra com ST"
+    },
+    {
+      "id": 15111819175,
+      "situacao": 1,
+      "padrao": 8,
+      "descricao": "Devolução de venda"
+    },
+    {
+      "id": 15111819179,
+      "situacao": 1,
+      "padrao": 0,
+      "descricao": "Devolução de venda com ST"
+    },
+    {
+      "id": 15111819149,
+      "situacao": 1,
+      "padrao": 0,
+      "descricao": "Entrada de bonificação"
+    },
+    {
+      "id": 15111819154,
+      "situacao": 1,
+      "padrao": 0,
+      "descricao": "Importação de mercadoria"
+    },
+    {
+      "id": 15111819160,
+      "situacao": 1,
+      "padrao": 0,
+      "descricao": "Remessa de mercadoria para conserto"
+    },
+    {
+      "id": 15111819162,
+      "situacao": 1,
+      "padrao": 0,
+      "descricao": "Remessa de mercadoria para demonstração"
+    },
+    {
+      "id": 15111819156,
+      "situacao": 1,
+      "padrao": 0,
+      "descricao": "Retorno de mercadoria enviada para conserto"
+    },
+    {
+      "id": 15111819158,
+      "situacao": 1,
+      "padrao": 0,
+      "descricao": "Retorno de mercadoria enviada para demonstração"
+    },
+    {
+      "id": 15111819151,
+      "situacao": 1,
+      "padrao": 0,
+      "descricao": "Saída em bonificação"
+    },
+    {
+      "id": 15111821399,
+      "situacao": 1,
+      "padrao": 0,
+      "descricao": "TESTE HOMOLOGAÇÃO - MEI"
+    },
+    {
+      "id": 15111819176,
+      "situacao": 1,
+      "padrao": 0,
+      "descricao": "Transferência de comercialização"
+    },
+    {
+      "id": 15111819177,
+      "situacao": 1,
+      "padrao": 0,
+      "descricao": "Transferência para comercialização"
+    },
+    {
+      "id": 15111819166,
+      "situacao": 1,
+      "padrao": 0,
+      "descricao": "Venda de mercadoria"
+    },
+    {
+      "id": 15111819169,
+      "situacao": 1,
+      "padrao": 1,
+      "descricao": "Venda de mercadoria a não contribuinte"
+    },
+    {
+      "id": 15111819173,
+      "situacao": 1,
+      "padrao": 0,
+      "descricao": "Venda de mercadoria com ST"
+    }
+  ]
+}

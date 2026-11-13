@@ -43,10 +43,25 @@ async function updateStoreAction(storeId: string, formData: FormData) {
     active,
     openMode,
     operatingHours: JSON.parse(operatingHoursText) as Record<string, unknown>,
+    ...legalFromForm(formData),
   });
 
   revalidatePath(`/platform/stores/${storeId}`);
   revalidatePath("/platform/stores");
+}
+
+/** Empty fields clear the value; an empty IBGE code is resolved from the city. */
+function legalFromForm(formData: FormData) {
+  const read = (name: string) => String(formData.get(name) ?? "").trim() || null;
+  const cnpj = read("cnpj");
+  return {
+    legalName: read("legalName"),
+    tradeName: read("tradeName"),
+    cnpj,
+    stateRegistration: read("stateRegistration"),
+    taxRegime: cnpj ? ("SIMPLES_NACIONAL" as const) : null,
+    municipalityIbgeCode: read("municipalityIbgeCode"),
+  };
 }
 
 export default async function StoreDetailPage({ params }: StoreDetailPageProps) {
@@ -204,6 +219,29 @@ export default async function StoreDetailPage({ params }: StoreDetailPageProps) 
                   name="postalCode"
                 />
               </label>
+            </div>
+          </section>
+          <section className="grid gap-4 border-t border-slate-100 pt-4" data-testid="store-legal-fields">
+            <h3 className="font-semibold">Dados fiscais</h3>
+            <div className="grid gap-4 md:grid-cols-2">
+              {(
+                [
+                  ["legalName", "Razao social", store.legal?.legalName],
+                  ["tradeName", "Nome fantasia", store.legal?.tradeName],
+                  ["cnpj", "CNPJ", store.legal?.cnpj],
+                  ["stateRegistration", "Inscricao estadual", store.legal?.stateRegistration],
+                  [
+                    "municipalityIbgeCode",
+                    "Codigo IBGE do municipio (vazio: automatico pela cidade)",
+                    store.legal?.municipalityIbgeSource === "MANUAL" ? store.legal.municipalityIbgeCode : "",
+                  ],
+                ] as const
+              ).map(([name, label, value]) => (
+                <label className="grid gap-1 text-sm font-medium" key={name}>
+                  {label}
+                  <input className="rounded-md border border-slate-300 px-3 py-2" defaultValue={value ?? ""} name={name} />
+                </label>
+              ))}
             </div>
           </section>
           <section className="grid gap-4 border-t border-slate-100 pt-4">

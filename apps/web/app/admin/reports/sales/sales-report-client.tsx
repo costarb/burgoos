@@ -2,6 +2,8 @@
 
 import type {
   AdminOrder,
+  FiscalDocumentDetail,
+  OrderFiscalInfo,
   OrderPlatform,
   SalesAnalyticalOrder,
   SalesReportResponse,
@@ -9,6 +11,8 @@ import type {
 import { useSearchParams } from "next/navigation";
 import React, { useEffect, useState } from "react";
 import { MultiSelectFilter } from "../../../../components/admin/multi-select-filter";
+import type { FiscalActionState } from "../../fiscal/fiscal-labels";
+import { OrderFiscalCell } from "../../fiscal/order-fiscal-cell";
 import { OrderMaintenanceDialog } from "../../orders/order-maintenance-dialog";
 import { IfoodFinancialDetails } from "./ifood-financial-details";
 
@@ -43,9 +47,21 @@ interface SalesReportClientProps {
   report: SalesReportResponse;
   orderPlatforms: OrderPlatform[];
   token: string;
+  /** NFC-e status per order id; empty when the user has no fiscal access. */
+  fiscal?: Record<string, OrderFiscalInfo>;
+  emitFiscalAction?: (
+    target: OrderFiscalInfo["target"],
+    confirmRetroactive?: boolean
+  ) => Promise<FiscalActionState<FiscalDocumentDetail>>;
 }
 
-export function SalesReportClient({ report, orderPlatforms, token }: SalesReportClientProps) {
+export function SalesReportClient({
+  report,
+  orderPlatforms,
+  token,
+  fiscal = {},
+  emitFiscalAction,
+}: SalesReportClientProps) {
   const searchParams = useSearchParams();
   const [maintenanceOrder, setMaintenanceOrder] = useState<AdminOrder | null>(null);
   const [analyticalItems, setAnalyticalItems] = useState(report.analytical.items);
@@ -283,13 +299,22 @@ export function SalesReportClient({ report, orderPlatforms, token }: SalesReport
                         .join(", ")}
                     </td>
                     <td className="px-4 py-3">
-                      <button
-                        className="rounded-md border border-slate-300 px-3 py-1 text-xs font-semibold"
-                        onClick={() => setMaintenanceOrder(toAdminOrder(order))}
-                        type="button"
-                      >
-                        Alterar
-                      </button>
+                      <div className="flex min-w-[12rem] flex-col items-start gap-2">
+                        <button
+                          className="rounded-md border border-slate-300 px-3 py-1 text-xs font-semibold"
+                          onClick={() => setMaintenanceOrder(toAdminOrder(order))}
+                          type="button"
+                        >
+                          Alterar
+                        </button>
+                        {fiscal[order.orderId] && emitFiscalAction ? (
+                          <OrderFiscalCell
+                            emitAction={emitFiscalAction}
+                            info={fiscal[order.orderId]}
+                            saleDate={order.createdAt}
+                          />
+                        ) : null}
+                      </div>
                     </td>
                   </tr>
                 ))}

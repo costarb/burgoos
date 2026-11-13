@@ -5,7 +5,7 @@
 
 ## Escopo e leitura
 
-Este catálogo descreve o modelo PostgreSQL atual exposto pelo Prisma: **85 entidades** e **84 enums**. Ele documenta nomes lógicos e físicos, tipos, nulabilidade, chaves, defaults, relacionamentos, índices e finalidade de negócio. Não registra valores de credenciais, dados pessoais reais nem conteúdo de produção.
+Este catálogo descreve o modelo PostgreSQL atual exposto pelo Prisma: **92 entidades** e **92 enums**. Ele documenta nomes lógicos e físicos, tipos, nulabilidade, chaves, defaults, relacionamentos, índices e finalidade de negócio. Não registra valores de credenciais, dados pessoais reais nem conteúdo de produção.
 
 ### Convenções
 
@@ -31,6 +31,7 @@ Este catálogo descreve o modelo PostgreSQL atual exposto pelo Prisma: **85 enti
 | Delivery e marketplaces | `OrderPlatform`, `DeliveryIntegration`, `DeliveryIntegrationCredential`, `DeliveryPlatformEvent`, `PlatformOrderLink`, `PlatformSyncAttempt`, `PlatformCancellationReason`, `PlatformDispute`, `DeliveryIntegrationAudit` |
 | Jobs, exportações e notificações | `ExportJob`, `BackgroundJob`, `BackgroundJobAttempt`, `OperationalNotification` |
 | MCP e assistentes de IA | `StoreMcpConfiguration`, `StoreMcpToken`, `McpToolCall`, `McpOAuthClient`, `McpOAuthAuthorizationRequest`, `McpOAuthConnection`, `McpOAuthToken` |
+| Fiscal (NFC-e) | `FiscalConfiguration`, `FiscalProviderConnection`, `PlatformFiscalProviderConfiguration`, `FiscalCertificate`, `FiscalProfile`, `FiscalDocument`, `FiscalDocumentEvent` |
 
 ## Relações centrais
 
@@ -78,6 +79,13 @@ erDiagram
 | `createdByPlatformUserId` | `created_by_platform_user_id` | `String?` | não | — | Identificador associado a createdByPlatformUser. |
 | `defaultLayoutPresetKey` | `default_layout_preset_key` | `String` | sim | default: "classic" | Atributo defaultLayoutPresetKey da entidade. |
 | `config` | `config` | `Json` | sim | default: "{}" | Atributo config da entidade. |
+| `legalName` | `legal_name` | `String?` | não | — | Atributo legalName da entidade. |
+| `tradeName` | `trade_name` | `String?` | não | — | Atributo tradeName da entidade. |
+| `cnpj` | `cnpj` | `String?` | não | — | Atributo cnpj da entidade. |
+| `stateRegistration` | `state_registration` | `String?` | não | — | Atributo stateRegistration da entidade. |
+| `taxRegime` | `tax_regime` | `FiscalTaxRegime?` | não | — | Valor controlado pelo enum FiscalTaxRegime. |
+| `municipalityIbgeCode` | `municipality_ibge_code` | `String?` | não | — | Atributo municipalityIbgeCode da entidade. |
+| `municipalityIbgeSource` | `municipality_ibge_source` | `String?` | não | — | Atributo municipalityIbgeSource da entidade. |
 | `createdAt` | `created_at` | `DateTime` | sim | default: now() | Data e hora de criação. |
 | `updatedAt` | `updated_at` | `DateTime` | sim | — | Data e hora da última atualização. |
 | `createdByPlatformUser` | `—` | `PlatformUser?` | não | FK/relação | Referência relacionada a PlatformUser. |
@@ -155,6 +163,12 @@ erDiagram
 | `mcpToolCalls` | `—` | `McpToolCall[]` | coleção | relação 1:N/N:N | Coleção relacionada de McpToolCall. |
 | `mcpOAuthConnections` | `—` | `McpOAuthConnection[]` | coleção | relação 1:N/N:N | Coleção relacionada de McpOAuthConnection. |
 | `mcpOAuthRequests` | `—` | `McpOAuthAuthorizationRequest[]` | coleção | relação 1:N/N:N | Coleção relacionada de McpOAuthAuthorizationRequest. |
+| `fiscalConfiguration` | `—` | `FiscalConfiguration?` | não | FK/relação | Referência relacionada a FiscalConfiguration. |
+| `fiscalProviderConnections` | `—` | `FiscalProviderConnection[]` | coleção | relação 1:N/N:N | Coleção relacionada de FiscalProviderConnection. |
+| `fiscalCertificates` | `—` | `FiscalCertificate[]` | coleção | relação 1:N/N:N | Coleção relacionada de FiscalCertificate. |
+| `fiscalProfiles` | `—` | `FiscalProfile[]` | coleção | relação 1:N/N:N | Coleção relacionada de FiscalProfile. |
+| `fiscalDocuments` | `—` | `FiscalDocument[]` | coleção | relação 1:N/N:N | Coleção relacionada de FiscalDocument. |
+| `fiscalDocumentEvents` | `—` | `FiscalDocumentEvent[]` | coleção | relação 1:N/N:N | Coleção relacionada de FiscalDocumentEvent. |
 
 **Restrições e índices do modelo**:
 
@@ -499,14 +513,17 @@ erDiagram
 | `name` | `name` | `String` | sim | — | Atributo name da entidade. |
 | `sortOrder` | `sort_order` | `Int` | sim | default: 0 | Atributo sortOrder da entidade. |
 | `active` | `active` | `Boolean` | sim | default: true | Indicador verdadeiro/falso da condição nomeada. |
+| `fiscalProfileId` | `fiscal_profile_id` | `String?` | não | — | Identificador associado a fiscalProfile. |
 | `createdAt` | `created_at` | `DateTime` | sim | default: now() | Data e hora de criação. |
 | `updatedAt` | `updated_at` | `DateTime` | sim | — | Data e hora da última atualização. |
 | `tenant` | `—` | `Tenant` | sim | FK/relação | Referência relacionada a Tenant. |
+| `fiscalProfile` | `—` | `FiscalProfile?` | não | FK/relação | Referência relacionada a FiscalProfile. |
 | `products` | `—` | `Product[]` | coleção | relação 1:N/N:N | Coleção relacionada de Product. |
 
 **Restrições e índices do modelo**:
 
 - `@@index([tenantId])`
+- `@@index([fiscalProfileId])`
 
 **Escopo de tenant**: próprio (`tenantId`).
 
@@ -525,10 +542,12 @@ erDiagram
 | `price` | `price` | `Decimal` | sim | — | Atributo price da entidade. |
 | `imageUrl` | `image_url` | `String?` | não | — | Atributo imageUrl da entidade. |
 | `active` | `active` | `Boolean` | sim | default: true | Indicador verdadeiro/falso da condição nomeada. |
+| `fiscalProfileId` | `fiscal_profile_id` | `String?` | não | — | Identificador associado a fiscalProfile. |
 | `createdAt` | `created_at` | `DateTime` | sim | default: now() | Data e hora de criação. |
 | `updatedAt` | `updated_at` | `DateTime` | sim | — | Data e hora da última atualização. |
 | `tenant` | `—` | `Tenant` | sim | FK/relação | Referência relacionada a Tenant. |
 | `category` | `—` | `Category` | sim | FK/relação | Referência relacionada a Category. |
+| `fiscalProfile` | `—` | `FiscalProfile?` | não | FK/relação | Referência relacionada a FiscalProfile. |
 | `orderItems` | `—` | `OrderItem[]` | coleção | relação 1:N/N:N | Coleção relacionada de OrderItem. |
 | `technicalSheets` | `—` | `TechnicalSheet[]` | coleção | relação 1:N/N:N | Coleção relacionada de TechnicalSheet. |
 | `productCostSnapshots` | `—` | `ProductCostSnapshot[]` | coleção | relação 1:N/N:N | Coleção relacionada de ProductCostSnapshot. |
@@ -539,6 +558,7 @@ erDiagram
 
 - `@@index([tenantId])`
 - `@@index([categoryId])`
+- `@@index([fiscalProfileId])`
 
 **Escopo de tenant**: próprio (`tenantId`).
 
@@ -583,9 +603,11 @@ erDiagram
 | `active` | `active` | `Boolean` | sim | default: true | Indicador verdadeiro/falso da condição nomeada. |
 | `maxQuantity` | `max_quantity` | `Int` | sim | default: 1 | Atributo maxQuantity da entidade. |
 | `sortOrder` | `sort_order` | `Int` | sim | default: 0 | Atributo sortOrder da entidade. |
+| `fiscalProfileId` | `fiscal_profile_id` | `String?` | não | — | Identificador associado a fiscalProfile. |
 | `createdAt` | `created_at` | `DateTime` | sim | default: now() | Data e hora de criação. |
 | `updatedAt` | `updated_at` | `DateTime` | sim | — | Data e hora da última atualização. |
 | `tenant` | `—` | `Tenant` | sim | FK/relação | Referência relacionada a Tenant. |
+| `fiscalProfile` | `—` | `FiscalProfile?` | não | FK/relação | Referência relacionada a FiscalProfile. |
 | `assignments` | `—` | `ProductComplementAssignment[]` | coleção | relação 1:N/N:N | Coleção relacionada de ProductComplementAssignment. |
 | `modifications` | `—` | `OrderItemModification[]` | coleção | relação 1:N/N:N | Coleção relacionada de OrderItemModification. |
 
@@ -593,6 +615,7 @@ erDiagram
 
 - `@@index([tenantId, active, sortOrder])`
 - `@@index([tenantId, ingredientId])`
+- `@@index([fiscalProfileId])`
 
 **Escopo de tenant**: próprio (`tenantId`).
 
@@ -785,6 +808,7 @@ erDiagram
 | `deletedAt` | `deleted_at` | `DateTime?` | não | — | Data e hora de deleted. |
 | `deletedByUserId` | `deleted_by_user_id` | `String?` | não | — | Identificador associado a deletedByUser. |
 | `deletionReason` | `deletion_reason` | `String?` | não | — | Atributo deletionReason da entidade. |
+| `consumerDocument` | `consumer_document` | `String?` | não | — | Atributo consumerDocument da entidade. |
 | `createdAt` | `created_at` | `DateTime` | sim | default: now() | Data e hora de criação. |
 | `updatedAt` | `updated_at` | `DateTime` | sim | — | Data e hora da última atualização. |
 | `tenant` | `—` | `Tenant` | sim | FK/relação | Referência relacionada a Tenant. |
@@ -804,6 +828,7 @@ erDiagram
 | `paymentAllocations` | `—` | `PaymentAllocation[]` | coleção | relação 1:N/N:N | Coleção relacionada de PaymentAllocation. |
 | `externalFinancialSales` | `—` | `ExternalFinancialSale[]` | coleção | relação 1:N/N:N | Coleção relacionada de ExternalFinancialSale. |
 | `operationalEvents` | `—` | `OrderOperationalEvent[]` | coleção | relação 1:N/N:N | Coleção relacionada de OrderOperationalEvent. |
+| `fiscalDocuments` | `—` | `FiscalDocument[]` | coleção | relação 1:N/N:N | Coleção relacionada de FiscalDocument. |
 
 **Restrições e índices do modelo**:
 
@@ -909,6 +934,7 @@ erDiagram
 | `closedAt` | `closed_at` | `DateTime?` | não | — | Data e hora de closed. |
 | `version` | `version` | `Int` | sim | default: 0 | Versão usada para controle de concorrência ou evolução. |
 | `notes` | `notes` | `String?` | não | — | Atributo notes da entidade. |
+| `consumerDocument` | `consumer_document` | `String?` | não | — | Atributo consumerDocument da entidade. |
 | `createdAt` | `created_at` | `DateTime` | sim | default: now() | Data e hora de criação. |
 | `updatedAt` | `updated_at` | `DateTime` | sim | — | Data e hora da última atualização. |
 | `tenant` | `—` | `Tenant` | sim | FK/relação | Referência relacionada a Tenant. |
@@ -916,6 +942,7 @@ erDiagram
 | `charges` | `—` | `PaymentCharge[]` | coleção | relação 1:N/N:N | Coleção relacionada de PaymentCharge. |
 | `paymentAllocations` | `—` | `PaymentAllocation[]` | coleção | relação 1:N/N:N | Coleção relacionada de PaymentAllocation. |
 | `operationalEvents` | `—` | `OrderOperationalEvent[]` | coleção | relação 1:N/N:N | Coleção relacionada de OrderOperationalEvent. |
+| `fiscalDocuments` | `—` | `FiscalDocument[]` | coleção | relação 1:N/N:N | Coleção relacionada de FiscalDocument. |
 
 **Restrições e índices do modelo**:
 
@@ -1322,6 +1349,15 @@ erDiagram
 | `deliveryIntegrationId` | `delivery_integration_id` | `String?` | não | UNIQUE | Identificador associado a deliveryIntegration. |
 | `financialReadiness` | `financial_readiness` | `IfoodFinancialReadinessStatus?` | não | — | Valor controlado pelo enum IfoodFinancialReadinessStatus. |
 | `homologationEvidence` | `homologation_evidence` | `Json` | sim | default: "{}" | Atributo homologationEvidence da entidade. |
+| `autoImportEnabled` | `auto_import_enabled` | `Boolean` | sim | default: false | Indicador verdadeiro/falso da condição nomeada. |
+| `autoImportStrategy` | `auto_import_strategy` | `String?` | não | — | Atributo autoImportStrategy da entidade. |
+| `autoImportFixedProductId` | `auto_import_fixed_product_id` | `String?` | não | — | Identificador associado a autoImportFixedProduct. |
+| `autoImportLastSuccessAt` | `auto_import_last_success_at` | `DateTime?` | não | — | Data e hora de autoImportLastSuccess. |
+| `autoImportLastAttemptAt` | `auto_import_last_attempt_at` | `DateTime?` | não | — | Data e hora de autoImportLastAttempt. |
+| `autoImportConsecutiveFailures` | `auto_import_consecutive_failures` | `Int` | sim | default: 0 | Atributo autoImportConsecutiveFailures da entidade. |
+| `autoImportLastErrorCode` | `auto_import_last_error_code` | `String?` | não | — | Atributo autoImportLastErrorCode da entidade. |
+| `autoImportLastLagSeconds` | `auto_import_last_lag_seconds` | `Int?` | não | — | Atributo autoImportLastLagSeconds da entidade. |
+| `autoImportLastAlertAt` | `auto_import_last_alert_at` | `DateTime?` | não | — | Data e hora de autoImportLastAlert. |
 | `tenant` | `—` | `Tenant` | sim | FK/relação | Referência relacionada a Tenant. |
 | `createdByUser` | `—` | `User?` | não | FK/relação | Referência relacionada a User. |
 | `updatedByUser` | `—` | `User?` | não | FK/relação | Referência relacionada a User. |
@@ -1346,6 +1382,7 @@ erDiagram
 - `@@unique([provider, providerUserId, environment])`
 - `@@index([tenantId, status])`
 - `@@index([provider, credentialMode, tokenExpiresAt])`
+- `@@index([autoImportEnabled, status])`
 
 **Escopo de tenant**: próprio (`tenantId`).
 
@@ -2928,6 +2965,234 @@ erDiagram
 
 **Escopo de tenant**: global ou derivado por relacionamento.
 
+### Fiscal (NFC-e)
+
+#### FiscalConfiguration
+
+**Tabela física**: `fiscal_configurations`  
+**Finalidade**: Configuração fiscal da loja: provedor, ambiente, série, modo de emissão (automático/manual) e origens elegíveis.
+
+| Campo lógico | Coluna física | Tipo Prisma | Obrigatório | Regra/Chave | Descrição |
+|---|---|---|---|---|---|
+| `id` | `id` | `String` | sim | PK; default: uuid() | Identificador único do registro. |
+| `tenantId` | `tenant_id` | `String` | sim | UNIQUE | Tenant proprietário; obrigatório para isolamento dos dados. |
+| `enabled` | `enabled` | `Boolean` | sim | default: false | Indicador verdadeiro/falso da condição nomeada. |
+| `provider` | `provider` | `FiscalProvider?` | não | — | Valor controlado pelo enum FiscalProvider. |
+| `environment` | `environment` | `FiscalEnvironment` | sim | default: HOMOLOGATION | Valor controlado pelo enum FiscalEnvironment. |
+| `series` | `series` | `Int?` | não | — | Atributo series da entidade. |
+| `emissionMode` | `emission_mode` | `FiscalEmissionMode` | sim | default: MANUAL | Valor controlado pelo enum FiscalEmissionMode. |
+| `eligibleSources` | `eligible_sources` | `OrderSource[]` | coleção | default: [COUNTER, IMPORT, API] | Valor controlado pelo enum OrderSource. |
+| `defaultCancelReason` | `default_cancel_reason` | `String` | sim | default: "Venda cancelada a pedido do cliente" | Atributo defaultCancelReason da entidade. |
+| `enabledAt` | `enabled_at` | `DateTime?` | não | — | Data e hora de enabled. |
+| `updatedByUserId` | `updated_by_user_id` | `String?` | não | — | Identificador associado a updatedByUser. |
+| `createdAt` | `created_at` | `DateTime` | sim | default: now() | Data e hora de criação. |
+| `updatedAt` | `updated_at` | `DateTime` | sim | — | Data e hora da última atualização. |
+| `tenant` | `—` | `Tenant` | sim | FK/relação | Referência relacionada a Tenant. |
+
+**Escopo de tenant**: próprio (`tenantId`).
+
+#### FiscalProviderConnection
+
+**Tabela física**: `fiscal_provider_connections`  
+**Finalidade**: Conexão da loja com o provedor fiscal (ex.: Bling via OAuth), com credencial cifrada e configurações do provedor.
+
+| Campo lógico | Coluna física | Tipo Prisma | Obrigatório | Regra/Chave | Descrição |
+|---|---|---|---|---|---|
+| `id` | `id` | `String` | sim | PK; default: uuid() | Identificador único do registro. |
+| `tenantId` | `tenant_id` | `String` | sim | — | Tenant proprietário; obrigatório para isolamento dos dados. |
+| `provider` | `provider` | `FiscalProvider` | sim | — | Valor controlado pelo enum FiscalProvider. |
+| `status` | `status` | `FiscalConnectionStatus` | sim | default: DRAFT | Estado atual no ciclo de vida da entidade. |
+| `credentialCiphertext` | `credential_ciphertext` | `String?` | não | — | Atributo credentialCiphertext da entidade. |
+| `tokenExpiresAt` | `token_expires_at` | `DateTime?` | não | — | Data e hora de tokenExpires. |
+| `refreshTokenExpiresAt` | `refresh_token_expires_at` | `DateTime?` | não | — | Data e hora de refreshTokenExpires. |
+| `externalAccountId` | `external_account_id` | `String?` | não | — | Identificador associado a externalAccount. |
+| `settings` | `settings` | `Json` | sim | default: "{}" | Atributo settings da entidade. |
+| `connectedAt` | `connected_at` | `DateTime?` | não | — | Data e hora de connected. |
+| `disconnectedAt` | `disconnected_at` | `DateTime?` | não | — | Data e hora de disconnected. |
+| `lastValidationAt` | `last_validation_at` | `DateTime?` | não | — | Data e hora de lastValidation. |
+| `lastErrorCode` | `last_error_code` | `String?` | não | — | Atributo lastErrorCode da entidade. |
+| `lastErrorMessage` | `last_error_message` | `String?` | não | — | Atributo lastErrorMessage da entidade. |
+| `updatedByUserId` | `updated_by_user_id` | `String?` | não | — | Identificador associado a updatedByUser. |
+| `createdAt` | `created_at` | `DateTime` | sim | default: now() | Data e hora de criação. |
+| `updatedAt` | `updated_at` | `DateTime` | sim | — | Data e hora da última atualização. |
+| `tenant` | `—` | `Tenant` | sim | FK/relação | Referência relacionada a Tenant. |
+
+**Restrições e índices do modelo**:
+
+- `@@unique([tenantId, provider])`
+- `@@index([provider, status, tokenExpiresAt])`
+
+**Escopo de tenant**: próprio (`tenantId`).
+
+#### PlatformFiscalProviderConfiguration
+
+**Tabela física**: `platform_fiscal_provider_configurations`  
+**Finalidade**: Aplicativo OAuth do provedor fiscal no nível da plataforma (client id/secret cifrados).
+
+| Campo lógico | Coluna física | Tipo Prisma | Obrigatório | Regra/Chave | Descrição |
+|---|---|---|---|---|---|
+| `id` | `id` | `String` | sim | PK; default: uuid() | Identificador único do registro. |
+| `provider` | `provider` | `FiscalProvider` | sim | UNIQUE | Valor controlado pelo enum FiscalProvider. |
+| `configurationCiphertext` | `configuration_ciphertext` | `String` | sim | — | Atributo configurationCiphertext da entidade. |
+| `updatedByUserId` | `updated_by_user_id` | `String?` | não | — | Identificador associado a updatedByUser. |
+| `createdAt` | `created_at` | `DateTime` | sim | default: now() | Data e hora de criação. |
+| `updatedAt` | `updated_at` | `DateTime` | sim | — | Data e hora da última atualização. |
+
+**Escopo de tenant**: global ou derivado por relacionamento.
+
+#### FiscalCertificate
+
+**Tabela física**: `fiscal_certificates`  
+**Finalidade**: Certificado A1 da loja (arquivo e senha cifrados) com metadados de titular, CNPJ e validade.
+
+| Campo lógico | Coluna física | Tipo Prisma | Obrigatório | Regra/Chave | Descrição |
+|---|---|---|---|---|---|
+| `id` | `id` | `String` | sim | PK; default: uuid() | Identificador único do registro. |
+| `tenantId` | `tenant_id` | `String` | sim | — | Tenant proprietário; obrigatório para isolamento dos dados. |
+| `status` | `status` | `FiscalCertificateStatus` | sim | default: ACTIVE | Estado atual no ciclo de vida da entidade. |
+| `activeKey` | `active_key` | `String?` | não | UNIQUE | Atributo activeKey da entidade. |
+| `secretCiphertext` | `secret_ciphertext` | `String` | sim | — | Atributo secretCiphertext da entidade. |
+| `subjectName` | `subject_name` | `String` | sim | — | Atributo subjectName da entidade. |
+| `cnpj` | `cnpj` | `String?` | não | — | Atributo cnpj da entidade. |
+| `validFrom` | `valid_from` | `DateTime` | sim | — | Atributo validFrom da entidade. |
+| `validTo` | `valid_to` | `DateTime` | sim | — | Atributo validTo da entidade. |
+| `fingerprintSha256` | `fingerprint_sha256` | `String` | sim | — | Atributo fingerprintSha256 da entidade. |
+| `lastExpiryAlertDays` | `last_expiry_alert_days` | `Int?` | não | — | Atributo lastExpiryAlertDays da entidade. |
+| `uploadedByUserId` | `uploaded_by_user_id` | `String?` | não | — | Identificador associado a uploadedByUser. |
+| `createdAt` | `created_at` | `DateTime` | sim | default: now() | Data e hora de criação. |
+| `replacedAt` | `replaced_at` | `DateTime?` | não | — | Data e hora de replaced. |
+| `tenant` | `—` | `Tenant` | sim | FK/relação | Referência relacionada a Tenant. |
+
+**Restrições e índices do modelo**:
+
+- `@@index([tenantId, status])`
+- `@@index([status, validTo])`
+
+**Escopo de tenant**: próprio (`tenantId`).
+
+#### FiscalProfile
+
+**Tabela física**: `fiscal_profiles`  
+**Finalidade**: Perfil tributário reutilizável (NCM, CFOP, CSOSN, origem, unidade, CEST) atribuído a categoria, produto ou complemento.
+
+| Campo lógico | Coluna física | Tipo Prisma | Obrigatório | Regra/Chave | Descrição |
+|---|---|---|---|---|---|
+| `id` | `id` | `String` | sim | PK; default: uuid() | Identificador único do registro. |
+| `tenantId` | `tenant_id` | `String` | sim | — | Tenant proprietário; obrigatório para isolamento dos dados. |
+| `name` | `name` | `String` | sim | — | Atributo name da entidade. |
+| `ncm` | `ncm` | `String` | sim | — | Atributo ncm da entidade. |
+| `cfop` | `cfop` | `String` | sim | — | Atributo cfop da entidade. |
+| `csosn` | `csosn` | `String` | sim | — | Atributo csosn da entidade. |
+| `origin` | `origin` | `Int` | sim | default: 0 | Atributo origin da entidade. |
+| `commercialUnit` | `commercial_unit` | `String` | sim | default: "UN" | Atributo commercialUnit da entidade. |
+| `cest` | `cest` | `String?` | não | — | Atributo cest da entidade. |
+| `benefitCode` | `benefit_code` | `String?` | não | — | Atributo benefitCode da entidade. |
+| `active` | `active` | `Boolean` | sim | default: true | Indicador verdadeiro/falso da condição nomeada. |
+| `createdAt` | `created_at` | `DateTime` | sim | default: now() | Data e hora de criação. |
+| `updatedAt` | `updated_at` | `DateTime` | sim | — | Data e hora da última atualização. |
+| `tenant` | `—` | `Tenant` | sim | FK/relação | Referência relacionada a Tenant. |
+| `categories` | `—` | `Category[]` | coleção | relação 1:N/N:N | Coleção relacionada de Category. |
+| `products` | `—` | `Product[]` | coleção | relação 1:N/N:N | Coleção relacionada de Product. |
+| `complements` | `—` | `ProductComplement[]` | coleção | relação 1:N/N:N | Coleção relacionada de ProductComplement. |
+
+**Restrições e índices do modelo**:
+
+- `@@unique([tenantId, name])`
+- `@@index([tenantId, active])`
+
+**Escopo de tenant**: próprio (`tenantId`).
+
+#### FiscalDocument
+
+**Tabela física**: `fiscal_documents`  
+**Finalidade**: NFC-e de uma venda (pedido avulso ou comanda): situação, numeração, chave, protocolo, prazos de cancelamento e cópias de XML.
+
+| Campo lógico | Coluna física | Tipo Prisma | Obrigatório | Regra/Chave | Descrição |
+|---|---|---|---|---|---|
+| `id` | `id` | `String` | sim | PK; default: uuid() | Identificador único do registro. |
+| `tenantId` | `tenant_id` | `String` | sim | — | Tenant proprietário; obrigatório para isolamento dos dados. |
+| `orderId` | `order_id` | `String?` | não | — | Identificador associado a order. |
+| `serviceTabId` | `service_tab_id` | `String?` | não | — | Identificador associado a serviceTab. |
+| `activeKey` | `active_key` | `String?` | não | UNIQUE | Atributo activeKey da entidade. |
+| `provider` | `provider` | `FiscalProvider` | sim | — | Valor controlado pelo enum FiscalProvider. |
+| `environment` | `environment` | `FiscalEnvironment` | sim | — | Valor controlado pelo enum FiscalEnvironment. |
+| `status` | `status` | `FiscalDocumentStatus` | sim | default: PENDING | Estado atual no ciclo de vida da entidade. |
+| `trigger` | `trigger` | `String` | sim | — | Atributo trigger da entidade. |
+| `externalId` | `external_id` | `String?` | não | — | Identificador associado a external. |
+| `number` | `number` | `Int?` | não | — | Atributo number da entidade. |
+| `series` | `series` | `Int?` | não | — | Atributo series da entidade. |
+| `accessKey` | `access_key` | `String?` | não | UNIQUE | Atributo accessKey da entidade. |
+| `protocol` | `protocol` | `String?` | não | — | Atributo protocol da entidade. |
+| `issuedAt` | `issued_at` | `DateTime?` | não | — | Data e hora de issued. |
+| `authorizedAt` | `authorized_at` | `DateTime?` | não | — | Data e hora de authorized. |
+| `saleOccurredAt` | `sale_occurred_at` | `DateTime` | sim | — | Data e hora de saleOccurred. |
+| `totalAmount` | `total_amount` | `Decimal` | sim | — | Atributo totalAmount da entidade. |
+| `consumerDocument` | `consumer_document` | `String?` | não | — | Atributo consumerDocument da entidade. |
+| `issuerSnapshot` | `issuer_snapshot` | `Json` | sim | — | Indicador verdadeiro/falso da condição nomeada. |
+| `payloadSnapshot` | `payload_snapshot` | `Json` | sim | — | Atributo payloadSnapshot da entidade. |
+| `rejectionCode` | `rejection_code` | `String?` | não | — | Atributo rejectionCode da entidade. |
+| `rejectionMessage` | `rejection_message` | `String?` | não | — | Atributo rejectionMessage da entidade. |
+| `xmlAssetKey` | `xml_asset_key` | `String?` | não | — | Atributo xmlAssetKey da entidade. |
+| `danfeAssetKey` | `danfe_asset_key` | `String?` | não | — | Atributo danfeAssetKey da entidade. |
+| `qrCodeUrl` | `qr_code_url` | `String?` | não | — | Atributo qrCodeUrl da entidade. |
+| `consultationUrl` | `consultation_url` | `String?` | não | — | Atributo consultationUrl da entidade. |
+| `danfeUrl` | `danfe_url` | `String?` | não | — | Atributo danfeUrl da entidade. |
+| `cancelReason` | `cancel_reason` | `String?` | não | — | Atributo cancelReason da entidade. |
+| `cancelRequestedAt` | `cancel_requested_at` | `DateTime?` | não | — | Data e hora de cancelRequested. |
+| `cancelDeadlineAt` | `cancel_deadline_at` | `DateTime?` | não | — | Data e hora de cancelDeadline. |
+| `cancelReminderAt` | `cancel_reminder_at` | `DateTime?` | não | — | Data e hora de cancelReminder. |
+| `cancelledAt` | `cancelled_at` | `DateTime?` | não | — | Data e hora de cancelled. |
+| `cancelProtocol` | `cancel_protocol` | `String?` | não | — | Atributo cancelProtocol da entidade. |
+| `cancelXmlAssetKey` | `cancel_xml_asset_key` | `String?` | não | — | Atributo cancelXmlAssetKey da entidade. |
+| `attempts` | `attempts` | `Int` | sim | default: 0 | Atributo attempts da entidade. |
+| `taxDivergences` | `tax_divergences` | `Json?` | não | — | Atributo taxDivergences da entidade. |
+| `taxDivergenceAt` | `tax_divergence_at` | `DateTime?` | não | — | Data e hora de taxDivergence. |
+| `taxDivergenceReviewedAt` | `tax_divergence_reviewed_at` | `DateTime?` | não | — | Data e hora de taxDivergenceReviewed. |
+| `nextSyncAt` | `next_sync_at` | `DateTime?` | não | — | Data e hora de nextSync. |
+| `requestedByUserId` | `requested_by_user_id` | `String?` | não | — | Identificador associado a requestedByUser. |
+| `createdAt` | `created_at` | `DateTime` | sim | default: now() | Data e hora de criação. |
+| `updatedAt` | `updated_at` | `DateTime` | sim | — | Data e hora da última atualização. |
+| `tenant` | `—` | `Tenant` | sim | FK/relação | Referência relacionada a Tenant. |
+| `order` | `—` | `Order?` | não | FK/relação | Referência relacionada a Order. |
+| `serviceTab` | `—` | `ServiceTab?` | não | FK/relação | Referência relacionada a ServiceTab. |
+| `events` | `—` | `FiscalDocumentEvent[]` | coleção | relação 1:N/N:N | Coleção relacionada de FiscalDocumentEvent. |
+
+**Restrições e índices do modelo**:
+
+- `@@index([tenantId, status])`
+- `@@index([tenantId, orderId])`
+- `@@index([tenantId, serviceTabId])`
+- `@@index([tenantId, saleOccurredAt])`
+- `@@index([status, nextSyncAt])`
+
+**Escopo de tenant**: próprio (`tenantId`).
+
+#### FiscalDocumentEvent
+
+**Tabela física**: `fiscal_document_events`  
+**Finalidade**: Linha do tempo de cada NFC-e (envio, autorização, rejeição, sincronização, cancelamento), sem dados sensíveis.
+
+| Campo lógico | Coluna física | Tipo Prisma | Obrigatório | Regra/Chave | Descrição |
+|---|---|---|---|---|---|
+| `id` | `id` | `String` | sim | PK; default: uuid() | Identificador único do registro. |
+| `tenantId` | `tenant_id` | `String` | sim | — | Tenant proprietário; obrigatório para isolamento dos dados. |
+| `documentId` | `document_id` | `String` | sim | — | Identificador associado a document. |
+| `type` | `type` | `FiscalDocumentEventType` | sim | — | Valor controlado pelo enum FiscalDocumentEventType. |
+| `actorUserId` | `actor_user_id` | `String?` | não | — | Identificador associado a actorUser. |
+| `providerStatus` | `provider_status` | `String?` | não | — | Atributo providerStatus da entidade. |
+| `code` | `code` | `String?` | não | — | Atributo code da entidade. |
+| `message` | `message` | `String?` | não | — | Atributo message da entidade. |
+| `metadata` | `metadata` | `Json` | sim | default: "{}" | Estrutura JSON com dados complementares controlados pelo domínio. |
+| `createdAt` | `created_at` | `DateTime` | sim | default: now() | Data e hora de criação. |
+| `tenant` | `—` | `Tenant` | sim | FK/relação | Referência relacionada a Tenant. |
+| `document` | `—` | `FiscalDocument` | sim | FK/relação | Referência relacionada a FiscalDocument. |
+
+**Restrições e índices do modelo**:
+
+- `@@index([tenantId, documentId, createdAt])`
+
+**Escopo de tenant**: próprio (`tenantId`).
+
 ## Catálogo de enums
 
 ### UserRole
@@ -2964,7 +3229,7 @@ Valores permitidos: `ACTIVE`, `USED`, `EXPIRED`.
 
 ### AccessAuditEventType
 
-Valores permitidos: `LOGIN_SUCCESS`, `LOGIN_FAILURE`, `LOGOUT`, `USER_CREATED`, `USER_UPDATED`, `USER_STATUS_CHANGED`, `PROFILE_CREATED`, `PROFILE_UPDATED`, `PERMISSIONS_CHANGED`, `STORE_ASSIGNMENT_CHANGED`, `ACCESS_DENIED`, `PASSWORD_RESET_REQUESTED`, `PASSWORD_CHANGED`, `MCP_CONFIGURATION_CHANGED`, `MCP_TOKEN_CREATED`, `MCP_TOKEN_REVOKED`, `MCP_CONNECTION_AUTHORIZED`, `MCP_CONNECTION_DENIED`, `MCP_CONNECTION_REVOKED`, `MCP_CLIENT_REJECTED`.
+Valores permitidos: `LOGIN_SUCCESS`, `LOGIN_FAILURE`, `LOGOUT`, `USER_CREATED`, `USER_UPDATED`, `USER_STATUS_CHANGED`, `PROFILE_CREATED`, `PROFILE_UPDATED`, `PERMISSIONS_CHANGED`, `STORE_ASSIGNMENT_CHANGED`, `ACCESS_DENIED`, `PASSWORD_RESET_REQUESTED`, `PASSWORD_CHANGED`, `MCP_CONFIGURATION_CHANGED`, `MCP_TOKEN_CREATED`, `MCP_TOKEN_REVOKED`, `MCP_CONNECTION_AUTHORIZED`, `MCP_CONNECTION_DENIED`, `MCP_CONNECTION_REVOKED`, `MCP_CLIENT_REJECTED`, `FISCAL_CONFIGURATION_CHANGED`, `FISCAL_CONNECTION_CHANGED`, `FISCAL_CERTIFICATE_CHANGED`, `FISCAL_PROFILE_CHANGED`.
 
 ### McpDataArea
 
@@ -3168,7 +3433,7 @@ Valores permitidos: `PROVIDER_TOKEN`, `OAUTH`, `FIXED_TOKEN`.
 
 ### SalesRunTrigger
 
-Valores permitidos: `MANUAL`, `INITIAL_LOAD`, `WEBHOOK`, `RECONCILIATION_SHORT`, `RECONCILIATION_DAILY`.
+Valores permitidos: `MANUAL`, `INITIAL_LOAD`, `WEBHOOK`, `RECONCILIATION_SHORT`, `RECONCILIATION_DAILY`, `AUTOMATIC`.
 
 ### OAuthAuthorizationAttemptStatus
 
@@ -3240,7 +3505,7 @@ Valores permitidos: `PENDING`, `PROCESSING`, `COMPLETED`, `FAILED`, `EXPIRED`.
 
 ### BackgroundJobType
 
-Valores permitidos: `EXPORT`, `SALES_IMPORT_PREVIEW`, `SALES_IMPORT_CONFIRM`, `IFOOD_FINANCIAL_RECONCILIATION`, `PROVIDER_WEBHOOK`, `PAYMENT_WEBHOOK`, `IFOOD_POLL`, `MP_RECONCILIATION`, `MP_TOKEN_REFRESH`, `POINT_RECONCILIATION`, `RETENTION`.
+Valores permitidos: `EXPORT`, `SALES_IMPORT_PREVIEW`, `SALES_IMPORT_CONFIRM`, `IFOOD_FINANCIAL_RECONCILIATION`, `PROVIDER_WEBHOOK`, `PAYMENT_WEBHOOK`, `IFOOD_POLL`, `MP_RECONCILIATION`, `MP_TOKEN_REFRESH`, `POINT_RECONCILIATION`, `RETENTION`, `FISCAL_EMISSION`, `FISCAL_SYNC`, `FISCAL_CANCELLATION`, `SALES_AUTO_IMPORT`.
 
 ### BackgroundJobPriority
 
@@ -3265,6 +3530,38 @@ Valores permitidos: `UNREAD`, `READ`, `ARCHIVED`.
 ### OperationalNotificationSeverity
 
 Valores permitidos: `INFO`, `SUCCESS`, `WARNING`, `ERROR`.
+
+### FiscalProvider
+
+Valores permitidos: `BLING`.
+
+### FiscalEnvironment
+
+Valores permitidos: `HOMOLOGATION`, `PRODUCTION`.
+
+### FiscalEmissionMode
+
+Valores permitidos: `AUTOMATIC`, `MANUAL`.
+
+### FiscalTaxRegime
+
+Valores permitidos: `SIMPLES_NACIONAL`.
+
+### FiscalConnectionStatus
+
+Valores permitidos: `DRAFT`, `CONNECTED`, `ERROR`, `DISCONNECTED`.
+
+### FiscalCertificateStatus
+
+Valores permitidos: `ACTIVE`, `REPLACED`, `REMOVED`.
+
+### FiscalDocumentStatus
+
+Valores permitidos: `PENDING`, `PROCESSING`, `AUTHORIZED`, `REJECTED`, `ERROR`, `CANCEL_PENDING`, `CANCELLED`, `CANCEL_FAILED`.
+
+### FiscalDocumentEventType
+
+Valores permitidos: `CREATED`, `SUBMITTED`, `AUTHORIZED`, `REJECTED`, `ERROR`, `RETRY_SCHEDULED`, `SYNCED`, `CANCEL_REQUESTED`, `CANCEL_MANUAL_REQUIRED`, `CANCELLED`, `CANCEL_FAILED`, `DOCUMENTS_STORED`, `RETROACTIVE_CONFIRMED`, `TAX_DIVERGENCE`, `TAX_DIVERGENCE_REVIEWED`.
 
 ## Relacionamentos e integridade
 
@@ -3345,6 +3642,12 @@ Valores permitidos: `INFO`, `SUCCESS`, `WARNING`, `ERROR`.
 | `Tenant` | `mcpToolCalls` | `McpToolCall` | muitos | `—` |
 | `Tenant` | `mcpOAuthConnections` | `McpOAuthConnection` | muitos | `—` |
 | `Tenant` | `mcpOAuthRequests` | `McpOAuthAuthorizationRequest` | muitos | `—` |
+| `Tenant` | `fiscalConfiguration` | `FiscalConfiguration` | zero ou um | `—` |
+| `Tenant` | `fiscalProviderConnections` | `FiscalProviderConnection` | muitos | `—` |
+| `Tenant` | `fiscalCertificates` | `FiscalCertificate` | muitos | `—` |
+| `Tenant` | `fiscalProfiles` | `FiscalProfile` | muitos | `—` |
+| `Tenant` | `fiscalDocuments` | `FiscalDocument` | muitos | `—` |
+| `Tenant` | `fiscalDocumentEvents` | `FiscalDocumentEvent` | muitos | `—` |
 | `PlatformUser` | `createdTenants` | `Tenant` | muitos | `—` |
 | `LayoutPreset` | `tenantsUsingDefault` | `Tenant` | muitos | `—` |
 | `LayoutPreset` | `visualConfigurations` | `StoreVisualConfiguration` | muitos | `—` |
@@ -3419,9 +3722,11 @@ Valores permitidos: `INFO`, `SUCCESS`, `WARNING`, `ERROR`.
 | `StoreVisualConfiguration` | `createdByUser` | `User` | zero ou um | `@relation("VisualConfigurationCreatedBy", fields: [createdByUserId], references: [id], onDelete: SetNull)` |
 | `StoreVisualConfiguration` | `publishedByUser` | `User` | zero ou um | `@relation("VisualConfigurationPublishedBy", fields: [publishedByUserId], references: [id], onDelete: SetNull)` |
 | `Category` | `tenant` | `Tenant` | um | `@relation(fields: [tenantId], references: [id], onDelete: Cascade)` |
+| `Category` | `fiscalProfile` | `FiscalProfile` | zero ou um | `@relation(fields: [fiscalProfileId], references: [id], onDelete: Restrict)` |
 | `Category` | `products` | `Product` | muitos | `—` |
 | `Product` | `tenant` | `Tenant` | um | `@relation(fields: [tenantId], references: [id], onDelete: Cascade)` |
 | `Product` | `category` | `Category` | um | `@relation(fields: [categoryId], references: [id], onDelete: Restrict)` |
+| `Product` | `fiscalProfile` | `FiscalProfile` | zero ou um | `@relation(fields: [fiscalProfileId], references: [id], onDelete: Restrict)` |
 | `Product` | `orderItems` | `OrderItem` | muitos | `—` |
 | `Product` | `technicalSheets` | `TechnicalSheet` | muitos | `—` |
 | `Product` | `productCostSnapshots` | `ProductCostSnapshot` | muitos | `—` |
@@ -3446,6 +3751,7 @@ Valores permitidos: `INFO`, `SUCCESS`, `WARNING`, `ERROR`.
 | `Order` | `paymentAllocations` | `PaymentAllocation` | muitos | `—` |
 | `Order` | `externalFinancialSales` | `ExternalFinancialSale` | muitos | `—` |
 | `Order` | `operationalEvents` | `OrderOperationalEvent` | muitos | `—` |
+| `Order` | `fiscalDocuments` | `FiscalDocument` | muitos | `—` |
 | `SalesIntegration` | `tenant` | `Tenant` | um | `@relation(fields: [tenantId], references: [id], onDelete: Cascade)` |
 | `SalesIntegration` | `createdByUser` | `User` | zero ou um | `@relation("SalesIntegrationCreatedBy", fields: [createdByUserId], references: [id], onDelete: SetNull)` |
 | `SalesIntegration` | `updatedByUser` | `User` | zero ou um | `@relation("SalesIntegrationUpdatedBy", fields: [updatedByUserId], references: [id], onDelete: SetNull)` |
@@ -3528,7 +3834,9 @@ Valores permitidos: `INFO`, `SUCCESS`, `WARNING`, `ERROR`.
 | `ServiceTab` | `charges` | `PaymentCharge` | muitos | `—` |
 | `ServiceTab` | `paymentAllocations` | `PaymentAllocation` | muitos | `—` |
 | `ServiceTab` | `operationalEvents` | `OrderOperationalEvent` | muitos | `—` |
+| `ServiceTab` | `fiscalDocuments` | `FiscalDocument` | muitos | `—` |
 | `ProductComplement` | `tenant` | `Tenant` | um | `@relation(fields: [tenantId], references: [id], onDelete: Cascade)` |
+| `ProductComplement` | `fiscalProfile` | `FiscalProfile` | zero ou um | `@relation(fields: [fiscalProfileId], references: [id], onDelete: Restrict)` |
 | `ProductComplement` | `assignments` | `ProductComplementAssignment` | muitos | `—` |
 | `ProductComplement` | `modifications` | `OrderItemModification` | muitos | `—` |
 | `ProductComplementAssignment` | `product` | `Product` | um | `@relation(fields: [productId], references: [id], onDelete: Cascade)` |
@@ -3686,6 +3994,19 @@ Valores permitidos: `INFO`, `SUCCESS`, `WARNING`, `ERROR`.
 | `McpOAuthConnection` | `requests` | `McpOAuthAuthorizationRequest` | muitos | `—` |
 | `McpOAuthConnection` | `toolCalls` | `McpToolCall` | muitos | `—` |
 | `McpOAuthToken` | `connection` | `McpOAuthConnection` | um | `@relation(fields: [connectionId], references: [id], onDelete: Cascade)` |
+| `FiscalConfiguration` | `tenant` | `Tenant` | um | `@relation(fields: [tenantId], references: [id], onDelete: Cascade)` |
+| `FiscalProviderConnection` | `tenant` | `Tenant` | um | `@relation(fields: [tenantId], references: [id], onDelete: Cascade)` |
+| `FiscalCertificate` | `tenant` | `Tenant` | um | `@relation(fields: [tenantId], references: [id], onDelete: Cascade)` |
+| `FiscalProfile` | `tenant` | `Tenant` | um | `@relation(fields: [tenantId], references: [id], onDelete: Cascade)` |
+| `FiscalProfile` | `categories` | `Category` | muitos | `—` |
+| `FiscalProfile` | `products` | `Product` | muitos | `—` |
+| `FiscalProfile` | `complements` | `ProductComplement` | muitos | `—` |
+| `FiscalDocument` | `tenant` | `Tenant` | um | `@relation(fields: [tenantId], references: [id], onDelete: Cascade)` |
+| `FiscalDocument` | `order` | `Order` | zero ou um | `@relation(fields: [orderId], references: [id], onDelete: Restrict)` |
+| `FiscalDocument` | `serviceTab` | `ServiceTab` | zero ou um | `@relation(fields: [serviceTabId], references: [id], onDelete: Restrict)` |
+| `FiscalDocument` | `events` | `FiscalDocumentEvent` | muitos | `—` |
+| `FiscalDocumentEvent` | `tenant` | `Tenant` | um | `@relation(fields: [tenantId], references: [id], onDelete: Cascade)` |
+| `FiscalDocumentEvent` | `document` | `FiscalDocument` | um | `@relation(fields: [documentId], references: [id], onDelete: Cascade)` |
 
 ## Governança e manutenção
 

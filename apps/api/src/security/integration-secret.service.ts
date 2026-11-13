@@ -5,7 +5,9 @@ import { createCipheriv, createDecipheriv, createHash, randomBytes } from "crypt
 export type IntegrationCredentialEnvelope =
   | { version: 1; kind: "PAGBANK_EDI"; ediToken: string }
   | { version: 1; kind: "MERCADO_PAGO_OAUTH"; accessToken: string; refreshToken: string }
-  | { version: 1; kind: "MERCADO_PAGO_FIXED"; accessToken: string };
+  | { version: 1; kind: "MERCADO_PAGO_FIXED"; accessToken: string }
+  | { version: 1; kind: "BLING_OAUTH"; accessToken: string; refreshToken: string }
+  | { version: 1; kind: "FISCAL_A1_CERTIFICATE"; pfxBase64: string; password: string };
 
 @Injectable()
 export class IntegrationSecretService {
@@ -89,8 +91,11 @@ function isCredentialEnvelope(value: unknown): value is IntegrationCredentialEnv
   if (record.version !== 1 || typeof record.kind !== "string") return false;
   if (record.kind === "PAGBANK_EDI") return typeof record.ediToken === "string";
   if (record.kind === "MERCADO_PAGO_FIXED") return typeof record.accessToken === "string";
+  if (record.kind === "FISCAL_A1_CERTIFICATE") {
+    return typeof record.pfxBase64 === "string" && typeof record.password === "string";
+  }
   return (
-    record.kind === "MERCADO_PAGO_OAUTH" &&
+    (record.kind === "MERCADO_PAGO_OAUTH" || record.kind === "BLING_OAUTH") &&
     typeof record.accessToken === "string" &&
     typeof record.refreshToken === "string"
   );

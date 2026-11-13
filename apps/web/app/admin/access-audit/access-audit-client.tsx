@@ -164,6 +164,10 @@ const EVENT_TYPE_LABELS: Record<string, string> = {
   MCP_CONNECTION_DENIED: "MCP: conexao cancelada pelo usuario",
   MCP_CONNECTION_REVOKED: "MCP: conexao revogada",
   MCP_CLIENT_REJECTED: "MCP: aplicativo recusado",
+  FISCAL_CONFIGURATION_CHANGED: "Fiscal: configuracao alterada",
+  FISCAL_CONNECTION_CHANGED: "Fiscal: conexao com provedor alterada",
+  FISCAL_CERTIFICATE_CHANGED: "Fiscal: certificado A1 alterado",
+  FISCAL_PROFILE_CHANGED: "Fiscal: perfil fiscal alterado",
 };
 
 export function eventTypeLabel(eventType: string): string {

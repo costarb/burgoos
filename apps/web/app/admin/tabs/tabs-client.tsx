@@ -1,6 +1,6 @@
 "use client";
 
-import React, { FormEvent, useState } from "react";
+import React, { FormEvent, useEffect, useState } from "react";
 import type { ServiceTabDetail, ServiceTabSummary } from "@rrfive/types";
 import {
   checkoutServiceTab,
@@ -26,6 +26,9 @@ export function TabsClient({
   const [feedback, setFeedback] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [checkoutOpen, setCheckoutOpen] = useState(false);
+  const [consumerDocument, setConsumerDocument] = useState("");
+  const selectedId = selected?.id;
+  useEffect(() => setConsumerDocument(""), [selectedId]);
 
   function replaceTab(tab: ServiceTabSummary) {
     setTabs((current) => {
@@ -74,7 +77,10 @@ export function TabsClient({
     try {
       const tab =
         action === "checkout"
-          ? await checkoutServiceTab(selected.id, { expectedVersion: selected.version })
+          ? await checkoutServiceTab(selected.id, {
+              expectedVersion: selected.version,
+              ...(consumerDocument.trim() ? { consumerDocument: consumerDocument.trim() } : {}),
+            })
           : await reopenServiceTab(selected.id, {
               expectedVersion: selected.version,
               reason: "Reabertura solicitada pelo operador",
@@ -247,8 +253,16 @@ export function TabsClient({
                     Transfira a responsabilidade antes de iniciar a cobranca.
                   </p>
                 ) : null}
+                <input
+                  aria-label="CPF ou CNPJ na nota"
+                  className="mt-5 min-h-12 w-full rounded-lg border px-3"
+                  inputMode="numeric"
+                  onChange={(event) => setConsumerDocument(event.target.value)}
+                  placeholder="CPF/CNPJ na nota (opcional)"
+                  value={consumerDocument}
+                />
                 <button
-                  className="mt-5 min-h-12 w-full rounded-lg bg-emerald-700 font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50"
+                  className="mt-3 min-h-12 w-full rounded-lg bg-emerald-700 font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50"
                   disabled={
                     busy ||
                     Boolean(

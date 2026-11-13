@@ -1,0 +1,120 @@
+{
+  "data": {
+    "id": 27268975683,
+    "tipo": 1,
+    "situacao": 5,
+    "numero": "000004",
+    "dataEmissao": "2026-10-30 18:26:45",
+    "dataOperacao": "2026-10-30 18:26:45",
+    "chaveAcesso": "35261011222333000181650010000000041689756832",
+    "contato": {
+      "id": 18483362700,
+      "nome": "Consumidor final",
+      "numeroDocumento": "",
+      "ie": "",
+      "rg": "",
+      "telefone": "",
+      "email": "",
+      "endereco": {
+        "endereco": "",
+        "numero": "",
+        "complemento": "",
+        "bairro": "",
+        "cep": "",
+        "municipio": "",
+        "uf": ""
+      }
+    },
+    "naturezaOperacao": {
+      "id": 15111821399
+    },
+    "loja": {
+      "id": 0
+    },
+    "serie": 1,
+    "valorNota": 1,
+    "valorFrete": 0,
+    "tipoNota": "",
+    "xml": "https://www.bling.com.br/relatorios/nfe.xml.php?chaveAcesso=35261011222333000181650010000000041689756832&s&signature=FIXTURE",
+    "linkDanfe": "https://www.bling.com.br/doc.view.php?id=FIXTURE&accessKey=FIXTURE",
+    "linkPDF": "https://www.bling.com.br/doc.view.php?PDF=true&id=FIXTURE&accessKey=FIXTURE",
+    "optanteSimplesNacional": true,
+    "numeroPedidoLoja": "",
+    "vendedor": {
+      "id": 0
+    },
+    "transporte": {
+      "fretePorConta": 1,
+      "transportador": {
+        "nome": "",
+        "numeroDocumento": ""
+      },
+      "volumes": [],
+      "etiqueta": {
+        "nome": "",
+        "endereco": "",
+        "numero": "",
+        "complemento": "",
+        "municipio": "",
+        "uf": "",
+        "cep": "",
+        "bairro": ""
+      }
+    },
+    "itens": [
+      {
+        "codigo": "TESTE-RRF5-1",
+        "descricao": "Hot Dog (teste integracao)",
+        "unidade": "UN",
+        "quantidade": 1,
+        "valor": 1,
+        "valorTotal": 1,
+        "tipo": "P",
+        "pesoBruto": 0,
+        "pesoLiquido": 0,
+        "numeroPedidoCompra": "",
+        "classificacaoFiscal": "2106.90.90",
+        "cest": "",
+        "codigoServico": "",
+        "origem": 0,
+        "informacoesAdicionais": "Total aproximado de tributos: R$ [APROX_TRIB]. Fonte IBPT.",
+        "gtin": "",
+        "cfop": "5102",
+        "impostos": {
+          "valorAproximadoTotalTributos": 0.31,
+          "icms": {
+            "st": 0,
+            "origem": 0,
+            "modalidade": 0,
+            "aliquota": 0,
+            "valor": 0
+          }
+        },
+        "unidadeTributavel": {
+          "unidade": "",
+          "quantidade": 0
+        },
+        "exportacao": {
+          "drawback": "",
+          "registroExportacao": "",
+          "chaveAcessoNFe": ""
+        }
+      }
+    ],
+    "parcelas": [
+      {
+        "data": "2026-10-30",
+        "valor": 1,
+        "observacoes": "",
+        "caut": "",
+        "formaPagamento": {
+          "id": 11508877
+        }
+      }
+    ],
+    "intermediador": {
+      "cnpj": "",
+      "nomeUsuario": ""
+    }
+  }
+}

@@ -1,5 +1,7 @@
-import type { OrderStatus } from "@rrfive/types";
-import { getOrderMaintenanceHistory, getOrderMaintenanceSearch } from "../../../../lib/api";
+import type { OrderFiscalInfo, OrderStatus } from "@rrfive/types";
+import { getOrderMaintenanceHistory, getOrderMaintenanceSearch, getOrdersFiscalStatus } from "../../../../lib/api";
+import { emitSaleFiscalDocumentAction } from "../../fiscal/actions";
+import { OrderFiscalCell } from "../../fiscal/order-fiscal-cell";
 
 interface MaintenancePageProps {
   searchParams?: {
@@ -29,9 +31,11 @@ export default async function OrderMaintenancePage({ searchParams = {} }: Mainte
     includeDeleted: searchParams.includeDeleted === "true",
     search: searchParams.search,
   });
-  const histories = await Promise.all(
-    result.orders.map((order) => getOrderMaintenanceHistory(result.token, order.id))
-  );
+  const [histories, fiscal] = await Promise.all([
+    Promise.all(result.orders.map((order) => getOrderMaintenanceHistory(result.token, order.id))),
+    // Users without fiscal access simply do not see the fiscal status.
+    getOrdersFiscalStatus(result.token, result.orders.map((order) => order.id)).catch(() => ({}) as Record<string, OrderFiscalInfo>),
+  ]);
 
   return (
     <main className="mx-auto max-w-6xl px-6 py-8 text-slate-900">
@@ -76,6 +80,11 @@ export default async function OrderMaintenancePage({ searchParams = {} }: Mainte
                 <p className="font-semibold">R$ {order.total}</p>
               </div>
             </div>
+            {fiscal[order.id] ? (
+              <div className="mt-3">
+                <OrderFiscalCell emitAction={emitSaleFiscalDocumentAction} info={fiscal[order.id]} saleDate={order.createdAt ?? new Date().toISOString()} />
+              </div>
+            ) : null}
             {order.deletionReason ? <p className="mt-3 rounded-md bg-red-50 p-2 text-sm text-red-700">Motivo da exclusao: {order.deletionReason}</p> : null}
             <details className="mt-3">
               <summary className="cursor-pointer text-sm font-semibold">Historico de manutencoes ({histories[index]?.length ?? 0})</summary>

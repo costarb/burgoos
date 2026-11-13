@@ -164,6 +164,25 @@ describe("NotificationsService", () => {
         exportJobId: "export-1",
       }),
     });
+
+    for (const [actionUrl, expected] of [
+      ["/admin/fiscal?tab=pendencias", "/admin/fiscal?tab=pendencias"],
+      ["//evil.example/admin", null],
+      ["/admin/../../etc", null],
+      ["/admin/fiscal\nX", null],
+    ] as const) {
+      await service.create({
+        tenantId: "tenant-1",
+        recipientUserId: "user-1",
+        type: "FISCAL_CANCEL_MANUAL_REQUIRED",
+        title: "Cancelar NFC-e",
+        message: "Cancele no provedor.",
+        actionUrl,
+      });
+      expect(prisma.operationalNotification.create).toHaveBeenLastCalledWith({
+        data: expect.objectContaining({ actionUrl: expected }),
+      });
+    }
   });
 });
 
