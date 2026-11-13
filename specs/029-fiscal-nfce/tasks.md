@@ -86,8 +86,8 @@
 ## Phase 10: Polish
 
 - [X] T042 [P] Docs: `docs/USER_GUIDE.md` (seção Fiscal: configuração, Bling, cancelamento assistido, importação automática), `docs/DATA_DICTIONARY.md` regenerado, guia de monitoria com os eventos de log; emenda da constituição ("Fiscal/NF-e" promovido pela spec 029)
-- [ ] T043 Typecheck, lint e suítes de API e web (comparar com o baseline do `develop`)
-- [ ] T044 Roteiro do `quickstart.md` em homologação; depois produção em modo manual → automático
+- [X] T043 Typecheck, lint e suítes de API e web (comparar com o baseline do `develop`) *(2026-11-13: typecheck e lint limpos; web 66/66 arquivos; API 875 passaram, com as mesmas 24 falhas preexistentes do `develop` em f1f6135 — AppModule sem decorator metadata no Vitest e testes que dependem de Postgres —, nenhuma regressão)*
+- [ ] T044 Roteiro do `quickstart.md` em homologação; depois produção em modo manual → automático *(homologação concluída em 2026-11-13; falta a produção)*
 
 ## Dependencies
 
