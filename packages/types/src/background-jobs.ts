@@ -8,7 +8,11 @@ export type BackgroundJobType =
   | "MP_RECONCILIATION"
   | "MP_TOKEN_REFRESH"
   | "POINT_RECONCILIATION"
-  | "RETENTION";
+  | "RETENTION"
+  | "FISCAL_EMISSION"
+  | "FISCAL_SYNC"
+  | "FISCAL_CANCELLATION"
+  | "SALES_AUTO_IMPORT";
 
 export type BackgroundJobPriority = "CRITICAL" | "HIGH" | "NORMAL" | "LOW";
 export type BackgroundJobStatus =

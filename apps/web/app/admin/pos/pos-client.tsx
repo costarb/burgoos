@@ -86,6 +86,7 @@ export function PosClient({
   );
   const [customerName, setCustomerName] = useState(initialOrder?.customerName ?? "");
   const [customerPhone, setCustomerPhone] = useState(initialOrder?.customerPhone ?? "");
+  const [consumerDocument, setConsumerDocument] = useState("");
   const [orderNotes, setOrderNotes] = useState(initialOrder?.notes ?? "");
   const [orderVersion, setOrderVersion] = useState(initialOrder?.version ?? 0);
   const [createdOrder, setCreatedOrder] = useState<PosOrder | null>(null);
@@ -128,6 +129,7 @@ export function PosClient({
           customerPhone: customerPhone || undefined,
           fulfillmentMethod,
           notes: orderNotes || undefined,
+          ...(consumerDocument.trim() ? { consumerDocument: consumerDocument.trim() } : {}),
           items,
         });
         setOrderVersion(order.version);
@@ -141,6 +143,7 @@ export function PosClient({
             fulfillmentMethod,
             notes: orderNotes || undefined,
             releaseToKds: true,
+            consumerDocument: serviceTabId ? undefined : consumerDocument.trim() || undefined,
             items,
           },
           crypto.randomUUID(),
@@ -148,6 +151,7 @@ export function PosClient({
         setCart([]);
         setCustomerName("");
         setCustomerPhone("");
+        setConsumerDocument("");
         setOrderNotes("");
         setCreatedOrder(order);
         setPendingPayments((current) => [{
@@ -363,6 +367,16 @@ export function PosClient({
           placeholder="Telefone (opcional)"
           value={customerPhone}
         />
+        {serviceTabId ? null : (
+          <input
+            aria-label="CPF ou CNPJ na nota"
+            className="mt-3 min-h-12 w-full rounded-lg border px-3"
+            inputMode="numeric"
+            onChange={(event) => setConsumerDocument(event.target.value)}
+            placeholder="CPF/CNPJ na nota (opcional)"
+            value={consumerDocument}
+          />
+        )}
         <textarea
           aria-label="Observações gerais do pedido"
           className="mt-3 min-h-20 w-full rounded-lg border p-3"

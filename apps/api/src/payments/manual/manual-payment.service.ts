@@ -1,8 +1,10 @@
 import {
   ConflictException,
+  Inject,
   Injectable,
   Logger,
   NotFoundException,
+  Optional,
 } from "@nestjs/common";
 import {
   ChargeMode,
@@ -15,6 +17,7 @@ import {
   Prisma,
   ServiceTabStatus,
 } from "@prisma/client";
+import { FiscalTriggerService } from "../../management/fiscal/documents/fiscal-trigger.service";
 import { AuthUser } from "../../platform/auth/auth.types";
 import { PrismaService } from "../../platform/database/prisma.service";
 import { ConfirmManualPaymentDto } from "./dto/manual-payment.dto";
@@ -61,7 +64,10 @@ export function validateManualPayment(
 @Injectable()
 export class ManualPaymentService {
   private readonly logger = new Logger(ManualPaymentService.name);
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    @Optional() @Inject(FiscalTriggerService) private readonly fiscalTrigger?: FiscalTriggerService,
+  ) {}
 
   async options(tenantId: string) {
     await this.prisma.paymentInstitutionConfiguration.createMany({
@@ -100,7 +106,7 @@ export class ManualPaymentService {
     });
     if (!institution) throw new ConflictException("Instituicao de pagamento nao esta habilitada");
 
-    return this.prisma.$transaction(async (tx) => {
+    const result = await this.prisma.$transaction(async (tx) => {
       const existing = await tx.paymentCharge.findUnique({
         where: { tenantId_idempotencyKey: { tenantId: user.tenantId, idempotencyKey } },
       });
@@ -220,6 +226,13 @@ export class ManualPaymentService {
       );
       return projectManualCharge(charge);
     }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
+    // The balance is fully paid now: automatic NFC-e (no-op in manual mode or when already issued).
+    if (dto.targetType === PaymentTargetType.ORDER) {
+      await this.fiscalTrigger?.requestForOrder(user.tenantId, dto.targetId);
+    } else {
+      await this.fiscalTrigger?.requestAutomatic(user.tenantId, { type: "TAB", id: dto.targetId });
+    }
+    return result;
   }
 }
 

@@ -2,6 +2,7 @@ import {
   ConflictException,
   Injectable,
   NotFoundException,
+  UnprocessableEntityException,
 } from "@nestjs/common";
 import {
   OperationalEventSource,
@@ -10,6 +11,7 @@ import {
   ServiceTabStatus,
 } from "@prisma/client";
 import { randomInt } from "node:crypto";
+import { normalizeConsumerDocument } from "../../common/br/br-documents";
 import { AuthUser } from "../../platform/auth/auth.types";
 import { PrismaService } from "../../platform/database/prisma.service";
 import { OperationalEventService } from "../operational-events/operational-event.service";
@@ -129,12 +131,18 @@ export class ServiceTabService {
         assignedUserId: tab.assignedUserId,
       });
     }
+    let consumerDocument: string | null = null;
+    if (dto.consumerDocument?.trim()) {
+      consumerDocument = normalizeConsumerDocument(dto.consumerDocument);
+      if (!consumerDocument) throw new UnprocessableEntityException("CPF/CNPJ do consumidor invalido");
+    }
     return this.transition(user, tabId, dto.expectedVersion, {
       from: ServiceTabStatus.OPEN,
       to: ServiceTabStatus.CHECKOUT_PENDING,
       data: {
         checkoutStartedAt: new Date(),
         checkoutStartedByUserId: user.id,
+        ...(dto.consumerDocument !== undefined ? { consumerDocument } : {}),
       },
       event: OperationalEventType.TAB_CHECKOUT_STARTED,
     });

@@ -1,3 +1,6 @@
+import { FiscalModule } from "../fiscal/fiscal.module";
+import { NotificationsService } from "../notifications/notifications.service";
+import { SalesAutoImportService } from "./auto-import/sales-auto-import.service";
 import { forwardRef, Module, OnModuleInit } from "@nestjs/common";
 import { ScheduleModule } from "@nestjs/schedule";
 import { OrderingModule } from "../../ordering/ordering.module";
@@ -55,6 +58,7 @@ import { IfoodFinancialObservabilityService } from "./ifood/ifood-financial-obse
     PlatformIntegrationsModule,
     DeliveryIntegrationsModule,
     forwardRef(() => OrderingModule),
+    FiscalModule,
   ],
   controllers: [
     SalesIntegrationController,
@@ -98,6 +102,8 @@ import { IfoodFinancialObservabilityService } from "./ifood/ifood-financial-obse
     IfoodFinancialReconciliationProcessor,
     IfoodFinancialReadinessService,
     IfoodFinancialObservabilityService,
+    NotificationsService,
+    SalesAutoImportService,
   ],
   exports: [
     SalesIntegrationService,

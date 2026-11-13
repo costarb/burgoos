@@ -1,10 +1,11 @@
-import { ConflictException, Injectable, NotFoundException, Optional } from "@nestjs/common";
+import { ConflictException, Inject, Injectable, NotFoundException, Optional } from "@nestjs/common";
 import { PaymentReleaseSource, SalesImportRunStatus } from "@prisma/client";
 import {
   HistoricalOrderImportService,
   NormalizedHistoricalSale,
 } from "../../ordering/historical-order-import.service";
 import { PrismaService } from "../../platform/database/prisma.service";
+import { FiscalTriggerService } from "../fiscal/documents/fiscal-trigger.service";
 import { ExternalSaleIdentityService } from "./external-sale-identity.service";
 import { IntegrationAuditService } from "./integration-audit.service";
 import { IfoodFinancialSaleService } from "./ifood/ifood-financial-sale.service";
@@ -16,7 +17,8 @@ export class SalesImportConfirmationService {
     private readonly historical: HistoricalOrderImportService,
     private readonly identities: ExternalSaleIdentityService,
     @Optional() private readonly ifoodFinancialSales?: IfoodFinancialSaleService,
-    @Optional() private readonly audit?: IntegrationAuditService
+    @Optional() private readonly audit?: IntegrationAuditService,
+    @Optional() @Inject(FiscalTriggerService) private readonly fiscalTrigger?: FiscalTriggerService
   ) {}
 
   async confirm(tenantId: string, runId: string, resume = false) {
@@ -58,6 +60,7 @@ export class SalesImportConfirmationService {
     let enriched = Number(counts.enriched ?? 0);
     let created = Number(counts.created ?? 0);
     let reconciled = Number(counts.reconciled ?? 0);
+    const createdOrderIds: string[] = [];
 
     for (const movement of movements) {
       const sale = movement.normalizedData as unknown as NormalizedHistoricalSale;
@@ -132,6 +135,7 @@ export class SalesImportConfirmationService {
         if (!orderId) throw new Error("Venda nao gerou pedido");
         imported += 1;
         created += 1;
+        createdOrderIds.push(orderId);
       } catch {
         failed += 1;
         await this.identities.release(identityKey);
@@ -156,6 +160,10 @@ export class SalesImportConfirmationService {
         completedAt: new Date(),
       },
     });
+    // Automatic NFC-e for same-day sales (marketplace sales are excluded by the fiscal rules).
+    if (run.provider !== "IFOOD") {
+      for (const orderId of createdOrderIds) await this.fiscalTrigger?.requestForOrder(tenantId, orderId);
+    }
     if (run.provider === "IFOOD" && this.audit) {
       await this.audit.record({
         tenantId,

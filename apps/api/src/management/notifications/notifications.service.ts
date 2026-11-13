@@ -171,7 +171,14 @@ function notificationEtag(unreadCount: number, version: string): string {
   return `"${digest}"`;
 }
 
+/** In-app admin screens (e.g. the fiscal pending queue); never absolute or protocol-relative URLs. */
+const INTERNAL_ADMIN_PATH = /^\/admin\/[a-z0-9/_-]*(\?[a-z0-9=&_-]*)?$/i;
+
 function normalizeActionUrl(value?: string | null, exportJobId?: string | null): string | null {
+  if (value && INTERNAL_ADMIN_PATH.test(value)) {
+    return value;
+  }
+
   if (!value?.startsWith("/api/admin/exports/")) {
     return null;
   }

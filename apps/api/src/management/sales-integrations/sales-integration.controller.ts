@@ -12,6 +12,7 @@ import { AuthUser } from "../../platform/auth/auth.types";
 import { CurrentUser } from "../../platform/auth/current-user.decorator";
 import { JwtAuthGuard } from "../../platform/auth/jwt-auth.guard";
 import {
+  SalesAutoImportDto,
   SalesCredentialDto,
   SalesIntegrationStatusDto,
   UpsertSalesIntegrationDto,
@@ -71,6 +72,12 @@ export class SalesIntegrationController {
     @Body() dto: SalesCredentialDto
   ) {
     await this.service.rotateCredential(user.tenantId, user.id, id, dto);
+  }
+  @Put(":id/auto-import")
+  @ApiOperation({ summary: "Enable or disable the automatic import every 2 minutes" })
+  @RequirePermission("integrations.sales.manage")
+  autoImport(@CurrentUser() user: AuthUser, @Param("id") id: string, @Body() dto: SalesAutoImportDto) {
+    return this.service.updateAutoImport(user.tenantId, user.id, id, dto);
   }
   @Patch(":id/status")
   @ApiOperation({ summary: "Activate, pause or disable an integration" })

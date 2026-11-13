@@ -51,9 +51,9 @@ export class SalesImportPreviewService {
 
   async create(
     tenantId: string,
-    userId: string,
+    userId: string | null,
     dto: CreateSalesImportRunDto,
-    trigger: "MANUAL" | "INITIAL_LOAD" = "MANUAL"
+    trigger: "MANUAL" | "INITIAL_LOAD" | "AUTOMATIC" = "MANUAL"
   ) {
     const start = new Date(`${dto.startDate}T00:00:00.000Z`);
     const end = new Date(`${dto.endDate}T00:00:00.000Z`);

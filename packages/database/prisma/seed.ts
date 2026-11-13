@@ -248,6 +248,46 @@ async function main(): Promise<void> {
       sensitive: true,
     },
     {
+      key: "store.profile.manage",
+      area: "Configuracoes",
+      screen: "Dados da loja",
+      action: AccessPermissionAction.MANAGE,
+      description: "Ver e alterar os dados da loja: contato, endereco e dados fiscais",
+      sensitive: true,
+    },
+    {
+      key: "fiscal.view",
+      area: "Fiscal",
+      screen: "NFC-e",
+      action: AccessPermissionAction.VIEW,
+      description: "Visualizar configuracao fiscal, notas e pendencias; baixar DANFE e XML",
+      sensitive: false,
+    },
+    {
+      key: "fiscal.configure",
+      area: "Fiscal",
+      screen: "NFC-e",
+      action: AccessPermissionAction.MANAGE,
+      description: "Configurar emitente, provedor fiscal, certificado A1 e perfis fiscais",
+      sensitive: true,
+    },
+    {
+      key: "fiscal.issue",
+      area: "Fiscal",
+      screen: "NFC-e",
+      action: AccessPermissionAction.CREATE,
+      description: "Emitir e reprocessar NFC-e, inclusive emissao retroativa",
+      sensitive: true,
+    },
+    {
+      key: "fiscal.cancel",
+      area: "Fiscal",
+      screen: "NFC-e",
+      action: AccessPermissionAction.DELETE,
+      description: "Cancelar NFC-e e receber alertas de cancelamento pendente",
+      sensitive: true,
+    },
+    {
       key: "pos.capture",
       area: "Operacao",
       screen: "Capturar pedido",
@@ -439,6 +479,11 @@ async function main(): Promise<void> {
       "integrations.sales.manage",
       "mcp.manage",
       "mcp.connect",
+      "store.profile.manage",
+      "fiscal.view",
+      "fiscal.configure",
+      "fiscal.issue",
+      "fiscal.cancel",
     ],
   });
 
@@ -447,7 +492,7 @@ async function main(): Promise<void> {
     name: "Operador",
     description: "Acompanha e atualiza a operacao diaria.",
     scope: AccessProfileScope.STORE,
-    permissionKeys: ["orders.view", "orders.manage"],
+    permissionKeys: ["orders.view", "orders.manage", "fiscal.view", "fiscal.issue"],
   });
 
   await ensureProfile({

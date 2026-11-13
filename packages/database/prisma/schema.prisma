@@ -77,6 +77,10 @@ enum AccessAuditEventType {
   MCP_CONNECTION_DENIED
   MCP_CONNECTION_REVOKED
   MCP_CLIENT_REJECTED
+  FISCAL_CONFIGURATION_CHANGED
+  FISCAL_CONNECTION_CHANGED
+  FISCAL_CERTIFICATE_CHANGED
+  FISCAL_PROFILE_CHANGED
 }
 
 enum McpDataArea {
@@ -465,6 +469,7 @@ enum SalesRunTrigger {
   WEBHOOK
   RECONCILIATION_SHORT
   RECONCILIATION_DAILY
+  AUTOMATIC
 }
 
 enum OAuthAuthorizationAttemptStatus {
@@ -604,6 +609,10 @@ enum BackgroundJobType {
   MP_TOKEN_REFRESH
   POINT_RECONCILIATION
   RETENTION
+  FISCAL_EMISSION
+  FISCAL_SYNC
+  FISCAL_CANCELLATION
+  SALES_AUTO_IMPORT
 }
 
 enum BackgroundJobPriority {
@@ -649,6 +658,66 @@ enum OperationalNotificationSeverity {
   ERROR
 }
 
+enum FiscalProvider {
+  BLING
+}
+
+enum FiscalEnvironment {
+  HOMOLOGATION
+  PRODUCTION
+}
+
+enum FiscalEmissionMode {
+  AUTOMATIC
+  MANUAL
+}
+
+enum FiscalTaxRegime {
+  SIMPLES_NACIONAL
+}
+
+enum FiscalConnectionStatus {
+  DRAFT
+  CONNECTED
+  ERROR
+  DISCONNECTED
+}
+
+enum FiscalCertificateStatus {
+  ACTIVE
+  REPLACED
+  REMOVED
+}
+
+enum FiscalDocumentStatus {
+  PENDING
+  PROCESSING
+  AUTHORIZED
+  REJECTED
+  ERROR
+  CANCEL_PENDING
+  CANCELLED
+  CANCEL_FAILED
+}
+
+enum FiscalDocumentEventType {
+  CREATED
+  SUBMITTED
+  AUTHORIZED
+  REJECTED
+  ERROR
+  RETRY_SCHEDULED
+  SYNCED
+  CANCEL_REQUESTED
+  CANCEL_MANUAL_REQUIRED
+  CANCELLED
+  CANCEL_FAILED
+  DOCUMENTS_STORED
+  RETROACTIVE_CONFIRMED
+  TAX_DIVERGENCE
+  TAX_DIVERGENCE_REVIEWED
+}
+
 model Tenant {
   id                          String                            @id @default(uuid()) @db.Uuid
   name                        String
@@ -664,6 +733,14 @@ model Tenant {
   createdByPlatformUserId     String?                           @map("created_by_platform_user_id") @db.Uuid
   defaultLayoutPresetKey      String                            @default("classic") @map("default_layout_preset_key")
   config                      Json                              @default("{}")
+  /// Fiscal identity of the store (spec 029): edited by the platform and by the store admin.
+  legalName                   String?                           @map("legal_name") @db.VarChar(120)
+  tradeName                   String?                           @map("trade_name") @db.VarChar(120)
+  cnpj                        String?                           @db.VarChar(14)
+  stateRegistration           String?                           @map("state_registration") @db.VarChar(20)
+  taxRegime                   FiscalTaxRegime?                  @map("tax_regime")
+  municipalityIbgeCode        String?                           @map("municipality_ibge_code") @db.Char(7)
+  municipalityIbgeSource      String?                           @map("municipality_ibge_source") @db.VarChar(10)
   createdAt                   DateTime                          @default(now()) @map("created_at")
   updatedAt                   DateTime                          @updatedAt @map("updated_at")
   createdByPlatformUser       PlatformUser?                     @relation(fields: [createdByPlatformUserId], references: [id], onDelete: SetNull)
@@ -741,6 +818,12 @@ model Tenant {
   mcpToolCalls                McpToolCall[]
   mcpOAuthConnections         McpOAuthConnection[]
   mcpOAuthRequests            McpOAuthAuthorizationRequest[]
+  fiscalConfiguration         FiscalConfiguration?
+  fiscalProviderConnections   FiscalProviderConnection[]
+  fiscalCertificates          FiscalCertificate[]
+  fiscalProfiles              FiscalProfile[]
+  fiscalDocuments             FiscalDocument[]
+  fiscalDocumentEvents        FiscalDocumentEvent[]
 
   @@index([createdByPlatformUserId])
   @@index([defaultLayoutPresetKey])
@@ -1109,17 +1192,20 @@ model StoreVisualConfiguration {
 }
 
 model Category {
-  id        String    @id @default(uuid()) @db.Uuid
-  tenantId  String    @map("tenant_id") @db.Uuid
-  name      String
-  sortOrder Int       @default(0) @map("sort_order")
-  active    Boolean   @default(true)
-  createdAt DateTime  @default(now()) @map("created_at")
-  updatedAt DateTime  @updatedAt @map("updated_at")
-  tenant    Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  products  Product[]
+  id              String         @id @default(uuid()) @db.Uuid
+  tenantId        String         @map("tenant_id") @db.Uuid
+  name            String
+  sortOrder       Int            @default(0) @map("sort_order")
+  active          Boolean        @default(true)
+  fiscalProfileId String?        @map("fiscal_profile_id") @db.Uuid
+  createdAt       DateTime       @default(now()) @map("created_at")
+  updatedAt       DateTime       @updatedAt @map("updated_at")
+  tenant          Tenant         @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  fiscalProfile   FiscalProfile? @relation(fields: [fiscalProfileId], references: [id], onDelete: Restrict)
+  products        Product[]
 
   @@index([tenantId])
+  @@index([fiscalProfileId])
   @@map("categories")
 }
 
@@ -1132,10 +1218,12 @@ model Product {
   price                 Decimal                       @db.Decimal(10, 2)
   imageUrl              String?                       @map("image_url")
   active                Boolean                       @default(true)
+  fiscalProfileId       String?                       @map("fiscal_profile_id") @db.Uuid
   createdAt             DateTime                      @default(now()) @map("created_at")
   updatedAt             DateTime                      @updatedAt @map("updated_at")
   tenant                Tenant                        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
   category              Category                      @relation(fields: [categoryId], references: [id], onDelete: Restrict)
+  fiscalProfile         FiscalProfile?                @relation(fields: [fiscalProfileId], references: [id], onDelete: Restrict)
   orderItems            OrderItem[]
   technicalSheets       TechnicalSheet[]
   productCostSnapshots  ProductCostSnapshot[]
@@ -1144,6 +1232,7 @@ model Product {
 
   @@index([tenantId])
   @@index([categoryId])
+  @@index([fiscalProfileId])
   @@map("products")
 }
 
@@ -1196,6 +1285,7 @@ model Order {
   deletedAt                 DateTime?                        @map("deleted_at")
   deletedByUserId           String?                          @map("deleted_by_user_id") @db.Uuid
   deletionReason            String?                          @map("deletion_reason")
+  consumerDocument          String?                          @map("consumer_document") @db.VarChar(14)
   createdAt                 DateTime                         @default(now()) @map("created_at")
   updatedAt                 DateTime                         @updatedAt @map("updated_at")
   tenant                    Tenant                           @relation(fields: [tenantId], references: [id], onDelete: Cascade)
@@ -1215,6 +1305,7 @@ model Order {
   paymentAllocations        PaymentAllocation[]
   externalFinancialSales    ExternalFinancialSale[]
   operationalEvents         OrderOperationalEvent[]
+  fiscalDocuments           FiscalDocument[]
 
   @@index([tenantId, status])
   @@index([tenantId, createdAt])
@@ -1231,56 +1322,66 @@ model Order {
 }
 
 model SalesIntegration {
-  id                    String                         @id @default(uuid()) @db.Uuid
-  tenantId              String                         @map("tenant_id") @db.Uuid
-  provider              SalesProvider
-  channel               SalesInputChannel              @default(API)
-  environment           SalesIntegrationEnvironment    @default(PRODUCTION)
-  credentialMode        SalesCredentialMode            @default(PROVIDER_TOKEN) @map("credential_mode")
-  status                SalesIntegrationStatus         @default(DRAFT)
-  displayName           String                         @map("display_name")
-  externalMerchantId    String?                        @map("external_merchant_id")
-  providerUserId        String?                        @map("provider_user_id")
-  settings              Json                           @default("{}")
-  tokenExpiresAt        DateTime?                      @map("token_expires_at")
-  scopes                Json                           @default("[]")
-  connectedAt           DateTime?                      @map("connected_at")
-  lastSyncAt            DateTime?                      @map("last_sync_at")
-  disconnectedAt        DateTime?                      @map("disconnected_at")
-  operationLockOwner    String?                        @map("operation_lock_owner")
-  operationLockUntil    DateTime?                      @map("operation_lock_until")
-  lastValidationAt      DateTime?                      @map("last_validation_at")
-  lastErrorCode         String?                        @map("last_error_code")
-  lastErrorMessage      String?                        @map("last_error_message")
-  createdByUserId       String?                        @map("created_by_user_id") @db.Uuid
-  updatedByUserId       String?                        @map("updated_by_user_id") @db.Uuid
-  createdAt             DateTime                       @default(now()) @map("created_at")
-  updatedAt             DateTime                       @updatedAt @map("updated_at")
-  deliveryIntegrationId String?                        @unique @map("delivery_integration_id") @db.Uuid
-  financialReadiness    IfoodFinancialReadinessStatus? @map("financial_readiness")
-  homologationEvidence  Json                           @default("{}") @map("homologation_evidence")
-  tenant                Tenant                         @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  createdByUser         User?                          @relation("SalesIntegrationCreatedBy", fields: [createdByUserId], references: [id], onDelete: SetNull)
-  updatedByUser         User?                          @relation("SalesIntegrationUpdatedBy", fields: [updatedByUserId], references: [id], onDelete: SetNull)
-  credentials           SalesIntegrationCredential[]
-  runs                  SalesImportRun[]
-  movements             ExternalSalesMovement[]
-  oauthAttempts         OAuthAuthorizationAttempt[]
-  transactionStates     ProviderTransactionState[]
-  notifications         ProviderNotification[]
-  auditEvents           IntegrationAuditEvent[]
-  externalIdentities    ExternalSaleIdentity[]
-  deliveryIntegration   DeliveryIntegration?           @relation(fields: [deliveryIntegrationId], references: [id], onDelete: SetNull)
-  financialSales        ExternalFinancialSale[]
-  financialEvents       ExternalFinancialEvent[]
-  settlements           ExternalSettlement[]
-  reconciliationFiles   ExternalReconciliationFile[]
-  reconciliationRuns    FinancialReconciliationRun[]
+  id                            String                         @id @default(uuid()) @db.Uuid
+  tenantId                      String                         @map("tenant_id") @db.Uuid
+  provider                      SalesProvider
+  channel                       SalesInputChannel              @default(API)
+  environment                   SalesIntegrationEnvironment    @default(PRODUCTION)
+  credentialMode                SalesCredentialMode            @default(PROVIDER_TOKEN) @map("credential_mode")
+  status                        SalesIntegrationStatus         @default(DRAFT)
+  displayName                   String                         @map("display_name")
+  externalMerchantId            String?                        @map("external_merchant_id")
+  providerUserId                String?                        @map("provider_user_id")
+  settings                      Json                           @default("{}")
+  tokenExpiresAt                DateTime?                      @map("token_expires_at")
+  scopes                        Json                           @default("[]")
+  connectedAt                   DateTime?                      @map("connected_at")
+  lastSyncAt                    DateTime?                      @map("last_sync_at")
+  disconnectedAt                DateTime?                      @map("disconnected_at")
+  operationLockOwner            String?                        @map("operation_lock_owner")
+  operationLockUntil            DateTime?                      @map("operation_lock_until")
+  lastValidationAt              DateTime?                      @map("last_validation_at")
+  lastErrorCode                 String?                        @map("last_error_code")
+  lastErrorMessage              String?                        @map("last_error_message")
+  createdByUserId               String?                        @map("created_by_user_id") @db.Uuid
+  updatedByUserId               String?                        @map("updated_by_user_id") @db.Uuid
+  createdAt                     DateTime                       @default(now()) @map("created_at")
+  updatedAt                     DateTime                       @updatedAt @map("updated_at")
+  deliveryIntegrationId         String?                        @unique @map("delivery_integration_id") @db.Uuid
+  financialReadiness            IfoodFinancialReadinessStatus? @map("financial_readiness")
+  homologationEvidence          Json                           @default("{}") @map("homologation_evidence")
+  autoImportEnabled             Boolean                        @default(false) @map("auto_import_enabled")
+  autoImportStrategy            String?                        @map("auto_import_strategy") @db.VarChar(20)
+  autoImportFixedProductId      String?                        @map("auto_import_fixed_product_id") @db.Uuid
+  autoImportLastSuccessAt       DateTime?                      @map("auto_import_last_success_at")
+  autoImportLastAttemptAt       DateTime?                      @map("auto_import_last_attempt_at")
+  autoImportConsecutiveFailures Int                            @default(0) @map("auto_import_consecutive_failures")
+  autoImportLastErrorCode       String?                        @map("auto_import_last_error_code") @db.VarChar(40)
+  autoImportLastLagSeconds      Int?                           @map("auto_import_last_lag_seconds")
+  autoImportLastAlertAt         DateTime?                      @map("auto_import_last_alert_at")
+  tenant                        Tenant                         @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  createdByUser                 User?                          @relation("SalesIntegrationCreatedBy", fields: [createdByUserId], references: [id], onDelete: SetNull)
+  updatedByUser                 User?                          @relation("SalesIntegrationUpdatedBy", fields: [updatedByUserId], references: [id], onDelete: SetNull)
+  credentials                   SalesIntegrationCredential[]
+  runs                          SalesImportRun[]
+  movements                     ExternalSalesMovement[]
+  oauthAttempts                 OAuthAuthorizationAttempt[]
+  transactionStates             ProviderTransactionState[]
+  notifications                 ProviderNotification[]
+  auditEvents                   IntegrationAuditEvent[]
+  externalIdentities            ExternalSaleIdentity[]
+  deliveryIntegration           DeliveryIntegration?           @relation(fields: [deliveryIntegrationId], references: [id], onDelete: SetNull)
+  financialSales                ExternalFinancialSale[]
+  financialEvents               ExternalFinancialEvent[]
+  settlements                   ExternalSettlement[]
+  reconciliationFiles           ExternalReconciliationFile[]
+  reconciliationRuns            FinancialReconciliationRun[]
 
   @@unique([tenantId, provider, channel, environment])
   @@unique([provider, providerUserId, environment])
   @@index([tenantId, status])
   @@index([provider, credentialMode, tokenExpiresAt])
+  @@index([autoImportEnabled, status])
   @@map("sales_integrations")
 }
 
@@ -1790,6 +1891,7 @@ model ServiceTab {
   closedAt                DateTime?               @map("closed_at")
   version                 Int                     @default(0)
   notes                   String?
+  consumerDocument        String?                 @map("consumer_document") @db.VarChar(14)
   createdAt               DateTime                @default(now()) @map("created_at")
   updatedAt               DateTime                @updatedAt @map("updated_at")
   tenant                  Tenant                  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
@@ -1797,6 +1899,7 @@ model ServiceTab {
   charges                 PaymentCharge[]
   paymentAllocations      PaymentAllocation[]
   operationalEvents       OrderOperationalEvent[]
+  fiscalDocuments         FiscalDocument[]
 
   @@unique([tenantId, publicCode])
   @@index([tenantId, status, openedAt])
@@ -1806,23 +1909,26 @@ model ServiceTab {
 }
 
 model ProductComplement {
-  id            String                        @id @default(uuid()) @db.Uuid
-  tenantId      String                        @map("tenant_id") @db.Uuid
-  name          String
-  description   String?
-  price         Decimal                       @db.Decimal(10, 2)
-  ingredientId  String?                       @map("ingredient_id") @db.Uuid
-  active        Boolean                       @default(true)
-  maxQuantity   Int                           @default(1) @map("max_quantity")
-  sortOrder     Int                           @default(0) @map("sort_order")
-  createdAt     DateTime                      @default(now()) @map("created_at")
-  updatedAt     DateTime                      @updatedAt @map("updated_at")
-  tenant        Tenant                        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  assignments   ProductComplementAssignment[]
-  modifications OrderItemModification[]
+  id              String                        @id @default(uuid()) @db.Uuid
+  tenantId        String                        @map("tenant_id") @db.Uuid
+  name            String
+  description     String?
+  price           Decimal                       @db.Decimal(10, 2)
+  ingredientId    String?                       @map("ingredient_id") @db.Uuid
+  active          Boolean                       @default(true)
+  maxQuantity     Int                           @default(1) @map("max_quantity")
+  sortOrder       Int                           @default(0) @map("sort_order")
+  fiscalProfileId String?                       @map("fiscal_profile_id") @db.Uuid
+  createdAt       DateTime                      @default(now()) @map("created_at")
+  updatedAt       DateTime                      @updatedAt @map("updated_at")
+  tenant          Tenant                        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  fiscalProfile   FiscalProfile?                @relation(fields: [fiscalProfileId], references: [id], onDelete: Restrict)
+  assignments     ProductComplementAssignment[]
+  modifications   OrderItemModification[]
 
   @@index([tenantId, active, sortOrder])
   @@index([tenantId, ingredientId])
+  @@index([fiscalProfileId])
   @@map("product_complements")
 }
 
@@ -2843,4 +2949,183 @@ model McpOAuthToken {
   @@index([connectionId, kind])
   @@index([expiresAt])
   @@map("mcp_oauth_tokens")
+}
+
+model FiscalConfiguration {
+  id                  String             @id @default(uuid()) @db.Uuid
+  tenantId            String             @unique @map("tenant_id") @db.Uuid
+  enabled             Boolean            @default(false)
+  provider            FiscalProvider?
+  environment         FiscalEnvironment  @default(HOMOLOGATION)
+  series              Int?
+  emissionMode        FiscalEmissionMode @default(MANUAL) @map("emission_mode")
+  eligibleSources     OrderSource[]      @default([COUNTER, IMPORT, API]) @map("eligible_sources")
+  defaultCancelReason String             @default("Venda cancelada a pedido do cliente") @map("default_cancel_reason") @db.VarChar(255)
+  enabledAt           DateTime?          @map("enabled_at")
+  updatedByUserId     String?            @map("updated_by_user_id") @db.Uuid
+  createdAt           DateTime           @default(now()) @map("created_at")
+  updatedAt           DateTime           @updatedAt @map("updated_at")
+  tenant              Tenant             @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@map("fiscal_configurations")
+}
+
+model FiscalProviderConnection {
+  id                    String                 @id @default(uuid()) @db.Uuid
+  tenantId              String                 @map("tenant_id") @db.Uuid
+  provider              FiscalProvider
+  status                FiscalConnectionStatus @default(DRAFT)
+  credentialCiphertext  String?                @map("credential_ciphertext")
+  tokenExpiresAt        DateTime?              @map("token_expires_at")
+  refreshTokenExpiresAt DateTime?              @map("refresh_token_expires_at")
+  externalAccountId     String?                @map("external_account_id") @db.VarChar(120)
+  settings              Json                   @default("{}")
+  connectedAt           DateTime?              @map("connected_at")
+  disconnectedAt        DateTime?              @map("disconnected_at")
+  lastValidationAt      DateTime?              @map("last_validation_at")
+  lastErrorCode         String?                @map("last_error_code") @db.VarChar(40)
+  lastErrorMessage      String?                @map("last_error_message") @db.VarChar(255)
+  updatedByUserId       String?                @map("updated_by_user_id") @db.Uuid
+  createdAt             DateTime               @default(now()) @map("created_at")
+  updatedAt             DateTime               @updatedAt @map("updated_at")
+  tenant                Tenant                 @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, provider])
+  @@index([provider, status, tokenExpiresAt])
+  @@map("fiscal_provider_connections")
+}
+
+model PlatformFiscalProviderConfiguration {
+  id                      String         @id @default(uuid()) @db.Uuid
+  provider                FiscalProvider @unique
+  configurationCiphertext String         @map("configuration_ciphertext")
+  updatedByUserId         String?        @map("updated_by_user_id") @db.Uuid
+  createdAt               DateTime       @default(now()) @map("created_at")
+  updatedAt               DateTime       @updatedAt @map("updated_at")
+
+  @@map("platform_fiscal_provider_configurations")
+}
+
+model FiscalCertificate {
+  id                  String                  @id @default(uuid()) @db.Uuid
+  tenantId            String                  @map("tenant_id") @db.Uuid
+  status              FiscalCertificateStatus @default(ACTIVE)
+  /// Equals tenant_id while ACTIVE; null otherwise. Enforces one active certificate per tenant.
+  activeKey           String?                 @unique @map("active_key") @db.Uuid
+  secretCiphertext    String                  @map("secret_ciphertext")
+  subjectName         String                  @map("subject_name") @db.VarChar(255)
+  cnpj                String?                 @db.Char(14)
+  validFrom           DateTime                @map("valid_from")
+  validTo             DateTime                @map("valid_to")
+  fingerprintSha256   String                  @map("fingerprint_sha256") @db.Char(64)
+  lastExpiryAlertDays Int?                    @map("last_expiry_alert_days")
+  uploadedByUserId    String?                 @map("uploaded_by_user_id") @db.Uuid
+  createdAt           DateTime                @default(now()) @map("created_at")
+  replacedAt          DateTime?               @map("replaced_at")
+  tenant              Tenant                  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, status])
+  @@index([status, validTo])
+  @@map("fiscal_certificates")
+}
+
+model FiscalProfile {
+  id             String              @id @default(uuid()) @db.Uuid
+  tenantId       String              @map("tenant_id") @db.Uuid
+  name           String              @db.VarChar(80)
+  ncm            String              @db.Char(8)
+  cfop           String              @db.Char(4)
+  csosn          String              @db.Char(3)
+  origin         Int                 @default(0) @db.SmallInt
+  commercialUnit String              @default("UN") @map("commercial_unit") @db.VarChar(6)
+  cest           String?             @db.Char(7)
+  benefitCode    String?             @map("benefit_code") @db.VarChar(10)
+  active         Boolean             @default(true)
+  createdAt      DateTime            @default(now()) @map("created_at")
+  updatedAt      DateTime            @updatedAt @map("updated_at")
+  tenant         Tenant              @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  categories     Category[]
+  products       Product[]
+  complements    ProductComplement[]
+
+  @@unique([tenantId, name])
+  @@index([tenantId, active])
+  @@map("fiscal_profiles")
+}
+
+model FiscalDocument {
+  id                      String                @id @default(uuid()) @db.Uuid
+  tenantId                String                @map("tenant_id") @db.Uuid
+  orderId                 String?               @map("order_id") @db.Uuid
+  serviceTabId            String?               @map("service_tab_id") @db.Uuid
+  /// "order:<id>" / "tab:<id>" while the sale holds this document; null when REJECTED or CANCELLED.
+  activeKey               String?               @unique @map("active_key") @db.VarChar(60)
+  provider                FiscalProvider
+  environment             FiscalEnvironment
+  status                  FiscalDocumentStatus  @default(PENDING)
+  trigger                 String                @db.VarChar(12)
+  externalId              String?               @map("external_id") @db.VarChar(80)
+  number                  Int?
+  series                  Int?
+  accessKey               String?               @unique @map("access_key") @db.Char(44)
+  protocol                String?               @db.VarChar(40)
+  issuedAt                DateTime?             @map("issued_at")
+  authorizedAt            DateTime?             @map("authorized_at")
+  saleOccurredAt          DateTime              @map("sale_occurred_at")
+  totalAmount             Decimal               @map("total_amount") @db.Decimal(12, 2)
+  consumerDocument        String?               @map("consumer_document") @db.VarChar(14)
+  issuerSnapshot          Json                  @map("issuer_snapshot")
+  payloadSnapshot         Json                  @map("payload_snapshot")
+  rejectionCode           String?               @map("rejection_code") @db.VarChar(40)
+  rejectionMessage        String?               @map("rejection_message") @db.VarChar(500)
+  xmlAssetKey             String?               @map("xml_asset_key") @db.VarChar(255)
+  danfeAssetKey           String?               @map("danfe_asset_key") @db.VarChar(255)
+  qrCodeUrl               String?               @map("qr_code_url") @db.VarChar(1000)
+  consultationUrl         String?               @map("consultation_url") @db.VarChar(1000)
+  danfeUrl                String?               @map("danfe_url") @db.VarChar(1000)
+  cancelReason            String?               @map("cancel_reason") @db.VarChar(255)
+  cancelRequestedAt       DateTime?             @map("cancel_requested_at")
+  cancelDeadlineAt        DateTime?             @map("cancel_deadline_at")
+  cancelReminderAt        DateTime?             @map("cancel_reminder_at")
+  cancelledAt             DateTime?             @map("cancelled_at")
+  cancelProtocol          String?               @map("cancel_protocol") @db.VarChar(40)
+  cancelXmlAssetKey       String?               @map("cancel_xml_asset_key") @db.VarChar(255)
+  attempts                Int                   @default(0)
+  /// Items whose authorized CFOP/CSOSN differ from the ERP fiscal profile (provider rules applied other taxes).
+  taxDivergences          Json?                 @map("tax_divergences")
+  taxDivergenceAt         DateTime?             @map("tax_divergence_at")
+  taxDivergenceReviewedAt DateTime?             @map("tax_divergence_reviewed_at")
+  nextSyncAt              DateTime?             @map("next_sync_at")
+  requestedByUserId       String?               @map("requested_by_user_id") @db.Uuid
+  createdAt               DateTime              @default(now()) @map("created_at")
+  updatedAt               DateTime              @updatedAt @map("updated_at")
+  tenant                  Tenant                @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  order                   Order?                @relation(fields: [orderId], references: [id], onDelete: Restrict)
+  serviceTab              ServiceTab?           @relation(fields: [serviceTabId], references: [id], onDelete: Restrict)
+  events                  FiscalDocumentEvent[]
+
+  @@index([tenantId, status])
+  @@index([tenantId, orderId])
+  @@index([tenantId, serviceTabId])
+  @@index([tenantId, saleOccurredAt])
+  @@index([status, nextSyncAt])
+  @@map("fiscal_documents")
+}
+
+model FiscalDocumentEvent {
+  id             String                  @id @default(uuid()) @db.Uuid
+  tenantId       String                  @map("tenant_id") @db.Uuid
+  documentId     String                  @map("document_id") @db.Uuid
+  type           FiscalDocumentEventType
+  actorUserId    String?                 @map("actor_user_id") @db.Uuid
+  providerStatus String?                 @map("provider_status") @db.VarChar(40)
+  code           String?                 @db.VarChar(40)
+  message        String?                 @db.VarChar(500)
+  metadata       Json                    @default("{}")
+  createdAt      DateTime                @default(now()) @map("created_at")
+  tenant         Tenant                  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  document       FiscalDocument          @relation(fields: [documentId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, documentId, createdAt])
+  @@map("fiscal_document_events")
 }

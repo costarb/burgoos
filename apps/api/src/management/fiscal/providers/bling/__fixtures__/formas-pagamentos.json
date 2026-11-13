@@ -1,0 +1,125 @@
+{
+  "data": [
+    {
+      "id": 11508878,
+      "descricao": "Boleto",
+      "tipoPagamento": 15,
+      "situacao": 1,
+      "fixa": false,
+      "padrao": 0,
+      "finalidade": 2,
+      "juros": 0,
+      "multa": 0
+    },
+    {
+      "id": 11511041,
+      "descricao": "Cartão de crédito",
+      "tipoPagamento": 3,
+      "situacao": 1,
+      "fixa": false,
+      "padrao": 0,
+      "finalidade": 3,
+      "juros": 0,
+      "multa": 0
+    },
+    {
+      "id": 11511042,
+      "descricao": "Cartão de débito",
+      "tipoPagamento": 4,
+      "situacao": 1,
+      "fixa": false,
+      "padrao": 0,
+      "finalidade": 3,
+      "juros": 0,
+      "multa": 0
+    },
+    {
+      "id": 11508879,
+      "descricao": "Cheque",
+      "tipoPagamento": 2,
+      "situacao": 1,
+      "fixa": false,
+      "padrao": 0,
+      "finalidade": 3,
+      "juros": 0,
+      "multa": 0
+    },
+    {
+      "id": 11508881,
+      "descricao": "Crediário",
+      "tipoPagamento": 21,
+      "situacao": 1,
+      "fixa": false,
+      "padrao": 0,
+      "finalidade": 3,
+      "juros": 0,
+      "multa": 0
+    },
+    {
+      "id": 11508880,
+      "descricao": "Depósito Bancário",
+      "tipoPagamento": 16,
+      "situacao": 1,
+      "fixa": false,
+      "padrao": 0,
+      "finalidade": 3,
+      "juros": 0,
+      "multa": 0
+    },
+    {
+      "id": 11508877,
+      "descricao": "Dinheiro",
+      "tipoPagamento": 1,
+      "situacao": 1,
+      "fixa": false,
+      "padrao": 1,
+      "finalidade": 3,
+      "juros": 0,
+      "multa": 0
+    },
+    {
+      "id": 11508883,
+      "descricao": "Pix",
+      "tipoPagamento": 20,
+      "situacao": 1,
+      "fixa": false,
+      "padrao": 0,
+      "finalidade": 3,
+      "juros": 0,
+      "multa": 0
+    },
+    {
+      "id": 11511058,
+      "descricao": "Pix dinâmico (gerado pela maquininha)",
+      "tipoPagamento": 17,
+      "situacao": 1,
+      "fixa": false,
+      "padrao": 0,
+      "finalidade": 3,
+      "juros": 0,
+      "multa": 0
+    },
+    {
+      "id": 11511057,
+      "descricao": "Vale-refeição",
+      "tipoPagamento": 11,
+      "situacao": 1,
+      "fixa": false,
+      "padrao": 0,
+      "finalidade": 3,
+      "juros": 0,
+      "multa": 0
+    },
+    {
+      "id": 11508882,
+      "descricao": "Vale-Troca",
+      "tipoPagamento": 21,
+      "situacao": 1,
+      "fixa": false,
+      "padrao": 0,
+      "finalidade": 2,
+      "juros": 0,
+      "multa": 0
+    }
+  ]
+}

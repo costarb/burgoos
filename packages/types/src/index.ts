@@ -8,6 +8,7 @@ export * from "./notifications";
 export * from "./payments";
 export * from "./pos";
 export * from "./mcp";
+export * from "./fiscal";
 
 export type AccessUserStatus = "INVITED" | "ACTIVE" | "INACTIVE" | "LOCKED";
 export type StoreUserRole = "OWNER" | "ADMIN" | "OPERATOR";
@@ -201,7 +202,28 @@ export interface StoreSocialLinks {
   website?: string;
 }
 
-export interface CreateStoreInput {
+/** Fiscal identity of the store (spec 029): part of the store registration. */
+export interface StoreLegalInput {
+  legalName?: string | null;
+  tradeName?: string | null;
+  cnpj?: string | null;
+  stateRegistration?: string | null;
+  taxRegime?: "SIMPLES_NACIONAL" | null;
+  /** Empty: resolved from the store city/state. */
+  municipalityIbgeCode?: string | null;
+}
+
+export interface StoreLegal {
+  legalName: string | null;
+  tradeName: string | null;
+  cnpj: string | null;
+  stateRegistration: string | null;
+  taxRegime: "SIMPLES_NACIONAL" | null;
+  municipalityIbgeCode: string | null;
+  municipalityIbgeSource: "IBGE_API" | "MANUAL" | null;
+}
+
+export interface CreateStoreInput extends StoreLegalInput {
   name: string;
   slug: string;
   publicDomain?: string;
@@ -215,7 +237,7 @@ export interface CreateStoreInput {
   owner: StoreOwnerInput;
 }
 
-export interface UpdateStoreInput {
+export interface UpdateStoreInput extends StoreLegalInput {
   name?: string;
   slug?: string;
   publicDomain?: string | null;
@@ -260,8 +282,17 @@ export interface StoreResponsibleUser {
   email: string;
 }
 
+/** What the store admin may change on its own store ("Dados da loja"). */
+export interface StoreProfileInput extends StoreLegalInput {
+  name?: string;
+  phone?: string;
+  address?: StoreAddress;
+  socialLinks?: StoreSocialLinks;
+}
+
 export interface StoreDetail extends StoreSummary {
   phone: string;
+  legal?: StoreLegal;
   address?: StoreAddress | null;
   socialLinks?: StoreSocialLinks | null;
   operatingHours: Record<string, unknown>;

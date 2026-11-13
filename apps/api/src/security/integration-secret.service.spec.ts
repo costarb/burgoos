@@ -49,6 +49,18 @@ describe("IntegrationSecretService", () => {
         refreshToken: "refresh-token",
       } as const,
       { version: 1, kind: "MERCADO_PAGO_FIXED", accessToken: "fixed-token" } as const,
+      {
+        version: 1,
+        kind: "BLING_OAUTH",
+        accessToken: "bling-access-token",
+        refreshToken: "bling-refresh-token",
+      } as const,
+      {
+        version: 1,
+        kind: "FISCAL_A1_CERTIFICATE",
+        pfxBase64: Buffer.from("pfx-token-bytes").toString("base64"),
+        password: "certificate-token-password",
+      } as const,
     ];
 
     for (const envelope of envelopes) {
@@ -62,5 +74,10 @@ describe("IntegrationSecretService", () => {
     expect(() => service.decryptEnvelope(service.encrypt("edi-token"))).toThrow(
       "Envelope de credencial invalido"
     );
+    expect(() =>
+      service.decryptEnvelope(
+        service.encrypt(JSON.stringify({ version: 1, kind: "FISCAL_A1_CERTIFICATE", pfxBase64: "x" }))
+      )
+    ).toThrow("Envelope de credencial invalido");
   });
 });

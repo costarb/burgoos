@@ -12,6 +12,7 @@ import {
   Min,
   MinLength,
   ValidateIf,
+  IsBoolean,
 } from "class-validator";
 
 export class UpsertSalesIntegrationDto {
@@ -40,6 +41,16 @@ export class UpsertSalesIntegrationDto {
   @IsOptional()
   @IsObject()
   settings?: Record<string, unknown>;
+}
+
+export class SalesAutoImportDto {
+  @IsBoolean()
+  enabled!: boolean;
+  @IsIn(["PRICE_WEIGHTED", "FIXED_PRODUCT"])
+  strategy!: "PRICE_WEIGHTED" | "FIXED_PRODUCT";
+  @ValidateIf((value: SalesAutoImportDto) => value.strategy === "FIXED_PRODUCT")
+  @IsUUID()
+  fixedProductId?: string | null;
 }
 
 export class MercadoPagoCredentialModeDto {

@@ -1,7 +1,9 @@
 "use client";
 
 import React, { FormEvent, useState } from "react";
+import type { BlingPlatformConfiguration } from "@rrfive/types";
 import {
+  updateBlingPlatformConfiguration,
   MercadoPagoPlatformConfigurationView,
   PagBankPlatformConfigurationView,
   updateMercadoPagoPlatformConfiguration,
@@ -12,12 +14,14 @@ export function PlatformIntegrationsClient({
   token,
   mercadoPago,
   pagBank,
+  bling,
 }: {
   token: string;
   mercadoPago: MercadoPagoPlatformConfigurationView;
   pagBank: PagBankPlatformConfigurationView;
+  bling?: BlingPlatformConfiguration;
 }) {
-  const [tab, setTab] = useState<"PAGBANK" | "MERCADO_PAGO">("PAGBANK");
+  const [tab, setTab] = useState<"PAGBANK" | "MERCADO_PAGO" | "BLING">("PAGBANK");
   return (
     <main className="mx-auto grid w-full max-w-4xl gap-6 p-6">
       <header>
@@ -29,7 +33,7 @@ export function PlatformIntegrationsClient({
         </p>
       </header>
       <nav className="flex gap-2 border-b" aria-label="Integrações de vendas">
-        {(["PAGBANK", "MERCADO_PAGO"] as const).map((provider) => (
+        {(bling ? (["PAGBANK", "MERCADO_PAGO", "BLING"] as const) : (["PAGBANK", "MERCADO_PAGO"] as const)).map((provider) => (
           <button
             key={provider}
             type="button"
@@ -38,11 +42,13 @@ export function PlatformIntegrationsClient({
               tab === provider ? "border-tomato text-tomato" : "border-transparent text-slate-600"
             }`}
           >
-            {provider === "PAGBANK" ? "PagBank" : "Mercado Pago"}
+            {provider === "PAGBANK" ? "PagBank" : provider === "BLING" ? "Bling (NFC-e)" : "Mercado Pago"}
           </button>
         ))}
       </nav>
-      {tab === "PAGBANK" ? (
+      {tab === "BLING" && bling ? (
+        <BlingConfigurationForm token={token} initialValue={bling} />
+      ) : tab === "PAGBANK" ? (
         <PagBankConfigurationForm token={token} initialValue={pagBank} />
       ) : (
         <MercadoPagoPlatformConfigurationClient token={token} initialValue={mercadoPago} embedded />
@@ -190,6 +196,64 @@ function PagBankConfigurationForm({
         <div className="flex items-end">
           <button disabled={busy} className="rounded bg-ink px-4 py-2 font-semibold text-white">
             {busy ? "Salvando..." : "Salvar configuraÃ§Ã£o"}
+          </button>
+        </div>
+      </form>
+      <p role="status" className="text-sm font-medium text-slate-700">
+        {message}
+      </p>
+    </section>
+  );
+}
+
+function BlingConfigurationForm({ token, initialValue }: { token: string; initialValue: BlingPlatformConfiguration }) {
+  const [value, setValue] = useState(initialValue);
+  const [busy, setBusy] = useState(false);
+  const [message, setMessage] = useState("");
+  async function submit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setBusy(true);
+    setMessage("");
+    const formData = new FormData(event.currentTarget);
+    const read = (name: string) => String(formData.get(name) ?? "").trim() || undefined;
+    try {
+      setValue(
+        await updateBlingPlatformConfiguration(token, {
+          clientId: read("clientId"),
+          clientSecret: read("clientSecret"),
+          postCallbackUrl: read("postCallbackUrl"),
+        })
+      );
+      setMessage("Configuracao do Bling atualizada.");
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "Falha ao atualizar a configuracao do Bling");
+    } finally {
+      setBusy(false);
+    }
+  }
+  return (
+    <section className="grid gap-4 rounded border bg-white p-5" data-testid="bling-platform">
+      <div>
+        <h2 className="text-xl font-semibold">Bling (NFC-e)</h2>
+        <p className="text-sm text-slate-600">
+          Aplicativo OAuth usado pelas lojas para conectar a propria conta Bling e emitir NFC-e. Origem atual:{" "}
+          {value.source === "DATABASE" ? "banco de dados" : "variaveis de ambiente"}.{" "}
+          {value.oauthReady ? "Pronto para conectar lojas." : "Informe client id e client secret."}
+        </p>
+      </div>
+      <div className="rounded bg-slate-50 p-3 text-sm">
+        <p className="font-semibold">URL de redirecionamento (cadastre no app do Bling)</p>
+        <code className="mt-1 block break-all text-slate-800" data-testid="bling-redirect-uri">
+          {value.redirectUri}
+        </code>
+      </div>
+      <form onSubmit={submit} className="grid gap-4 md:grid-cols-2">
+        <Field name="clientId" label={`Client ID${value.clientIdHint ? ` (${value.clientIdHint})` : ""}`} configured={value.clientIdConfigured} />
+        <SecretField name="clientSecret" label="Client secret" configured={value.clientSecretConfigured} />
+        <Field name="postCallbackUrl" label="Tela de retorno apos conectar (web /admin/fiscal)" value={value.postCallbackUrl ?? ""} />
+        <div className="flex items-end">
+          <button disabled={busy} className="rounded bg-ink px-4 py-2 font-semibold text-white">
+            {busy ? "Salvando..." : "Salvar configuracao"}
           </button>
         </div>
       </form>

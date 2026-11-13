@@ -11,6 +11,7 @@ import { IntegrationSecretService } from "../../security/integration-secret.serv
 import {
   SalesCredentialDto,
   SalesIntegrationStatusDto,
+  SalesAutoImportDto,
   UpsertSalesIntegrationDto,
 } from "./dto/sales-integration.dto";
 import { IntegrationAuditService } from "./integration-audit.service";
@@ -96,6 +97,38 @@ export class SalesIntegrationService {
     }
     return this.view(row);
   }
+  /** Automatic import every 2 minutes (spec 029, US5): Mercado Pago and PagBank only. */
+  async updateAutoImport(tenantId: string, userId: string, id: string, dto: SalesAutoImportDto) {
+    const integration = await this.find(tenantId, id);
+    if (integration.provider !== "MERCADO_PAGO" && integration.provider !== "PAGBANK") {
+      throw new UnprocessableEntityException("Importacao automatica disponivel para Mercado Pago e PagBank");
+    }
+    if (dto.strategy === "FIXED_PRODUCT") {
+      const product = await this.prisma.product.findFirst({ where: { id: dto.fixedProductId ?? "", tenantId, active: true }, select: { id: true } });
+      if (!product) throw new UnprocessableEntityException("Produto fixo invalido ou inativo");
+    }
+    const row = await this.prisma.salesIntegration.update({
+      where: { id },
+      data: {
+        autoImportEnabled: dto.enabled,
+        autoImportStrategy: dto.strategy,
+        autoImportFixedProductId: dto.strategy === "FIXED_PRODUCT" ? dto.fixedProductId : null,
+        ...(dto.enabled && !integration.autoImportEnabled ? { autoImportConsecutiveFailures: 0, autoImportLastErrorCode: null } : {}),
+        updatedByUserId: userId,
+      },
+      include: { credentials: { where: { status: SalesCredentialStatus.ACTIVE }, take: 1 } },
+    });
+    await this.audit?.record({
+      tenantId,
+      integrationId: id,
+      actorUserId: userId,
+      action: "SALES_AUTO_IMPORT_UPDATED",
+      outcome: dto.enabled ? "ENABLED" : "DISABLED",
+      metadata: { strategy: dto.strategy },
+    });
+    return this.view(row);
+  }
+
   async rotateCredential(tenantId: string, userId: string, id: string, dto: SalesCredentialDto) {
     const integration = await this.find(tenantId, id);
     if (integration.provider === "IFOOD") {
@@ -202,6 +235,12 @@ export class SalesIntegrationService {
       updatedAt: row.updatedAt.toISOString(),
       deliveryIntegrationId: row.deliveryIntegrationId,
       financialReadiness: row.financialReadiness,
+      autoImport: {
+        enabled: row.autoImportEnabled,
+        strategy: (row.autoImportStrategy ?? "PRICE_WEIGHTED") as "PRICE_WEIGHTED" | "FIXED_PRODUCT",
+        fixedProductId: row.autoImportFixedProductId,
+      },
+      autoImportHealth: autoImportHealth(row),
     };
   }
 
@@ -243,4 +282,22 @@ export class SalesIntegrationService {
     }
     return delivery;
   }
+}
+
+/** Degraded after 3 consecutive failures or data lagging more than 15 minutes. */
+export function autoImportHealth(row: {
+  autoImportLastSuccessAt: Date | null;
+  autoImportLastAttemptAt: Date | null;
+  autoImportConsecutiveFailures: number;
+  autoImportLastErrorCode: string | null;
+  autoImportLastLagSeconds: number | null;
+}) {
+  return {
+    lastSuccessAt: row.autoImportLastSuccessAt?.toISOString() ?? null,
+    lastAttemptAt: row.autoImportLastAttemptAt?.toISOString() ?? null,
+    consecutiveFailures: row.autoImportConsecutiveFailures,
+    lastErrorCode: row.autoImportLastErrorCode,
+    lagSeconds: row.autoImportLastLagSeconds,
+    degraded: row.autoImportConsecutiveFailures >= 3 || (row.autoImportLastLagSeconds ?? 0) > 15 * 60,
+  };
 }

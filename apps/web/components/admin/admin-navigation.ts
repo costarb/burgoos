@@ -9,6 +9,7 @@ import {
   ClipboardList,
   CookingPot,
   FileChartColumn,
+  FileText,
   Import,
   LayoutDashboard,
   PackageSearch,
@@ -171,6 +172,13 @@ export const adminNavigation: AdminNavigationGroup[] = [
         permissions: ["finance.view", "finance.manage"],
       },
       {
+        href: "/admin/fiscal",
+        label: "Fiscal (NFC-e)",
+        icon: FileText,
+        description: "Notas fiscais de consumidor",
+        permissions: ["fiscal.view", "fiscal.configure"],
+      },
+      {
         href: "/admin/reports/dre",
         label: "DRE",
         icon: FileChartColumn,
@@ -230,6 +238,13 @@ export const adminNavigation: AdminNavigationGroup[] = [
         icon: Palette,
         description: "Marca e tema",
         permissions: ["catalog.manage"],
+      },
+      {
+        href: "/admin/settings/store",
+        label: "Dados da loja",
+        icon: Store,
+        description: "Contato, endereco e dados fiscais",
+        permissions: ["store.profile.manage"],
       },
       {
         href: "/admin/settings",
