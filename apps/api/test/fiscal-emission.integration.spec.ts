@@ -147,6 +147,45 @@ describe("NFC-e emission (US3)", () => {
     expect((await h.documents.list(TENANT, { pendingOnly: true })).items).toEqual([]);
   });
 
+  it("frees the sale when the provider authorizes in homologation while the store is in production", async () => {
+    const h = createFiscalHarness();
+    h.prisma.table("fiscalConfiguration")[0].environment = "PRODUCTION";
+    h.fake.authorizedEnvironment = "HOMOLOGATION";
+    const orderId = h.seedOrder();
+    await h.trigger.requestForOrder(TENANT, orderId);
+    await h.runJobs();
+
+    expect(h.documentsOf()[0]).toMatchObject({
+      status: "REJECTED",
+      environment: "HOMOLOGATION",
+      activeKey: null,
+      rejectionCode: "ENVIRONMENT_MISMATCH",
+      number: 1,
+    });
+    expect(h.logs.find((log) => log.event === "fiscal.document.environment_mismatch")).toMatchObject({ expected: "PRODUCTION", actual: "HOMOLOGATION" });
+    const pending = await h.documents.list(TENANT, { pendingOnly: true });
+    expect(pending.items.map((item) => item.pendingReason)).toEqual(["ENVIRONMENT_MISMATCH"]);
+
+    // After the provider account is switched to production, the sale is issued again.
+    h.fake.authorizedEnvironment = "PRODUCTION";
+    await h.emissions.request({ tenantId: TENANT, target: { type: "ORDER", id: orderId }, trigger: "MANUAL" });
+    await h.runJobs();
+    const authorized = h.documentsOf().find((document) => document.status === "AUTHORIZED");
+    expect(authorized).toMatchObject({ environment: "PRODUCTION", activeKey: `order:${orderId}` });
+    expect((await h.documents.list(TENANT, { pendingOnly: true })).items).toEqual([]);
+  });
+
+  it("records the real environment when a production note is authorized while the store is in homologation", async () => {
+    const h = createFiscalHarness();
+    h.fake.authorizedEnvironment = "PRODUCTION";
+    const orderId = h.seedOrder();
+    await h.trigger.requestForOrder(TENANT, orderId);
+    await h.runJobs();
+
+    expect(h.documentsOf()[0]).toMatchObject({ status: "AUTHORIZED", environment: "PRODUCTION", activeKey: `order:${orderId}` });
+    expect(h.logs.find((log) => log.event === "fiscal.document.environment_mismatch")).toMatchObject({ expected: "HOMOLOGATION", actual: "PRODUCTION" });
+  });
+
   it("lists only the latest rejected attempt of a sale as pending", async () => {
     const h = createFiscalHarness();
     h.fake.submitOutcomes = ["REJECT", "REJECT"];

@@ -86,6 +86,11 @@ export type ProviderDocumentState =
       qrCodeUrl: string | null;
       consultationUrl: string | null;
       danfeUrl: string | null;
+      /**
+       * SEFAZ environment the note was actually authorized in (`tpAmb`), when the provider reports it.
+       * Some providers (Bling) choose the environment in their own account settings, not per request.
+       */
+      environment?: FiscalEnvironment | null;
     }
   | { status: "REJECTED"; externalId: string | null; code: string; message: string }
   | { status: "CANCELLED"; externalId: string; cancelledAt: string | null; protocol: string | null };

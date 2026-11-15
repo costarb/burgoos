@@ -13,6 +13,7 @@ import type {
 import { FiscalProviderContextService } from "../providers/fiscal-provider-context.service";
 import { FiscalProviderRegistry } from "../providers/fiscal-provider.registry";
 import { FiscalDocumentStorageService } from "./fiscal-document-storage.service";
+import { ENVIRONMENT_MISMATCH } from "./fiscal-document-state.service";
 
 const PENDING_STATUSES: FiscalDocumentStatus[] = ["REJECTED", "ERROR", "CANCEL_PENDING", "CANCEL_FAILED"];
 /** Authorized notes whose item taxes diverged from the fiscal profile and nobody reviewed yet. */
@@ -347,7 +348,8 @@ export class FiscalDocumentsService {
   pendingReason(document: FiscalDocument): FiscalPendingReason | null {
     switch (document.status) {
       case "REJECTED":
-        return document.rejectionCode === "MISSING_FISCAL_DATA" ? "MISSING_FISCAL_DATA" : "REJECTED";
+        if (document.rejectionCode === "MISSING_FISCAL_DATA") return "MISSING_FISCAL_DATA";
+        return document.rejectionCode === ENVIRONMENT_MISMATCH ? "ENVIRONMENT_MISMATCH" : "REJECTED";
       case "ERROR":
         return document.rejectionCode === "PROVIDER_DISCONNECTED" ? "PROVIDER_DISCONNECTED" : "ERROR";
       case "CANCEL_PENDING": {
