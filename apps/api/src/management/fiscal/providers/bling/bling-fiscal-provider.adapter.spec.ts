@@ -77,6 +77,7 @@ describe("Bling NFC-e mapper", () => {
       accessKey: "35261011222333000181650010000000041689756832",
       protocol: "135260000000001",
       authorizedAt: "2026-10-30T18:26:46-03:00",
+      environment: "HOMOLOGATION",
     });
     expect(parseSendResult("1", JSON.parse(fixture("enviar-rejected-717.json")))).toEqual({
       status: "REJECTED",
@@ -154,8 +155,11 @@ describe("BlingFiscalProviderAdapter", () => {
       protocol: "135260000000001",
       consultationUrl: "https://www.homologacao.nfce.fazenda.sp.gov.br/consulta",
       danfeUrl: expect.stringContaining("doc.view.php"),
+      environment: "HOMOLOGATION",
     });
     expect(state.status === "AUTHORIZED" && state.qrCodeUrl).toContain("homologacao.nfce.fazenda.sp.gov.br/qrcode");
+    // The authorized XML alone (sync path) also reports the environment.
+    expect(await adapter.get(ctx, externalId)).toMatchObject({ status: "AUTHORIZED", environment: "HOMOLOGATION" });
     const xml = await adapter.downloadXml(ctx, externalId, "AUTHORIZATION");
     expect(xml?.toString()).toContain("<nfeProc");
     expect(await adapter.downloadXml(ctx, externalId, "CANCELLATION")).toBeNull();

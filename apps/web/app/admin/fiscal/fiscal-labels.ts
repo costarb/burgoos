@@ -30,6 +30,7 @@ export const PENDING_REASON: Record<FiscalPendingReason, string> = {
   PROVIDER_DISCONNECTED: "Provedor desconectado: reconecte a conta",
   SAME_DAY_NOT_ISSUED: "Venda do dia sem NFC-e",
   TAX_DIVERGENCE: "Autorizada com CFOP/CSOSN diferente do perfil fiscal: revise a natureza no provedor",
+  ENVIRONMENT_MISMATCH: "Emitida em homologacao, sem validade fiscal: mude a NFC-e para Producao no provedor e emita de novo",
 };
 
 export const READINESS_LABEL: Record<FiscalReadinessKey, string> = {

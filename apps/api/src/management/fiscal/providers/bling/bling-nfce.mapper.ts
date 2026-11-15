@@ -1,4 +1,4 @@
-import type { PaymentMethod } from "@prisma/client";
+import type { FiscalEnvironment, PaymentMethod } from "@prisma/client";
 import { FiscalProviderError, NfceDraft, ProviderDocumentState } from "../fiscal-provider.adapter";
 
 export interface BlingSettings {
@@ -111,6 +111,17 @@ function tag(xml: string, name: string): string[] {
   );
 }
 
+/**
+ * SEFAZ environment from `tpAmb` (1 production, 2 homologation). Bling picks the environment in the
+ * account settings, so the ERP reads it back from SEFAZ instead of trusting its own configuration.
+ */
+export function environmentOf(xml: string): FiscalEnvironment | null {
+  const value = tag(xml, "tpAmb")[0];
+  if (value === "1") return "PRODUCTION";
+  if (value === "2") return "HOMOLOGATION";
+  return null;
+}
+
 /** Result of POST /nfce/{id}/enviar: SEFAZ SOAP envelope (`retEnviNFe` with `protNFe`). */
 export function parseSendResult(externalId: string, body: unknown): ProviderDocumentState {
   const xml = (body as { data?: { xml?: unknown } })?.data?.xml;
@@ -142,6 +153,7 @@ export function parseSendResult(externalId: string, body: unknown): ProviderDocu
       qrCodeUrl: null,
       consultationUrl: null,
       danfeUrl: null,
+      environment: environmentOf(protocolXml) ?? environmentOf(xml),
     };
   }
   return { status: "REJECTED", externalId, code, message };
@@ -161,12 +173,18 @@ export interface BlingNfceDetail {
   itens?: Array<{ codigo?: string }>;
 }
 
-/** Fields read from the authorized nfeProc XML (QR code and public consultation URL). */
-export function parseAuthorizedXml(xml: string): { qrCodeUrl: string | null; consultationUrl: string | null; protocol: string | null } {
+/** Fields read from the authorized nfeProc XML (QR code, public consultation URL and environment). */
+export function parseAuthorizedXml(xml: string): {
+  qrCodeUrl: string | null;
+  consultationUrl: string | null;
+  protocol: string | null;
+  environment: FiscalEnvironment | null;
+} {
   return {
     qrCodeUrl: tag(xml, "qrCode")[0] ?? null,
     consultationUrl: tag(xml, "urlChave")[0] ?? null,
     protocol: tag(xml, "nProt")[0] ?? null,
+    environment: environmentOf(xml),
   };
 }
 
@@ -190,6 +208,7 @@ export function stateFromDetail(detail: BlingNfceDetail, xmlFields?: ReturnType<
       qrCodeUrl: xmlFields?.qrCodeUrl ?? null,
       consultationUrl: xmlFields?.consultationUrl ?? null,
       danfeUrl: detail.linkDanfe || null,
+      environment: xmlFields?.environment ?? null,
     };
   }
   if (detail.situacao === 2) return { status: "CANCELLED", externalId, cancelledAt: null, protocol: null };
