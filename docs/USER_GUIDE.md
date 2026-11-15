@@ -279,7 +279,7 @@ Acesse **Financeiro → Fiscal (NFC-e)**. A tela emite e acompanha a nota fiscal
    - escolha a **natureza de operação** usada nas NFC-e;
    - confira o vínculo de cada forma de pagamento do sistema com uma forma do Bling (o sistema sugere pelo código fiscal).
 4. **Perfis fiscais:** na aba **Perfis fiscais**, cadastre os perfis (NCM, CFOP, CSOSN) e atribua um perfil a cada categoria. Produtos e complementos podem ter perfil próprio em **Ajustar por produto ou complemento**.
-5. **Emissão:** escolha o ambiente (**Homologação** para testes, **Produção** para valer), o modo (**Automático** ou **Manual**) e ative a emissão. A ativação só é liberada quando a **Prontidão para emitir** estiver completa.
+5. **Emissão:** escolha o ambiente (**Homologação** para testes, **Produção** para valer), o modo (**Automático** ou **Manual**) e ative a emissão. A ativação só é liberada quando a **Prontidão para emitir** estiver completa. No Bling, o ambiente da NFC-e é definido **na própria conta do Bling** (preferências da NFC-e, com o CSC do ambiente correspondente): mude lá também. Se o Bling autorizar uma nota em homologação com a loja em produção, o ERP a mostra em **Pendências** como "Emitida em homologação, sem validade fiscal" e libera a venda para emitir de novo depois que a conta do Bling estiver em produção.
 
 No Bling, a natureza de operação das NFC-e precisa estar como **Saída**, **Faturada**, **Consumidor final**, **Indicador de presença 1 - Operação presencial** e com o **regime tributário atual do CNPJ** (MEI ou Simples Nacional). Sem isso a SEFAZ rejeita a nota (códigos 717, 899 ou 180).
 

@@ -1,7 +1,7 @@
 [CmdletBinding()]
 param(
   [switch]$SkipDatabase,
-  [int]$StartupTimeoutSeconds = 60
+  [int]$StartupTimeoutSeconds = 120
 )
 
 $ErrorActionPreference = "Stop"

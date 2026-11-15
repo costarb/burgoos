@@ -28,7 +28,8 @@ export type FiscalPendingReason =
   | "MISSING_FISCAL_DATA"
   | "PROVIDER_DISCONNECTED"
   | "SAME_DAY_NOT_ISSUED"
-  | "TAX_DIVERGENCE";
+  | "TAX_DIVERGENCE"
+  | "ENVIRONMENT_MISMATCH";
 
 export type FiscalReadinessKey =
   | "ISSUER"

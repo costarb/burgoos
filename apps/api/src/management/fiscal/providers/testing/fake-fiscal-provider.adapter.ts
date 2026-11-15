@@ -1,4 +1,4 @@
-import type { FiscalProvider } from "@prisma/client";
+import type { FiscalEnvironment, FiscalProvider } from "@prisma/client";
 import {
   FiscalProviderAdapter,
   FiscalProviderCapabilities,
@@ -101,6 +101,8 @@ export class FakeFiscalProviderAdapter implements FiscalProviderAdapter {
   settingsIssues: FiscalSettingsIssue[] = [];
   /** Taxes the "provider rules" apply to the item at each position instead of the ones sent. */
   itemTaxOverrides: Record<number, { cfop: string; csosn: string }> = {};
+  /** SEFAZ environment reported on authorization (`tpAmb`); undefined reports none. */
+  authorizedEnvironment: FiscalEnvironment | undefined;
 
   validateSettings(): FiscalSettingsIssue[] {
     return this.settingsIssues;
@@ -125,6 +127,7 @@ export class FakeFiscalProviderAdapter implements FiscalProviderAdapter {
       qrCodeUrl: `https://sefaz.test/qr/${externalId}`,
       consultationUrl: "https://www.nfce.fazenda.sp.gov.br/consulta",
       danfeUrl: `https://provider.test/danfe/${externalId}`,
+      ...(this.authorizedEnvironment ? { environment: this.authorizedEnvironment } : {}),
     };
   }
 

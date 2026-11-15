@@ -54,6 +54,8 @@ export class BlingFiscalProviderAdapter implements FiscalProviderAdapter {
       accessKey: detailed.accessKey ?? result.accessKey,
       protocol: result.protocol ?? detailed.protocol,
       authorizedAt: result.authorizedAt ?? detailed.authorizedAt,
+      // The SEFAZ answer to the submission is authoritative for the environment.
+      environment: result.environment ?? detailed.environment ?? null,
     };
   }
 

@@ -8,6 +8,10 @@ import { FiscalAuditService } from "./fiscal-audit.service";
 import { FiscalDocumentStorageService } from "./fiscal-document-storage.service";
 import { authorizedItemTaxes, compareItemTaxes } from "./fiscal-tax-divergence";
 
+export const ENVIRONMENT_MISMATCH = "ENVIRONMENT_MISMATCH";
+const ENVIRONMENT_MISMATCH_MESSAGE =
+  "Autorizada em homologacao (sem validade fiscal) com a loja em producao: mude o ambiente da NFC-e para Producao na conta do provedor e emita de novo";
+
 const MINUTE = 60_000;
 const HOUR = 60 * MINUTE;
 const DAY = 24 * HOUR;
@@ -72,10 +76,54 @@ export class FiscalDocumentStateService {
     if (state.status === "AUTHORIZED") {
       if (!["PENDING", "PROCESSING", "ERROR"].includes(document.status)) return "UNCHANGED";
       const authorizedAt = state.authorizedAt ? new Date(state.authorizedAt) : now;
+      const environment = state.environment ?? document.environment;
+      if (environment !== document.environment) {
+        this.audit.log(
+          "fiscal.document.environment_mismatch",
+          { tenantId: document.tenantId, documentId: document.id, provider: document.provider, expected: document.environment, actual: environment },
+          "warn"
+        );
+      }
+      if (document.environment === "PRODUCTION" && environment === "HOMOLOGATION") {
+        // Authorized in homologation while the store issues in production: the note has no fiscal
+        // value. Record it with its real environment and free the sale so it can be issued again
+        // once the provider account is switched to production.
+        await this.prisma.fiscalDocument.update({
+          where: { id: document.id },
+          data: {
+            status: "REJECTED",
+            environment,
+            activeKey: null,
+            externalId: state.externalId,
+            number: state.number,
+            series: state.series,
+            accessKey: state.accessKey,
+            protocol: state.protocol,
+            issuedAt: document.issuedAt ?? authorizedAt,
+            qrCodeUrl: state.qrCodeUrl,
+            consultationUrl: state.consultationUrl,
+            danfeUrl: state.danfeUrl,
+            rejectionCode: ENVIRONMENT_MISMATCH,
+            rejectionMessage: ENVIRONMENT_MISMATCH_MESSAGE,
+            nextSyncAt: null,
+          },
+        });
+        await this.audit.event({
+          tenantId: document.tenantId,
+          documentId: document.id,
+          type: "REJECTED",
+          code: ENVIRONMENT_MISMATCH,
+          message: ENVIRONMENT_MISMATCH_MESSAGE,
+          metadata: { via, number: state.number, expected: document.environment, actual: environment },
+        });
+        return "REJECTED";
+      }
       const updated = await this.prisma.fiscalDocument.update({
         where: { id: document.id },
         data: {
           status: "AUTHORIZED",
+          // A production note issued while the ERP is in homologation is a real fiscal document.
+          environment,
           externalId: state.externalId,
           number: state.number,
           series: state.series,
@@ -91,7 +139,13 @@ export class FiscalDocumentStateService {
           nextSyncAt: null,
         },
       });
-      await this.audit.event({ tenantId: document.tenantId, documentId: document.id, type: "AUTHORIZED", providerStatus: "AUTHORIZED", metadata: { via, number: state.number } });
+      await this.audit.event({
+        tenantId: document.tenantId,
+        documentId: document.id,
+        type: "AUTHORIZED",
+        providerStatus: "AUTHORIZED",
+        metadata: { via, number: state.number, ...(environment !== document.environment ? { expected: document.environment, actual: environment } : {}) },
+      });
       this.audit.log("fiscal.document.authorized", {
         tenantId: document.tenantId,
         documentId: document.id,
