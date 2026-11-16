@@ -2978,3 +2978,15 @@ export async function updateStoreProfile(token: string, payload: StoreProfileInp
     body: JSON.stringify(payload),
   });
 }
+
+/** Version of the running API (public health endpoint), or null when it does not answer. */
+export async function getApiVersion(): Promise<import("./app-version").ApiVersion | null> {
+  try {
+    const response = await fetch(`${apiUrl}/api/health`, { cache: "no-store" });
+    if (!response.ok) return null;
+    const body = (await response.json()) as { version?: import("./app-version").ApiVersion };
+    return body.version ?? null;
+  } catch {
+    return null;
+  }
+}

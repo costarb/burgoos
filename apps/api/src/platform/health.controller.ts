@@ -1,6 +1,7 @@
 import { Controller, Get } from "@nestjs/common";
 import { RuntimeRoleService } from "../config/runtime-role.service";
 import { MemoryPressureService } from "../common/observability/memory-pressure.service";
+import { appVersion } from "./app-version";
 
 @Controller("health")
 export class HealthController {
@@ -13,6 +14,7 @@ export class HealthController {
       service: "api",
       role: this.roles.role,
       pressure: this.pressure.level,
+      version: appVersion(),
     };
   }
 }
