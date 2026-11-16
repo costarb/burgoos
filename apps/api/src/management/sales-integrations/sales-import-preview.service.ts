@@ -10,8 +10,12 @@ import {
   ExternalMovementStatus,
   Prisma,
   SalesImportDayStatus,
+  SalesImportRun,
+  SalesIntegrationEnvironment,
   SalesIntegrationStatus,
+  SalesProvider,
 } from "@prisma/client";
+import type { NormalizedHistoricalSale } from "../../ordering/historical-order-import.service";
 import { PrismaService } from "../../platform/database/prisma.service";
 import { IntegrationSecretService } from "../../security/integration-secret.service";
 import { CreateSalesImportRunDto } from "./dto/sales-integration.dto";
@@ -20,6 +24,25 @@ import { SalesProviderRegistry } from "./sales-provider.registry";
 import { ProviderTransactionStateService } from "./provider-transaction-state.service";
 import { IntegrationAuditService } from "./integration-audit.service";
 import { IfoodFinancialCredentialService } from "./ifood/ifood-financial-credential.service";
+
+const IDENTITY_CHUNK = 1000;
+
+export interface ProcessOptions {
+  /** false: already imported sales are reconciled by the caller and not stored as movements. */
+  persistKnownSales?: boolean;
+}
+
+/** A sale returned by the provider that already became an order (ExternalSaleIdentity exists). */
+export interface KnownSale {
+  externalSaleId: string;
+  sale: NormalizedHistoricalSale;
+}
+
+export type ProcessResult = SalesImportRun & {
+  knownSales: KnownSale[];
+  /** Most recent sale seen by the provider in this run, used for the automatic import lag. */
+  latestOccurredAt: Date | null;
+};
 
 const EMPTY_COUNTS = {
   found: 0,
@@ -99,7 +122,18 @@ export class SalesImportPreviewService {
     return run;
   }
 
-  async process(runId: string, tenantId: string) {
+  /**
+   * Fetches the run period from the provider and classifies each movement as new, duplicate (sale
+   * already imported, by ExternalSaleIdentity) or rejected.
+   *
+   * `persistKnownSales: false` (automatic import, spec 030): already imported sales are not stored
+   * again as movements; they are returned in `knownSales` so the caller reconciles the order in
+   * memory. The provider transaction state is still refreshed for every movement.
+   */
+  async process(runId: string, tenantId: string, options: ProcessOptions = {}): Promise<ProcessResult> {
+    const persistKnownSales = options.persistKnownSales ?? true;
+    const knownSales: KnownSale[] = [];
+    let latestOccurredAt: Date | null = null;
     const run = await this.prisma.salesImportRun.update({
       where: { id: runId },
       data: { status: "FETCHING", startedAt: new Date() },
@@ -195,6 +229,12 @@ export class SalesImportPreviewService {
         await this.prisma.externalSalesMovement.deleteMany({ where: { runId, dayId: day.id } });
         ready += 1;
         counts.found += result.movements.length;
+        const known = await this.knownSaleIds(
+          tenantId,
+          run.provider,
+          run.integration.environment,
+          result.movements
+        );
         for (const movement of result.movements) {
           const providerTransactionStateId = await this.transactionStates.upsertFromMovement({
             tenantId,
@@ -202,20 +242,15 @@ export class SalesImportPreviewService {
             provider: run.provider,
             movement,
           });
-          const duplicate = movement.externalSaleId
-            ? Boolean(
-                await this.prisma.externalSaleIdentity.findUnique({
-                  where: {
-                    tenantId_provider_environment_externalSaleId: {
-                      tenantId,
-                      provider: run.provider,
-                      environment: run.integration.environment,
-                      externalSaleId: movement.externalSaleId,
-                    },
-                  },
-                })
-              )
-            : false;
+          if (movement.sale) {
+            const occurredAt = new Date(movement.sale.occurredAt);
+            if (
+              Number.isFinite(occurredAt.getTime()) &&
+              (!latestOccurredAt || occurredAt > latestOccurredAt)
+            )
+              latestOccurredAt = occurredAt;
+          }
+          const duplicate = Boolean(movement.externalSaleId && known.has(movement.externalSaleId));
           const status: ExternalMovementStatus = duplicate
             ? "DUPLICATE"
             : movement.sale
@@ -228,6 +263,11 @@ export class SalesImportPreviewService {
             if (status === "DUPLICATE") counts.existingOrders += 1;
             else if (status === "NEW") counts.historicalCandidates += 1;
             else counts.unknown += 1;
+          }
+          if (status === "DUPLICATE" && !persistKnownSales) {
+            if (movement.sale && movement.externalSaleId)
+              knownSales.push({ externalSaleId: movement.externalSaleId, sale: movement.sale });
+            continue;
           }
           await this.prisma.externalSalesMovement.create({
             data: {
@@ -305,7 +345,33 @@ export class SalesImportPreviewService {
         outcome: completed.status,
         metadata: { runId, trigger: run.trigger },
       });
-    return completed;
+    return { ...completed, knownSales, latestOccurredAt };
+  }
+
+  /** Sale ids of the day that already became orders, in one query per chunk instead of one per movement. */
+  private async knownSaleIds(
+    tenantId: string,
+    provider: SalesProvider,
+    environment: SalesIntegrationEnvironment,
+    movements: Array<{ externalSaleId?: string | null }>
+  ): Promise<Set<string>> {
+    const ids = [
+      ...new Set(movements.map((movement) => movement.externalSaleId).filter(Boolean) as string[]),
+    ];
+    const known = new Set<string>();
+    for (let index = 0; index < ids.length; index += IDENTITY_CHUNK) {
+      const rows = await this.prisma.externalSaleIdentity.findMany({
+        where: {
+          tenantId,
+          provider,
+          environment,
+          externalSaleId: { in: ids.slice(index, index + IDENTITY_CHUNK) },
+        },
+        select: { externalSaleId: true },
+      });
+      for (const row of rows) known.add(row.externalSaleId);
+    }
+    return known;
   }
 
   async get(tenantId: string, id: string) {

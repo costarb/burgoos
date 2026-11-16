@@ -116,14 +116,22 @@ export class SalesAutoImportService implements OnModuleInit, RuntimeBackgroundJo
     }
 
     try {
-      const previewed = await this.preview.process(runId, tenantId);
+      // Sales already imported in earlier cycles are not stored again (spec 030): they come back in
+      // `knownSales` and only their payment data is reconciled on the order.
+      const previewed = await this.preview.process(runId, tenantId, { persistKnownSales: false });
       if (previewed.status === "FAILED") {
         const day = await this.prisma.salesImportDay.findFirst({ where: { runId, status: "FAILED" }, orderBy: { movementDate: "desc" } });
         return this.fail(integration, { ...base, runId }, day?.errorCode ?? "PREVIEW_FAILED", startedAt, now);
       }
       const confirmed = await this.confirmation.confirm(tenantId, runId);
+      const knownSales = previewed.knownSales ?? [];
+      const reconciledOrders = await this.confirmation.reconcileKnownSales(
+        tenantId,
+        { provider: integration.provider, environment: integration.environment },
+        knownSales
+      );
       const counts = (confirmed.counts ?? {}) as Record<string, number>;
-      const lagSeconds = await this.lagSeconds(integrationId, now);
+      const lagSeconds = lagSecondsOf(previewed.latestOccurredAt ?? null, now);
       await this.prisma.salesIntegration.update({
         where: { id: integrationId },
         data: {
@@ -143,6 +151,8 @@ export class SalesAutoImportService implements OnModuleInit, RuntimeBackgroundJo
         created: Number(counts.created ?? 0),
         duplicate: Number(counts.duplicate ?? 0),
         failed: Number(counts.failed ?? 0),
+        known: knownSales.length,
+        reconciledOrders,
         lagSeconds,
         durationMs: Date.now() - startedAt,
       });
@@ -207,19 +217,18 @@ export class SalesAutoImportService implements OnModuleInit, RuntimeBackgroundJo
     }
   }
 
-  /** Seconds between now and the most recent sale received from the provider today. */
-  private async lagSeconds(integrationId: string, now: Date): Promise<number | null> {
-    const latest = await this.prisma.externalSalesMovement.findFirst({
-      where: { integrationId, kind: "SALE", occurredAt: { gte: new Date(`${businessDate(now)}T00:00:00-03:00`) } },
-      orderBy: { occurredAt: "desc" },
-      select: { occurredAt: true },
-    });
-    return latest?.occurredAt ? Math.max(0, Math.round((now.getTime() - latest.occurredAt.getTime()) / 1000)) : null;
-  }
-
   private log(event: string, fields: Record<string, unknown>, level: "log" | "warn" | "error" = "log"): void {
     this.logger[level](JSON.stringify({ event, ...fields }));
   }
+}
+
+/**
+ * Seconds between now and the most recent sale the provider returned in this cycle, when that sale
+ * is from the current business day (null = no sales today yet).
+ */
+export function lagSecondsOf(latestOccurredAt: Date | null, now: Date): number | null {
+  if (!latestOccurredAt || businessDate(latestOccurredAt) !== businessDate(now)) return null;
+  return Math.max(0, Math.round((now.getTime() - latestOccurredAt.getTime()) / 1000));
 }
 
 function errorCode(error: unknown): string {

@@ -71,6 +71,7 @@ describe("SalesImportHistoryService", () => {
   it("purges terminal raw runs older than 180 days without touching identities", async () => {
     const deleteMany = vi.fn().mockResolvedValue({ count: 2 });
     const service = new SalesImportRetentionService({
+      $executeRaw: vi.fn().mockResolvedValue(0),
       salesImportRun: {
         findMany: vi.fn().mockResolvedValueOnce([{ id: "run-1" }, { id: "run-2" }]).mockResolvedValueOnce([]),
         deleteMany,
