@@ -85,6 +85,7 @@ import type {
   SalesReportResponse,
   SalesIntegrationView,
   SalesImportRunView,
+  ProductOption,
   SalesMovementView,
   SalesProviderCapability,
   StoreDetail,
@@ -2555,11 +2556,25 @@ export function confirmSalesImportRun(token: string, runId: string): Promise<Sal
   return fetchAdmin(token, `/api/admin/sales-import-runs/${runId}/confirm`, { method: "POST" });
 }
 
+export type SalesRunHistoryTrigger = "MANUAL" | "AUTOMATIC" | "INITIAL_LOAD";
+
 export function listSalesImportRuns(
   token: string,
-  page = 1
+  page = 1,
+  trigger?: SalesRunHistoryTrigger
 ): Promise<{ items: SalesImportRunView[]; page: number; pageSize: number; total: number }> {
-  return fetchAdmin(token, `/api/admin/sales-import-runs?page=${page}`);
+  const params = new URLSearchParams({ page: String(page) });
+  if (trigger) params.set("trigger", trigger);
+  return fetchAdmin(token, `/api/admin/sales-import-runs?${params.toString()}`);
+}
+
+/** Lean product list for selectors: id, name, price and active, without images (spec 030). */
+export function listProductOptions(
+  token: string,
+  filters: { active?: boolean } = {}
+): Promise<ProductOption[]> {
+  const query = filters.active === undefined ? "" : `?active=${String(filters.active)}`;
+  return fetchAdmin<ProductOption[]>(token, `/api/admin/products/options${query}`);
 }
 
 export function listSalesImportMovements(

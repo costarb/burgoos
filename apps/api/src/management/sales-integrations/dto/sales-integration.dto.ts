@@ -132,4 +132,8 @@ export class SalesPaginationDto {
   @IsOptional()
   @IsIn(["NEW", "DUPLICATE", "REJECTED", "IMPORTED", "FAILED"])
   status?: string;
+  /** Run history filter by origin (spec 030): the automatic cycles every 2 minutes hide the manual runs. */
+  @IsOptional()
+  @IsIn(["MANUAL", "AUTOMATIC", "INITIAL_LOAD"])
+  trigger?: "MANUAL" | "AUTOMATIC" | "INITIAL_LOAD";
 }

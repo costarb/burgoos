@@ -20,6 +20,22 @@ describe("SalesImportHistoryService", () => {
       expect.objectContaining({ where: { tenantId: "tenant" }, skip: 10, take: 10 })
     );
   });
+  it("filters the run history by trigger without loading the integration", async () => {
+    const findMany = vi.fn(() => ({ query: "items" }));
+    const count = vi.fn(() => ({ query: "count" }));
+    const service = new SalesImportHistoryService({
+      salesImportRun: { findMany, count },
+      $transaction: vi.fn(async () => [[], 0]),
+    } as never);
+    await service.list("tenant", { page: 1, pageSize: 20, trigger: "MANUAL" });
+    expect(findMany).toHaveBeenCalledWith({
+      where: { tenantId: "tenant", trigger: "MANUAL" },
+      orderBy: { createdAt: "desc" },
+      skip: 0,
+      take: 20,
+    });
+    expect(count).toHaveBeenCalledWith({ where: { tenantId: "tenant", trigger: "MANUAL" } });
+  });
   it("filters tenant-owned movements and redacts unsafe error details", async () => {
     const findMany = vi.fn();
     const count = vi.fn();

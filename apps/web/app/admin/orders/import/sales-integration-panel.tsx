@@ -1,6 +1,6 @@
 "use client";
 
-import type { AdminProduct } from "../../../../lib/api";
+import type { ProductOption } from "@rrfive/types";
 import {
   confirmSalesImportRun,
   createSalesImportRun,
@@ -85,37 +85,67 @@ export function SalesImportHistory({ history }: { history: SalesImportRunView[] 
   );
 }
 
+type HistoryTrigger = "MANUAL" | "AUTOMATIC";
+
 export function SalesIntegrationPanel({
   token,
   products,
 }: {
   token: string;
-  products: AdminProduct[];
+  products: ProductOption[];
 }) {
-  const [integration, setIntegration] = useState<SalesIntegrationView | null>(null);
+  const [integrations, setIntegrations] = useState<SalesIntegrationView[]>([]);
   const [run, setRun] = useState<SalesImportRunView | null>(null);
   const [history, setHistory] = useState<SalesImportRunView[]>([]);
+  const [historyOpen, setHistoryOpen] = useState(false);
+  const [historyTrigger, setHistoryTrigger] = useState<HistoryTrigger>("MANUAL");
+  const [historyPage, setHistoryPage] = useState(1);
+  const [historyTotal, setHistoryTotal] = useState(0);
   const [providers, setProviders] = useState<SalesProviderCapability[]>([]);
   const [selectedProvider, setSelectedProvider] = useState("PAGBANK");
   const [strategy, setStrategy] = useState<"PRICE_WEIGHTED" | "FIXED_PRODUCT">("PRICE_WEIGHTED");
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
+  const integration = integrations.find((item) => item.provider === selectedProvider) ?? null;
 
+  /** Integrations and providers load once; switching the provider only picks from this list. */
   async function refresh() {
-    const [integrations, runs, catalog] = await Promise.all([
+    const [list, catalog] = await Promise.all([
       listSalesIntegrations(token),
-      listSalesImportRuns(token),
       listSalesProviders(token),
     ]);
     setProviders(catalog);
-    setIntegration(integrations.find((item) => item.provider === selectedProvider) ?? null);
-    setHistory(runs.items);
+    setIntegrations(list);
+    if (historyOpen) await loadHistory(1, historyTrigger);
   }
   useEffect(() => {
     void refresh().catch((error: unknown) =>
       setMessage(error instanceof Error ? error.message : "Falha ao carregar integracao")
     );
-  }, [token, selectedProvider]);
+  }, [token]);
+
+  /** Keeps the cached list in sync when a panel saves or reconnects an integration. */
+  function setIntegration(next: SalesIntegrationView | null) {
+    if (!next) return;
+    setIntegrations((list) => [next, ...list.filter((item) => item.id !== next.id)]);
+  }
+
+  /** The history loads on demand: the automatic cycles every 2 minutes would hide manual runs. */
+  async function loadHistory(page: number, trigger: HistoryTrigger) {
+    const result = await listSalesImportRuns(token, page, trigger);
+    setHistory((current) => (page === 1 ? result.items : [...current, ...result.items]));
+    setHistoryPage(page);
+    setHistoryTotal(result.total ?? result.items.length);
+  }
+  function showHistory(open: boolean) {
+    setHistoryOpen(open);
+    if (open && history.length === 0)
+      void loadHistory(1, historyTrigger).catch(() => setMessage("Falha ao carregar o historico"));
+  }
+  function changeHistoryTrigger(trigger: HistoryTrigger) {
+    setHistoryTrigger(trigger);
+    void loadHistory(1, trigger).catch(() => setMessage("Falha ao carregar o historico"));
+  }
 
   async function configure(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -375,9 +405,29 @@ export function SalesIntegrationPanel({
       {integration?.status === "ACTIVE" && (selectedProvider === "MERCADO_PAGO" || selectedProvider === "PAGBANK") ? (
         <SalesAutoImportCard integration={integration} onChange={setIntegration} products={products} token={token} />
       ) : null}
-      {history.length > 0 ? (
-        <details>
-          <summary className="cursor-pointer font-semibold">Historico de execucoes</summary>
+      <details
+        data-testid="sales-import-history"
+        onToggle={(event) => showHistory((event.currentTarget as HTMLDetailsElement).open)}
+      >
+        <summary className="cursor-pointer font-semibold">Historico de execucoes</summary>
+        <div className="mt-2 flex gap-2 text-sm" role="group" aria-label="Origem das execucoes">
+          {(["MANUAL", "AUTOMATIC"] as const).map((trigger) => (
+            <button
+              key={trigger}
+              type="button"
+              aria-pressed={historyTrigger === trigger}
+              onClick={() => changeHistoryTrigger(trigger)}
+              className={`rounded-full border px-3 py-1 font-semibold ${
+                historyTrigger === trigger ? "border-ink bg-ink text-white" : "border-slate-300"
+              }`}
+            >
+              {trigger === "MANUAL" ? "Manuais" : "Automaticas"}
+            </button>
+          ))}
+        </div>
+        {history.length === 0 ? (
+          <p className="mt-2 text-sm text-slate-500">Nenhuma execucao encontrada.</p>
+        ) : (
           <ul className="mt-2 grid gap-2 text-sm">
             {history.map((item) => (
               <li key={item.id} className="rounded border p-2">
@@ -394,8 +444,21 @@ export function SalesIntegrationPanel({
               </li>
             ))}
           </ul>
-        </details>
-      ) : null}
+        )}
+        {history.length < historyTotal ? (
+          <button
+            type="button"
+            className="mt-2 rounded border px-3 py-1 text-sm font-semibold"
+            onClick={() =>
+              void loadHistory(historyPage + 1, historyTrigger).catch(() =>
+                setMessage("Falha ao carregar o historico")
+              )
+            }
+          >
+            Carregar mais
+          </button>
+        ) : null}
+      </details>
     </section>
   );
 }

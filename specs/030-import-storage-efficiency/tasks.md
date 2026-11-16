@@ -30,12 +30,12 @@
 **Goal**: a tela abre sem carregar o catálogo e com o histórico útil.
 **Independent Test**: a página carrega só as opções de produtos e as instituições, e o histórico mostra as execuções manuais por padrão.
 
-- [ ] T006 [P] [US2] `packages/types`: `ProductOption` e `trigger` na consulta do histórico
-- [ ] T007 [US2] API `GET /api/admin/products/options` (`admin-product.controller.ts` + `catalog.service.ts#listProductOptions`): `select` enxuto, filtro `active`, permissões `catalog.manage | integrations.sales.view | integrations.sales.manage` (permissão no método, não na classe). Testes: sem imagem/descrição, isolamento por loja
-- [ ] T008 [US2] API histórico: `SalesPaginationDto.trigger`, filtro em `sales-import-history.service.ts#list`, sem o `include` da integração. Testes
-- [ ] T009 [US2] Web `apps/web/lib/api.ts`: `listProductOptions()` e `listSalesImportRuns(token, { trigger, page })`
-- [ ] T010 [US2] Web `admin/orders/import/page.tsx`: token + `listProductOptions({active:true})` + instituições em paralelo, sem `getAdminCatalog`. Trocar `AdminProduct` por `ProductOption` em `order-import-client.tsx`, `sales-integration-panel.tsx`, `sales-auto-import-card.tsx` e `ifood-financial-panel.tsx`
-- [ ] T011 [US2] Web `sales-integration-panel.tsx`: provedores e integrações carregados uma vez; histórico carregado ao abrir o `<details>`, com filtro Manual/Automática (padrão Manual) e paginação "carregar mais". Testes da página e do painel atualizados
+- [X] T006 [P] [US2] `packages/types`: `ProductOption` e `trigger` na consulta do histórico
+- [X] T007 [US2] API `GET /api/admin/products/options` (`admin-product.controller.ts` + `catalog.service.ts#listProductOptions`): `select` enxuto, filtro `active`, permissões `catalog.manage | integrations.sales.view | integrations.sales.manage` (permissão no método, não na classe). Testes: sem imagem/descrição, isolamento por loja
+- [X] T008 [US2] API histórico: `SalesPaginationDto.trigger`, filtro em `sales-import-history.service.ts#list`, sem o `include` da integração. Testes
+- [X] T009 [US2] Web `apps/web/lib/api.ts`: `listProductOptions()` e `listSalesImportRuns(token, { trigger, page })`
+- [X] T010 [US2] Web `admin/orders/import/page.tsx`: token + `listProductOptions({active:true})` + instituições em paralelo, sem `getAdminCatalog`. Trocar `AdminProduct` por `ProductOption` em `order-import-client.tsx`, `sales-integration-panel.tsx`, `sales-auto-import-card.tsx` e `ifood-financial-panel.tsx`
+- [X] T011 [US2] Web `sales-integration-panel.tsx`: provedores e integrações carregados uma vez; histórico carregado ao abrir o `<details>`, com filtro Manual/Automática (padrão Manual) e paginação "carregar mais". Testes da página e do painel atualizados
 
 **Checkpoint**: fase A completa → merge em `develop` → `main` (quickstart §2–3).
 

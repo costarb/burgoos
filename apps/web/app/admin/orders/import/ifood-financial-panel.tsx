@@ -7,7 +7,7 @@ import type {
   SalesIntegrationView,
 } from "@rrfive/types";
 import React, { FormEvent, useEffect, useState } from "react";
-import type { AdminProduct } from "../../../../lib/api";
+import type { ProductOption } from "@rrfive/types";
 import type {
   IfoodFinancialReconciliationRunView,
   IfoodReconciliationFileView,
@@ -38,7 +38,7 @@ export function IfoodFinancialPanel({
   onCompleted,
 }: {
   token: string;
-  products: AdminProduct[];
+  products: ProductOption[];
   integration: SalesIntegrationView | null;
   onIntegrationChange: (integration: SalesIntegrationView) => void;
   onCompleted: () => Promise<void>;
