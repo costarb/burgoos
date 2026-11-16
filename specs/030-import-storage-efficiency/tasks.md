@@ -64,10 +64,10 @@
 **Goal**: nenhuma imagem em base64 no banco; o admin recebe URLs assinadas.
 **Independent Test**: migrar produtos fake com base64. O banco fica só com chaves, o admin mostra a URL assinada e o cardápio público continua servindo a foto.
 
-- [ ] T020 [US4] `catalog.service.ts`: a resposta de produto traz `imageUrl` resolvido (`createReadUrl` para chave, http mantida) e `imageAssetKey`; a gravação recusa `data:` (FR-019) e apaga a chave anterior ao trocar ou excluir (FR-020). Testes
-- [ ] T021 [US4] `store-branding.service.ts`: mesma regra para logo/cabeçalho/corpo/rodapé (`*AssetKey`, URL resolvida, recusa de `data:`, remoção da anterior). Testes
-- [ ] T022 [US4] `legacy-image-migration.service.ts`: job durável `LEGACY_IMAGE_MIGRATION` (um registro por vez, valida MIME e tamanho, grava em `imageKey`, update condicional, desfaz em caso de corrida) para produtos e identidade visual; endpoints `POST/GET /api/admin/assets/legacy-images/migrate`; logs `catalog.legacy_image.*`. Testes (idempotência, corrida, falha mantém o base64)
-- [ ] T023 [US4] Web: o catálogo e a identidade visual usam `imageUrl` para exibir e `imageAssetKey` para salvar; botão **Migrar imagens antigas** com a situação. Testes do formulário
+- [X] T020 [US4] `catalog.service.ts`: a resposta de produto traz `imageUrl` resolvido (`createReadUrl` para chave, http mantida) e `imageAssetKey`; a gravação recusa `data:` (FR-019) e apaga a chave anterior ao trocar ou excluir (FR-020). Testes
+- [X] T021 [US4] `store-branding.service.ts`: mesma regra para logo/cabeçalho/corpo/rodapé (`*AssetKey`, URL resolvida, recusa de `data:`, remoção da anterior). Testes
+- [X] T022 [US4] `legacy-image-migration.service.ts`: job durável `LEGACY_IMAGE_MIGRATION` (um registro por vez, valida MIME e tamanho, grava em `imageKey`, update condicional, desfaz em caso de corrida) para produtos e identidade visual; endpoints `POST/GET /api/admin/assets/legacy-images/migrate`; logs `catalog.legacy_image.*`. Testes (idempotência, corrida, falha mantém o base64)
+- [X] T023 [US4] Web: o catálogo e a identidade visual usam `imageUrl` para exibir e `imageAssetKey` para salvar; botão **Migrar imagens antigas** com a situação. Testes do formulário
 
 **Checkpoint**: fase C → produção → migração → `VACUUM` (quickstart §5).
 

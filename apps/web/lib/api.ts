@@ -189,7 +189,10 @@ export interface AdminProduct {
   name: string;
   description: string;
   price: string;
+  /** Ready for `<img>`: signed URL for bucket images (spec 030). */
   imageUrl: string | null;
+  /** Stored value (bucket key or URL) that the form saves; null for legacy base64. */
+  imageAssetKey?: string | null;
   active: boolean;
   externalMappings: AdminProductExternalMapping[];
 }
@@ -2043,6 +2046,22 @@ export function createImageUploadIntent(
     method: "POST",
     body: JSON.stringify(payload),
   });
+}
+
+export interface LegacyImageMigrationStatus {
+  status: "IDLE" | "QUEUED" | "RUNNING" | "COMPLETED" | "FAILED";
+  pending: number;
+  migrated: number;
+  failed: number;
+}
+
+/** Moves the legacy base64 images of the store to the bucket (spec 030, US4). */
+export function requestLegacyImageMigration(token: string): Promise<{ jobId: string; status: "QUEUED" | "RUNNING" }> {
+  return fetchAdmin(token, "/api/admin/assets/legacy-images/migrate", { method: "POST" });
+}
+
+export function getLegacyImageMigration(token: string): Promise<LegacyImageMigrationStatus> {
+  return fetchAdmin<LegacyImageMigrationStatus>(token, "/api/admin/assets/legacy-images/migrate");
 }
 
 export function confirmImageUpload(token: string, assetKey: string): Promise<{ assetKey: string }> {

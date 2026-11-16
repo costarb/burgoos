@@ -1,5 +1,8 @@
-import { BadRequestException, Inject, Injectable, NotFoundException } from "@nestjs/common";
+import { BadRequestException, Inject, Injectable, Logger, NotFoundException, Optional } from "@nestjs/common";
 import { NeutralTheme, VisualConfigurationStatus } from "@prisma/client";
+import { ASSET_STORAGE, AssetStorage } from "../../common/storage/asset-storage";
+import { isStoredAssetKey } from "../../common/storage/asset-keys";
+import { isImageDataUrl, normalizeImageReference, resolveImageUrl } from "../../common/storage/image-values";
 import { PrismaService } from "../../platform/database/prisma.service";
 import { logStoreAuditEvent } from "../../platform/stores/store-audit";
 import { assertHexColor, getContrastRatio } from "./color-contrast";
@@ -9,9 +12,24 @@ import { BUILT_IN_LAYOUT_PRESETS, isActiveLayoutPreset, toLayoutPresetKey } from
 
 type StoreVisualConfigurationDelegate = PrismaService["storeVisualConfiguration"];
 
+const IMAGE_FIELDS = ["logoUrl", "headerImageUrl", "bodyImageUrl", "footerImageUrl"] as const;
+type ImageField = (typeof IMAGE_FIELDS)[number];
+type ImageValues = Partial<Record<ImageField, string | null>>;
+const IMAGE_LABELS: Record<ImageField, string> = {
+  logoUrl: "Logo",
+  headerImageUrl: "Imagem de header",
+  bodyImageUrl: "Imagem de body",
+  footerImageUrl: "Imagem de footer",
+};
+
 @Injectable()
 export class StoreBrandingService {
-  constructor(@Inject(PrismaService) private readonly prisma: PrismaService) {}
+  private readonly logger = new Logger(StoreBrandingService.name);
+
+  constructor(
+    @Inject(PrismaService) private readonly prisma: PrismaService,
+    @Optional() @Inject(ASSET_STORAGE) private readonly assetStorage?: AssetStorage
+  ) {}
 
   async getState(tenantId: string) {
     const [draft, published, availableLayouts] = await Promise.all([
@@ -27,18 +45,18 @@ export class StoreBrandingService {
     ]);
 
     return {
-      draft: draft ? this.toView(draft) : null,
-      published: published ? this.toView(published) : null,
+      draft: draft ? await this.toView(draft) : null,
+      published: published ? await this.toView(published) : null,
       availableLayouts,
     };
   }
 
   async saveDraft(tenantId: string, userId: string, dto: StoreBrandingDto) {
-    const data = await this.toValidatedData(dto);
     const existingDraft = await this.prisma.storeVisualConfiguration.findFirst({
       where: { tenantId, status: VisualConfigurationStatus.DRAFT },
       orderBy: { updatedAt: "desc" },
     });
+    const data = await this.toValidatedData(tenantId, dto, await this.currentImageValues(tenantId));
 
     const configuration = existingDraft
       ? await this.prisma.storeVisualConfiguration.update({
@@ -54,11 +72,12 @@ export class StoreBrandingService {
           },
         });
 
+    if (existingDraft) await this.deleteReplacedImages(tenantId, existingDraft, data);
     return this.toView(configuration);
   }
 
   async preview(tenantId: string, dto: StoreBrandingDto) {
-    const data = await this.toValidatedData(dto);
+    const data = await this.toValidatedData(tenantId, dto, await this.currentImageValues(tenantId));
 
     return {
       safeToPublish: true,
@@ -66,10 +85,11 @@ export class StoreBrandingService {
       configuration: {
         id: "preview",
         status: VisualConfigurationStatus.DRAFT,
-        logoUrl: data.logoUrl,
-        headerImageUrl: data.headerImageUrl,
-        bodyImageUrl: data.bodyImageUrl,
-        footerImageUrl: data.footerImageUrl,
+        logoUrl: await resolveImageUrl(this.assetStorage, data.logoUrl),
+        headerImageUrl: await resolveImageUrl(this.assetStorage, data.headerImageUrl),
+        bodyImageUrl: await resolveImageUrl(this.assetStorage, data.bodyImageUrl),
+        footerImageUrl: await resolveImageUrl(this.assetStorage, data.footerImageUrl),
+        ...this.assetKeys(data),
         primaryColor: data.primaryColor,
         accentColor: data.accentColor,
         neutralTheme: data.neutralTheme,
@@ -127,7 +147,7 @@ export class StoreBrandingService {
       orderBy: [{ publishedAt: "desc" }, { updatedAt: "desc" }],
     });
 
-    return configurations.map((configuration) => this.toView(configuration));
+    return Promise.all(configurations.map((configuration) => this.toView(configuration)));
   }
 
   async restorePrevious(tenantId: string, userId: string) {
@@ -273,7 +293,7 @@ export class StoreBrandingService {
     return databasePresets.length > 0 ? databasePresets : BUILT_IN_LAYOUT_PRESETS;
   }
 
-  private async toValidatedData(dto: StoreBrandingDto) {
+  private async toValidatedData(tenantId: string, dto: StoreBrandingDto, currentImages: string[]) {
     let primaryColor: string;
     let accentColor: string;
 
@@ -295,10 +315,10 @@ export class StoreBrandingService {
     }
 
     return {
-      logoUrl: normalizeImageValue(dto.logoUrl, "Logo"),
-      headerImageUrl: normalizeImageValue(dto.headerImageUrl, "Imagem de header"),
-      bodyImageUrl: normalizeImageValue(dto.bodyImageUrl, "Imagem de body"),
-      footerImageUrl: normalizeImageValue(dto.footerImageUrl, "Imagem de footer"),
+      logoUrl: this.normalizeImage(tenantId, dto.logoUrl, "logoUrl", currentImages),
+      headerImageUrl: this.normalizeImage(tenantId, dto.headerImageUrl, "headerImageUrl", currentImages),
+      bodyImageUrl: this.normalizeImage(tenantId, dto.bodyImageUrl, "bodyImageUrl", currentImages),
+      footerImageUrl: this.normalizeImage(tenantId, dto.footerImageUrl, "footerImageUrl", currentImages),
       primaryColor,
       accentColor,
       neutralTheme: dto.neutralTheme as NeutralTheme,
@@ -322,7 +342,61 @@ export class StoreBrandingService {
     return isActiveLayoutPreset(key) ? { key, active: true } : null;
   }
 
-  private toView(configuration: {
+  private normalizeImage(
+    tenantId: string,
+    value: string | null | undefined,
+    field: ImageField,
+    current: string[]
+  ): string | null {
+    return normalizeImageReference(value ?? null, { tenantId, label: IMAGE_LABELS[field], current }) ?? null;
+  }
+
+  /** Images of the draft and of the published version: the only legacy base64 values a save may keep. */
+  private async currentImageValues(tenantId: string): Promise<string[]> {
+    const rows = await this.prisma.storeVisualConfiguration.findMany({
+      where: {
+        tenantId,
+        status: { in: [VisualConfigurationStatus.DRAFT, VisualConfigurationStatus.PUBLISHED] },
+      },
+      select: { logoUrl: true, headerImageUrl: true, bodyImageUrl: true, footerImageUrl: true },
+    });
+    return rows
+      .flatMap((row) => IMAGE_FIELDS.map((field) => row[field]))
+      .filter((value): value is string => Boolean(value));
+  }
+
+  /**
+   * FR-020: removes from the bucket the draft images replaced by this save. Published and archived
+   * versions may point to the same key (restore), so a key is removed only when no version uses it.
+   */
+  private async deleteReplacedImages(tenantId: string, previous: ImageValues, next: ImageValues) {
+    if (!this.assetStorage) return;
+    for (const field of IMAGE_FIELDS) {
+      const key = previous[field];
+      if (!key || key === next[field] || !isStoredAssetKey(key)) continue;
+      try {
+        const stillUsed = await this.prisma.storeVisualConfiguration.count({
+          where: { tenantId, OR: IMAGE_FIELDS.map((candidate) => ({ [candidate]: key })) },
+        });
+        if (stillUsed === 0) await this.assetStorage.delete(key);
+      } catch (error) {
+        this.logger.warn(`branding.image.delete_failed tenantId=${tenantId} reason=${(error as Error).message}`);
+      }
+    }
+  }
+
+  /** Stored key or URL of each image (the form sends it back); legacy base64 is not repeated. */
+  private assetKeys(values: ImageValues) {
+    const keyOf = (value: string | null | undefined) => (value && !isImageDataUrl(value) ? value : null);
+    return {
+      logoAssetKey: keyOf(values.logoUrl),
+      headerImageAssetKey: keyOf(values.headerImageUrl),
+      bodyImageAssetKey: keyOf(values.bodyImageUrl),
+      footerImageAssetKey: keyOf(values.footerImageUrl),
+    };
+  }
+
+  private async toView(configuration: {
     id: string;
     status: VisualConfigurationStatus | string;
     logoUrl: string | null;
@@ -338,13 +412,20 @@ export class StoreBrandingService {
     orderingEnabled?: boolean;
     publishedAt: Date | string | null;
   }) {
-    return {
-      id: configuration.id,
-      status: configuration.status,
+    const images = {
       logoUrl: configuration.logoUrl,
       headerImageUrl: configuration.headerImageUrl ?? DEFAULT_STORE_BRANDING.headerImageUrl,
       bodyImageUrl: configuration.bodyImageUrl ?? DEFAULT_STORE_BRANDING.bodyImageUrl,
       footerImageUrl: configuration.footerImageUrl ?? DEFAULT_STORE_BRANDING.footerImageUrl,
+    };
+    return {
+      id: configuration.id,
+      status: configuration.status,
+      logoUrl: await resolveImageUrl(this.assetStorage, images.logoUrl),
+      headerImageUrl: await resolveImageUrl(this.assetStorage, images.headerImageUrl),
+      bodyImageUrl: await resolveImageUrl(this.assetStorage, images.bodyImageUrl),
+      footerImageUrl: await resolveImageUrl(this.assetStorage, images.footerImageUrl),
+      ...this.assetKeys(images),
       primaryColor: configuration.primaryColor,
       accentColor: configuration.accentColor,
       neutralTheme: configuration.neutralTheme,
@@ -360,30 +441,4 @@ export class StoreBrandingService {
           : configuration.publishedAt,
     };
   }
-}
-
-function normalizeImageValue(value: string | null | undefined, label: string): string | null {
-  const normalized = value?.trim() ?? "";
-  if (!normalized) {
-    return null;
-  }
-
-  if (isHttpUrl(normalized) || isImageDataUrl(normalized)) {
-    return normalized;
-  }
-
-  throw new BadRequestException(`${label} deve ser uma URL ou upload de imagem em base64`);
-}
-
-function isHttpUrl(value: string): boolean {
-  try {
-    const url = new URL(value);
-    return url.protocol === "http:" || url.protocol === "https:";
-  } catch {
-    return false;
-  }
-}
-
-function isImageDataUrl(value: string): boolean {
-  return /^data:image\/(png|jpe?g|webp|gif);base64,[a-z0-9+/=\s]+$/i.test(value);
 }
