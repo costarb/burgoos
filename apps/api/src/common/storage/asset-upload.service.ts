@@ -1,7 +1,7 @@
-import { randomUUID } from "node:crypto";
 import { PassThrough, Readable } from "node:stream";
 import { Inject, Injectable, NotFoundException, UnprocessableEntityException } from "@nestjs/common";
 import { ASSET_STORAGE, AssetStorage } from "./asset-storage";
+import { imageKey } from "./asset-keys";
 
 export const IMAGE_ASSET_MAX_BYTES = 2 * 1024 * 1024;
 export const IMAGE_ASSET_MAX_DIMENSION = 4096;
@@ -42,8 +42,8 @@ export class AssetUploadService {
   async createIntent(tenantId: string, input: CreateImageUploadIntent) {
     validateIntent(input);
     this.pruneExpired();
-    const extension = { "image/png": "png", "image/jpeg": "jpg", "image/webp": "webp" }[input.contentType];
-    const key = `tenants/${tenantId}/images/${input.purpose.toLowerCase()}/${randomUUID()}.${extension}`;
+    const extension = ({ "image/png": "png", "image/jpeg": "jpg", "image/webp": "webp" } as const)[input.contentType];
+    const key = imageKey(tenantId, input.purpose, extension);
     const intent = await this.storage.createUploadIntent({
       key,
       contentType: input.contentType,

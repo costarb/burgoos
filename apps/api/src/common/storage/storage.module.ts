@@ -4,12 +4,13 @@ import { ASSET_STORAGE } from "./asset-storage";
 import { LocalAssetStorageService } from "./local-asset-storage.service";
 import { S3AssetStorageService } from "./s3-asset-storage.service";
 import { AssetUploadController } from "./asset-upload.controller";
+import { LocalAssetReadController } from "./local-asset-read.controller";
 import { AssetUploadService } from "./asset-upload.service";
 import { AuthModule } from "../../platform/auth/auth.module";
 
 @Module({
   imports: [AuthModule],
-  controllers: [AssetUploadController],
+  controllers: [AssetUploadController, LocalAssetReadController],
   providers: [
     AssetUploadService,
     LocalAssetStorageService,

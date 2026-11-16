@@ -10,7 +10,7 @@ describe("bounded image asset uploads", () => {
     const image = pngHeader(320, 180);
     const intent = await service.createIntent("tenant-1", input(image.length, 320, 180));
 
-    expect(intent.assetKey).toMatch(/^tenants\/tenant-1\/images\/product_image\/.+\.png$/);
+    expect(intent.assetKey).toMatch(/^images\/tenant-1\/product\/.+\.png$/);
     expect(new Date(intent.expiresAt).getTime() - Date.now()).toBeLessThanOrEqual(300_000);
     await service.uploadLocal("tenant-1", intent.assetKey, "image/png", Readable.from(image));
 

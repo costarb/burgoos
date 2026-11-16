@@ -1,4 +1,5 @@
 import { Inject, Injectable, Logger, OnModuleInit, Optional } from "@nestjs/common";
+import { exportKey } from "../../common/storage/asset-keys";
 import { ConfigService } from "@nestjs/config";
 import { AssetStorageProvider, BackgroundJob, ExportFormat, ExportJobStatus, OperationalNotificationSeverity } from "@prisma/client";
 import ExcelJS from "exceljs";
@@ -106,7 +107,7 @@ export class ExportJobWorker implements OnModuleInit {
       const descriptor = await provider.describe(job);
       validateRowLimit(job.format, descriptor.totalRows);
       const file = describeExportFile(descriptor, job.format);
-      const storageKey = `${job.tenantId}/${job.id}/${file.fileName}`;
+      const storageKey = exportKey(job.tenantId, job.id, file.fileName);
       if (!this.assetStorage) throw new Error("Asset storage is unavailable");
       await this.prisma.exportJob.update({
         where: { id: job.id },

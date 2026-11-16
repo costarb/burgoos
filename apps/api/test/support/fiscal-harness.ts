@@ -106,6 +106,8 @@ export function createFiscalHarness(options: { capabilities?: FiscalProviderCapa
       if (!content) throw new Error("missing");
       return { body: Readable.from(content) };
     },
+    exists: async (key) => files.has(key),
+    createReadUrl: async (key) => `https://storage.test/${key}?signed`,
     delete: async (key) => {
       files.delete(key);
     },
