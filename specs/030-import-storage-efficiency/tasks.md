@@ -46,14 +46,14 @@
 **Goal**: layout padronizado no bucket, recuperação dos XMLs perdidos e aviso de storage temporário.
 **Independent Test**: com o storage fake sem os arquivos, a recuperação regrava a partir do provedor fake, e o que falhar vira pendência `FILES_MISSING`.
 
-- [ ] T012 [US3] `common/storage/asset-keys.ts`: `fiscalKey` (mês no horário de Brasília), `imageKey`, `exportKey`, `isStoredAssetKey` (layout novo + legado `tenants/`). Testes (nota às 22h de 31/10 em Brasília → `2026/10`)
-- [ ] T013 [US3] `AssetStorage`: `exists(key)` e `createReadUrl(key, ttl)` em S3 (HeadObject, presigned GET) e local (fs.stat, URL HMAC), além de `local-asset-read.controller.ts` (`GET /api/assets/local/:key`, só com storage local). Testes
-- [ ] T014 [US3] Usar o montador: `fiscal-document-storage.service.ts`, `asset-upload.service.ts` e `export-job.worker.ts`; `catalog.service.ts` passa a usar o `isStoredAssetKey` compartilhado. Testes ajustados
-- [ ] T015 [US3] Prisma: `fiscal_documents.files_missing_at` e `files_missing_reason`, migração `20261116120000_fiscal_files_missing`, `npm run db:generate`; `FiscalPendingReason += FILES_MISSING` e `FiscalReadinessKey += STORAGE` em `packages/types`
-- [ ] T016 [US3] `fiscal-file-recovery.service.ts`: job durável `FISCAL_FILE_RECOVERY` (uma nota por vez, `exists` → `storeFiles`; marca e limpa `files_missing_*`), agendamento semanal, endpoints `POST/GET /api/admin/fiscal/documents/recover-files`, log `fiscal.files.recovery_completed` / `fiscal.files.missing`. Testes com o storage fake e o adapter fake
-- [ ] T017 [US3] `fiscal-documents.service.ts#pendingReason` com `FILES_MISSING`; prontidão com o item `STORAGE` (não bloqueia); log `storage.local_in_production` na subida. Testes
-- [ ] T018 [US3] Web: rótulo `FILES_MISSING` em `fiscal-labels.ts`, botão **Recuperar arquivos** com a situação na tela Fiscal e o aviso `STORAGE` na prontidão
-- [ ] T019 [P] [US3] Docs: layout do bucket e regras do R2 em `docs/ARCHITECTURE.md`; recuperação em `docs/USER_GUIDE.md`
+- [X] T012 [US3] `common/storage/asset-keys.ts`: `fiscalKey` (mês no horário de Brasília), `imageKey`, `exportKey`, `isStoredAssetKey` (layout novo + legado `tenants/`). Testes (nota às 22h de 31/10 em Brasília → `2026/10`)
+- [X] T013 [US3] `AssetStorage`: `exists(key)` e `createReadUrl(key, ttl)` em S3 (HeadObject, presigned GET) e local (fs.stat, URL HMAC), além de `local-asset-read.controller.ts` (`GET /api/assets/local/:key`, só com storage local). Testes
+- [X] T014 [US3] Usar o montador: `fiscal-document-storage.service.ts`, `asset-upload.service.ts` e `export-job.worker.ts`; `catalog.service.ts` passa a usar o `isStoredAssetKey` compartilhado. Testes ajustados
+- [X] T015 [US3] Prisma: `fiscal_documents.files_missing_at` e `files_missing_reason`, migração `20261116120000_fiscal_files_missing`, `npm run db:generate`; `FiscalPendingReason += FILES_MISSING` e `FiscalReadinessKey += STORAGE` em `packages/types`
+- [X] T016 [US3] `fiscal-file-recovery.service.ts`: job durável `FISCAL_FILE_RECOVERY` (uma nota por vez, `exists` → `storeFiles`; marca e limpa `files_missing_*`), agendamento semanal, endpoints `POST/GET /api/admin/fiscal/files/recovery`, log `fiscal.files.recovery_completed` / `fiscal.files.missing`. Testes com o storage fake e o adapter fake
+- [X] T017 [US3] `fiscal-documents.service.ts#pendingReason` com `FILES_MISSING`; prontidão com o item `STORAGE` (não bloqueia); log `storage.local_in_production` na subida. Testes
+- [X] T018 [US3] Web: rótulo `FILES_MISSING` em `fiscal-labels.ts`, botão **Recuperar arquivos** com a situação na tela Fiscal e o aviso `STORAGE` na prontidão
+- [X] T019 [P] [US3] Docs: layout do bucket e regras do R2 em `docs/ARCHITECTURE.md`; recuperação em `docs/USER_GUIDE.md`
 
 **Checkpoint**: fase B → produção → recuperação → trava do R2 (quickstart §4, §1.2).
 

@@ -25,6 +25,7 @@ import { FiscalCancellationService } from "./fiscal-cancellation.service";
 import { FiscalDocumentsService } from "./fiscal-documents.service";
 import { FiscalEmissionService } from "./fiscal-emission.service";
 import { FiscalSyncService } from "./fiscal-sync.service";
+import { FiscalFileRecoveryService } from "./fiscal-file-recovery.service";
 import { FiscalXmlExportService } from "./fiscal-xml-export.service";
 
 @ApiTags("admin fiscal")
@@ -38,8 +39,22 @@ export class FiscalDocumentsController {
     @Inject(FiscalEmissionService) private readonly emissions: FiscalEmissionService,
     @Inject(FiscalCancellationService) private readonly cancellations: FiscalCancellationService,
     @Inject(FiscalSyncService) private readonly sync: FiscalSyncService,
-    @Inject(FiscalXmlExportService) private readonly xmlExport: FiscalXmlExportService
+    @Inject(FiscalXmlExportService) private readonly xmlExport: FiscalXmlExportService,
+    @Inject(FiscalFileRecoveryService) private readonly recovery: FiscalFileRecoveryService
   ) {}
+
+  /** Downloads again from the provider the XML copies missing from the storage (spec 030). */
+  @Post("files/recovery")
+  @HttpCode(202)
+  @RequirePermission(FISCAL_PERMISSIONS.configure)
+  recoverFiles(@CurrentUser() user: AuthUser) {
+    return this.recovery.request(user.tenantId);
+  }
+
+  @Get("files/recovery")
+  fileRecoveryStatus(@CurrentUser() user: AuthUser) {
+    return this.recovery.status(user.tenantId);
+  }
 
   /** ZIP with the period XMLs for the accountant (production notes unless asked otherwise). */
   @Get("exports/xml")

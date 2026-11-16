@@ -26,6 +26,7 @@ import {
   startBlingAuthorizationAction,
   syncFiscalDocumentAction,
   reviewFiscalTaxDivergenceAction,
+  recoverFiscalFilesAction,
 } from "./actions";
 import { FiscalClient, type FiscalTab } from "./fiscal-client";
 
@@ -67,6 +68,7 @@ export default async function FiscalPage({ searchParams }: { searchParams?: Reco
         saveBlingSettings: saveBlingSettingsAction,
         disconnectBling: disconnectBlingAction,
         refreshConfiguration: refreshFiscalConfigurationAction,
+        recoverFiles: recoverFiscalFilesAction,
       }}
       documentActions={{
         loadDocuments: loadFiscalDocumentsAction,

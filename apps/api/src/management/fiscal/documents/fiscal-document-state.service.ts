@@ -175,15 +175,24 @@ export class FiscalDocumentStateService {
     return "CANCELLED";
   }
 
-  /** Best effort: a storage or download failure never reverts the fiscal status. */
-  async storeFiles(document: FiscalDocument, kind: "AUTHORIZATION" | "CANCELLATION"): Promise<void> {
-    if (!document.externalId) return;
+  /**
+   * Best effort: a storage or download failure never reverts the fiscal status. Returns the asset
+   * fields stored (empty when nothing could be downloaded or saved). `checkTaxes: false` is used by
+   * the file recovery (spec 030), which must not reopen tax divergences already reviewed.
+   */
+  async storeFiles(
+    document: FiscalDocument,
+    kind: "AUTHORIZATION" | "CANCELLATION",
+    options: { checkTaxes?: boolean } = {}
+  ): Promise<string[]> {
+    if (!document.externalId) return [];
+    let stored: string[] = [];
     const adapter = this.registry.get(document.provider);
     const name = document.accessKey ?? document.id;
     const issuedAt = document.issuedAt ?? document.createdAt;
     let authorizedXml = null as Buffer | null;
+    const data: Record<string, string> = {};
     try {
-      const data: Record<string, string> = {};
       await this.contexts.run(document.tenantId, document.provider, document.environment, async (ctx) => {
         const xml = await adapter.downloadXml(ctx, document.externalId as string, kind);
         if (xml) {
@@ -192,14 +201,19 @@ export class FiscalDocumentStateService {
           data[kind === "AUTHORIZATION" ? "xmlAssetKey" : "cancelXmlAssetKey"] = await this.storage.save(key, xml, "xml");
         }
         if (kind === "AUTHORIZATION") {
-          const pdf = await adapter.downloadDanfe(ctx, document.externalId as string);
-          if (pdf) data.danfeAssetKey = await this.storage.save(this.storage.key(document.tenantId, issuedAt, name, "danfe"), pdf, "danfe");
+          // The DANFE is optional: its failure must not discard the XML already stored.
+          try {
+            const pdf = await adapter.downloadDanfe(ctx, document.externalId as string);
+            if (pdf) data.danfeAssetKey = await this.storage.save(this.storage.key(document.tenantId, issuedAt, name, "danfe"), pdf, "danfe");
+          } catch (error) {
+            this.audit.log(
+              "fiscal.document.storage_failed",
+              { tenantId: document.tenantId, documentId: document.id, kind: "DANFE", reason: (error as Error).message },
+              "warn"
+            );
+          }
         }
       });
-      if (Object.keys(data).length) {
-        await this.prisma.fiscalDocument.update({ where: { id: document.id }, data });
-        await this.audit.event({ tenantId: document.tenantId, documentId: document.id, type: "DOCUMENTS_STORED", metadata: { kind, files: Object.keys(data) } });
-      }
     } catch (error) {
       this.audit.log(
         "fiscal.document.storage_failed",
@@ -207,7 +221,13 @@ export class FiscalDocumentStateService {
         "warn"
       );
     }
-    if (authorizedXml) await this.checkItemTaxes(document, authorizedXml);
+    if (Object.keys(data).length) {
+      await this.prisma.fiscalDocument.update({ where: { id: document.id }, data });
+      await this.audit.event({ tenantId: document.tenantId, documentId: document.id, type: "DOCUMENTS_STORED", metadata: { kind, files: Object.keys(data) } });
+      stored = Object.keys(data);
+    }
+    if (authorizedXml && options.checkTaxes !== false) await this.checkItemTaxes(document, authorizedXml);
+    return stored;
   }
 
   /**

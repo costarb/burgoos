@@ -1,4 +1,6 @@
-import { Inject, Injectable } from "@nestjs/common";
+import { Inject, Injectable, Optional } from "@nestjs/common";
+import { ConfigService } from "@nestjs/config";
+import { isTemporaryStorage } from "../../../common/storage/storage-health";
 import type { FiscalProvider } from "@prisma/client";
 import type { FiscalReadiness, FiscalReadinessItem } from "../fiscal.types";
 import { PrismaService } from "../../../platform/database/prisma.service";
@@ -22,7 +24,8 @@ export class FiscalReadinessService {
     @Inject(PrismaService) private readonly prisma: PrismaService,
     @Inject(FiscalIssuerService) private readonly issuers: FiscalIssuerService,
     @Inject(FiscalProfileService) private readonly profiles: FiscalProfileService,
-    @Inject(FiscalProviderRegistry) private readonly registry: FiscalProviderRegistry
+    @Inject(FiscalProviderRegistry) private readonly registry: FiscalProviderRegistry,
+    @Optional() @Inject(ConfigService) private readonly config?: ConfigService
   ) {}
 
   async evaluate(tenantId: string, provider: FiscalProvider | null): Promise<FiscalReadiness> {
@@ -92,6 +95,16 @@ export class FiscalReadinessService {
       missingCount === 0 ? "Todos os produtos tem perfil fiscal" : `${missingCount} produto(s)/complemento(s) sem perfil fiscal`,
       false
     );
+
+    // Spec 030: the note stays valid at the provider, so this warns without blocking emission.
+    if (
+      isTemporaryStorage({
+        nodeEnv: this.config?.get<string>("NODE_ENV") ?? process.env.NODE_ENV,
+        provider: this.config?.get<string>("ASSET_STORAGE_PROVIDER"),
+      })
+    ) {
+      add("STORAGE", false, "Arquivos fiscais em storage temporario: configure o storage S3 para nao perder os XMLs", false);
+    }
 
     return { ready: items.every((item) => item.ok || !item.blocking), items };
   }

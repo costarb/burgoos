@@ -264,7 +264,17 @@ Handlers devem limitar concorrência e lotes, selecionar apenas campos necessár
 
 ## 9. Armazenamento de arquivos
 
-O `StorageModule` expõe uma abstração selecionada por `ASSET_STORAGE_PROVIDER`: armazenamento local em desenvolvimento ou compatível com S3 em produção. Arquivos devem ser transmitidos por stream quando possível; o banco guarda metadados e referências, não binários grandes.
+O `StorageModule` expõe uma abstração selecionada por `ASSET_STORAGE_PROVIDER`: armazenamento local em desenvolvimento ou compatível com S3 em produção (Cloudflare R2 desde 2026-11-16). Arquivos devem ser transmitidos por stream quando possível; o banco guarda metadados e referências, não binários grandes.
+
+**Layout do bucket** (spec 030): todas as chaves são montadas em `common/storage/asset-keys.ts`, com o tipo primeiro e a loja em seguida, para que cada tipo tenha a sua regra no bucket:
+
+| Prefixo | Conteúdo | Regra no bucket |
+|---|---|---|
+| `fiscal/{tenantId}/{AAAA}/{MM}/` | XML de autorização, XML de cancelamento e DANFE. Mês da emissão no horário de Brasília | Trava de retenção de 5 anos (*write-once*) |
+| `images/{tenantId}/{product\|branding-*}/` | Fotos de produtos e identidade visual | Sem expiração; a imagem antiga é removida quando substituída |
+| `exports/{tenantId}/{jobId}/` | Exportações (CSV, Excel, PDF, ZIP) | Expiração em 7 dias |
+
+Chaves antigas `tenants/{tenantId}/images/...` continuam legíveis. O admin recebe as imagens por URL de leitura assinada (`AssetStorage.createReadUrl`: presigned GET no S3 e URL HMAC servida por `/api/assets/local/` no storage local). `AssetStorage.exists` sustenta a recuperação dos XMLs fiscais (`FiscalFileRecoveryService`, job `FISCAL_FILE_RECOVERY`). Com `NODE_ENV=production` e storage local, a API registra `storage.local_in_production` e a prontidão fiscal mostra o item `STORAGE`.
 
 ## 10. Observabilidade e memória
 
