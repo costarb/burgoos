@@ -1,5 +1,11 @@
 import { ConflictException, Inject, Injectable, NotFoundException, Optional } from "@nestjs/common";
-import { PaymentReleaseSource, SalesImportRunStatus } from "@prisma/client";
+import {
+  PaymentReleaseSource,
+  Prisma,
+  SalesImportRunStatus,
+  SalesIntegrationEnvironment,
+  SalesProvider,
+} from "@prisma/client";
 import {
   HistoricalOrderImportService,
   NormalizedHistoricalSale,
@@ -199,21 +205,56 @@ export class SalesImportConfirmationService {
       select: { orderId: true },
     });
     if (!identity?.orderId) return;
-    const releaseDate = sale.expectedReleaseAt ? new Date(sale.expectedReleaseAt) : null;
     await this.prisma.order.update({
       where: { id: identity.orderId },
-      data: {
-        paymentGrossAmount: sale.grossAmount,
-        ...(sale.feeAmount === undefined ? {} : { paymentFeeAmount: sale.feeAmount }),
-        ...(sale.netAmount === undefined ? {} : { paymentNetAmount: sale.netAmount }),
-        ...(releaseDate && Number.isFinite(releaseDate.getTime())
-          ? {
-              paymentReleaseExpectedAt: releaseDate,
-              paymentReleaseSource: PaymentReleaseSource.EXTRACT,
-            }
-          : {}),
+      data: paymentDataFor(sale),
+    });
+  }
+
+  /**
+   * Automatic import (spec 030): sales the provider returns again after they became orders are not
+   * stored as movements. Their payment data (fee, net, expected release) still reaches the order, but
+   * only when a value actually changed, instead of one write per sale every cycle.
+   */
+  async reconcileKnownSales(
+    tenantId: string,
+    run: { provider: SalesProvider; environment: SalesIntegrationEnvironment },
+    knownSales: Array<{ externalSaleId: string; sale: NormalizedHistoricalSale }>
+  ): Promise<number> {
+    if (!knownSales.length) return 0;
+    const identities = await this.prisma.externalSaleIdentity.findMany({
+      where: {
+        tenantId,
+        provider: run.provider,
+        environment: run.environment,
+        externalSaleId: { in: knownSales.map((item) => item.externalSaleId) },
+        orderId: { not: null },
+      },
+      select: { externalSaleId: true, orderId: true },
+    });
+    const orderBySale = new Map(identities.map((row) => [row.externalSaleId, row.orderId as string]));
+    const orders = await this.prisma.order.findMany({
+      where: { tenantId, id: { in: [...new Set(orderBySale.values())] } },
+      select: {
+        id: true,
+        paymentGrossAmount: true,
+        paymentFeeAmount: true,
+        paymentNetAmount: true,
+        paymentReleaseExpectedAt: true,
+        paymentReleaseSource: true,
       },
     });
+    const orderById = new Map(orders.map((order) => [order.id, order]));
+    let updated = 0;
+    for (const { externalSaleId, sale } of knownSales) {
+      const order = orderById.get(orderBySale.get(externalSaleId) ?? "");
+      if (!order) continue;
+      const data = paymentDataFor(sale);
+      if (!paymentChanged(order, data)) continue;
+      await this.prisma.order.update({ where: { id: order.id }, data });
+      updated += 1;
+    }
+    return updated;
   }
 
   private async persistIfoodSale(
@@ -236,4 +277,49 @@ export class SalesImportConfirmationService {
       sale,
     });
   }
+}
+
+type PaymentData = {
+  paymentGrossAmount: number;
+  paymentFeeAmount?: number;
+  paymentNetAmount?: number;
+  paymentReleaseExpectedAt?: Date;
+  paymentReleaseSource?: PaymentReleaseSource;
+};
+
+/** Payment fields the provider is authoritative for, as written on the imported order. */
+function paymentDataFor(sale: NormalizedHistoricalSale): PaymentData {
+  const releaseDate = sale.expectedReleaseAt ? new Date(sale.expectedReleaseAt) : null;
+  return {
+    paymentGrossAmount: sale.grossAmount,
+    ...(sale.feeAmount === undefined ? {} : { paymentFeeAmount: sale.feeAmount }),
+    ...(sale.netAmount === undefined ? {} : { paymentNetAmount: sale.netAmount }),
+    ...(releaseDate && Number.isFinite(releaseDate.getTime())
+      ? { paymentReleaseExpectedAt: releaseDate, paymentReleaseSource: PaymentReleaseSource.EXTRACT }
+      : {}),
+  };
+}
+
+type OrderPayment = {
+  paymentGrossAmount: Prisma.Decimal | null;
+  paymentFeeAmount: Prisma.Decimal | null;
+  paymentNetAmount: Prisma.Decimal | null;
+  paymentReleaseExpectedAt: Date | null;
+  paymentReleaseSource: PaymentReleaseSource | null;
+};
+
+/** True when writing `data` would change the order (amounts compared in cents). */
+export function paymentChanged(order: OrderPayment, data: PaymentData): boolean {
+  const cents = (value: Prisma.Decimal | number | null | undefined) =>
+    value === null || value === undefined ? null : Math.round(Number(value) * 100);
+  if (cents(order.paymentGrossAmount) !== cents(data.paymentGrossAmount)) return true;
+  if (data.paymentFeeAmount !== undefined && cents(order.paymentFeeAmount) !== cents(data.paymentFeeAmount)) return true;
+  if (data.paymentNetAmount !== undefined && cents(order.paymentNetAmount) !== cents(data.paymentNetAmount)) return true;
+  if (
+    data.paymentReleaseExpectedAt &&
+    (order.paymentReleaseExpectedAt?.getTime() !== data.paymentReleaseExpectedAt.getTime() ||
+      order.paymentReleaseSource !== data.paymentReleaseSource)
+  )
+    return true;
+  return false;
 }

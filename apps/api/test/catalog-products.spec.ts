@@ -47,6 +47,27 @@ describe("catalog product management", () => {
     });
   });
 
+  it("lists lean product options without image or relations, scoped to the tenant", async () => {
+    const prisma = prismaMock();
+    prisma.product.findMany.mockResolvedValue([
+      { id: productId, name: "Dogao", price: new Prisma.Decimal("22.5"), active: true },
+    ]);
+    const service = new CatalogService(prisma as never, {} as never);
+
+    const options = await service.listProductOptions(tenantId, true);
+
+    expect(prisma.product.findMany).toHaveBeenCalledWith({
+      where: { tenantId, active: true },
+      select: { id: true, name: true, price: true, active: true },
+      orderBy: { name: "asc" },
+    });
+    expect(options).toEqual([{ id: productId, name: "Dogao", price: "22.50", active: true }]);
+    expect(Object.keys(options[0])).not.toContain("imageUrl");
+
+    await service.listProductOptions(tenantId);
+    expect(prisma.product.findMany).toHaveBeenLastCalledWith(expect.objectContaining({ where: { tenantId } }));
+  });
+
   it("updates base64 image and replaces external mappings", async () => {
     const prisma = prismaMock();
     prisma.category.findFirst.mockResolvedValue({ id: categoryId });

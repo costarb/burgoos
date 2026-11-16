@@ -165,7 +165,7 @@ describe("SalesImportPreviewService", () => {
         salesImportRun: { update: updateRun },
         salesImportDay: { upsert: upsertDay, update: updateDay },
         externalSalesMovement: { deleteMany: vi.fn(), create: createMovement },
-        externalSaleIdentity: { findUnique: vi.fn().mockResolvedValue(null) },
+        externalSaleIdentity: { findMany: vi.fn().mockResolvedValue([]) },
       } as never,
       {} as never,
       { get: vi.fn(() => adapter) } as never,
@@ -241,7 +241,7 @@ describe("SalesImportPreviewService", () => {
         salesImportRun: { update },
         salesImportDay: { upsert: vi.fn().mockResolvedValue({ id: "day" }), update: vi.fn() },
         externalSalesMovement: { deleteMany: vi.fn(), create: vi.fn() },
-        externalSaleIdentity: { findUnique: vi.fn().mockResolvedValue(null) },
+        externalSaleIdentity: { findMany: vi.fn().mockResolvedValue([]) },
       } as never,
       {} as never,
       {
@@ -341,11 +341,7 @@ describe("SalesImportPreviewService", () => {
         salesImportDay: { upsert: vi.fn().mockResolvedValue({ id: "day" }), update: vi.fn() },
         externalSalesMovement: { deleteMany: vi.fn(), create: vi.fn() },
         externalSaleIdentity: {
-          findUnique: vi
-            .fn()
-            .mockResolvedValueOnce(null)
-            .mockResolvedValueOnce({ id: "identity" })
-            .mockResolvedValueOnce(null),
+          findMany: vi.fn().mockResolvedValue([{ externalSaleId: "existing-sale" }]),
         },
       } as never,
       {} as never,
@@ -365,6 +361,120 @@ describe("SalesImportPreviewService", () => {
       historicalCandidates: 1,
       existingOrders: 1,
       unknown: 1,
+    });
+  });
+
+  describe("automatic mode (persistKnownSales: false)", () => {
+    const date = () => businessToday();
+    const movement = (id: string, occurredAt: string, feeAmount?: number) => ({
+      providerMovementId: `movement-${id}`,
+      externalSaleId: id,
+      externalEventCode: "approved",
+      kind: "SALE" as const,
+      raw: {},
+      sale: {
+        provider: "MERCADO_PAGO" as const,
+        channel: "API" as const,
+        providerMovementId: `movement-${id}`,
+        externalSaleId: id,
+        occurredAt,
+        grossAmount: 20,
+        feeAmount,
+        paymentMethod: "PIX" as const,
+        raw: {},
+      },
+    });
+    const setup = (persistKnownSales?: boolean) => {
+      const today = date();
+      const run = {
+        id: "run-auto",
+        tenantId: "tenant",
+        integrationId: "integration-mp",
+        provider: "MERCADO_PAGO",
+        channel: "API",
+        startDate: today,
+        endDate: today,
+        trigger: "AUTOMATIC",
+        integration: { environment: "PRODUCTION", credentials: [{ secretCiphertext: "cipher" }] },
+      };
+      const update = vi
+        .fn()
+        .mockResolvedValueOnce(run)
+        .mockImplementation(({ data }) => Promise.resolve({ ...run, ...data }));
+      const createMovement = vi.fn().mockResolvedValue({});
+      const upsertState = vi.fn().mockResolvedValue("state-id");
+      const findIdentities = vi
+        .fn()
+        .mockResolvedValue([{ externalSaleId: "old-1" }, { externalSaleId: "old-2" }]);
+      const day = today.toISOString().slice(0, 10);
+      const current = new SalesImportPreviewService(
+        {
+          salesImportRun: { update },
+          salesImportDay: { upsert: vi.fn().mockResolvedValue({ id: "day" }), update: vi.fn() },
+          externalSalesMovement: { deleteMany: vi.fn(), create: createMovement },
+          externalSaleIdentity: { findMany: findIdentities },
+        } as never,
+        { getCredential: vi.fn().mockResolvedValue({ token: "token" }) } as never,
+        {
+          get: vi.fn(() => ({
+            fetchRange: vi.fn().mockResolvedValue({
+              days: [
+                {
+                  date: day,
+                  validated: true,
+                  pagesFetched: 1,
+                  totalPages: 1,
+                  totalElements: 3,
+                  movements: [
+                    movement("old-1", `${day}T12:00:00.000Z`, 0.5),
+                    movement("old-2", `${day}T13:00:00.000Z`),
+                    movement("new-1", `${day}T14:30:00.000Z`),
+                  ],
+                },
+              ],
+            }),
+          })),
+        } as never,
+        { redact: vi.fn((value) => value) } as never,
+        { upsertFromMovement: upsertState } as never
+      );
+      return {
+        run: () => current.process("run-auto", "tenant", { persistKnownSales }),
+        createMovement,
+        upsertState,
+        findIdentities,
+        day,
+      };
+    };
+
+    it("stores only new sales and returns the known ones for in-memory reconciliation", async () => {
+      const { run, createMovement, upsertState, findIdentities, day } = setup(false);
+      const result = await run();
+
+      expect(findIdentities).toHaveBeenCalledTimes(1);
+      expect(createMovement).toHaveBeenCalledTimes(1);
+      expect(createMovement).toHaveBeenCalledWith(
+        expect.objectContaining({ data: expect.objectContaining({ externalSaleId: "new-1", status: "NEW" }) })
+      );
+      // The provider transaction state keeps being refreshed for every movement.
+      expect(upsertState).toHaveBeenCalledTimes(3);
+      expect(result.knownSales.map((item) => item.externalSaleId)).toEqual(["old-1", "old-2"]);
+      expect(result.knownSales[0].sale).toMatchObject({ feeAmount: 0.5 });
+      expect(result.latestOccurredAt?.toISOString()).toBe(`${day}T14:30:00.000Z`);
+      expect(result.counts).toMatchObject({ found: 3, new: 1, duplicate: 2 });
+      expect(result.status).toBe("PREVIEW_READY");
+    });
+
+    it("keeps storing every movement in the manual preview", async () => {
+      const { run, createMovement } = setup(undefined);
+      const result = await run();
+
+      expect(createMovement).toHaveBeenCalledTimes(3);
+      expect(createMovement).toHaveBeenCalledWith(
+        expect.objectContaining({ data: expect.objectContaining({ externalSaleId: "old-1", status: "DUPLICATE" }) })
+      );
+      expect(result.knownSales).toEqual([]);
+      expect(result.counts).toMatchObject({ found: 3, new: 1, duplicate: 2 });
     });
   });
 });

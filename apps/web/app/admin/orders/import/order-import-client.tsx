@@ -12,13 +12,13 @@ import type {
 } from "@rrfive/types";
 import { useRouter } from "next/navigation";
 import { OperationFeedback } from "../../../../components/admin/operation-feedback";
-import type { AdminProduct } from "../../../../lib/api";
+import type { ProductOption } from "@rrfive/types";
 import { importHistoricalOrders } from "../../../../lib/api";
 import { SalesIntegrationPanel } from "./sales-integration-panel";
 
 interface OrderImportClientProps {
   token: string;
-  products: AdminProduct[];
+  products: ProductOption[];
   institutions: PaymentInstitutionConfiguration[];
 }
 

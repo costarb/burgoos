@@ -2,13 +2,13 @@
 
 import React, { useEffect, useState } from "react";
 import type { SalesAutoImportSettings, SalesIntegrationView } from "@rrfive/types";
-import type { AdminProduct } from "../../../../lib/api";
+import type { ProductOption } from "@rrfive/types";
 import { updateSalesAutoImport } from "../../../../lib/api";
 
 interface Props {
   token: string;
   integration: SalesIntegrationView;
-  products: AdminProduct[];
+  products: ProductOption[];
   onChange: (integration: SalesIntegrationView) => void;
 }
 

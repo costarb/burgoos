@@ -284,4 +284,83 @@ describe("SalesImportConfirmationService", () => {
     expect(prisma.externalSalesMovement.findMany).not.toHaveBeenCalled();
     expect(historical.importNormalizedSale).not.toHaveBeenCalled();
   });
+
+  describe("reconcileKnownSales (automatic import)", () => {
+    const sale = (overrides: Record<string, unknown> = {}) => ({
+      provider: "MERCADO_PAGO",
+      channel: "API",
+      providerMovementId: "m-1",
+      externalSaleId: "sale-1",
+      occurredAt: "2026-11-16T15:00:00.000Z",
+      grossAmount: 20,
+      feeAmount: 0.4,
+      netAmount: 19.6,
+      expectedReleaseAt: "2026-11-17T15:00:00.000Z",
+      paymentMethod: "PIX",
+      ...overrides,
+    });
+    const reconcileSetup = (order: Record<string, unknown>) => {
+      const prisma = {
+        externalSaleIdentity: {
+          findMany: vi.fn().mockResolvedValue([{ externalSaleId: "sale-1", orderId: "order-1" }]),
+        },
+        order: {
+          findMany: vi.fn().mockResolvedValue([{ id: "order-1", ...order }]),
+          update: vi.fn().mockResolvedValue({}),
+        },
+      };
+      const service = new SalesImportConfirmationService(prisma as never, {} as never, {} as never);
+      return { prisma, service };
+    };
+    const synced = {
+      paymentGrossAmount: "20.00",
+      paymentFeeAmount: "0.40",
+      paymentNetAmount: "19.60",
+      paymentReleaseExpectedAt: new Date("2026-11-17T15:00:00.000Z"),
+      paymentReleaseSource: "EXTRACT",
+    };
+
+    it("does not write the order when nothing changed", async () => {
+      const { prisma, service } = reconcileSetup(synced);
+      const updated = await service.reconcileKnownSales(
+        "tenant",
+        { provider: "MERCADO_PAGO", environment: "PRODUCTION" },
+        [{ externalSaleId: "sale-1", sale: sale() as never }]
+      );
+      expect(updated).toBe(0);
+      expect(prisma.order.update).not.toHaveBeenCalled();
+      expect(prisma.order.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({ where: { tenantId: "tenant", id: { in: ["order-1"] } } })
+      );
+    });
+
+    it("writes the order when the provider reports a new fee or release date", async () => {
+      const { prisma, service } = reconcileSetup({ ...synced, paymentFeeAmount: null, paymentNetAmount: null });
+      const updated = await service.reconcileKnownSales(
+        "tenant",
+        { provider: "MERCADO_PAGO", environment: "PRODUCTION" },
+        [{ externalSaleId: "sale-1", sale: sale() as never }]
+      );
+      expect(updated).toBe(1);
+      expect(prisma.order.update).toHaveBeenCalledWith({
+        where: { id: "order-1" },
+        data: expect.objectContaining({ paymentFeeAmount: 0.4, paymentNetAmount: 19.6 }),
+      });
+    });
+
+    it("skips sales without a linked order and does nothing for an empty list", async () => {
+      const { prisma, service } = reconcileSetup(synced);
+      prisma.externalSaleIdentity.findMany.mockResolvedValue([]);
+      prisma.order.findMany.mockResolvedValue([]);
+      expect(
+        await service.reconcileKnownSales("tenant", { provider: "PAGBANK", environment: "PRODUCTION" }, [
+          { externalSaleId: "sale-1", sale: sale() as never },
+        ])
+      ).toBe(0);
+      expect(
+        await service.reconcileKnownSales("tenant", { provider: "PAGBANK", environment: "PRODUCTION" }, [])
+      ).toBe(0);
+      expect(prisma.order.update).not.toHaveBeenCalled();
+    });
+  });
 });

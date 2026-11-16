@@ -7,7 +7,7 @@ import { SalesPaginationDto } from "./dto/sales-integration.dto";
 export class SalesImportHistoryService {
   constructor(private readonly prisma: PrismaService) {}
   async list(tenantId: string, query: SalesPaginationDto) {
-    const where = { tenantId };
+    const where = { tenantId, ...(query.trigger ? { trigger: query.trigger } : {}) };
     const skip = (query.page - 1) * query.pageSize;
     const [items, total] = await this.prisma.$transaction([
       this.prisma.salesImportRun.findMany({
@@ -15,17 +15,6 @@ export class SalesImportHistoryService {
         orderBy: { createdAt: "desc" },
         skip,
         take: query.pageSize,
-        include: {
-          integration: {
-            select: {
-              credentialMode: true,
-              environment: true,
-              providerUserId: true,
-              status: true,
-              lastSyncAt: true,
-            },
-          },
-        },
       }),
       this.prisma.salesImportRun.count({ where }),
     ]);
@@ -34,10 +23,6 @@ export class SalesImportHistoryService {
         ...item,
         counts: this.previewCounts(item.counts),
         errorMessage: this.safeMessage(item.errorMessage),
-        integration: {
-          ...item.integration,
-          lastSyncAt: item.integration.lastSyncAt?.toISOString() ?? null,
-        },
       })),
       page: query.page,
       pageSize: query.pageSize,

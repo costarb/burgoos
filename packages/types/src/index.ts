@@ -124,6 +124,17 @@ export type PaymentReleaseSource = "EXTRACT" | "D_PLUS_30_FALLBACK" | "IMMEDIATE
 export type PaymentReleaseStatus = "RELEASED" | "PENDING_RELEASE";
 export type OrderMaintenanceAction = "EDIT" | "DELETE";
 
+/**
+ * Minimal product for selectors (sales import, automatic import, fixed product). Never carries the
+ * image, description, category or technical sheet (spec 030).
+ */
+export interface ProductOption {
+  id: string;
+  name: string;
+  price: string;
+  active: boolean;
+}
+
 export interface PublicMenuProduct {
   id: string;
   name: string;
