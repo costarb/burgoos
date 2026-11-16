@@ -47,6 +47,13 @@ export class AdminProductController {
     });
   }
 
+  /** Lean list for selectors: id, name, price and active only (spec 030). */
+  @Get("options")
+  @RequirePermission("catalog.manage", "integrations.sales.view", "integrations.sales.manage")
+  options(@CurrentUser() user: AuthUser, @Query() query: { active?: string }) {
+    return this.catalogService.listProductOptions(user.tenantId, parseBooleanQuery(query.active));
+  }
+
   @Post()
   create(@CurrentUser() user: AuthUser, @Body() dto: CreateProductDto) {
     return this.catalogService.createProduct(user.tenantId, dto);

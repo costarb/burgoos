@@ -11,7 +11,7 @@ const NOW = new Date("2026-10-30T15:00:00.000Z"); // 12:00 in São Paulo
 describe("sales automatic import (US5)", () => {
   let prisma: ReturnType<typeof createFiscalFakePrisma>;
   let preview: { create: ReturnType<typeof vi.fn>; process: ReturnType<typeof vi.fn> };
-  let confirmation: { confirm: ReturnType<typeof vi.fn> };
+  let confirmation: { confirm: ReturnType<typeof vi.fn>; reconcileKnownSales: ReturnType<typeof vi.fn> };
   let jobs: { enqueue: ReturnType<typeof vi.fn> };
   let service: SalesAutoImportService;
   let logs: Array<Record<string, unknown>>;
@@ -29,9 +29,12 @@ describe("sales automatic import (US5)", () => {
     });
     preview = {
       create: vi.fn(async (_tenant: string, _user: null, dto: { integrationId: string }) => ({ id: `run-${dto.integrationId}` })),
-      process: vi.fn(async () => ({ status: "PREVIEW_READY" })),
+      process: vi.fn(async () => ({ status: "PREVIEW_READY", knownSales: [], latestOccurredAt: null })),
     };
-    confirmation = { confirm: vi.fn(async () => ({ status: "COMPLETED", counts: { found: 3, created: 2, duplicate: 1, failed: 0 } })) };
+    confirmation = {
+      confirm: vi.fn(async () => ({ status: "COMPLETED", counts: { found: 3, created: 2, duplicate: 1, failed: 0 } })),
+      reconcileKnownSales: vi.fn(async () => 0),
+    };
     jobs = { enqueue: vi.fn(async () => ({})) };
     service = new SalesAutoImportService(prisma as never, preview as never, confirmation as never, jobs as never, new NotificationsService(prisma as never));
     logs = [];
@@ -72,7 +75,7 @@ describe("sales automatic import (US5)", () => {
   });
 
   it("imports the current day with the configured strategy and records health", async () => {
-    prisma.table("externalSalesMovement").push({ id: "m1", integrationId: "pb", kind: "SALE", occurredAt: new Date(NOW.getTime() - 90_000) } as never);
+    preview.process.mockResolvedValueOnce({ status: "PREVIEW_READY", knownSales: [], latestOccurredAt: new Date(NOW.getTime() - 90_000) });
 
     expect(await service.runCycle(TENANT, "pb", NOW)).toBe("success");
 
@@ -82,6 +85,7 @@ describe("sales automatic import (US5)", () => {
       expect.objectContaining({ integrationId: "pb", startDate: "2026-10-30", endDate: "2026-10-30", strategy: "FIXED_PRODUCT", fixedProductId: "product-1" }),
       "AUTOMATIC"
     );
+    expect(preview.process).toHaveBeenCalledWith("run-pb", TENANT, { persistKnownSales: false });
     expect(confirmation.confirm).toHaveBeenCalledWith(TENANT, "run-pb");
     expect(row("pb")).toMatchObject({ autoImportConsecutiveFailures: 0, autoImportLastLagSeconds: 90, autoImportLastSuccessAt: NOW });
     expect(logs.find((log) => log.event === "sales.auto_import.cycle")).toMatchObject({
@@ -140,5 +144,25 @@ describe("sales automatic import (US5)", () => {
     expect(await service.runCycle(TENANT, "off", NOW)).toBe("skipped");
     expect(await service.runCycle(TENANT, "other", NOW)).toBe("skipped");
     expect(preview.create).not.toHaveBeenCalled();
+  });
+
+  it("reconciles sales already imported in earlier cycles without storing them again", async () => {
+    const knownSales = [
+      { externalSaleId: "sale-1", sale: { grossAmount: 20, feeAmount: 0.4 } },
+      { externalSaleId: "sale-2", sale: { grossAmount: 15 } },
+    ];
+    preview.process.mockResolvedValueOnce({ status: "PREVIEW_READY", knownSales, latestOccurredAt: new Date(NOW.getTime() - 30_000) });
+    confirmation.reconcileKnownSales.mockResolvedValueOnce(1);
+
+    expect(await service.runCycle(TENANT, "mp", NOW)).toBe("success");
+
+    expect(confirmation.reconcileKnownSales).toHaveBeenCalledWith(TENANT, { provider: "MERCADO_PAGO", environment: undefined }, knownSales);
+    expect(logs.find((log) => log.event === "sales.auto_import.cycle")).toMatchObject({ result: "success", known: 2, reconciledOrders: 1, lagSeconds: 30 });
+  });
+
+  it("reports no lag when the latest sale seen is from a previous day", async () => {
+    preview.process.mockResolvedValueOnce({ status: "PREVIEW_READY", knownSales: [], latestOccurredAt: new Date("2026-10-29T23:50:00.000Z") });
+    await service.runCycle(TENANT, "mp", NOW);
+    expect(row("mp").autoImportLastLagSeconds).toBeNull();
   });
 });

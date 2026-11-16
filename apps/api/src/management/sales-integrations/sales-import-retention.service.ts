@@ -1,4 +1,4 @@
-import { Injectable, OnModuleInit, Optional } from "@nestjs/common";
+import { Injectable, Logger, OnModuleInit, Optional } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 import type { BackgroundJob, Prisma } from "@prisma/client";
 import { Cron, CronExpression } from "@nestjs/schedule";
@@ -24,8 +24,17 @@ const REDACTED_RAW_PAYLOAD = (now: Date): Prisma.InputJsonObject => ({
 });
 const NOT_YET_REDACTED: Prisma.JsonFilter = { path: ["redacted"], equals: true };
 
+/** Rows per statement for the sales import compaction (spec 030). */
+const SALES_IMPORT_BATCH = 2000;
+/** Automatic runs without new sales are kept this long for diagnosis. */
+const AUTOMATIC_RUN_RETENTION_DAYS = 2;
+/** Raw provider payloads of sales movements are redacted after this many days. */
+const RAW_PAYLOAD_RETENTION_DAYS = 30;
+
 @Injectable()
 export class SalesImportRetentionService implements OnModuleInit {
+  private readonly logger = new Logger("SalesImportRetention");
+  private totals = { compactedMovements: 0, deletedRuns: 0, redactedPayloads: 0 };
   private readonly batchSize: number;
   private readonly deadlineMs: number;
   private readonly ifoodRawPayloadRetentionDays: number;
@@ -74,10 +83,12 @@ export class SalesImportRetentionService implements OnModuleInit {
   }
 
   private async runUntilDeadline(now: Date): Promise<RetentionBatchResult> {
-    const deadline = Date.now() + this.deadlineMs;
+    const startedAt = Date.now();
+    const deadline = startedAt + this.deadlineMs;
     let deleted = 0;
     let redacted = 0;
     let hasMore = false;
+    this.totals = { compactedMovements: 0, deletedRuns: 0, redactedPayloads: 0 };
     do {
       const batch = await this.purgeBatch(now);
       deleted += batch.deleted;
@@ -85,7 +96,70 @@ export class SalesImportRetentionService implements OnModuleInit {
       hasMore = batch.hasMore;
       if (!hasMore) break;
     } while (Date.now() < deadline);
+    this.logger.log(
+      JSON.stringify({
+        event: "sales.retention.completed",
+        ...this.totals,
+        durationMs: Date.now() - startedAt,
+        hasMore,
+      })
+    );
     return { deleted, redacted, hasMore };
+  }
+
+  /**
+   * Sales import retention (spec 030), in batches by id so no long transaction blocks the automatic
+   * import:
+   * 1. duplicate movements of finished automatic runs (legacy cycles stored every sale of the day
+   *    again; they were already reconciled when the run was confirmed);
+   * 2. automatic runs without new sales older than 2 days (days and movements cascade);
+   * 3. raw provider payloads older than 30 days (amounts, statuses and links are kept).
+   * Orders, sale identities and provider transaction states are never touched.
+   */
+  private async compactSalesImports(now: Date): Promise<{
+    compactedMovements: number;
+    deletedRuns: number;
+    redactedPayloads: number;
+    hasMore: boolean;
+  }> {
+    const limit = SALES_IMPORT_BATCH;
+    const runCutoff = new Date(now.getTime() - AUTOMATIC_RUN_RETENTION_DAYS * 86_400_000);
+    const payloadCutoff = new Date(now.getTime() - RAW_PAYLOAD_RETENTION_DAYS * 86_400_000);
+    const compactedMovements = await this.prisma.$executeRaw`
+      DELETE FROM external_sales_movements
+      WHERE id IN (
+        SELECT m.id FROM external_sales_movements m
+        JOIN sales_import_runs r ON r.id = m.run_id
+        WHERE m.status = 'DUPLICATE'
+          AND r."trigger" = 'AUTOMATIC'
+          AND r.status IN ('COMPLETED', 'COMPLETED_WITH_ERRORS', 'FAILED')
+        LIMIT ${limit}
+      )`;
+    const deletedRuns = await this.prisma.$executeRaw`
+      DELETE FROM sales_import_runs
+      WHERE id IN (
+        SELECT id FROM sales_import_runs
+        WHERE "trigger" = 'AUTOMATIC'
+          AND status IN ('COMPLETED', 'COMPLETED_WITH_ERRORS', 'FAILED')
+          AND created_at < ${runCutoff}
+          AND COALESCE(counts->>'new', '0') = '0'
+        LIMIT ${limit}
+      )`;
+    const redactedPayloads = await this.prisma.$executeRaw`
+      UPDATE external_sales_movements
+      SET raw_payload = jsonb_build_object('redacted', true, 'redactedAt', ${now.toISOString()}::text)
+      WHERE id IN (
+        SELECT id FROM external_sales_movements
+        WHERE created_at < ${payloadCutoff}
+          AND NOT (raw_payload @> '{"redacted": true}'::jsonb)
+        LIMIT ${limit}
+      )`;
+    return {
+      compactedMovements,
+      deletedRuns,
+      redactedPayloads,
+      hasMore: [compactedMovements, deletedRuns, redactedPayloads].some((count) => count === limit),
+    };
   }
 
   private async purgeBatch(now: Date): Promise<RetentionBatchResult> {
@@ -151,6 +225,7 @@ export class SalesImportRetentionService implements OnModuleInit {
       take: this.batchSize,
     });
 
+    const imports = await this.compactSalesImports(now);
     const [runs, attempts, notifications] = await Promise.all([
       this.deleteIds(this.prisma.salesImportRun, runIds),
       this.deleteIds(this.prisma.oAuthAuthorizationAttempt, attemptIds),
@@ -161,10 +236,14 @@ export class SalesImportRetentionService implements OnModuleInit {
       this.redactRawPayloads(this.prisma.externalFinancialEvent, ifoodEventIds, now),
       this.redactRawPayloads(this.prisma.externalSettlement, ifoodSettlementIds, now),
     ]);
+    this.totals.compactedMovements += imports.compactedMovements;
+    this.totals.deletedRuns += imports.deletedRuns;
+    this.totals.redactedPayloads += imports.redactedPayloads;
     return {
-      deleted: runs + attempts + notifications,
-      redacted: redactedSales + redactedEvents + redactedSettlements,
+      deleted: runs + attempts + notifications + imports.compactedMovements + imports.deletedRuns,
+      redacted: redactedSales + redactedEvents + redactedSettlements + imports.redactedPayloads,
       hasMore:
+        imports.hasMore ||
         runIds.length === this.batchSize ||
         attemptIds.length === this.batchSize ||
         notificationIds.length === this.batchSize ||

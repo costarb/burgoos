@@ -12,6 +12,14 @@ import { ASSET_STORAGE, AssetStorage } from "../common/storage/asset-storage";
 
 type BrandingAssetKey = "logo" | "header" | "body" | "footer";
 
+/** Mirrors `ProductOption` in @rrfive/types (the API does not import the shared package). */
+export interface ProductOption {
+  id: string;
+  name: string;
+  price: string;
+  active: boolean;
+}
+
 type PublicImageAsset =
   | { value: string; body?: never; contentType?: never; contentLength?: never }
   | { body: Readable; contentType?: string; contentLength?: number; value?: never };
@@ -174,6 +182,21 @@ export class CatalogService {
         active: dto.active,
       },
     });
+  }
+
+  /** Product selectors only need the name and price: no image, description or relations (spec 030). */
+  async listProductOptions(tenantId: string, active?: boolean): Promise<ProductOption[]> {
+    const products = await this.prisma.product.findMany({
+      where: { tenantId, ...(active === undefined ? {} : { active }) },
+      select: { id: true, name: true, price: true, active: true },
+      orderBy: { name: "asc" },
+    });
+    return products.map((product) => ({
+      id: product.id,
+      name: product.name,
+      price: product.price.toFixed(2),
+      active: product.active,
+    }));
   }
 
   async listProducts(tenantId: string, filters: ProductFilters = {}) {
