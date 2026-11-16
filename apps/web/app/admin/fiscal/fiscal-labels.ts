@@ -31,6 +31,7 @@ export const PENDING_REASON: Record<FiscalPendingReason, string> = {
   SAME_DAY_NOT_ISSUED: "Venda do dia sem NFC-e",
   TAX_DIVERGENCE: "Autorizada com CFOP/CSOSN diferente do perfil fiscal: revise a natureza no provedor",
   ENVIRONMENT_MISMATCH: "Emitida em homologacao, sem validade fiscal: mude a NFC-e para Producao no provedor e emita de novo",
+  FILES_MISSING: "Arquivo fiscal indisponivel: o XML nao foi recuperado do provedor. Baixe pelo painel do provedor e guarde",
 };
 
 export const READINESS_LABEL: Record<FiscalReadinessKey, string> = {
@@ -42,6 +43,7 @@ export const READINESS_LABEL: Record<FiscalReadinessKey, string> = {
   PRODUCTS_WITHOUT_PROFILE: "Produtos sem perfil",
   PAYMENT_MAP: "Formas de pagamento",
   OPERATION_NATURE: "Natureza de operacao",
+  STORAGE: "Armazenamento dos arquivos",
 };
 
 export const PENDING_STATUSES: FiscalDocumentStatus[] = ["REJECTED", "ERROR", "CANCEL_PENDING", "CANCEL_FAILED"];

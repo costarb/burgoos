@@ -1,22 +1,20 @@
 import { Inject, Injectable } from "@nestjs/common";
 import { Readable } from "node:stream";
 import { ASSET_STORAGE, AssetStorage } from "../../../common/storage/asset-storage";
+import { FiscalFileKind, fiscalKey } from "../../../common/storage/asset-keys";
 
 const MAX_BYTES = 5 * 1024 * 1024;
 
-export type FiscalFileKind = "xml" | "danfe" | "cancel-xml";
+export type { FiscalFileKind };
 
 /** Copies of XML/DANFE kept in the ERP storage so documents survive a provider switch. */
 @Injectable()
 export class FiscalDocumentStorageService {
   constructor(@Inject(ASSET_STORAGE) private readonly storage: AssetStorage) {}
 
+  /** Bucket layout and São Paulo issue month live in common/storage/asset-keys (spec 030). */
   key(tenantId: string, issuedAt: Date, name: string, kind: FiscalFileKind): string {
-    const year = issuedAt.getUTCFullYear();
-    const month = String(issuedAt.getUTCMonth() + 1).padStart(2, "0");
-    const safeName = name.replace(/[^a-zA-Z0-9_-]/g, "");
-    const suffix = kind === "danfe" ? ".pdf" : kind === "cancel-xml" ? "-cancelamento.xml" : ".xml";
-    return `fiscal/${tenantId}/${year}/${month}/${safeName}${suffix}`;
+    return fiscalKey(tenantId, issuedAt, name, kind);
   }
 
   async save(key: string, content: Buffer, kind: FiscalFileKind): Promise<string> {

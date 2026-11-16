@@ -61,7 +61,7 @@ Com a trava, nenhum arquivo em `fiscal/` pode ser apagado nem sobrescrito durant
 
 1. Deploy da fase B.
 2. **Fiscal → Configuração**: a prontidão não mostra o aviso `STORAGE` (o storage já é S3).
-3. Disparar a recuperação: botão **Recuperar arquivos** na tela Fiscal, ou `POST /api/admin/fiscal/documents/recover-files`.
+3. Disparar a recuperação: botão **Recuperar arquivos** na tela Fiscal, ou `POST /api/admin/fiscal/files/recovery`.
 4. Acompanhar o log `fiscal.files.recovery_completed` (`recovered` / `missing`).
 5. Notas em `missing` aparecem em **Pendências** como "Arquivo fiscal indisponível", com o motivo.
 6. Depois disso, criar a trava da seção 1.2.

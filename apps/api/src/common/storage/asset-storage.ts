@@ -35,7 +35,17 @@ export interface AssetStorage {
   write(input: AssetWriteInput): Promise<{ sizeBytes: number }>;
   read(key: string): Promise<StoredAsset>;
   delete(key: string): Promise<void>;
+  /** True when the object exists (used by the fiscal file recovery, spec 030). */
+  exists(key: string): Promise<boolean>;
+  /**
+   * Short-lived URL an `<img>` can load without the admin token: presigned GET on S3/R2, an HMAC
+   * signed API URL on the local storage (spec 030).
+   */
+  createReadUrl(key: string, expiresInSeconds: number): Promise<string>;
 }
+
+/** Default lifetime of the image read URLs returned to the admin. */
+export const READ_URL_TTL_SECONDS = 3600;
 
 export function assertSafeAssetKey(key: string): void {
   const segments = key.split("/");

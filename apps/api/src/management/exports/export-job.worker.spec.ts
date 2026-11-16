@@ -19,7 +19,7 @@ describe("ExportJobWorker", () => {
 
   afterEach(async () => {
     vi.restoreAllMocks();
-    await rm(join(process.cwd(), "tmp", "exports", "tenant-1"), {
+    await rm(join(process.cwd(), "tmp", "exports", "exports", "tenant-1"), {
       force: true,
       maxRetries: 3,
       recursive: true,
@@ -110,7 +110,7 @@ describe("ExportJobWorker", () => {
           status: ExportJobStatus.COMPLETED,
           fileName: expect.stringContaining(extension),
           fileMimeType: mime,
-          fileStorageKey: expect.stringContaining("tenant-1/export-1/"),
+          fileStorageKey: expect.stringContaining("exports/tenant-1/export-1/"),
           fileSizeBytes: expect.any(Number),
         }),
       });

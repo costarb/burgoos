@@ -93,7 +93,7 @@ A recuperação (R6) só grava quando o arquivo não existe. A DANFE do Bling é
 - se falhar, grava `filesMissingAt` e `filesMissingReason`, e a nota entra nas pendências como `FILES_MISSING`;
 - em caso de sucesso, limpa esses campos.
 
-O job é disparado por um endpoint (`POST /api/admin/fiscal/documents/recover-files`, permissão `fiscal.configure`) e por um agendamento semanal (domingo às 04:00, horário de Brasília).
+O job é disparado por um endpoint (`POST /api/admin/fiscal/files/recovery`, permissão `fiscal.configure`) e por um agendamento semanal (domingo às 04:00, horário de Brasília).
 
 **Rationale**: o download pelo provedor já existe (`adapter.downloadXml`). Falta orquestrar e registrar a falha. O ritmo de uma nota por vez respeita o limite do Bling (3 req/s), já tratado no contexto do provedor.
 

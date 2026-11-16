@@ -1,6 +1,7 @@
 import {
   DeleteObjectCommand,
   GetObjectCommand,
+  HeadObjectCommand,
   PutObjectCommand,
   S3Client,
 } from "@aws-sdk/client-s3";
@@ -95,6 +96,27 @@ export class S3AssetStorageService implements AssetStorage {
     this.assertConfigured();
     assertSafeAssetKey(key);
     await this.client.send(new DeleteObjectCommand({ Bucket: this.bucket, Key: key }));
+  }
+
+  async exists(key: string): Promise<boolean> {
+    this.assertConfigured();
+    assertSafeAssetKey(key);
+    try {
+      await this.client.send(new HeadObjectCommand({ Bucket: this.bucket, Key: key }));
+      return true;
+    } catch (error) {
+      const candidate = error as { name?: string; $metadata?: { httpStatusCode?: number } };
+      if (candidate.name === "NotFound" || candidate.$metadata?.httpStatusCode === 404) return false;
+      throw error;
+    }
+  }
+
+  async createReadUrl(key: string, expiresInSeconds: number): Promise<string> {
+    this.assertConfigured();
+    assertSafeAssetKey(key);
+    return getSignedUrl(this.client, new GetObjectCommand({ Bucket: this.bucket, Key: key }), {
+      expiresIn: expiresInSeconds,
+    });
   }
 
   private assertConfigured(): void {

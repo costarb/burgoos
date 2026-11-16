@@ -311,6 +311,14 @@ A aba **Pendências** reúne notas rejeitadas, com erro, sem perfil fiscal ou co
 
 Também aparecem notas **autorizadas com CFOP/CSOSN diferente do perfil fiscal**: o sistema compara o XML autorizado com o perfil de cada item e mostra o que saiu e o que era esperado. A nota continua válida. Ajuste as regras da natureza no Bling e clique em **Marcar como revisada**.
 
+Notas com **Arquivo fiscal indisponível** são as que o sistema não conseguiu recuperar do provedor. A nota continua válida. Baixe o XML pelo painel do Bling e guarde com os documentos fiscais.
+
+### 10.4.1 Recuperar arquivos fiscais
+
+O sistema guarda uma cópia do XML (e da DANFE, quando o provedor envia) de cada NFC-e, por 5 anos. Em **Fiscal → Configuração → Arquivos fiscais**, o botão **Recuperar arquivos** confere todas as notas autorizadas e canceladas e baixa de novo do provedor o que estiver faltando. A mesma conferência roda sozinha todo domingo de madrugada. O que não puder ser recuperado aparece em **Pendências**.
+
+Se a **Prontidão para emitir** mostrar **Armazenamento dos arquivos** com alerta, os arquivos fiscais estão num armazenamento temporário: peça ao suporte para configurar o armazenamento S3.
+
 ### 10.5 XML para o contador
 
 Na aba **Notas**, informe o período e clique em **Exportar XMLs**. O arquivo ZIP traz as pastas `autorizadas` e `canceladas` e um `resumo.csv`. Notas de homologação só entram quando o ambiente configurado é homologação.
