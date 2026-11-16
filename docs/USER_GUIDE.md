@@ -137,6 +137,10 @@ Ao publicar mudanças:
 - desative itens indisponíveis em vez de criar duplicatas;
 - revise o cardápio público após uma alteração relevante.
 
+**Fotos dos produtos.** Envie a foto pelo campo **Upload de imagem** (PNG, JPEG ou WebP, até 2 MiB). A foto fica no armazenamento de arquivos da loja, e a foto antiga é apagada quando você troca. Também é possível informar o endereço (`https://...`) de uma imagem já publicada. A identidade visual (logo e imagens da página) segue a mesma regra.
+
+Se aparecer o aviso **Imagens antigas gravadas no banco**, clique em **Migrar imagens antigas**. As fotos cadastradas antes do upload são movidas para o armazenamento de arquivos, uma por vez, sem tirar o cardápio do ar. Se alguma não puder ser migrada, o aviso informa quantas: envie essas fotos de novo.
+
 ### 6.2 Insumos e fichas técnicas
 
 Cadastre os insumos antes de elaborar fichas técnicas. A ficha relaciona cada produto aos ingredientes e quantidades usados na produção. Esses dados alimentam custo, estoque, CMV e precificação.

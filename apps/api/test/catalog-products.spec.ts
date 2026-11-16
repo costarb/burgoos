@@ -68,10 +68,11 @@ describe("catalog product management", () => {
     expect(prisma.product.findMany).toHaveBeenLastCalledWith(expect.objectContaining({ where: { tenantId } }));
   });
 
-  it("updates base64 image and replaces external mappings", async () => {
+  it("keeps the legacy base64 image already stored and replaces external mappings", async () => {
     const prisma = prismaMock();
     prisma.category.findFirst.mockResolvedValue({ id: categoryId });
     prisma.product.findFirst.mockResolvedValue({ id: productId });
+    prisma.product.findUnique.mockResolvedValue({ imageUrl: "data:image/png;base64,AAAA" });
     prisma.product.update.mockResolvedValue(product({ imageUrl: "old" }));
     prisma.product.findUniqueOrThrow.mockResolvedValue(
       product({
@@ -125,6 +126,88 @@ describe("catalog product management", () => {
     expect(updated.externalMappings).toEqual([
       { id: "mapping-2", provider: "IFOOD", externalProductId: "IFOOD-999" },
     ]);
+    // The base64 stays in imageUrl until the migration but is not repeated in imageAssetKey.
+    expect(updated).toMatchObject({ imageUrl: "data:image/png;base64,AAAA", imageAssetKey: null });
+  });
+
+  describe("bucket images (spec 030, US4)", () => {
+    const oldKey = `images/${tenantId}/product/aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa.png`;
+    const newKey = `images/${tenantId}/product/bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb.webp`;
+
+    function setup(current: string | null = oldKey) {
+      const prisma = prismaMock();
+      prisma.category.findFirst.mockResolvedValue({ id: categoryId });
+      prisma.product.findFirst.mockResolvedValue({ id: productId });
+      prisma.product.findUnique.mockResolvedValue({ imageUrl: current });
+      prisma.product.update.mockImplementation(async ({ data }: { data: { imageUrl?: string | null } }) =>
+        product({ imageUrl: data.imageUrl ?? current })
+      );
+      prisma.product.count.mockResolvedValue(0);
+      const storage = {
+        createReadUrl: vi.fn(async (key: string) => `https://signed.example/${key}?sig=1`),
+        delete: vi.fn(async () => undefined),
+      };
+      const service = new CatalogService(prisma as never, {} as never, storage as never);
+      return { prisma, storage, service };
+    }
+
+    it("returns a signed URL for <img> and the raw key for the form", async () => {
+      const { prisma, service } = setup();
+      prisma.product.findMany.mockResolvedValue([
+        product({ imageUrl: oldKey }),
+        product({ id: "p-http", imageUrl: "https://cdn.example/a.png" }),
+        product({ id: "p-none", imageUrl: null }),
+      ]);
+
+      const [stored, external, none] = await service.listProducts(tenantId);
+
+      expect(stored).toMatchObject({ imageUrl: `https://signed.example/${oldKey}?sig=1`, imageAssetKey: oldKey });
+      expect(external).toMatchObject({ imageUrl: "https://cdn.example/a.png", imageAssetKey: "https://cdn.example/a.png" });
+      expect(none).toMatchObject({ imageUrl: null, imageAssetKey: null });
+    });
+
+    it("refuses a new base64 image and a key of another store", async () => {
+      const { service } = setup();
+      await expect(
+        service.updateProduct(tenantId, productId, { imageUrl: "data:image/png;base64,BBBB" })
+      ).rejects.toThrow("Envie a imagem pelo upload");
+      await expect(
+        service.updateProduct(tenantId, productId, {
+          imageUrl: "images/99999999-9999-4999-8999-999999999999/product/bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb.png",
+        })
+      ).rejects.toThrow("imagem de outra loja");
+      await expect(
+        service.createProduct(tenantId, { categoryId, name: "Novo", price: 10, imageUrl: "data:image/png;base64,AAAA" })
+      ).rejects.toThrow("Envie a imagem pelo upload");
+    });
+
+    it("removes the replaced image from the bucket when no product uses it", async () => {
+      const { prisma, storage, service } = setup();
+
+      await service.updateProduct(tenantId, productId, { imageUrl: newKey });
+
+      expect(prisma.product.update).toHaveBeenCalledWith(expect.objectContaining({ data: expect.objectContaining({ imageUrl: newKey }) }));
+      expect(prisma.product.count).toHaveBeenCalledWith({ where: { tenantId, imageUrl: oldKey } });
+      expect(storage.delete).toHaveBeenCalledWith(oldKey);
+    });
+
+    it("keeps the old file when another product uses it, when the image is unchanged and when delete fails", async () => {
+      const shared = setup();
+      shared.prisma.product.count.mockResolvedValue(1);
+      await shared.service.updateProduct(tenantId, productId, { imageUrl: "" });
+      expect(shared.storage.delete).not.toHaveBeenCalled();
+
+      const unchanged = setup();
+      await unchanged.service.updateProduct(tenantId, productId, { imageUrl: oldKey, name: "Outro nome" });
+      await unchanged.service.updateProduct(tenantId, productId, { name: "Sem imagem no corpo" });
+      expect(unchanged.storage.delete).not.toHaveBeenCalled();
+
+      const failing = setup();
+      failing.storage.delete.mockRejectedValueOnce(new Error("bucket down"));
+      await expect(failing.service.updateProduct(tenantId, productId, { imageUrl: newKey })).resolves.toMatchObject({
+        imageAssetKey: newKey,
+      });
+    });
   });
 });
 
@@ -138,7 +221,9 @@ function prismaMock() {
       findFirst: vi.fn(),
       create: vi.fn(),
       update: vi.fn(),
+      findUnique: vi.fn(),
       findUniqueOrThrow: vi.fn(),
+      count: vi.fn(),
     },
     productExternalMapping: {
       deleteMany: vi.fn(),

@@ -9,17 +9,21 @@ import { PublicDomainMenuController } from "./controllers/public-domain-menu.con
 import { AdminProductComplementController } from "./controllers/admin-product-complement.controller";
 import { ProductComplementService } from "./product-complement.service";
 import { StorageModule } from "../common/storage/storage.module";
+import { BackgroundJobsModule } from "../common/background-jobs/background-jobs.module";
+import { AdminLegacyImageController } from "./controllers/admin-legacy-image.controller";
+import { LegacyImageMigrationService } from "./legacy-image-migration.service";
 
 @Module({
-  imports: [AuthModule, BrandingModule, StorageModule],
+  imports: [AuthModule, BrandingModule, StorageModule, BackgroundJobsModule],
   controllers: [
     AdminCategoryController,
     AdminProductController,
     PublicMenuController,
     PublicDomainMenuController,
     AdminProductComplementController,
+    AdminLegacyImageController,
   ],
-  providers: [CatalogService, ProductComplementService],
+  providers: [CatalogService, ProductComplementService, LegacyImageMigrationService],
   exports: [CatalogService, ProductComplementService],
 })
 export class CatalogModule {}
