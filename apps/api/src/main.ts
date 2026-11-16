@@ -14,11 +14,15 @@ export async function bootstrap(): Promise<void> {
   const role = resolveAppRole(process.env.APP_ROLE);
 
   if (role === "worker") {
-    await NestFactory.createApplicationContext(AppModule);
+    const context = await NestFactory.createApplicationContext(AppModule);
+    context.enableShutdownHooks();
     return;
   }
 
   const app = await NestFactory.create(AppModule, { bodyParser: false });
+  // On SIGTERM (deploy) Nest runs the destroy hooks first: the job worker stops claiming jobs and the
+  // running one goes back to the queue, so the old instance does not keep working with the old code.
+  app.enableShutdownHooks();
   const bodyLimit = process.env.API_BODY_LIMIT ?? "2mb";
 
   app.use(json({ limit: bodyLimit }));

@@ -11,6 +11,9 @@ import { BackgroundJobPolicy } from "./background-job-policy";
 import { BackgroundJobRegistry, type RuntimeBackgroundJobHandler } from "./background-job.registry";
 import { BackgroundJobRepository } from "./background-job.repository";
 
+/** Time a deploy shutdown waits for the running job before giving up (Render kills after 30 s). */
+export const SHUTDOWN_GRACE_MS = 20_000;
+
 @Injectable()
 export class BackgroundJobWorker implements OnModuleInit, OnModuleDestroy {
   private readonly logger = new Logger(BackgroundJobWorker.name);
@@ -46,9 +49,20 @@ export class BackgroundJobWorker implements OnModuleInit, OnModuleDestroy {
     if (!this.loopPromise) this.loopPromise = this.loop();
   }
 
-  async stop(): Promise<void> {
+  /**
+   * Stops claiming jobs and signals the running one to stop (shutdown hooks call this on SIGTERM). A job
+   * that does not stop within the grace time keeps its lease and is recovered when the lease expires.
+   */
+  async stop(graceMs = SHUTDOWN_GRACE_MS): Promise<void> {
+    if (this.controller.signal.aborted && !this.loopPromise) return;
     this.controller.abort();
-    await this.loopPromise;
+    if (this.loopPromise) {
+      const finished = await Promise.race([
+        this.loopPromise.then(() => true),
+        new Promise<boolean>((resolve) => setTimeout(() => resolve(false), graceMs).unref()),
+      ]);
+      this.logger.log(`background_job.worker_stopped workerId=${this.workerId} drained=${finished}`);
+    }
     this.loopPromise = null;
   }
 
@@ -113,6 +127,16 @@ export class BackgroundJobWorker implements OnModuleInit, OnModuleDestroy {
       });
       this.metrics?.jobFinished({ jobId: job.id, handler: job.type, outcome: "SUCCEEDED", durationMs, processedCount: result.processedCount, snapshot: memoryEnd });
     } catch (error) {
+      if (this.controller.signal.aborted) {
+        // Interrupted by the shutdown: back to the queue now, for the next instance, without a retry penalty.
+        await this.repository.releaseForShutdown(job.id, owner, new Date(), {
+          memoryStart,
+          memoryEnd: snapshot(),
+          durationMs: Date.now() - startedAt,
+        });
+        this.metrics?.jobFinished({ jobId: job.id, handler: job.type, outcome: "FAILED", durationMs: Date.now() - startedAt, snapshot: snapshot() });
+        return true;
+      }
       const retryPolicy = handler.policy
         ? new BackgroundJobPolicy(
             handler.policy.retryBaseDelayMs,

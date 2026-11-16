@@ -1,6 +1,9 @@
 {
   "name": "rrfive",
   "version": "0.1.0",
+  "engines": {
+    "node": ">=22 <23"
+  },
   "private": true,
   "description": "RRFive OS delivery pilot monorepo",
   "packageManager": "npm@10.8.2",

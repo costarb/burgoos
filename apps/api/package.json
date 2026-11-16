@@ -1,6 +1,9 @@
 {
   "name": "@rrfive/api",
   "version": "0.1.0",
+  "engines": {
+    "node": ">=22 <23"
+  },
   "private": true,
   "scripts": {
     "dev": "ts-node -r tsconfig-paths/register src/main.ts",

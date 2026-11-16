@@ -52,6 +52,21 @@ describe("BackgroundJobRepository leases", () => {
     });
     expect(attempts.map(({ outcome }) => outcome)).toEqual(["ABANDONED", "SUCCEEDED"]);
   });
+
+  it("gives a job interrupted by a shutdown back to the queue at once, keeping a retry available", async () => {
+    const job = await repository.enqueue({ ...jobInput("shutdown-key"), maxAttempts: 1 });
+    const lease = await repository.claimNext("old-instance", 60_000, new Date(), ["CRITICAL", "HIGH", "NORMAL", "LOW"], ["RETENTION"]);
+    expect(lease?.id).toBe(job.id);
+
+    expect(await repository.releaseForShutdown(job.id, { workerId: "new-instance", leaseVersion: lease!.leaseVersion })).toBe(false);
+    const releasedAt = new Date();
+    expect(await repository.releaseForShutdown(job.id, { workerId: "old-instance", leaseVersion: lease!.leaseVersion }, releasedAt)).toBe(true);
+
+    const released = await prisma.backgroundJob.findUniqueOrThrow({ where: { id: job.id } });
+    expect(released).toMatchObject({ status: "RETRY_WAIT", leasedBy: null, lastErrorCode: "SHUTDOWN", attempts: 1, maxAttempts: 2 });
+    const next = await repository.claimNext("new-instance", 60_000, new Date(releasedAt.getTime() + 1), ["CRITICAL", "HIGH", "NORMAL", "LOW"], ["RETENTION"]);
+    expect(next?.id).toBe(job.id);
+  });
 });
 
 function jobInput(activeKey: string) {

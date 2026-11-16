@@ -75,7 +75,7 @@
 
 ## Phase D: Runtime Node 22 [X]
 
-- [ ] T024 [X] `engines.node ">=22 <23"` na raiz e nos apps, `.node-version` com `22`; validar `npm ci`, typecheck, testes e build (web em worktree fora do OneDrive); documentar `NODE_VERSION` no quickstart §6
+- [X] T024 [X] `engines.node ">=22 <23"` na raiz e nos apps, `.node-version` com `22`; validar `npm ci`, typecheck, testes e build (web em worktree fora do OneDrive); documentar `NODE_VERSION` no quickstart §6. Inclui o desligamento no deploy: `enableShutdownHooks`, o worker para de pegar jobs e devolve o job interrompido à fila sem gastar tentativa (incidente da recuperação fiscal de 16/11)
 
 ---
 
