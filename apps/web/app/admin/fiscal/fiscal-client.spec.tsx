@@ -21,6 +21,7 @@ describe("FiscalClient", () => {
     saveBlingSettings: vi.fn(),
     disconnectBling: vi.fn(),
     refreshConfiguration: vi.fn(),
+    recoverFiles: vi.fn(),
   };
   const profileActions = { saveProfile: vi.fn(), deleteProfile: vi.fn(), reloadProfiles: vi.fn(), assignProfiles: vi.fn() };
   const documentActions = { loadDocuments: vi.fn(), reprocess: vi.fn(), cancel: vi.fn(), sync: vi.fn(), reviewTaxDivergence: vi.fn() };
@@ -52,6 +53,21 @@ describe("FiscalClient", () => {
     expect(text("fiscal-address")).toContain("Obrigatorio");
     expect(checkbox("Emissao de NFC-e ativa").disabled).toBe(true);
     expect(text("bling-requirements")).toContain("Conta Bling da empresa com NFC-e habilitada");
+  });
+
+  it("starts the fiscal file recovery and shows its feedback (spec 030)", async () => {
+    configurationActions.recoverFiles.mockResolvedValue({
+      status: "success",
+      message: "Recuperacao dos arquivos fiscais iniciada.",
+      data: { jobId: "job-1", status: "QUEUED" },
+    });
+    await render({ configuration: configuration() });
+
+    expect(text("fiscal-file-recovery")).toContain("Arquivos fiscais");
+    await click(button("Recuperar arquivos"));
+
+    expect(configurationActions.recoverFiles).toHaveBeenCalledTimes(1);
+    expect(container.textContent).toContain("Recuperacao dos arquivos fiscais iniciada.");
   });
 
   it("starts the Bling authorization and redirects the browser", async () => {
@@ -377,6 +393,7 @@ function documentSummary(overrides: Partial<FiscalDocumentSummary> = {}): Fiscal
     authorizedAt: new Date().toISOString(),
     rejectionCode: null,
     rejectionMessage: null,
+    filesMissingReason: null,
     cancelDeadlineAt: null,
     taxDivergences: null,
     taxDivergenceReviewedAt: null,

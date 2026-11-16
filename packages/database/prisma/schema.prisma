@@ -613,6 +613,8 @@ enum BackgroundJobType {
   FISCAL_SYNC
   FISCAL_CANCELLATION
   SALES_AUTO_IMPORT
+  FISCAL_FILE_RECOVERY
+  LEGACY_IMAGE_MIGRATION
 }
 
 enum BackgroundJobPriority {
@@ -3095,6 +3097,9 @@ model FiscalDocument {
   taxDivergences          Json?                 @map("tax_divergences")
   taxDivergenceAt         DateTime?             @map("tax_divergence_at")
   taxDivergenceReviewedAt DateTime?             @map("tax_divergence_reviewed_at")
+  /// Spec 030: the XML could not be recovered from the provider (pending reason FILES_MISSING).
+  filesMissingAt          DateTime?             @map("files_missing_at")
+  filesMissingReason      String?               @map("files_missing_reason") @db.VarChar(500)
   nextSyncAt              DateTime?             @map("next_sync_at")
   requestedByUserId       String?               @map("requested_by_user_id") @db.Uuid
   createdAt               DateTime              @default(now()) @map("created_at")

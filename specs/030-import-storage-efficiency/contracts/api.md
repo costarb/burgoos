@@ -16,23 +16,24 @@ Lista enxuta para seletores (importação, importação automática, produto fix
   ```
 - **Garantia**: nunca inclui imagem, descrição, categoria nem ficha técnica. Ordenação: nome.
 
-### `POST /api/admin/fiscal/documents/recover-files`
+### `POST /api/admin/fiscal/files/recovery`
 
 Enfileira a recuperação de XML e DANFE da loja (job `FISCAL_FILE_RECOVERY`). É idempotente: com um job ativo, devolve o mesmo.
 
 - **Permissão**: `fiscal.configure`
 - **202**: `{ "jobId": "uuid", "status": "QUEUED" | "RUNNING" }`
 
-### `GET /api/admin/fiscal/documents/recover-files`
+### `GET /api/admin/fiscal/files/recovery`
 
-Situação da última recuperação.
+Situação da última recuperação. A rota fica em `files/` porque `documents/:id` capturaria `documents/recover-files`.
 
 - **Permissão**: `fiscal.view`
 - **200**:
   ```json
   { "status": "IDLE" | "QUEUED" | "RUNNING" | "COMPLETED" | "FAILED",
-    "checked": 171, "recovered": 165, "missing": 6, "finishedAt": "2026-11-17T07:00:00.000Z" }
+    "documents": 171, "missing": 6, "finishedAt": "2026-11-17T07:00:00.000Z" }
   ```
+  `documents`: notas autorizadas ou canceladas; `missing`: notas com `FILES_MISSING`. As contagens de cada execução (`checked`, `recovered`, `missing`) ficam no log `fiscal.files.recovery_completed`.
 
 ### `POST /api/admin/assets/legacy-images/migrate`
 

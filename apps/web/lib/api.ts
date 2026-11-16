@@ -2885,6 +2885,11 @@ export async function syncFiscalDocument(token: string, id: string): Promise<Fis
   return fetchAdmin<FiscalDocumentDetail>(token, `/api/admin/fiscal/documents/${id}/sync`, { method: "POST" });
 }
 
+/** Spec 030: downloads again from the provider the XML copies missing from the storage. */
+export async function requestFiscalFileRecovery(token: string): Promise<{ jobId: string; status: "QUEUED" | "RUNNING" }> {
+  return fetchAdmin(token, "/api/admin/fiscal/files/recovery", { method: "POST" });
+}
+
 export async function reviewFiscalTaxDivergence(token: string, id: string): Promise<FiscalDocumentDetail> {
   return fetchAdmin<FiscalDocumentDetail>(token, `/api/admin/fiscal/documents/${id}/tax-divergence/review`, { method: "POST" });
 }

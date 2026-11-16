@@ -9,6 +9,8 @@ import { CreateProductDto } from "./dto/create-product.dto";
 import { UpdateCategoryDto } from "./dto/update-category.dto";
 import { UpdateProductDto } from "./dto/update-product.dto";
 import { ASSET_STORAGE, AssetStorage } from "../common/storage/asset-storage";
+import { isStoredAssetKey } from "../common/storage/asset-keys";
+import { contentTypeForKey } from "../common/storage/asset-content-type";
 
 type BrandingAssetKey = "logo" | "header" | "body" | "footer";
 
@@ -463,7 +465,7 @@ export class CatalogService {
       const stored = await this.assetStorage.read(value);
       return {
         body: stored.body,
-        contentType: stored.contentType ?? contentTypeForAssetKey(value),
+        contentType: stored.contentType ?? contentTypeForKey(value),
         contentLength: stored.contentLength,
       };
     } catch {
@@ -712,12 +714,3 @@ function isImageDataUrl(value: string): boolean {
   return /^data:image\/(png|jpe?g|webp|gif);base64,[a-z0-9+/=\s]+$/i.test(value);
 }
 
-function isStoredAssetKey(value: string): boolean {
-  return /^tenants\/[a-f0-9-]+\/images\/[a-z_]+\/[a-f0-9-]+\.(png|jpe?g|webp)$/i.test(value);
-}
-
-function contentTypeForAssetKey(value: string): string {
-  if (/\.png$/i.test(value)) return "image/png";
-  if (/\.webp$/i.test(value)) return "image/webp";
-  return "image/jpeg";
-}

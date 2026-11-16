@@ -17,6 +17,8 @@ export interface FiscalConfigurationActions {
   saveBlingSettings: (payload: BlingSettingsPayload) => Promise<FiscalActionState<BlingSettingsPayload>>;
   disconnectBling: () => Promise<FiscalActionState<void>>;
   refreshConfiguration: () => Promise<FiscalActionState<FiscalConfigurationView>>;
+  /** Spec 030: re-downloads from the provider the XML copies missing from the storage. */
+  recoverFiles?: () => Promise<FiscalActionState<{ jobId: string; status: "QUEUED" | "RUNNING" }>>;
 }
 
 interface Props {
@@ -101,6 +103,24 @@ export function FiscalConfigurationTab({ configuration, actions, busy, run, onCo
           ))}
         </ul>
       </section>
+
+      {actions.recoverFiles ? (
+        <section className={cardClass} data-testid="fiscal-file-recovery">
+          <h2 className="text-lg font-semibold">Arquivos fiscais</h2>
+          <p className="mt-1 text-sm text-slate-600">
+            Confere se o XML de cada NFC-e autorizada ou cancelada esta guardado e baixa de novo do provedor o que faltar. As notas que nao puderem
+            ser recuperadas aparecem em Pendencias.
+          </p>
+          <button
+            className="mt-3 rounded-md border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-60"
+            disabled={busy}
+            onClick={() => void run(actions.recoverFiles!)}
+            type="button"
+          >
+            Recuperar arquivos
+          </button>
+        </section>
+      ) : null}
 
       <section className={cardClass} data-testid="fiscal-issuer">
         <div className="flex flex-wrap items-start justify-between gap-3">

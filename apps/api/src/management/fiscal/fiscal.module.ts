@@ -22,6 +22,7 @@ import { FiscalNotifierService } from "./documents/fiscal-notifier.service";
 import { FiscalOrderGuardService } from "./documents/fiscal-order-guard.service";
 import { FiscalSaleLoader } from "./documents/fiscal-sale.loader";
 import { FiscalSyncService } from "./documents/fiscal-sync.service";
+import { FiscalFileRecoveryService } from "./documents/fiscal-file-recovery.service";
 import { FiscalTriggerService } from "./documents/fiscal-trigger.service";
 import { FiscalXmlExportService } from "./documents/fiscal-xml-export.service";
 import { FiscalProfileController } from "./profiles/fiscal-profile.controller";
@@ -64,6 +65,7 @@ import { FiscalProviderRegistry } from "./providers/fiscal-provider.registry";
     FiscalEmissionService,
     FiscalEmissionProcessor,
     FiscalSyncService,
+    FiscalFileRecoveryService,
     FiscalTriggerService,
     FiscalDocumentsService,
     FiscalOrderGuardService,

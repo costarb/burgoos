@@ -12,7 +12,9 @@ export type BackgroundJobType =
   | "FISCAL_EMISSION"
   | "FISCAL_SYNC"
   | "FISCAL_CANCELLATION"
-  | "SALES_AUTO_IMPORT";
+  | "SALES_AUTO_IMPORT"
+  | "FISCAL_FILE_RECOVERY"
+  | "LEGACY_IMAGE_MIGRATION";
 
 export type BackgroundJobPriority = "CRITICAL" | "HIGH" | "NORMAL" | "LOW";
 export type BackgroundJobStatus =

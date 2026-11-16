@@ -22,6 +22,11 @@ const UNREVIEWED_TAX_DIVERGENCE: Prisma.FiscalDocumentWhereInput = {
   taxDivergenceAt: { not: null },
   taxDivergenceReviewedAt: null,
 };
+/** Authorized or cancelled notes whose XML could not be recovered from the provider (spec 030). */
+const FILES_MISSING: Prisma.FiscalDocumentWhereInput = {
+  status: { in: ["AUTHORIZED", "CANCELLED"] },
+  filesMissingAt: { not: null },
+};
 
 export interface UnissuedSale {
   target: { type: "ORDER" | "TAB"; id: string };
@@ -70,7 +75,7 @@ export class FiscalDocumentsService {
         ? { saleOccurredAt: { ...(filters.from ? { gte: filters.from } : {}), ...(filters.to ? { lte: filters.to } : {}) } }
         : {}),
       ...(filters.pendingOnly
-        ? { OR: [{ status: { in: PENDING_STATUSES } }, UNREVIEWED_TAX_DIVERGENCE] }
+        ? { OR: [{ status: { in: PENDING_STATUSES } }, UNREVIEWED_TAX_DIVERGENCE, FILES_MISSING] }
         : filters.status?.length
           ? { status: { in: filters.status } }
           : {}),
@@ -359,7 +364,10 @@ export class FiscalDocumentsService {
       case "CANCEL_FAILED":
         return "CANCEL_FAILED";
       case "AUTHORIZED":
-        return document.taxDivergenceAt && !document.taxDivergenceReviewedAt ? "TAX_DIVERGENCE" : null;
+        if (document.taxDivergenceAt && !document.taxDivergenceReviewedAt) return "TAX_DIVERGENCE";
+        return document.filesMissingAt ? "FILES_MISSING" : null;
+      case "CANCELLED":
+        return document.filesMissingAt ? "FILES_MISSING" : null;
       default:
         return null;
     }
@@ -383,6 +391,7 @@ export class FiscalDocumentsService {
       authorizedAt: document.authorizedAt?.toISOString() ?? null,
       rejectionCode: document.rejectionCode,
       rejectionMessage: document.rejectionMessage,
+      filesMissingReason: document.filesMissingReason ?? null,
       cancelDeadlineAt: document.cancelDeadlineAt?.toISOString() ?? null,
       taxDivergences: (document.taxDivergences as unknown as FiscalTaxDivergence[] | null) ?? null,
       taxDivergenceReviewedAt: document.taxDivergenceReviewedAt?.toISOString() ?? null,

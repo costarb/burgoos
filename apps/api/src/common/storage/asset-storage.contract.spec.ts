@@ -69,6 +69,27 @@ describe("AssetStorage local contract", () => {
     );
   });
 
+  it("reports whether an object exists", async () => {
+    const storage = localStorage();
+    const key = "fiscal/tenant-1/2026/11/nota.xml";
+    expect(await storage.exists(key)).toBe(false);
+    await storage.write({ key, body: Readable.from([Buffer.from("<xml/>")]), contentType: "application/xml", maxBytes: 100 });
+    expect(await storage.exists(key)).toBe(true);
+  });
+
+  it("signs local read URLs that expire and cannot be reused for another key", async () => {
+    const storage = localStorage();
+    const key = "images/tenant-1/product/a.png";
+    const url = new URL(await storage.createReadUrl(key, 60));
+    expect(url.origin + url.pathname).toBe("http://localhost:3001/api/assets/local/images%2Ftenant-1%2Fproduct%2Fa.png");
+    const exp = Number(url.searchParams.get("exp"));
+    const sig = url.searchParams.get("sig") ?? "";
+    expect(storage.verifyReadSignature(key, exp, sig)).toBe(true);
+    expect(storage.verifyReadSignature("images/tenant-2/product/a.png", exp, sig)).toBe(false);
+    expect(storage.verifyReadSignature(key, exp + 1, sig)).toBe(false);
+    expect(storage.verifyReadSignature(key, Math.floor(Date.now() / 1000) - 1, sig)).toBe(false);
+  });
+
   it.each(["../secret", "/absolute", "tenant/../../secret", "tenant\\secret"])(
     "rejects unsafe key %s",
     (key) => expect(() => assertSafeAssetKey(key)).toThrow(/Invalid asset key/)

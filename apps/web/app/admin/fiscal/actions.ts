@@ -32,6 +32,7 @@ import {
   startBlingAuthorization,
   syncFiscalDocument,
   reviewFiscalTaxDivergence,
+  requestFiscalFileRecovery,
   updateBlingSettings,
   updateFiscalConfiguration,
   updateFiscalProfile,
@@ -137,3 +138,10 @@ export async function emitSaleFiscalDocumentAction(target: { type: "ORDER" | "TA
   );
 }
 
+export async function recoverFiscalFilesAction() {
+  return run(
+    (token) => requestFiscalFileRecovery(token),
+    "Recuperacao dos arquivos fiscais iniciada. As notas sem arquivo aparecerao em Pendencias.",
+    "Nao foi possivel iniciar a recuperacao dos arquivos fiscais."
+  );
+}

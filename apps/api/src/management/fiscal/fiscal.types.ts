@@ -29,7 +29,8 @@ export type FiscalPendingReason =
   | "PROVIDER_DISCONNECTED"
   | "SAME_DAY_NOT_ISSUED"
   | "TAX_DIVERGENCE"
-  | "ENVIRONMENT_MISMATCH";
+  | "ENVIRONMENT_MISMATCH"
+  | "FILES_MISSING";
 
 export type FiscalReadinessKey =
   | "ISSUER"
@@ -39,7 +40,8 @@ export type FiscalReadinessKey =
   | "DEFAULT_PROFILE"
   | "PRODUCTS_WITHOUT_PROFILE"
   | "PAYMENT_MAP"
-  | "OPERATION_NATURE";
+  | "OPERATION_NATURE"
+  | "STORAGE";
 
 export interface FiscalProviderCapabilitiesView {
   cancelViaApi: boolean;
@@ -183,6 +185,8 @@ export interface FiscalDocumentSummary {
   authorizedAt: string | null;
   rejectionCode: string | null;
   rejectionMessage: string | null;
+  /** Spec 030: why the XML could not be recovered from the provider (pending reason FILES_MISSING). */
+  filesMissingReason: string | null;
   cancelDeadlineAt: string | null;
   /** Items authorized with CFOP/CSOSN other than the fiscal profile; null when none or not checked. */
   taxDivergences: FiscalTaxDivergence[] | null;
