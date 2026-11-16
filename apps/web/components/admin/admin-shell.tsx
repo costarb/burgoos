@@ -22,6 +22,7 @@ import { NotificationCenterButton } from "./notification-center-button";
 import { SessionActions } from "./session-actions";
 import { StoreSwitcher } from "./store-switcher";
 import { shouldTriggerNavigationStart, useNavigationProgress } from "./use-navigation-progress";
+import { VersionInfo } from "./version-info";
 
 export function AdminShell({ children }: { children: ReactNode }) {
   const pathname = usePathname();
@@ -229,6 +230,7 @@ function SidebarContent({
           ))}
         </div>
       </nav>
+      <VersionInfo collapsed={collapsed} />
     </>
   );
 }
