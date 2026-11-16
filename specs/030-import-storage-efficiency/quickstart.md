@@ -78,11 +78,14 @@ Com a trava, nenhum arquivo em `fiscal/` pode ser apagado nem sobrescrito durant
    ```
    Para devolver o espaço: `VACUUM (FULL, ANALYZE) products; VACUUM (FULL, ANALYZE) store_visual_configurations;`
 
-## 6. Fase D: Node 22
+## 6. Fase D: Node 22 e desligamento no deploy
 
-1. Localmente: instalar Node 22 e rodar `npm ci && npm run typecheck && npm test && npm run build`, com a web numa worktree fora do OneDrive.
-2. No Render: o `engines.node` do `package.json` define a versão. Se o build ainda usar a 20, crie `NODE_VERSION=22` nos dois serviços.
-3. Depois do deploy, o aviso `NodeVersionSupportWarning` some dos logs de subida.
+1. O repositório fixa o Node 22: `.node-version` com `22` e `engines.node` `>=22 <23` na raiz e nos apps. O Render lê o `.node-version` no build.
+2. **No Render, nos dois serviços** (*Environment*): se existir a variável `NODE_VERSION`, apague-a ou troque para `22`, porque ela tem prioridade sobre o `.node-version`.
+3. **Recomendado** em `burgoos-api` (*Settings → Health Check Path*): `/api/health`. Assim o Render só troca a instância quando a nova responde.
+4. Depois do deploy, o log de subida mostra `node v22` e o aviso `NodeVersionSupportWarning` some. O rodapé do admin mostra o commit novo nas duas linhas.
+5. Desligamento: no SIGTERM do deploy, a API para de pegar jobs. O job em andamento recebe o sinal e volta para a fila na hora (`lastErrorCode = SHUTDOWN`), sem gastar tentativa, e a instância nova o retoma. O log `background_job.worker_stopped` registra a parada (`drained=false` quando o job não parou em 20 s; nesse caso ele volta quando o lease expirar).
+6. Localmente, use o Node 22 (`nvm use 22`) e rode `npm ci`. Com o Node 20, o npm só avisa (`EBADENGINE`).
 
 ## 7. Desenvolvimento local
 

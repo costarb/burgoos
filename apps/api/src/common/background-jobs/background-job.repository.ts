@@ -219,6 +219,45 @@ export class BackgroundJobRepository {
     });
   }
 
+  /**
+   * Gives a job interrupted by a shutdown (deploy) back to the queue at once. The interruption does not
+   * consume the retry budget: `maxAttempts` grows when needed so the next worker can still run it.
+   */
+  async releaseForShutdown(jobId: string, owner: JobLeaseOwner, now = new Date(), telemetry?: JobAttemptTelemetry): Promise<boolean> {
+    return this.prisma.$transaction(async (tx) => {
+      const job = await tx.backgroundJob.findFirst({
+        where: { id: jobId, status: "RUNNING", leasedBy: owner.workerId, leaseVersion: owner.leaseVersion },
+        select: { attempts: true, maxAttempts: true },
+      });
+      if (!job) return false;
+      const result = await tx.backgroundJob.updateMany({
+        where: { id: jobId, status: "RUNNING", leasedBy: owner.workerId, leaseVersion: owner.leaseVersion },
+        data: {
+          status: "RETRY_WAIT",
+          availableAt: now,
+          leasedBy: null,
+          leaseExpiresAt: null,
+          maxAttempts: Math.max(job.maxAttempts, job.attempts + 1),
+          lastErrorCode: "SHUTDOWN",
+          lastErrorMessage: "Interrompido pelo desligamento do servidor",
+        },
+      });
+      if (result.count !== 1) return false;
+      await tx.backgroundJobAttempt.updateMany({
+        where: { jobId, attempt: job.attempts, outcome: "RUNNING" },
+        data: {
+          outcome: "RETRY",
+          finishedAt: now,
+          errorCode: "SHUTDOWN",
+          durationMs: telemetry?.durationMs,
+          memoryStart: telemetry?.memoryStart as Prisma.InputJsonValue | undefined,
+          memoryEnd: telemetry?.memoryEnd as Prisma.InputJsonValue | undefined,
+        },
+      });
+      return true;
+    });
+  }
+
   async complete(jobId: string, owner: JobLeaseOwner, now = new Date(), telemetry?: JobAttemptTelemetry): Promise<boolean> {
     return this.prisma.$transaction(async (tx) => {
       const result = await tx.backgroundJob.updateMany({
