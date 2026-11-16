@@ -362,6 +362,11 @@ export interface VisualConfiguration extends PublicStoreBranding {
   id: string;
   status: VisualConfigurationStatus;
   publishedAt: string | null;
+  /** Stored value (bucket key or URL) of each image, saved by the form; the `*Url` fields are for display (spec 030). */
+  logoAssetKey?: string | null;
+  headerImageAssetKey?: string | null;
+  bodyImageAssetKey?: string | null;
+  footerImageAssetKey?: string | null;
 }
 
 export interface BrandingState {

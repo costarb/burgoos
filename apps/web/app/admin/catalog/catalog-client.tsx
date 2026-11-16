@@ -20,7 +20,8 @@ import {
   updateAdminCategory,
   updateAdminProduct,
 } from "../../../lib/api";
-import { uploadImageAsset } from "../../../lib/image-upload";
+import { imagePreviewUrl, uploadImageAsset } from "../../../lib/image-upload";
+import { LegacyImageMigrationCard } from "./legacy-image-migration-card";
 
 interface CatalogClientProps {
   token: string;
@@ -254,6 +255,8 @@ export function CatalogClient({
           onDismiss={() => setOperation({ status: "idle" })}
           state={operation}
         />
+
+        <LegacyImageMigrationCard onFinished={() => void refreshProducts()} token={token} />
 
         <div className="mt-6 flex flex-wrap items-center justify-between gap-3 border-b border-slate-200">
           <div className="flex gap-2">
@@ -703,7 +706,13 @@ function ProductEditorDialog({
   const [name, setName] = useState(product?.name ?? "");
   const [description, setDescription] = useState(product?.description ?? "");
   const [price, setPrice] = useState(product?.price ?? "");
-  const [imageUrl, setImageUrl] = useState(product?.imageUrl ?? "");
+  // The form saves the stored key (or URL); the signed `imageUrl` is only for the preview.
+  const initialImage = {
+    value: product?.imageAssetKey ?? product?.imageUrl ?? "",
+    url: product?.imageUrl ?? null,
+  };
+  const [imageUrl, setImageUrl] = useState(initialImage.value);
+  const [uploadedImage, setUploadedImage] = useState<{ key: string; url: string } | null>(null);
   const [active, setActive] = useState(product?.active ?? true);
   const [externalMappings, setExternalMappings] = useState<Record<DeliveryProvider, string>>({
     IFOOD:
@@ -724,7 +733,9 @@ function ProductEditorDialog({
     }
 
     try {
-      setImageUrl(await uploadImageAsset(token, file, "PRODUCT_IMAGE"));
+      const key = await uploadImageAsset(token, file, "PRODUCT_IMAGE");
+      setUploadedImage({ key, url: URL.createObjectURL(file) });
+      setImageUrl(key);
     } catch (error) {
       setFileError(error instanceof Error ? error.message : "Nao foi possivel enviar a imagem.");
     }
@@ -841,7 +852,11 @@ function ProductEditorDialog({
         </div>
 
         <aside className="space-y-3">
-          <ProductImage imageUrl={imageUrl || null} large name={name || "Produto"} />
+          <ProductImage
+            imageUrl={imagePreviewUrl(imageUrl, initialImage, uploadedImage)}
+            large
+            name={name || "Produto"}
+          />
           <label className="block text-sm">
             Upload de imagem
             <input

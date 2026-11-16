@@ -124,28 +124,32 @@ export default async function BrandingPage() {
             <fieldset className="grid gap-4 rounded-md border border-slate-200 p-4">
               <legend className="px-1 text-sm font-semibold">Imagens da pagina</legend>
               <DirectImageAssetField
-                currentValue={current?.logoUrl ?? ""}
+                currentPreviewUrl={current?.logoUrl ?? null}
+                currentValue={current?.logoAssetKey ?? current?.logoUrl ?? ""}
                 label="Logo"
                 name="logoUrl"
                 purpose="BRANDING_LOGO"
                 token={token}
               />
               <DirectImageAssetField
-                currentValue={current?.headerImageUrl ?? ""}
+                currentPreviewUrl={current?.headerImageUrl ?? null}
+                currentValue={current?.headerImageAssetKey ?? current?.headerImageUrl ?? ""}
                 label="Imagem de header"
                 name="headerImageUrl"
                 purpose="BRANDING_HEADER"
                 token={token}
               />
               <DirectImageAssetField
-                currentValue={current?.bodyImageUrl ?? ""}
+                currentPreviewUrl={current?.bodyImageUrl ?? null}
+                currentValue={current?.bodyImageAssetKey ?? current?.bodyImageUrl ?? ""}
                 label="Imagem de body"
                 name="bodyImageUrl"
                 purpose="BRANDING_BODY"
                 token={token}
               />
               <DirectImageAssetField
-                currentValue={current?.footerImageUrl ?? ""}
+                currentPreviewUrl={current?.footerImageUrl ?? null}
+                currentValue={current?.footerImageAssetKey ?? current?.footerImageUrl ?? ""}
                 label="Imagem de footer"
                 name="footerImageUrl"
                 purpose="BRANDING_FOOTER"

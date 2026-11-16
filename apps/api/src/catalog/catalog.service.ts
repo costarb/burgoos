@@ -11,6 +11,7 @@ import { UpdateProductDto } from "./dto/update-product.dto";
 import { ASSET_STORAGE, AssetStorage } from "../common/storage/asset-storage";
 import { isStoredAssetKey } from "../common/storage/asset-keys";
 import { contentTypeForKey } from "../common/storage/asset-content-type";
+import { isImageDataUrl, normalizeImageReference, resolveImageUrl } from "../common/storage/image-values";
 
 type BrandingAssetKey = "logo" | "header" | "body" | "footer";
 
@@ -240,7 +241,7 @@ export class CatalogService {
       orderBy: [{ category: { sortOrder: "asc" } }, { name: "asc" }],
     });
 
-    return products.map((product) => this.toProductResponse(product));
+    return Promise.all(products.map((product) => this.toProductResponse(product)));
   }
 
   async createProduct(tenantId: string, dto: CreateProductDto) {
@@ -260,6 +261,11 @@ export class CatalogService {
 
   async updateProduct(tenantId: string, productId: string, dto: UpdateProductDto) {
     await this.ensureProductBelongsToTenant(tenantId, productId);
+    const previous =
+      dto.imageUrl === undefined
+        ? null
+        : await this.prisma.product.findUnique({ where: { id: productId }, select: { imageUrl: true } });
+    const imageUrl = this.normalizeImageValue(tenantId, dto.imageUrl, previous?.imageUrl);
 
     if (dto.categoryId) {
       await this.ensureCategoryBelongsToTenant(tenantId, dto.categoryId);
@@ -272,10 +278,11 @@ export class CatalogService {
         name: dto.name,
         description: dto.description,
         price: dto.price === undefined ? undefined : new Prisma.Decimal(dto.price),
-        imageUrl: this.normalizeImageValue(dto.imageUrl),
+        imageUrl,
         active: dto.active,
       },
     });
+    if (imageUrl !== undefined) await this.deleteReplacedImage(tenantId, previous?.imageUrl, imageUrl);
 
     if (dto.externalMappings !== undefined) {
       await this.replaceExternalMappings(this.prisma, tenantId, productId, dto.externalMappings);
@@ -598,7 +605,7 @@ export class CatalogService {
       name: dto.name,
       description: dto.description ?? "",
       price: new Prisma.Decimal(dto.price),
-      imageUrl: this.normalizeImageValue(dto.imageUrl),
+      imageUrl: this.normalizeImageValue(tenantId, dto.imageUrl),
       active: dto.active ?? true,
     };
   }
@@ -669,28 +676,41 @@ export class CatalogService {
     return normalized;
   }
 
-  private normalizeImageValue(value?: string | null): string | null | undefined {
-    if (value === undefined) {
-      return undefined;
-    }
-
-    const normalized = value?.trim() ?? "";
-    if (!normalized) {
-      return null;
-    }
-
-    if (isHttpUrl(normalized) || isImageDataUrl(normalized) || isStoredAssetKey(normalized)) {
-      return normalized;
-    }
-
-    throw new BadRequestException("Product image must be a URL, asset key or legacy base64 image");
+  /** Bucket key, http(s) URL or, unchanged, the legacy base64 already stored (FR-019). */
+  private normalizeImageValue(
+    tenantId: string,
+    value?: string | null,
+    current?: string | null
+  ): string | null | undefined {
+    return normalizeImageReference(value, { tenantId, label: "Imagem do produto", current: [current] });
   }
 
-  private toProductResponse(product: ProductResponseInput) {
+  /**
+   * FR-020: removes the replaced image from the bucket after the update, when no other product still
+   * points to it. Best effort: a failure only leaves an orphan file.
+   */
+  private async deleteReplacedImage(tenantId: string, previous: string | null | undefined, next: string | null) {
+    if (!previous || previous === next || !isStoredAssetKey(previous) || !this.assetStorage) return;
+    try {
+      const stillUsed = await this.prisma.product.count({ where: { tenantId, imageUrl: previous } });
+      if (stillUsed === 0) await this.assetStorage.delete(previous);
+    } catch (error) {
+      this.logger.warn(`catalog.image.delete_failed tenantId=${tenantId} reason=${(error as Error).message}`);
+    }
+  }
+
+  /**
+   * Admin product: `imageUrl` is ready for an `<img>` (signed read URL for bucket keys) and
+   * `imageAssetKey` is the stored key or URL, which the form sends back to keep the image. A legacy
+   * base64 value is not repeated there (it would double the payload until the migration).
+   */
+  private async toProductResponse(product: ProductResponseInput) {
     const price = product.price as unknown;
 
     return {
       ...product,
+      imageUrl: await resolveImageUrl(this.assetStorage, product.imageUrl),
+      imageAssetKey: product.imageUrl && !isImageDataUrl(product.imageUrl) ? product.imageUrl : null,
       price: typeof price === "string" ? price : product.price.toFixed(2),
       externalMappings: (product.externalMappings ?? []).map((mapping) => ({
         id: mapping.id,
@@ -700,17 +720,3 @@ export class CatalogService {
     };
   }
 }
-
-function isHttpUrl(value: string): boolean {
-  try {
-    const url = new URL(value);
-    return url.protocol === "http:" || url.protocol === "https:";
-  } catch {
-    return false;
-  }
-}
-
-function isImageDataUrl(value: string): boolean {
-  return /^data:image\/(png|jpe?g|webp|gif);base64,[a-z0-9+/=\s]+$/i.test(value);
-}
-

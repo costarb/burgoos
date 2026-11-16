@@ -2,22 +2,30 @@
 
 import type { ImageAssetPurpose } from "@rrfive/types";
 import React, { useState } from "react";
-import { uploadImageAsset } from "../../lib/image-upload";
+import { imagePreviewUrl, uploadImageAsset } from "../../lib/image-upload";
 
+/**
+ * Image field of the branding form. `currentValue` is the stored value submitted with the form (bucket
+ * key or URL) and `currentPreviewUrl` the URL ready for `<img>` returned by the API (spec 030).
+ */
 export function DirectImageAssetField({
   currentValue,
+  currentPreviewUrl = null,
   label,
   name,
   purpose,
   token,
 }: {
   currentValue: string;
+  currentPreviewUrl?: string | null;
   label: string;
   name: string;
   purpose: ImageAssetPurpose;
   token: string;
 }) {
   const [value, setValue] = useState(currentValue);
+  const [uploaded, setUploaded] = useState<{ key: string; url: string } | null>(null);
+  const preview = imagePreviewUrl(value, { value: currentValue, url: currentPreviewUrl }, uploaded);
   const [error, setError] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
 
@@ -45,7 +53,10 @@ export function DirectImageAssetField({
             setError(null);
             setUploading(true);
             void uploadImageAsset(token, file, purpose)
-              .then(setValue)
+              .then((key) => {
+                setUploaded({ key, url: URL.createObjectURL(file) });
+                setValue(key);
+              })
               .catch((reason: unknown) => setError(reason instanceof Error ? reason.message : "Falha no upload."))
               .finally(() => setUploading(false));
           }}
@@ -54,7 +65,7 @@ export function DirectImageAssetField({
       </label>
       {uploading ? <p className="text-xs text-slate-500">Enviando imagem...</p> : null}
       {error ? <p className="text-sm text-red-700">{error}</p> : null}
-      {value ? <img alt="" className="h-20 w-full rounded-md border border-slate-200 bg-white object-contain" src={value} /> : null}
+      {preview ? <img alt="" className="h-20 w-full rounded-md border border-slate-200 bg-white object-contain" src={preview} /> : null}
     </div>
   );
 }
