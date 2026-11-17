@@ -114,6 +114,19 @@ describe("FiscalFileRecoveryService (spec 030)", () => {
     );
   });
 
+  it("stops between notes when the server shuts down, without enqueuing a continuation", async () => {
+    const { service, states, jobs } = setup([doc("a"), doc("b")], new Set(), () => true);
+    const controller = new AbortController();
+    states.storeFiles.mockImplementationOnce(async () => {
+      controller.abort();
+      return [];
+    });
+
+    await expect(service.execute({ tenantId: TENANT, targetId: TENANT, payload: {} }, controller.signal)).rejects.toThrow();
+    expect(states.storeFiles).toHaveBeenCalledTimes(1);
+    expect(jobs.enqueue).not.toHaveBeenCalled();
+  });
+
   it("treats local storage in production as temporary", () => {
     expect(isTemporaryStorage({ nodeEnv: "production", provider: "local" })).toBe(true);
     expect(isTemporaryStorage({ nodeEnv: "production", provider: undefined })).toBe(true);

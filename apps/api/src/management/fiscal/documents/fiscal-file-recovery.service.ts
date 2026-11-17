@@ -97,10 +97,13 @@ export class FiscalFileRecoveryService implements OnModuleInit, RuntimeBackgroun
     return { status, documents, missing, finishedAt: job?.completedAt?.toISOString() ?? null };
   }
 
-  async execute(job: Pick<BackgroundJob, "tenantId" | "targetId" | "payload">): Promise<{ processedCount: number }> {
+  async execute(
+    job: Pick<BackgroundJob, "tenantId" | "targetId" | "payload">,
+    signal?: AbortSignal
+  ): Promise<{ processedCount: number }> {
     const tenantId = job.tenantId ?? job.targetId;
     const afterId = (job.payload as { afterId?: string } | null)?.afterId;
-    const result = await this.run(tenantId, afterId);
+    const result = await this.run(tenantId, afterId, undefined, signal);
     if (result.nextAfterId) await this.request(tenantId, result.nextAfterId);
     return { processedCount: result.checked };
   }
@@ -109,7 +112,8 @@ export class FiscalFileRecoveryService implements OnModuleInit, RuntimeBackgroun
   async run(
     tenantId: string,
     afterId?: string,
-    deadline = Date.now() + RUN_BUDGET_MS
+    deadline = Date.now() + RUN_BUDGET_MS,
+    signal?: AbortSignal
   ): Promise<{ checked: number; recovered: number; missing: number; nextAfterId: string | null }> {
     const startedAt = Date.now();
     let cursor = afterId;
@@ -124,6 +128,8 @@ export class FiscalFileRecoveryService implements OnModuleInit, RuntimeBackgroun
       });
       if (!page.length) break;
       for (const document of page) {
+        // Deploy shutdown: stop between notes; the worker gives the job back to the queue (idempotent).
+        signal?.throwIfAborted();
         if (Date.now() >= deadline) {
           this.logCompleted(tenantId, { checked, recovered, missing }, startedAt, cursor ?? null);
           return { checked, recovered, missing, nextAfterId: cursor ?? null };
