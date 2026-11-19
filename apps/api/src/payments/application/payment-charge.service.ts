@@ -172,6 +172,7 @@ export class PaymentChargeService {
         providerTransactionId: mapped.providerTransactionId,
         providerStatus: mapped.providerStatus,
         providerStatusDetail: mapped.providerStatusDetail,
+        ...(mapped.paymentMethod ? { method: mapped.paymentMethod } : {}),
         lastCheckedAt: new Date(),
         finalizedAt: terminal ? new Date() : null,
         version: { increment: 1 },
