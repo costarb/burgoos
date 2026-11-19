@@ -8,6 +8,13 @@ export interface MercadoPagoPointTerminal {
   status?: string;
 }
 
+/** PDV: integrated with the API (receives orders). STANDALONE: the default, charges typed on the device. */
+export type MercadoPagoTerminalOperatingMode = "PDV" | "STANDALONE";
+
+export interface MercadoPagoTerminalSetupResponse {
+  terminals?: Array<{ id: string; operating_mode?: string }>;
+}
+
 export interface MercadoPagoTerminalListResponse {
   data?: {
     terminals?: MercadoPagoPointTerminal[];
@@ -63,7 +70,7 @@ export interface CreateMercadoPagoPointOrderInput {
 
 export interface MercadoPagoPointRequest {
   accessToken: string;
-  method: "GET" | "POST";
+  method: "GET" | "POST" | "PATCH";
   path: string;
   idempotencyKey?: string;
   body?: unknown;

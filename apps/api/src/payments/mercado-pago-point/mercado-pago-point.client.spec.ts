@@ -21,6 +21,20 @@ describe("MercadoPagoPointClient", () => {
     );
   });
 
+  it("changes the terminal operating mode through the setup endpoint", async () => {
+    const transport = vi.fn(async () => ({
+      terminals: [{ id: "PAX_Q92__123", operating_mode: "PDV" }],
+    }));
+    const mode = await new MercadoPagoPointClient(transport).setOperatingMode("secret", "PAX_Q92__123", "PDV");
+    expect(mode).toBe("PDV");
+    expect(transport).toHaveBeenCalledWith({
+      accessToken: "secret",
+      method: "PATCH",
+      path: "/terminals/v1/setup",
+      body: { terminals: [{ id: "PAX_Q92__123", operating_mode: "PDV" }] },
+    });
+  });
+
   it("creates one Point transaction with terminal and idempotency key", async () => {
     const transport = vi.fn(async () => ({ id: "ORD-1", status: "created" }));
     await new MercadoPagoPointClient(transport).createOrder("secret", {

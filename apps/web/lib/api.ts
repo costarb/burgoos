@@ -1342,6 +1342,17 @@ export async function setPaymentTerminalEnabled(
   });
 }
 
+export async function setPaymentTerminalOperatingMode(
+  terminalId: string,
+  mode: "PDV" | "STANDALONE"
+): Promise<PaymentTerminal> {
+  const token = await requireSessionAccessToken();
+  return fetchAdmin<PaymentTerminal>(token, `/api/admin/payment-terminals/${terminalId}/operating-mode`, {
+    method: "PATCH",
+    body: JSON.stringify({ mode }),
+  });
+}
+
 export async function createPaymentCharge(
   input: CreatePaymentChargeInput,
   idempotencyKey: string

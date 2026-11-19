@@ -5,6 +5,8 @@ import {
   MercadoPagoPointRequest,
   MercadoPagoPointTerminal,
   MercadoPagoTerminalListResponse,
+  MercadoPagoTerminalOperatingMode,
+  MercadoPagoTerminalSetupResponse,
 } from "./mercado-pago-point.types";
 import { pointProviderError } from "./point-provider-error";
 
@@ -37,6 +39,21 @@ export class MercadoPagoPointClient {
       if (page.length < limit || (typeof total === "number" && terminals.length >= total)) break;
     }
     return terminals;
+  }
+
+  /** Changes the terminal operating mode. The device applies it after a restart. */
+  async setOperatingMode(
+    accessToken: string,
+    terminalId: string,
+    mode: MercadoPagoTerminalOperatingMode,
+  ): Promise<string | undefined> {
+    const response = (await this.transport({
+      accessToken,
+      method: "PATCH",
+      path: "/terminals/v1/setup",
+      body: { terminals: [{ id: terminalId, operating_mode: mode }] },
+    })) as MercadoPagoTerminalSetupResponse;
+    return response.terminals?.find((terminal) => terminal.id === terminalId)?.operating_mode;
   }
 
   createOrder(
