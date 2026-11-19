@@ -24,6 +24,7 @@ import { SalesProviderRegistry } from "./sales-provider.registry";
 import { ProviderTransactionStateService } from "./provider-transaction-state.service";
 import { IntegrationAuditService } from "./integration-audit.service";
 import { IfoodFinancialCredentialService } from "./ifood/ifood-financial-credential.service";
+import { IntegratedPointSaleMatcher } from "./integrated-point-sale.matcher";
 
 const IDENTITY_CHUNK = 1000;
 
@@ -70,7 +71,11 @@ export class SalesImportPreviewService {
     } as unknown as ProviderTransactionStateService,
     private readonly audit?: IntegrationAuditService,
     @Optional() private readonly ifoodCredentials?: IfoodFinancialCredentialService
-  ) {}
+  ) {
+    this.pointSales = new IntegratedPointSaleMatcher(prisma);
+  }
+
+  private readonly pointSales: IntegratedPointSaleMatcher;
 
   async create(
     tenantId: string,
@@ -249,6 +254,19 @@ export class SalesImportPreviewService {
               (!latestOccurredAt || occurredAt > latestOccurredAt)
             )
               latestOccurredAt = occurredAt;
+          }
+          if (run.provider === "MERCADO_PAGO" && !(movement.externalSaleId && known.has(movement.externalSaleId))) {
+            const pointSale = await this.pointSales.match(
+              tenantId,
+              { integrationId: run.integrationId, channel: run.channel, environment: run.integration.environment },
+              movement
+            );
+            if (pointSale === "defer") {
+              // Charged on a PDV Point and not approved in the POS yet: the next cycle links it.
+              counts.found -= 1;
+              continue;
+            }
+            if (pointSale === "linked" && movement.externalSaleId) known.add(movement.externalSaleId);
           }
           const duplicate = Boolean(movement.externalSaleId && known.has(movement.externalSaleId));
           const status: ExternalMovementStatus = duplicate
