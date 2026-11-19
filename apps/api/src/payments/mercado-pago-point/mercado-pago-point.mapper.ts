@@ -1,3 +1,4 @@
+import { PaymentMethod } from "@prisma/client";
 import { ChargeStatus } from "../application/charge-status";
 import { MercadoPagoPointOrder } from "./mercado-pago-point.types";
 
@@ -9,6 +10,8 @@ export interface MappedPointOrder {
   paidAmount: string | null;
   refundedAmount: string | null;
   paymentMethodType: string | null;
+  /** Method the customer actually used on the terminal, when Mercado Pago reports it. */
+  paymentMethod: PaymentMethod | null;
 }
 
 export function mapPointOrder(order: MercadoPagoPointOrder): MappedPointOrder {
@@ -26,7 +29,19 @@ export function mapPointOrder(order: MercadoPagoPointOrder): MappedPointOrder {
     paidAmount: payment?.paid_amount ?? null,
     refundedAmount: payment?.refunded_amount ?? null,
     paymentMethodType: payment?.payment_method?.type ?? null,
+    paymentMethod: mapPaymentMethod(payment?.payment_method?.type, payment?.payment_method?.id),
   };
+}
+
+/** Mercado Pago payment_method type/id → ERP payment method; null when unknown or not reported yet. */
+export function mapPaymentMethod(type?: string, id?: string): PaymentMethod | null {
+  const methodType = normalize(type);
+  if (normalize(id) === "pix" || methodType === "bank_transfer") return PaymentMethod.PIX;
+  if (methodType === "credit_card") return PaymentMethod.CREDIT_CARD;
+  if (methodType === "debit_card" || methodType === "prepaid_card") return PaymentMethod.DEBIT_CARD;
+  if (methodType === "voucher_card") return PaymentMethod.VOUCHER;
+  if (methodType === "account_money" || methodType === "digital_wallet") return PaymentMethod.DIGITAL_WALLET;
+  return null;
 }
 
 function mapStatus(
