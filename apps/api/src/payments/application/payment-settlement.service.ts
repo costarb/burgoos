@@ -24,7 +24,8 @@ export class PaymentSettlementService {
           tenantId: charge.tenantId,
           chargeId: charge.id,
           institution: charge.institution,
-          method: charge.method,
+          // The panel requests one method; the customer may pay with another on the terminal.
+          method: mapped.paymentMethod ?? charge.method,
           grossAmount: charge.amount,
           netAmount: charge.amount,
           providerPaymentId: mapped.providerTransactionId,
