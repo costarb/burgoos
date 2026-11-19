@@ -1,8 +1,9 @@
-import { ConflictException, Injectable, NotFoundException } from "@nestjs/common";
+import { ConflictException, HttpException, HttpStatus, Injectable, NotFoundException } from "@nestjs/common";
 import { PaymentInstitution } from "@prisma/client";
 import { MercadoPagoAuthenticatedRequestService } from "../../management/sales-integrations/mercado-pago/mercado-pago-authenticated-request.service";
 import { PrismaService } from "../../platform/database/prisma.service";
 import { MercadoPagoPointClient } from "./mercado-pago-point.client";
+import type { MercadoPagoTerminalOperatingMode } from "./mercado-pago-point.types";
 
 @Injectable()
 export class PaymentTerminalService {
@@ -66,6 +67,47 @@ export class PaymentTerminalService {
     });
   }
 
+  /**
+   * Switches the terminal between PDV (integrated, receives charges from the system) and STANDALONE
+   * (the default) through the store's Mercado Pago connection. The device applies it after a restart.
+   * Leaving PDV also disables the terminal for charges.
+   */
+  async setOperatingMode(tenantId: string, terminalId: string, mode: MercadoPagoTerminalOperatingMode) {
+    const terminal = await this.prisma.paymentTerminal.findFirst({
+      where: { id: terminalId, tenantId },
+    });
+    if (!terminal) throw new NotFoundException("Terminal nao encontrado");
+    let reported: string | undefined;
+    try {
+      reported = await this.authenticated.executeForTenant({
+        tenantId,
+        request: (accessToken) =>
+          this.client.setOperatingMode(accessToken, terminal.providerTerminalId, mode),
+      });
+    } catch (error) {
+      if (providerCode(error) === "PERMISSION_DENIED") {
+        throw new HttpException(
+          {
+            statusCode: HttpStatus.BAD_GATEWAY,
+            code: "PERMISSION_DENIED",
+            message:
+              "O Mercado Pago nao permitiu mudar o modo desta maquininha pela API. Confira se ela esta vinculada a conta conectada, como responsavel pelo negocio, ou fale com o suporte do Mercado Pago.",
+          },
+          HttpStatus.BAD_GATEWAY,
+        );
+      }
+      throw error;
+    }
+    const operatingMode = (reported ?? mode).toUpperCase();
+    return this.prisma.paymentTerminal.update({
+      where: { id: terminal.id },
+      data: {
+        operatingMode,
+        ...(operatingMode === "PDV" ? {} : { enabled: false }),
+      },
+    });
+  }
+
   async setEnabled(tenantId: string, terminalId: string, enabled: boolean) {
     const terminal = await this.prisma.paymentTerminal.findFirst({
       where: { id: terminalId, tenantId },
@@ -79,6 +121,16 @@ export class PaymentTerminalService {
       data: { enabled },
     });
   }
+}
+
+function providerCode(error: unknown): string | undefined {
+  if (error instanceof HttpException) {
+    const response = error.getResponse();
+    return typeof response === "object" && response !== null
+      ? (response as { code?: string }).code
+      : undefined;
+  }
+  return (error as { code?: string } | null)?.code;
 }
 
 function maskSerial(serial?: string) {

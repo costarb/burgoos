@@ -8,6 +8,7 @@ import {
   getPaymentTerminals,
   getActivePaymentCharge,
   setPaymentTerminalEnabled,
+  setPaymentTerminalOperatingMode,
   syncPaymentTerminals,
 } from "../../../lib/api";
 import { usePaymentCharge } from "./use-payment-charge";
@@ -109,6 +110,28 @@ export function PointChargePanel({
     }
   }
 
+  async function changeMode(terminal: PaymentTerminal, mode: "PDV" | "STANDALONE") {
+    if (mode === "STANDALONE" && !window.confirm(
+      `Voltar ${terminal.displayName} ao modo normal? Ela deixa de receber cobrancas do sistema.`,
+    )) return;
+    setBusy(true);
+    setFeedback(null);
+    try {
+      const updated = await setPaymentTerminalOperatingMode(terminal.id, mode);
+      setTerminals((current) =>
+        current.map((candidate) => candidate.id === updated.id ? updated : candidate),
+      );
+      if (!updated.enabled && terminalId === updated.id) setTerminalId("");
+      setFeedback(mode === "PDV"
+        ? `${terminal.displayName} em modo PDV. Reinicie a maquininha e depois habilite-a aqui.`
+        : `${terminal.displayName} voltou ao modo normal. Reinicie a maquininha para aplicar.`);
+    } catch (error) {
+      setFeedback(error instanceof Error ? error.message : "Falha ao mudar o modo da maquininha.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
   async function cancel() {
     if (!charge) return;
     setBusy(true);
@@ -140,22 +163,39 @@ export function PointChargePanel({
           ) : null}
           {!loadingTerminals && terminals.length > 0 && enabled.length === 0 ? (
             <p className="mt-2 rounded-lg border border-amber-300 bg-amber-50 p-2 text-sm text-amber-950">
-              Foram encontradas {terminals.length} maquininha(s), mas nenhuma esta habilitada em modo PDV.
+              Foram encontradas {terminals.length} maquininha(s), mas nenhuma esta habilitada em modo PDV. Use Ativar modo PDV, reinicie a maquininha e marque Habilitada.
             </p>
           ) : null}
           {terminals.length > 0 ? (
             <div className="mt-2 space-y-1 text-xs text-blue-950">
-              {terminals.map((terminal) => (
-                <label className="flex items-center justify-between rounded bg-white px-2 py-1" key={terminal.id}>
-                  <span>{terminal.displayName} · {terminal.operatingMode ?? "modo desconhecido"}</span>
-                  <input
-                    checked={terminal.enabled}
-                    disabled={busy || terminal.operatingMode?.toUpperCase() !== "PDV"}
-                    onChange={() => toggleTerminal(terminal)}
-                    type="checkbox"
-                  />
-                </label>
-              ))}
+              {terminals.map((terminal) => {
+                const isPdv = terminal.operatingMode?.toUpperCase() === "PDV";
+                return (
+                  <div className="flex items-center justify-between gap-2 rounded bg-white px-2 py-1" key={terminal.id}>
+                    <span>{terminal.displayName} · {isPdv ? "modo PDV" : terminal.operatingMode ?? "modo desconhecido"}</span>
+                    <span className="flex items-center gap-2">
+                      <button
+                        className="rounded border px-2 py-0.5 font-semibold disabled:opacity-50"
+                        disabled={busy}
+                        onClick={() => changeMode(terminal, isPdv ? "STANDALONE" : "PDV")}
+                        type="button"
+                      >
+                        {isPdv ? "Voltar ao modo normal" : "Ativar modo PDV"}
+                      </button>
+                      <label className="flex items-center gap-1">
+                        <input
+                          aria-label={`Habilitar ${terminal.displayName}`}
+                          checked={terminal.enabled}
+                          disabled={busy || !isPdv}
+                          onChange={() => toggleTerminal(terminal)}
+                          type="checkbox"
+                        />
+                        Habilitada
+                      </label>
+                    </span>
+                  </div>
+                );
+              })}
             </div>
           ) : null}
           <div className="mt-3 flex gap-2">

@@ -1,4 +1,14 @@
-import { Body, Controller, Get, Param, Patch, Post, UseGuards } from "@nestjs/common";
+import {
+  BadRequestException,
+  Body,
+  Controller,
+  Get,
+  Param,
+  ParseUUIDPipe,
+  Patch,
+  Post,
+  UseGuards,
+} from "@nestjs/common";
 import { ApiBearerAuth, ApiOperation, ApiParam, ApiTags } from "@nestjs/swagger";
 import { PermissionGuard } from "../auth/guards/permission.guard";
 import { RequirePermission } from "../auth/guards/require-permission.decorator";
@@ -26,6 +36,21 @@ export class PaymentTerminalController {
   @RequirePermission("payment-terminals.manage")
   sync(@CurrentUser() user: AuthUser) {
     return this.terminals.synchronize(user.tenantId);
+  }
+
+  @Patch(":terminalId/operating-mode")
+  @ApiOperation({ summary: "Mudar a maquininha entre modo PDV (integrado) e modo normal" })
+  @ApiParam({ name: "terminalId", format: "uuid" })
+  @RequirePermission("payment-terminals.manage")
+  operatingMode(
+    @CurrentUser() user: AuthUser,
+    @Param("terminalId", ParseUUIDPipe) terminalId: string,
+    @Body() body: { mode?: string },
+  ) {
+    if (body?.mode !== "PDV" && body?.mode !== "STANDALONE") {
+      throw new BadRequestException("Modo deve ser PDV ou STANDALONE");
+    }
+    return this.terminals.setOperatingMode(user.tenantId, terminalId, body.mode);
   }
 
   @Patch(":terminalId/enabled")
