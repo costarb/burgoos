@@ -5,6 +5,7 @@ export type PointProviderErrorCode =
   | "ORDER_NOT_FOUND"
   | "IDEMPOTENCY_CONFLICT"
   | "VALIDATION"
+  | "PERMISSION_DENIED"
   | "RATE_LIMIT"
   | "PROVIDER_UNAVAILABLE";
 
@@ -21,6 +22,7 @@ export class PointProviderError extends Error {
 
 export function pointProviderError(status: number, providerCode?: string): PointProviderError {
   if (status === 401) return new PointProviderError("AUTHENTICATION", status, "Mercado Pago recusou a autorizacao");
+  if (status === 403) return new PointProviderError("PERMISSION_DENIED", status, "Mercado Pago nao permitiu a operacao para esta conta");
   if (status === 404) return new PointProviderError("ORDER_NOT_FOUND", status, "Order Point nao encontrada");
   if (status === 409 && providerCode === "already_queued_order_for_terminal") {
     return new PointProviderError("TERMINAL_BUSY", status, "A maquininha ja possui uma cobranca pendente");
