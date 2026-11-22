@@ -15,7 +15,7 @@ describe("SalesImportPreviewService", () => {
   const registry = { get: vi.fn(() => ({ capabilities: { maxPeriodDays: 31 } })) };
   const service = () =>
     new SalesImportPreviewService(
-      { salesImportRun: { findFirst: vi.fn(async () => null), create: vi.fn() } } as never,
+      { salesImportRun: { updateMany: vi.fn(async () => ({ count: 0 })), findFirst: vi.fn(async () => null), create: vi.fn() } } as never,
       {
         getCredential: vi.fn(async () => ({
           integration: { id: "integration", provider: "PAGBANK", channel: "API", status: "ACTIVE" },
@@ -42,8 +42,47 @@ describe("SalesImportPreviewService", () => {
       })
     ).rejects.toThrow(/1 e 31/);
   });
+  it("expires runs interrupted while fetching before checking for overlaps", async () => {
+    const updateMany = vi.fn(async () => ({ count: 1 }));
+    const findFirst = vi.fn(async () => null);
+    const current = new SalesImportPreviewService(
+      { salesImportRun: { updateMany, findFirst, create: vi.fn(async () => ({ id: "run-new" })) } } as never,
+      {
+        getCredential: vi.fn(async () => ({
+          integration: { id: "integration", provider: "MERCADO_PAGO", channel: "API", status: "ACTIVE" },
+        })),
+      } as never,
+      registry as never,
+      {} as never
+    );
+    await current.create("tenant", "user", {
+      integrationId: "00000000-0000-4000-8000-000000000000",
+      startDate: "2026-11-20",
+      endDate: "2026-11-20",
+      strategy: "PRICE_WEIGHTED",
+    }).catch(() => undefined);
+    expect(updateMany).toHaveBeenCalledWith(expect.objectContaining({
+      where: expect.objectContaining({ status: { in: ["PENDING", "FETCHING"] }, updatedAt: { lt: expect.any(Date) } }),
+      data: expect.objectContaining({ status: "FAILED", errorCode: "STALE_RUN" }),
+    }));
+    expect(updateMany.mock.invocationCallOrder[0]).toBeLessThan(findFirst.mock.invocationCallOrder[0]);
+  });
+  it("marks the run as failed when an error escapes the per-day handling", async () => {
+    const updateMany = vi.fn(async () => ({ count: 1 }));
+    const current = new SalesImportPreviewService(
+      { salesImportRun: { update: vi.fn(async () => { throw Object.assign(new Error("Bad Gateway"), { status: 502 }); }), updateMany } } as never,
+      {} as never,
+      registry as never,
+      {} as never
+    );
+    await expect(current.process("run-1", "tenant")).rejects.toThrow("Bad Gateway");
+    expect(updateMany).toHaveBeenCalledWith({
+      where: { id: "run-1", status: { in: ["PENDING", "FETCHING", "IMPORTING"] } },
+      data: expect.objectContaining({ status: "FAILED", errorCode: "HTTP_502", errorMessage: "Bad Gateway" }),
+    });
+  });
   it("rejects overlapping active runs", async () => {
-    const prisma = { salesImportRun: { findFirst: vi.fn(async () => ({ id: "existing" })) } };
+    const prisma = { salesImportRun: { updateMany: vi.fn(async () => ({ count: 0 })), findFirst: vi.fn(async () => ({ id: "existing" })) } };
     const current = new SalesImportPreviewService(
       prisma as never,
       {

@@ -11,6 +11,7 @@ import {
   Prisma,
   SalesImportDayStatus,
   SalesImportRun,
+  SalesImportRunStatus,
   SalesIntegrationEnvironment,
   SalesIntegrationStatus,
   SalesProvider,
@@ -27,6 +28,17 @@ import { IfoodFinancialCredentialService } from "./ifood/ifood-financial-credent
 import { IntegratedPointSaleMatcher } from "./integrated-point-sale.matcher";
 
 const IDENTITY_CHUNK = 1000;
+/** Runs that still block new imports of an overlapping period. */
+const ACTIVE_RUN_STATUSES: SalesImportRunStatus[] = ["PENDING", "FETCHING", "IMPORTING"];
+/** A PENDING/FETCHING run not updated for this long was interrupted and no longer blocks imports. */
+const STALE_RUN_MS = 30 * 60_000;
+
+function runErrorCode(error: unknown): string {
+  const value = error as { code?: unknown; status?: unknown } | null;
+  if (value && typeof value.code === "string") return value.code.slice(0, 40);
+  if (value && typeof value.status === "number") return `HTTP_${value.status}`;
+  return "PREVIEW_ERROR";
+}
 
 export interface ProcessOptions {
   /** false: already imported sales are reconciled by the caller and not stored as movements. */
@@ -97,11 +109,26 @@ export class SalesImportPreviewService {
       );
     if (integration.status !== SalesIntegrationStatus.ACTIVE)
       throw new ConflictException("Integracao deve estar ativa");
+    // A run left PENDING/FETCHING by a crash or a killed instance would block this period forever.
+    await this.prisma.salesImportRun.updateMany({
+      where: {
+        tenantId,
+        provider: integration.provider,
+        status: { in: ["PENDING", "FETCHING"] },
+        updatedAt: { lt: new Date(Date.now() - STALE_RUN_MS) },
+      },
+      data: {
+        status: "FAILED",
+        errorCode: "STALE_RUN",
+        errorMessage: "Processamento interrompido sem conclusao",
+        completedAt: new Date(),
+      },
+    });
     const overlap = await this.prisma.salesImportRun.findFirst({
       where: {
         tenantId,
         provider: integration.provider,
-        status: { in: ["PENDING", "FETCHING", "IMPORTING"] },
+        status: { in: ACTIVE_RUN_STATUSES },
         startDate: { lte: end },
         endDate: { gte: start },
       },
@@ -136,6 +163,29 @@ export class SalesImportPreviewService {
    * memory. The provider transaction state is still refreshed for every movement.
    */
   async process(runId: string, tenantId: string, options: ProcessOptions = {}): Promise<ProcessResult> {
+    try {
+      return await this.processRun(runId, tenantId, options);
+    } catch (error) {
+      // An error outside the per-day handling (e.g. the Mercado Pago range fetch answering 502) must not
+      // leave the run in FETCHING: an active run blocks every later import of the same period.
+      try {
+        await this.prisma.salesImportRun.updateMany({
+          where: { id: runId, status: { in: ACTIVE_RUN_STATUSES } },
+          data: {
+            status: "FAILED",
+            errorCode: runErrorCode(error),
+            errorMessage: (error instanceof Error ? error.message : "Falha externa").slice(0, 500),
+            completedAt: new Date(),
+          },
+        });
+      } catch {
+        /* the original error is the one that matters */
+      }
+      throw error;
+    }
+  }
+
+  private async processRun(runId: string, tenantId: string, options: ProcessOptions): Promise<ProcessResult> {
     const persistKnownSales = options.persistKnownSales ?? true;
     const knownSales: KnownSale[] = [];
     let latestOccurredAt: Date | null = null;
