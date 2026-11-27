@@ -65,6 +65,21 @@ export interface NormalizedHistoricalSale {
   raw: Record<string, unknown>;
 }
 
+/**
+ * The normalized sale as stored in `normalized_data`. The provider payload already goes to its own
+ * column (`raw_payload`, redacted and later wiped by retention), so a second copy inside the
+ * normalized sale is dropped. iFood keeps it: its confirmation reads the financial details from
+ * `sale.raw`.
+ */
+export function storedSale(
+  provider: SalesProvider,
+  sale: NormalizedHistoricalSale
+): Omit<NormalizedHistoricalSale, "raw"> & { raw?: Record<string, unknown> } {
+  if (provider === "IFOOD") return sale;
+  const { raw: _raw, ...rest } = sale;
+  return rest;
+}
+
 export type SalesProviderErrorCode =
   | "AUTHENTICATION"
   | "RATE_LIMIT"

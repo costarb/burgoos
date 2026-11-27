@@ -84,8 +84,9 @@ Com a trava, nenhum arquivo em `fiscal/` pode ser apagado nem sobrescrito durant
 2. **No Render, nos dois serviços** (*Environment*): se existir a variável `NODE_VERSION`, apague-a ou troque para `22`, porque ela tem prioridade sobre o `.node-version`.
 3. **Recomendado** em `burgoos-api` (*Settings → Health Check Path*): `/api/health`. Assim o Render só troca a instância quando a nova responde.
 4. Depois do deploy, o log de subida mostra `node v22` e o aviso `NodeVersionSupportWarning` some. O rodapé do admin mostra o commit novo nas duas linhas.
-5. Desligamento: no SIGTERM do deploy, a API para de pegar jobs. O job em andamento recebe o sinal e volta para a fila na hora (`lastErrorCode = SHUTDOWN`), sem gastar tentativa, e a instância nova o retoma. O log `background_job.worker_stopped` registra a parada (`drained=false` quando o job não parou em 20 s; nesse caso ele volta quando o lease expirar).
-6. Localmente, use o Node 22 (`nvm use 22`) e rode `npm ci`. Com o Node 20, o npm só avisa (`EBADENGINE`).
+5. **Start Command** de `burgoos-api`: `cd apps/api && exec node dist/src/main.js`. Com `npm run start --workspace …` o SIGTERM não chega ao Node e a instância antiga só morre no SIGKILL, sem parar os jobs (corrigido em 19/11; validado no redeploy das 19:53 UTC).
+6. Desligamento: no SIGTERM do deploy, a API para de pegar jobs. O job em andamento recebe o sinal e volta para a fila na hora (`lastErrorCode = SHUTDOWN`), sem gastar tentativa, e a instância nova o retoma. O log `background_job.worker_stopped` registra a parada (`drained=false` quando o job não parou em 20 s; nesse caso ele volta quando o lease expirar).
+7. Localmente, use o Node 22 (`nvm use 22`) e rode `npm ci`. Com o Node 20, o npm só avisa (`EBADENGINE`).
 
 ## 7. Desenvolvimento local
 

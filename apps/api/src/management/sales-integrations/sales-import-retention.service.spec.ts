@@ -179,7 +179,13 @@ describe("SalesImportRetentionService", () => {
     };
 
     it("compacts duplicates, drops automatic runs without new sales and redacts old payloads", async () => {
-      const executeRaw = vi.fn().mockResolvedValueOnce(120).mockResolvedValueOnce(30).mockResolvedValueOnce(7);
+      const executeRaw = vi
+        .fn()
+        .mockResolvedValueOnce(120)
+        .mockResolvedValueOnce(30)
+        .mockResolvedValueOnce(7)
+        .mockResolvedValueOnce(40)
+        .mockResolvedValueOnce(5);
       const service = build(executeRaw);
       const logs: string[] = [];
       (service as unknown as { logger: { log: (m: string) => void } }).logger = { log: (m) => logs.push(m) };
@@ -188,7 +194,7 @@ describe("SalesImportRetentionService", () => {
       const deleted = await service.purgeExpired(now);
 
       expect(deleted).toBe(150);
-      const [compact, runs, redact] = executeRaw.mock.calls;
+      const [compact, runs, redact, stripMovements, stripStates] = executeRaw.mock.calls;
       expect(sqlOf(compact)).toContain("DELETE FROM external_sales_movements");
       expect(sqlOf(compact)).toContain("m.status = 'DUPLICATE'");
       expect(sqlOf(compact)).toContain(`r."trigger" = 'AUTOMATIC'`);
@@ -197,13 +203,19 @@ describe("SalesImportRetentionService", () => {
       expect(runs[1]).toEqual(new Date("2026-11-18T05:00:00.000Z")); // 2 days
       expect(sqlOf(redact)).toContain("UPDATE external_sales_movements SET raw_payload");
       expect(redact).toContainEqual(new Date("2026-10-21T05:00:00.000Z")); // 30 days
-      // Orders, identities and provider transaction states are never part of the statements.
-      for (const call of executeRaw.mock.calls) expect(sqlOf(call)).not.toMatch(/orders|external_sale_identities|provider_transaction_states/);
+      // Orders, identities and provider transaction states are never deleted or redacted.
+      for (const call of [compact, runs, redact]) expect(sqlOf(call)).not.toMatch(/orders|external_sale_identities|provider_transaction_states/);
+      // Only the copy of the payload inside the normalized sale is removed; iFood keeps it for 30 days.
+      expect(sqlOf(stripMovements)).toContain("UPDATE external_sales_movements SET normalized_data = normalized_data - 'raw'");
+      expect(sqlOf(stripMovements)).toContain("provider <> 'IFOOD' OR created_at < ?");
+      expect(sqlOf(stripStates)).toContain("UPDATE provider_transaction_states SET normalized_data = normalized_data - 'raw'");
+      for (const call of [stripMovements, stripStates]) expect(sqlOf(call)).not.toMatch(/DELETE|raw_payload/);
       expect(JSON.parse(logs[0])).toMatchObject({
         event: "sales.retention.completed",
         compactedMovements: 120,
         deletedRuns: 30,
         redactedPayloads: 7,
+        strippedRawCopies: 45,
         hasMore: false,
       });
     });

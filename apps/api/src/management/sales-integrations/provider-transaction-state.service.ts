@@ -1,7 +1,7 @@
 import { Injectable } from "@nestjs/common";
 import { Prisma, ProviderResourceType, SalesProvider } from "@prisma/client";
 import { PrismaService } from "../../platform/database/prisma.service";
-import { ProviderMovement } from "./sales-provider.adapter";
+import { ProviderMovement, storedSale } from "./sales-provider.adapter";
 
 @Injectable()
 export class ProviderTransactionStateService {
@@ -35,6 +35,10 @@ export class ProviderTransactionStateService {
     )
       return existing.id;
     const attentionRequired = Boolean(existing?.orderId && status !== "approved");
+    // The payload is already in rawPayload: a second copy inside the normalized sale doubled the row.
+    const normalizedData = json(
+      input.movement.sale ? storedSale(input.provider, input.movement.sale) : {}
+    );
     const state = await this.prisma.providerTransactionState.upsert({
       where: {
         integrationId_resourceType_providerResourceId: {
@@ -58,7 +62,7 @@ export class ProviderTransactionStateService {
         createdAtProvider: dateValue(raw.date_created),
         approvedAtProvider: dateValue(raw.date_approved),
         updatedAtProvider: incomingUpdatedAt,
-        normalizedData: json(input.movement.sale ?? {}),
+        normalizedData,
         rawPayload: json(raw),
         lastSynchronizedAt: new Date(),
         attentionRequired,
@@ -72,7 +76,7 @@ export class ProviderTransactionStateService {
         createdAtProvider: dateValue(raw.date_created),
         approvedAtProvider: dateValue(raw.date_approved),
         updatedAtProvider: incomingUpdatedAt,
-        normalizedData: json(input.movement.sale ?? {}),
+        normalizedData,
         rawPayload: json(raw),
         lastSynchronizedAt: new Date(),
         attentionRequired,

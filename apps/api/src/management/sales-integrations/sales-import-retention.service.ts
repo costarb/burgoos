@@ -34,7 +34,7 @@ const RAW_PAYLOAD_RETENTION_DAYS = 30;
 @Injectable()
 export class SalesImportRetentionService implements OnModuleInit {
   private readonly logger = new Logger("SalesImportRetention");
-  private totals = { compactedMovements: 0, deletedRuns: 0, redactedPayloads: 0 };
+  private totals = { compactedMovements: 0, deletedRuns: 0, redactedPayloads: 0, strippedRawCopies: 0 };
   private readonly batchSize: number;
   private readonly deadlineMs: number;
   private readonly ifoodRawPayloadRetentionDays: number;
@@ -88,7 +88,7 @@ export class SalesImportRetentionService implements OnModuleInit {
     let deleted = 0;
     let redacted = 0;
     let hasMore = false;
-    this.totals = { compactedMovements: 0, deletedRuns: 0, redactedPayloads: 0 };
+    this.totals = { compactedMovements: 0, deletedRuns: 0, redactedPayloads: 0, strippedRawCopies: 0 };
     do {
       const batch = await this.purgeBatch(now);
       deleted += batch.deleted;
@@ -113,13 +113,15 @@ export class SalesImportRetentionService implements OnModuleInit {
    * 1. duplicate movements of finished automatic runs (legacy cycles stored every sale of the day
    *    again; they were already reconciled when the run was confirmed);
    * 2. automatic runs without new sales older than 2 days (days and movements cascade);
-   * 3. raw provider payloads older than 30 days (amounts, statuses and links are kept).
+   * 3. raw provider payloads older than 30 days (amounts, statuses and links are kept);
+   * 4. the copy of the payload left inside `normalized_data` by older versions.
    * Orders, sale identities and provider transaction states are never touched.
    */
   private async compactSalesImports(now: Date): Promise<{
     compactedMovements: number;
     deletedRuns: number;
     redactedPayloads: number;
+    strippedRawCopies: number;
     hasMore: boolean;
   }> {
     const limit = SALES_IMPORT_BATCH;
@@ -154,11 +156,31 @@ export class SalesImportRetentionService implements OnModuleInit {
           AND NOT (raw_payload @> '{"redacted": true}'::jsonb)
         LIMIT ${limit}
       )`;
+    // Rows written before the fix kept a second, never redacted copy of the payload inside the
+    // normalized sale. iFood still needs it until the payload retention (its confirmation reads it).
+    const strippedMovements = await this.prisma.$executeRaw`
+      UPDATE external_sales_movements
+      SET normalized_data = normalized_data - 'raw'
+      WHERE id IN (
+        SELECT id FROM external_sales_movements
+        WHERE normalized_data ? 'raw'
+          AND (provider <> 'IFOOD' OR created_at < ${payloadCutoff})
+        LIMIT ${limit}
+      )`;
+    const strippedStates = await this.prisma.$executeRaw`
+      UPDATE provider_transaction_states
+      SET normalized_data = normalized_data - 'raw'
+      WHERE id IN (
+        SELECT id FROM provider_transaction_states WHERE normalized_data ? 'raw' LIMIT ${limit}
+      )`;
     return {
       compactedMovements,
       deletedRuns,
       redactedPayloads,
-      hasMore: [compactedMovements, deletedRuns, redactedPayloads].some((count) => count === limit),
+      strippedRawCopies: strippedMovements + strippedStates,
+      hasMore: [compactedMovements, deletedRuns, redactedPayloads, strippedMovements, strippedStates].some(
+        (count) => count === limit
+      ),
     };
   }
 
@@ -239,6 +261,7 @@ export class SalesImportRetentionService implements OnModuleInit {
     this.totals.compactedMovements += imports.compactedMovements;
     this.totals.deletedRuns += imports.deletedRuns;
     this.totals.redactedPayloads += imports.redactedPayloads;
+    this.totals.strippedRawCopies += imports.strippedRawCopies;
     return {
       deleted: runs + attempts + notifications + imports.compactedMovements + imports.deletedRuns,
       redacted: redactedSales + redactedEvents + redactedSettlements + imports.redactedPayloads,
