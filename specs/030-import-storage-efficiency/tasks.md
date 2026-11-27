@@ -95,3 +95,26 @@
 ## Implementation Strategy
 
 Primeiro a fase A, que é o MVP: contém o disco e resolve a queixa da tela. Ela vai para produção sozinha. Em seguida vem a B (obrigação legal), depois a C e por fim a D, cada uma com o seu checkpoint de produção.
+
+## Verificação em produção (T025)
+
+Medições de 19/11/2026, três dias depois das quatro fases em produção:
+
+| Critério | Meta | Medido | Situação |
+|---|---|---|---|
+| SC-001 | ≤ 5 MB/dia | 1,4 MB (17/11) e 0,45 MB (18/11) de movimentos | OK |
+| SC-002 | movimentos < 23 MB e banco < 100 MB | depois do primeiro VACUUM: 40 MB e 111 MB (antes: 121 MB e 192 MB). Faltam 1.656 payloads a redigir na limpeza de 19/11 e um novo VACUUM | Pendente |
+| SC-003 | tela < 3 s | confirmado pelo usuário | OK |
+| SC-004 | 7 dias sem OOM | nenhum OOM desde 14/11, mas o RSS chegou a 444 MB de 512 MB com heap em ~60 MB (memória nativa retida). `MALLOC_ARENA_MAX=2` aplicado em 19/11 | Em observação até 21/11 |
+| SC-005 | 100% dos XMLs | 185 de 185 NFC-e autorizadas ou canceladas | OK |
+| SC-006 | produtos < 1 MB, fotos visíveis | 96 kB, nenhuma imagem em base64 | OK |
+| SC-007 | sem perda de pedidos e NFC-e | loja fechada em 16 e 17/11; PagBank sem vendas em 18/11 (dias `BLOCKED_NOT_VALIDATED` sem movimento são esperados). Comparar as semanas em 23/11 | Pendente |
+
+### Reavaliação de 27/11/2026
+
+| Critério | Medido | Situação |
+|---|---|---|
+| SC-001 | retenção diária às 02:00 UTC apaga de 800 a 1.440 execuções automáticas sem venda nova, sempre com `hasMore=false` | OK |
+| SC-002 | movimentos 42 MB e banco 132 MB. Causa: o `normalized_data` guardava uma segunda cópia do payload (`sale.raw`), que a redação de 30 dias não alcança: 18 MB dos 25 MB vivos de movimentos e 10 MB em `provider_transaction_states`. Corrigido na branch `035-import-raw-dedupe` (a cópia deixa de ser gravada e a retenção limpa o legado); depois do deploy e da limpeza noturna, um `VACUUM FULL` nas duas tabelas | Pendente |
+| SC-004 | nenhum OOM de 14/11 a 27/11. O RSS subiu de 134 para 380 MB em dois degraus, ambos numa chamada MCP `posicao_caixa` (23/11 01:20 e 14:56 UTC), com heap estável em ~65 MB: memória nativa do Prisma retida, não vazamento. Estável em 380 MB há 4 dias (limite 512 MB) | OK, com folga menor |
+| SC-007 | nenhum movimento `NEW`/`FAILED` parado em execução automática desde 18/11; todos os pedidos de 18 a 26/11 com NFC-e autorizada, exceto os 29 do Mercado Pago de 20/11 (execução travada, importados em 22/11 como retroativos) e 1 do PagBank de 24/11 às 20:58 (o EDI só publicou depois da janela de 10 min após a meia-noite; entrou pela importação manual de 25/11) | OK, com 2 exceções conhecidas |

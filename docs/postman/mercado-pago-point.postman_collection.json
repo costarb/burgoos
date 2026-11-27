@@ -1,0 +1,298 @@
+{
+  "info": {
+    "name": "Mercado Pago Point - modo PDV",
+    "description": "Configura a maquininha Point em modo PDV e faz uma cobranca de teste pela API de Orders, a mesma que o sistema usa.\n\nAntes de comecar:\n1. A maquininha precisa estar vinculada a uma loja e a um caixa (app do Mercado Pago).\n2. Na aba Variables da collection, cole o Access Token de producao em `access_token` (Current value). Nao salve o token no Initial value, para ele nao ir junto se a collection for compartilhada.\n\nOrdem: 1 -> 2 -> reiniciar a maquininha -> 3 -> 4 -> 5 ou 6/7.\nO passo 1 preenche `terminal_id` sozinho com a primeira maquininha da lista. O passo 4 preenche `order_id`.\n\nAtencao: cobranca com credencial de producao e dinheiro de verdade. Use valor baixo e estorne em seguida (passo 7).",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "auth": {
+    "type": "bearer",
+    "bearer": [{ "key": "token", "value": "{{access_token}}", "type": "string" }]
+  },
+  "variable": [
+    { "key": "base_url", "value": "https://api.mercadopago.com" },
+    { "key": "access_token", "value": "" },
+    { "key": "terminal_id", "value": "" },
+    { "key": "legacy_device_id", "value": "" },
+    { "key": "order_id", "value": "" },
+    { "key": "amount", "value": "1.00" }
+  ],
+  "item": [
+    {
+      "name": "1. Listar maquininhas",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "const body = pm.response.json();",
+              "const terminals = (body.data && body.data.terminals) || [];",
+              "console.log('Maquininhas:', terminals.map(t => `${t.id} (${t.operating_mode})`));",
+              "pm.test('Encontrou pelo menos uma maquininha', () => pm.expect(terminals.length).to.be.above(0));",
+              "if (terminals.length) pm.collectionVariables.set('terminal_id', terminals[0].id);"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/terminals/v1/list?limit=50&offset=0",
+          "host": ["{{base_url}}"],
+          "path": ["terminals", "v1", "list"],
+          "query": [
+            { "key": "limit", "value": "50" },
+            { "key": "offset", "value": "0" }
+          ]
+        },
+        "description": "Mostra as maquininhas vinculadas a lojas e caixas da conta, com o `operating_mode` (PDV, STANDALONE ou UNDEFINED). Grava a primeira em `terminal_id`. Se houver mais de uma, troque a variavel pelo id certo (formato MODELO__SERIAL; o serial esta na etiqueta atras da maquininha)."
+      }
+    },
+    {
+      "name": "2. Ativar modo PDV",
+      "request": {
+        "method": "PATCH",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"terminals\": [\n    { \"id\": \"{{terminal_id}}\", \"operating_mode\": \"PDV\" }\n  ]\n}"
+        },
+        "url": {
+          "raw": "{{base_url}}/terminals/v1/setup",
+          "host": ["{{base_url}}"],
+          "path": ["terminals", "v1", "setup"]
+        },
+        "description": "Depois de executar, REINICIE a maquininha. Para conferir na maquininha: Mais opcoes > Configuracoes > Modo de vinculacao = Ponto de Venda (PDV). Rode o passo 1 de novo: operating_mode deve vir PDV."
+      }
+    },
+    {
+      "name": "3. Conferir modo da maquininha",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "const id = pm.collectionVariables.get('terminal_id');",
+              "const t = ((pm.response.json().data || {}).terminals || []).find(x => x.id === id);",
+              "pm.test('Maquininha em modo PDV', () => pm.expect(t && t.operating_mode).to.eql('PDV'));"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/terminals/v1/list?limit=50&offset=0",
+          "host": ["{{base_url}}"],
+          "path": ["terminals", "v1", "list"],
+          "query": [
+            { "key": "limit", "value": "50" },
+            { "key": "offset", "value": "0" }
+          ]
+        }
+      }
+    },
+    {
+      "name": "4. Criar cobranca na maquininha",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "const body = pm.response.json();",
+              "pm.test('Cobranca criada', () => pm.expect(body.id).to.be.a('string'));",
+              "if (body.id) pm.collectionVariables.set('order_id', body.id);",
+              "console.log('order_id:', body.id, 'status:', body.status);"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" },
+          { "key": "X-Idempotency-Key", "value": "{{$guid}}" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"type\": \"point\",\n  \"external_reference\": \"teste-postman-{{$timestamp}}\",\n  \"expiration_time\": \"PT5M\",\n  \"description\": \"Teste de integracao PDV\",\n  \"transactions\": {\n    \"payments\": [{ \"amount\": \"{{amount}}\" }]\n  },\n  \"config\": {\n    \"point\": {\n      \"terminal_id\": \"{{terminal_id}}\",\n      \"print_on_terminal\": \"no_ticket\"\n    }\n  }\n}"
+        },
+        "url": {
+          "raw": "{{base_url}}/v1/orders",
+          "host": ["{{base_url}}"],
+          "path": ["v1", "orders"]
+        },
+        "description": "Envia a cobranca para a maquininha (mesmo formato que o sistema usa). Se nao aparecer na tela, aperte Atualizar ou o botao verde. Expira em 5 minutos. Valor na variavel `amount`, sempre com duas casas decimais."
+      }
+    },
+    {
+      "name": "5. Consultar cobranca",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/v1/orders/{{order_id}}",
+          "host": ["{{base_url}}"],
+          "path": ["v1", "orders", "{{order_id}}"]
+        },
+        "description": "status: created (aguardando), at_terminal (na maquininha), processed (pago), canceled, expired, failed, refunded."
+      }
+    },
+    {
+      "name": "6. Cancelar cobranca (antes de pagar)",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "x-allow-cancelable-status", "value": "at_terminal" }],
+        "url": {
+          "raw": "{{base_url}}/v1/orders/{{order_id}}/cancel",
+          "host": ["{{base_url}}"],
+          "path": ["v1", "orders", "{{order_id}}", "cancel"]
+        },
+        "description": "Cancela uma cobranca ainda nao paga. Status created: cancela na hora (200). Status at_terminal: responde 202 e o cancelamento se confirma em seguida."
+      }
+    },
+    {
+      "name": "7. Estornar cobranca paga",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" },
+          { "key": "X-Idempotency-Key", "value": "{{$guid}}" }
+        ],
+        "body": { "mode": "raw", "raw": "{}" },
+        "url": {
+          "raw": "{{base_url}}/v1/orders/{{order_id}}/refund",
+          "host": ["{{base_url}}"],
+          "path": ["v1", "orders", "{{order_id}}", "refund"]
+        },
+        "description": "Estorno total de uma cobranca com status processed (ate 90 dias)."
+      }
+    },
+    {
+      "name": "Ambiente de teste (maquininha virtual)",
+      "description": "Use com o Access Token de TESTE em `access_token`. A maquininha virtual e `NEWLAND_N950__SBX0000001`: nada aparece em tela, o pagamento e simulado por estas requisicoes.\n\nFluxo pela aplicacao: crie a cobranca no PDV do sistema, coloque o id da cobranca do Mercado Pago (ORD...) em `order_id` e rode uma das simulacoes. O sistema atualiza a situacao na consulta automatica (ate 2 minutos) ou ao consultar a cobranca na tela.\n\nA mudanca de situacao leva ate 10 segundos no Mercado Pago (40 para action_required).",
+      "item": [
+        {
+          "name": "T1. Simular pagamento aprovado",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"processed\",\n  \"payment_method_type\": \"credit_card\",\n  \"installments\": 1,\n  \"payment_method_id\": \"visa\",\n  \"status_detail\": \"accredited\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/v1/orders/{{order_id}}/events",
+              "host": ["{{base_url}}"],
+              "path": ["v1", "orders", "{{order_id}}", "events"]
+            },
+            "description": "Responde 204. Para debito: payment_method_type debit_card e payment_method_id debvisa."
+          }
+        },
+        {
+          "name": "T2. Simular pagamento recusado",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"status\": \"failed\"\n}" },
+            "url": {
+              "raw": "{{base_url}}/v1/orders/{{order_id}}/events",
+              "host": ["{{base_url}}"],
+              "path": ["v1", "orders", "{{order_id}}", "events"]
+            }
+          }
+        },
+        {
+          "name": "T3. Simular cancelamento na maquininha",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"status\": \"canceled\"\n}" },
+            "url": {
+              "raw": "{{base_url}}/v1/orders/{{order_id}}/events",
+              "host": ["{{base_url}}"],
+              "path": ["v1", "orders", "{{order_id}}", "events"]
+            }
+          }
+        },
+        {
+          "name": "T4. Simular expiracao",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"status\": \"expired\"\n}" },
+            "url": {
+              "raw": "{{base_url}}/v1/orders/{{order_id}}/events",
+              "host": ["{{base_url}}"],
+              "path": ["v1", "orders", "{{order_id}}", "events"]
+            }
+          }
+        },
+        {
+          "name": "T5. Simular estorno (depois de aprovado)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"status\": \"refunded\"\n}" },
+            "url": {
+              "raw": "{{base_url}}/v1/orders/{{order_id}}/events",
+              "host": ["{{base_url}}"],
+              "path": ["v1", "orders", "{{order_id}}", "events"]
+            },
+            "description": "So funciona se a cobranca ja estiver processed."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Voltar ao modo normal (STANDALONE)",
+      "item": [
+        {
+          "name": "8. Listar dispositivos (API antiga)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const body = pm.response.json();",
+                  "const devices = body.devices || [];",
+                  "console.log('Dispositivos:', devices.map(d => `${d.id} (${d.operating_mode})`));",
+                  "if (devices.length) pm.collectionVariables.set('legacy_device_id', devices[0].id);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/point/integration-api/devices",
+              "host": ["{{base_url}}"],
+              "path": ["point", "integration-api", "devices"]
+            },
+            "description": "Documentado so na API antiga do Point. Grava o primeiro dispositivo em `legacy_device_id`."
+          }
+        },
+        {
+          "name": "9. Voltar para STANDALONE (API antiga)",
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"operating_mode\": \"STANDALONE\"\n}" },
+            "url": {
+              "raw": "{{base_url}}/point/integration-api/devices/{{legacy_device_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["point", "integration-api", "devices", "{{legacy_device_id}}"]
+            },
+            "description": "Devolve a maquininha ao modo normal (cobranca avulsa). Reinicie a maquininha depois. Se a API recusar, a documentacao diz que da para trocar o modo na propria maquininha."
+          }
+        }
+      ]
+    }
+  ]
+}
