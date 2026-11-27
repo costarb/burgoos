@@ -374,11 +374,12 @@ describe("SalesImportPreviewService", () => {
         ],
       }),
     };
+    const createIfoodMovement = vi.fn();
     const current = new SalesImportPreviewService(
       {
         salesImportRun: { update },
         salesImportDay: { upsert: vi.fn().mockResolvedValue({ id: "day" }), update: vi.fn() },
-        externalSalesMovement: { deleteMany: vi.fn(), create: vi.fn() },
+        externalSalesMovement: { deleteMany: vi.fn(), create: createIfoodMovement },
         externalSaleIdentity: {
           findMany: vi.fn().mockResolvedValue([{ externalSaleId: "existing-sale" }]),
         },
@@ -401,6 +402,8 @@ describe("SalesImportPreviewService", () => {
       existingOrders: 1,
       unknown: 1,
     });
+    // iFood confirmation reads the financial details from sale.raw, so it is kept.
+    expect(createIfoodMovement.mock.calls[0][0].data.normalizedData).toHaveProperty("raw");
   });
 
   describe("automatic mode (persistKnownSales: false)", () => {
@@ -495,6 +498,10 @@ describe("SalesImportPreviewService", () => {
       expect(createMovement).toHaveBeenCalledWith(
         expect.objectContaining({ data: expect.objectContaining({ externalSaleId: "new-1", status: "NEW" }) })
       );
+      // The payload is stored once, in rawPayload, not again inside the normalized sale.
+      const stored = createMovement.mock.calls[0][0].data;
+      expect(stored.normalizedData).toMatchObject({ externalSaleId: "new-1", grossAmount: 20 });
+      expect(stored.normalizedData).not.toHaveProperty("raw");
       // The provider transaction state keeps being refreshed for every movement.
       expect(upsertState).toHaveBeenCalledTimes(3);
       expect(result.knownSales.map((item) => item.externalSaleId)).toEqual(["old-1", "old-2"]);

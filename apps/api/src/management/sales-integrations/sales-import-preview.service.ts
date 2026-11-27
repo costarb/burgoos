@@ -26,6 +26,7 @@ import { ProviderTransactionStateService } from "./provider-transaction-state.se
 import { IntegrationAuditService } from "./integration-audit.service";
 import { IfoodFinancialCredentialService } from "./ifood/ifood-financial-credential.service";
 import { IntegratedPointSaleMatcher } from "./integrated-point-sale.matcher";
+import { storedSale } from "./sales-provider.adapter";
 
 const IDENTITY_CHUNK = 1000;
 /** Runs that still block new imports of an overlapping period. */
@@ -357,7 +358,7 @@ export class SalesImportPreviewService {
               paymentMethod: movement.sale?.paymentMethod,
               installments: movement.sale?.installments,
               normalizedData: movement.sale
-                ? (JSON.parse(JSON.stringify(movement.sale)) as Prisma.InputJsonValue)
+                ? (JSON.parse(JSON.stringify(storedSale(run.provider, movement.sale))) as Prisma.InputJsonValue)
                 : undefined,
               rawPayload: this.secrets.redact(movement.raw) as Prisma.InputJsonValue,
               rejectionCode: movement.rejectionCode,
